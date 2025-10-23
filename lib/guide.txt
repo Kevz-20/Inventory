@@ -62,3 +62,5 @@ Instructions:
 - models           → shared data models
 - core             → constants, helpers, enums
 - config           → configuration files like API URLs
+
+RUN: flutter pub get
