@@ -65,3 +65,33 @@ Instructions:
 - models           → shared data models
 - core             → constants, helpers, enums
 - config           → configuration files like API URLs
+
+Flow to register new screens/widgets:
+1. Create new screen file
+    Example: lib/ui/screens/profile_screen.dart
+
+2. Import Flutter material package:
+    import 'package:flutter/material.dart';
+
+3. Create the widget class:
+    class ProfileScreen extends StatelessWidget {
+    const ProfileScreen({super.key});
+
+    @override
+    Widget build(BuildContext context) {
+        return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(child: Text('Profile Screen')),
+        );
+    }
+    }
+
+4. Register the route in app.dart:
+    import 'ui/screens/profile_screen.dart';
+Add inside routes:
+    '/profile': (context) => const ProfileScreen(),
+
+5. Navigate to new screen:
+    Navigator.pushNamed(context, '/profile');
+
+Create file → Import material.dart → Define widget → Import in app.dart → Add route → Use Navigator.pushNamed()
