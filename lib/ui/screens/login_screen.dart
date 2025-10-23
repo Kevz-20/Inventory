@@ -157,19 +157,25 @@ class _PinLoginPageState extends State<PinLoginPage> {
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     "BAG-ONG ACCOUNT",
                     style: TextStyle(
                       color: Color(0xFF4B3B88),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  Text(
-                    "NAKALIMOT SA PIN?",
-                    style: TextStyle(
-                      color: Color(0xFF4B3B88),
-                      fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/forgot_pin');
+                    },
+                    child: const Text(
+                      "NAKALIMOT SA PIN?",
+                      style: TextStyle(
+                        color: Color(0xFF4B3B88),
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ],

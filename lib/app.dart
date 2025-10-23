@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ui/screens/login_screen.dart';
+import 'ui/screens/forgot_pin_screen.dart';
 import 'ui/screens/home_screen.dart';
 
 class MyApp extends StatelessWidget {
@@ -14,6 +15,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const PinLoginPage(),
         '/home': (context) => const HomeScreen(),
+        '/forgot_pin': (context) => const ForgotPinScreen(),
       },
     );
   }
