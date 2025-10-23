@@ -1,30 +1,32 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:dswd_slp/main.dart';
+import 'package:dswd_slp/app.dart';
+import 'package:dswd_slp/ui/screens/login_screen.dart';
+import 'package:dswd_slp/ui/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('App starts at PinLoginPage and navigates to HomeScreen', (
+    WidgetTester tester,
+  ) async {
+    // Build the app
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify the initial screen is PinLoginPage
+    expect(find.byType(PinLoginPage), findsOneWidget);
+    expect(find.byType(HomeScreen), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Simulate entering correct PIN: 1, 2, 3, 4, then Enter
+    await tester.tap(find.text('1'));
     await tester.pump();
+    await tester.tap(find.text('2'));
+    await tester.pump();
+    await tester.tap(find.text('3'));
+    await tester.pump();
+    await tester.tap(find.text('4'));
+    await tester.pump();
+    await tester.tap(find.text('enter'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that HomeScreen appears
+    expect(find.byType(HomeScreen), findsOneWidget);
   });
 }
