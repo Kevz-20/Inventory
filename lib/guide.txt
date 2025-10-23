@@ -1,0 +1,64 @@
+GUIDE: Flutter Project Folder Structure (Offline-First + Sync)
+
+This is how you should organize your files in the lib/ folder for a maintainable Flutter app:
+
+lib/
+│
+├── main.dart                  # App entry point
+├── app.dart                   # App widget & routing
+│
+├── ui/                        # UI Layer
+│   ├── screens/
+│   │   ├── home_screen.dart
+│   │   ├── login_screen.dart
+│   │   └── profile_screen.dart
+│   └── widgets/
+│       ├── custom_button.dart
+│       └── loading_indicator.dart
+│
+├── controllers/               # State Management
+│   ├── user_controller.dart
+│   └── post_controller.dart
+│
+├── repositories/              # Business Logic / Repository Layer
+│   ├── user_repository.dart
+│   └── post_repository.dart
+│
+├── data/                      # Data Sources
+│   ├── local/                 # SQLite / Offline-first
+│   │   ├── database_helper.dart
+│   │   ├── user_local_data.dart
+│   │   └── post_local_data.dart
+│   └── remote/                # REST API / Online
+│       ├── user_api_data.dart
+│       └── post_api_data.dart
+│
+├── services/                  # Sync and other services
+│   ├── sync_service.dart      # Sync local -> remote
+│   └── api_service.dart       # Generic API helper
+│
+├── models/                    # Shared models for local and API
+│   ├── user.dart
+│   └── post.dart
+│
+├── core/                      # Utilities and constants
+│   ├── constants.dart
+│   ├── enums.dart
+│   └── helpers/
+│       └── date_helper.dart
+│
+└── config/                    # Configuration files
+    └── api_config.dart        # API URLs, tokens, etc.
+
+Instructions:
+- Keep all Dart files inside lib/ following this structure.
+- ui/screens       → all pages/screens of the app
+- ui/widgets       → reusable UI components
+- controllers      → state management files
+- repositories     → business logic & data handling
+- data/local       → SQLite helpers for offline storage
+- data/remote      → API helper files
+- services         → sync service & API helper
+- models           → shared data models
+- core             → constants, helpers, enums
+- config           → configuration files like API URLs
