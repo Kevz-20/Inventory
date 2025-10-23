@@ -17,14 +17,7 @@ class _PinLoginPageState extends State<PinLoginPage> {
           pin = pin.substring(0, pin.length - 1);
         }
       } else if (value.toLowerCase() == "enter") {
-        if (pin == "1234") {
-          Navigator.pushReplacementNamed(context, '/home');
-        } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("Incorrect PIN")));
-          pin = "";
-        }
+        Navigator.pushReplacementNamed(context, '/home');
       } else if (pin.length < 4) {
         pin += value;
       }
