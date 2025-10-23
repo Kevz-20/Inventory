@@ -1,3 +1,6 @@
+Install Flutter dependencies
+RUN: flutter pub get
+
 GUIDE: Flutter Project Folder Structure (Offline-First + Sync)
 
 This is how you should organize your files in the lib/ folder for a maintainable Flutter app:
@@ -62,5 +65,3 @@ Instructions:
 - models           → shared data models
 - core             → constants, helpers, enums
 - config           → configuration files like API URLs
-
-RUN: flutter pub get
