@@ -158,11 +158,17 @@ class _PinLoginPageState extends State<PinLoginPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "BAG-ONG ACCOUNT",
-                    style: TextStyle(
-                      color: Color(0xFF4B3B88),
-                      fontWeight: FontWeight.w600,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/create_account');
+                    },
+                    child: const Text(
+                      "BAG-ONG ACCOUNT",
+                      style: TextStyle(
+                        color: Color(0xFF4B3B88),
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                   GestureDetector(
