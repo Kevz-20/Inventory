@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class LoginViewModel extends ChangeNotifier {
   String _pin = "";
@@ -34,30 +35,34 @@ class LoginViewModel extends ChangeNotifier {
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: const Text("Change Mobile Number"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: controller,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 11,
-                  decoration: const InputDecoration(
-                    labelText: "Enter new mobile number",
-                    hintText: "09XXXXXXXXX",
-                    counterText: "",
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    maxLength: 11,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: "Enter new mobile number",
+                      hintText: "09XXXXXXXXX",
+                      counterText: "",
+                    ),
+                    onChanged: (_) => setState(() {}),
                   ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 5),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    "${controller.text.length}/11",
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  const SizedBox(height: 5),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      "${controller.text.length}/11",
+                      style: const TextStyle(fontSize: 13, color: Colors.black),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -68,9 +73,7 @@ class LoginViewModel extends ChangeNotifier {
                 onPressed: () {
                   final newNumber = controller.text.trim();
                   final isValid =
-                      RegExp(r'^[0-9]+$').hasMatch(newNumber) &&
-                      newNumber.startsWith("09") &&
-                      newNumber.length == 11;
+                      newNumber.startsWith("09") && newNumber.length == 11;
 
                   if (isValid) {
                     _mobileNumber = newNumber;
