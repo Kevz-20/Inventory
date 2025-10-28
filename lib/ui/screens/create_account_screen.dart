@@ -15,6 +15,7 @@ class CreateAccountScreen extends StatelessWidget {
           backgroundColor: const Color(0xFFFAF7F0),
           appBar: AppBar(
             backgroundColor: const Color(0xFF3C6E71),
+            iconTheme: const IconThemeData(color: Colors.white),
             title: const Text(
               "Bag-ong Account",
               style: TextStyle(color: Colors.white),
