@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/theme/app_theme.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/forgot_pin_screen.dart';
 import 'ui/screens/create_account_screen.dart';
@@ -11,7 +12,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'My Flutter App',
+      title: 'SLP',
+      theme: AppTheme.light,
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
