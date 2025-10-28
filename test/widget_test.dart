@@ -11,7 +11,7 @@ void main() {
     await tester.pumpWidget(const MyApp());
 
     // Verify the initial screen is PinLoginPage
-    expect(find.byType(PinLoginPage), findsOneWidget);
+    expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.byType(HomeScreen), findsNothing);
 
     // Simulate entering correct PIN: 1, 2, 3, 4, then Enter

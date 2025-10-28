@@ -1,31 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../viewmodels/login_viewmodel.dart';
 
-class PinLoginPage extends StatefulWidget {
-  const PinLoginPage({super.key});
-
-  @override
-  State<PinLoginPage> createState() => _PinLoginPageState();
-}
-
-class _PinLoginPageState extends State<PinLoginPage> {
-  String pin = "";
-
-  void _onKeyTap(String value) {
-    setState(() {
-      if (value == "back") {
-        if (pin.isNotEmpty) {
-          pin = pin.substring(0, pin.length - 1);
-        }
-      } else if (value.toLowerCase() == "enter") {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else if (pin.length < 4) {
-        pin += value;
-      }
-    });
-  }
+class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => LoginViewModel(),
+      child: const _LoginView(),
+    );
+  }
+}
+
+class _LoginView extends StatelessWidget {
+  const _LoginView();
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<LoginViewModel>();
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 253, 238, 224),
       body: SafeArea(
@@ -48,22 +43,54 @@ class _PinLoginPageState extends State<PinLoginPage> {
               ],
             ),
             const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color.fromARGB(26, 0, 0, 0),
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
+            Center(
+              child: Consumer<LoginViewModel>(
+                builder: (context, viewModel, _) => GestureDetector(
+                  onTap: () => viewModel.changeMobileNumber(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 25,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromARGB(26, 0, 0, 0),
+                          blurRadius: 5,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Mobile Number: ",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        Text(
+                          viewModel.mobileNumber,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.swap_horiz,
+                          color: Colors.black54,
+                          size: 22,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-              child: const Text(
-                "Mobile Number: 0955555555",
-                style: TextStyle(fontSize: 16, color: Colors.black87),
+                ),
               ),
             ),
             const SizedBox(height: 25),
@@ -82,7 +109,7 @@ class _PinLoginPageState extends State<PinLoginPage> {
                   height: 18,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: index < pin.length
+                    color: index < viewModel.pin.length
                         ? Colors.black
                         : Colors.transparent,
                     border: Border.all(color: Colors.black54, width: 1),
@@ -122,7 +149,7 @@ class _PinLoginPageState extends State<PinLoginPage> {
                     }
 
                     return GestureDetector(
-                      onTap: () => _onKeyTap(label),
+                      onTap: () => viewModel.onKeyTap(context, label),
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF9F6F1),
@@ -159,9 +186,8 @@ class _PinLoginPageState extends State<PinLoginPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/create_account');
-                    },
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/create_account'),
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(
@@ -172,9 +198,7 @@ class _PinLoginPageState extends State<PinLoginPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/forgot_pin');
-                    },
+                    onTap: () => Navigator.pushNamed(context, '/forgot_pin'),
                     child: const Text(
                       "NAKALIMOT SA PIN?",
                       style: TextStyle(

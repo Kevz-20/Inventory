@@ -7,10 +7,10 @@ This is how you should organize your files in the lib/ folder for a maintainable
 
 lib/
 │
-├── main.dart                  # App entry point
-├── app.dart                   # App widget & routing
+├── main.dart                      # App entry point
+├── app.dart                       # App widget & routing
 │
-├── ui/                        # UI Layer
+├── ui/                            # Presentation Layer
 │   ├── screens/
 │   │   ├── home_screen.dart
 │   │   ├── login_screen.dart
@@ -19,39 +19,38 @@ lib/
 │       ├── custom_button.dart
 │       └── loading_indicator.dart
 │
-├── controllers/               # State Management
-│   ├── user_controller.dart
-│   └── post_controller.dart
+├── viewmodels/                    # ViewModels (UI logic & state)
+│   ├── home_viewmodel.dart
+│   ├── login_viewmodel.dart
+│   └── profile_viewmodel.dart
 │
-├── repositories/              # Business Logic / Repository Layer
-│   ├── user_repository.dart
+├── repositories/                  # Data management layer
+│   ├── user_repository.dart       # Combines local + remote logic
 │   └── post_repository.dart
 │
-├── data/                      # Data Sources
-│   ├── local/                 # SQLite / Offline-first
+├── data/                          # Data sources
+│   ├── local/                     # Offline data (SQLite / Hive)
 │   │   ├── database_helper.dart
 │   │   ├── user_local_data.dart
 │   │   └── post_local_data.dart
-│   └── remote/                # REST API / Online
+│   └── remote/                    # Online data (API)
+│       ├── api_service.dart       # Handles base HTTP logic
 │       ├── user_api_data.dart
 │       └── post_api_data.dart
 │
-├── services/                  # Sync and other services
-│   ├── sync_service.dart      # Sync local -> remote
-│   └── api_service.dart       # Generic API helper
-│
-├── models/                    # Shared models for local and API
+├── models/                        # Data models
 │   ├── user.dart
 │   └── post.dart
 │
-├── core/                      # Utilities and constants
-│   ├── constants.dart
-│   ├── enums.dart
-│   └── helpers/
-│       └── date_helper.dart
+├── services/                      # App-level services
+│   ├── network_service.dart       # Checks connectivity (online/offline)
+│   └── sync_service.dart          # Syncs offline → online when reconnected
 │
-└── config/                    # Configuration files
-    └── api_config.dart        # API URLs, tokens, etc.
+└── core/                          # Common helpers & constants
+    ├── constants.dart
+    ├── enums.dart                 # e.g., NetworkStatus { online, offline }
+    └── helpers/
+        └── date_helper.dart
 
 Instructions:
 - Keep all Dart files inside lib/ following this structure.

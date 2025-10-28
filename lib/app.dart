@@ -14,10 +14,10 @@ class MyApp extends StatelessWidget {
       title: 'My Flutter App',
       initialRoute: '/login',
       routes: {
-        '/login': (context) => const PinLoginPage(),
-        '/home': (context) => const HomeScreen(),
-        '/forgot_pin': (context) => const ForgotPinScreen(),
+        '/login': (context) => const LoginScreen(),
         '/create_account': (context) => const CreateAccountScreen(),
+        '/forgot_pin': (context) => const ForgotPinScreen(),
+        '/home': (context) => const HomeScreen(),
       },
     );
   }
