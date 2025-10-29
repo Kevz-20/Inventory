@@ -1,3 +1,4 @@
+import 'package:dswd_slp/ui/screens/create_account_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/login_viewmodel.dart';
@@ -186,8 +187,35 @@ class _LoginView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () =>
-                        Navigator.pushNamed(context, '/create_account'),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  const CreateAccountScreen(),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                                const begin = Offset(
+                                  1.0,
+                                  0.0,
+                                ); // slide from right
+                                const end = Offset.zero;
+                                const curve = Curves.ease;
+
+                                final tween = Tween(
+                                  begin: begin,
+                                  end: end,
+                                ).chain(CurveTween(curve: curve));
+                                final offsetAnimation = animation.drive(tween);
+
+                                return SlideTransition(
+                                  position: offsetAnimation,
+                                  child: child,
+                                );
+                              },
+                        ),
+                      );
+                    },
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(

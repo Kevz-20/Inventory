@@ -108,6 +108,10 @@ class CreateAccountScreen extends StatelessWidget {
                     child: DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
                       ),
                       hint: const Text("Pili ug pangutana"),
                       initialValue: vm.selectedQuestion,
