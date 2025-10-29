@@ -103,7 +103,7 @@ class CreateAccountScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade400),
+                      border: Border.all(color: Colors.grey.shade900),
                     ),
                     child: DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
