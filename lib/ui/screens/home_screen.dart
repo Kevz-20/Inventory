@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/nav_bar.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,10 +100,22 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               children: [
-                _menuCard('Rekord sa Halin', 'assets/record.png'),
+                _menuCard(
+                  'Rekord sa Halin',
+                  'assets/record.png',
+                  onTap: () => context.go('/transaction_record'),
+                ),
                 _menuCard('Utang', 'assets/utang.png'),
-                _menuCard('Gasto', 'assets/gasto.png'),
-                _menuCard('Stock-in', 'assets/stockin.png'),
+                _menuCard(
+                  'Gasto',
+                  'assets/gasto.png',
+                  onTap: () => context.go('/expenses'),
+                ),
+                _menuCard(
+                  'Stock-in',
+                  'assets/stockin.png',
+                  onTap: () => context.go('/stockin'),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -136,32 +149,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _menuCard(String title, String iconPath) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(iconPath, height: 40),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+  Widget _menuCard(String title, String iconPath, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.05),
+              blurRadius: 5,
+              offset: Offset(0, 3),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(iconPath, height: 40),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

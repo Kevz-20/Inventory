@@ -1,4 +1,4 @@
-import 'package:dswd_slp/ui/screens/create_account_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/login_viewmodel.dart';
@@ -188,33 +188,8 @@ class _LoginView extends StatelessWidget {
                 children: [
                   GestureDetector(
                     onTap: () {
-                      Navigator.of(context).push(
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  const CreateAccountScreen(),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                                const begin = Offset(
-                                  1.0,
-                                  0.0,
-                                ); // slide from right
-                                const end = Offset.zero;
-                                const curve = Curves.ease;
-
-                                final tween = Tween(
-                                  begin: begin,
-                                  end: end,
-                                ).chain(CurveTween(curve: curve));
-                                final offsetAnimation = animation.drive(tween);
-
-                                return SlideTransition(
-                                  position: offsetAnimation,
-                                  child: child,
-                                );
-                              },
-                        ),
-                      );
+                      // Navigate to Create Account Screen
+                      context.push('/create_account');
                     },
                     child: const Text(
                       "BAG-ONG ACCOUNT",
@@ -226,7 +201,10 @@ class _LoginView extends StatelessWidget {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/forgot_pin'),
+                    onTap: () {
+                      // Navigate to Forgot PIN Screen
+                      context.push('/forgot_pin');
+                    },
                     child: const Text(
                       "NAKALIMOT SA PIN?",
                       style: TextStyle(

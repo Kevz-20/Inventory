@@ -106,6 +106,7 @@ class CreateAccountScreen extends StatelessWidget {
                       border: Border.all(color: Colors.grey.shade900),
                     ),
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,

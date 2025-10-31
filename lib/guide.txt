@@ -29,7 +29,7 @@ lib/
 │   └── post_repository.dart
 │
 ├── data/                          # Data sources
-│   ├── local/                     # Offline data (SQLite / Hive)
+│   ├── local/                     # Offline data (SQLite)
 │   │   ├── database_helper.dart
 │   │   ├── user_local_data.dart
 │   │   └── post_local_data.dart

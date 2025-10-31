@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginViewModel extends ChangeNotifier {
   String _pin = "";
@@ -14,7 +15,7 @@ class LoginViewModel extends ChangeNotifier {
         _pin = _pin.substring(0, _pin.length - 1);
       }
     } else if (value.toLowerCase() == "enter") {
-      Navigator.pushReplacementNamed(context, '/home');
+      context.go('/home');
     } else if (_pin.length < 4) {
       _pin += value;
     }
