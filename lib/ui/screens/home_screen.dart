@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            Text( 
+            Text(
               'Reports',
               style: GoogleFonts.poppins(
                 fontSize: 18,
@@ -141,7 +141,11 @@ class _HomeScreenState extends State<HomeScreen> {
               shrinkWrap: true,
               children: [
                 _menuCard('Balance Sheet', 'assets/balance_sheet.png'),
-                _menuCard('Income Statement', 'assets/income_statement.png'),
+                _menuCard(
+                  'Income Statement',
+                  'assets/income_statement.png',
+                  onTap: () => context.go('/income_statement'),
+                ),
               ],
             ),
           ],
