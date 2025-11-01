@@ -35,7 +35,7 @@ class _TransactionHistoryView extends StatelessWidget {
 
     return Scaffold(
       appBar: const AppHeader(
-        title: 'Rekord sa Transaksyon',
+        title: 'Transaksyon History',
         showBackButton: true,
       ),
       backgroundColor: AppColors.surface,
