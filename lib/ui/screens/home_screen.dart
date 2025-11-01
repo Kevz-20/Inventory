@@ -135,7 +135,11 @@ class _HomeScreenState extends State<HomeScreen> {
               shrinkWrap: true,
               children: [
                 _menuCard('Financial Report', 'assets/financial.png'),
-                _menuCard('Transaction History', 'assets/history.png'),
+                _menuCard(
+                  'Transaction History',
+                  'assets/history.png',
+                  onTap: () => context.go('/transaction_history'),
+                ),
                 _menuCard('Cash Management', 'assets/cash.png'),
               ],
             ),

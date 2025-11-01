@@ -9,6 +9,7 @@ import 'ui/screens/home_screen.dart';
 import 'ui/screens/expenses_screen.dart';
 import 'ui/screens/stockin_screen.dart';
 import 'ui/screens/transaction_record_screen.dart';
+import 'ui/screens/transaction_history_screen.dart';
 
 final _router = GoRouter(
   initialLocation: '/login',
@@ -43,6 +44,11 @@ final _router = GoRouter(
       path: '/transaction_record',
       pageBuilder: (context, state) =>
           buildSimpleTransitionPage(child: const TransactionRecordScreen()),
+    ),
+    GoRoute(
+      path: '/transaction_history',
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const TransactionHistoryScreen()),
     ),
   ],
 );

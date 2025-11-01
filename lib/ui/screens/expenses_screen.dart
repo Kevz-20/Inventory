@@ -1,5 +1,6 @@
 import '../widgets/header.dart';
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
 
 void main() {
   runApp(const ExpensesApp());
@@ -37,7 +38,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final double radius = 18;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf6f1ea),
+      backgroundColor: AppColors.background,
       appBar: const AppHeader(
         title: 'Rekord sa mga Gasto',
         showBackButton: true,
