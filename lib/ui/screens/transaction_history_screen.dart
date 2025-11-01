@@ -115,94 +115,111 @@ class _TransactionHistoryView extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 12),
 
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: vm.filteredTransactions.length,
-              itemBuilder: (context, index) {
-                final transaction = vm.filteredTransactions[index];
-                final isExpense = vm.isExpense(transaction['amount']!);
-
-                return Card(
-                  color: Colors.white,
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              transaction['title']!,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              transaction['amount']!,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isExpense ? Colors.red : Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              transaction['category']!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              transaction['method']!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              transaction['date']!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black45,
-                              ),
-                            ),
-                            Text(
-                              isExpense ? 'Expense' : 'Income',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: isExpense ? Colors.red : Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+            child: vm.filteredTransactions.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No transactions found',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                      ),
                     ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: vm.filteredTransactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = vm.filteredTransactions[index];
+                      final isExpense = vm.isExpense(transaction['amount']!);
+
+                      return Card(
+                        color: Colors.white,
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    transaction['title']!,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    transaction['amount']!,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isExpense
+                                          ? Colors.red
+                                          : Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    transaction['category']!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    transaction['method']!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    transaction['date']!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black45,
+                                    ),
+                                  ),
+                                  Text(
+                                    isExpense ? 'Expense' : 'Income',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: isExpense
+                                          ? Colors.red
+                                          : Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

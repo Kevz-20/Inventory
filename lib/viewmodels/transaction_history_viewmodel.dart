@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class TransactionHistoryViewModel extends ChangeNotifier {
   DateTime? _startDate;
@@ -14,25 +15,95 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       'method': 'Cash',
     },
     {
-      'title': 'Salary',
+      'title': 'Dinner at Jollibee',
       'date': 'Oct 30, 2025',
-      'amount': '+₱25,000.00',
-      'category': 'Income',
-      'method': 'Bank Transfer',
-    },
-    {
-      'title': 'Electric Bill',
-      'date': 'Oct 29, 2025',
-      'amount': '-₱3,500.00',
-      'category': 'Utilities',
+      'amount': '-₱450.00',
+      'category': 'Food',
       'method': 'Gcash',
     },
     {
-      'title': 'Internet',
+      'title': 'Jeepney Fare',
+      'date': 'Oct 29, 2025',
+      'amount': '-₱60.00',
+      'category': 'Transport',
+      'method': 'Cash',
+    },
+    {
+      'title': 'Gas Refill',
       'date': 'Oct 28, 2025',
-      'amount': '-₱1,000.00',
+      'amount': '-₱800.00',
+      'category': 'Transport',
+      'method': 'Debit Card',
+    },
+    {
+      'title': 'Electric Bill',
+      'date': 'Oct 27, 2025',
+      'amount': '-₱3,500.00',
       'category': 'Bills',
+      'method': 'Gcash',
+    },
+    {
+      'title': 'Water Bill',
+      'date': 'Oct 26, 2025',
+      'amount': '-₱600.00',
+      'category': 'Bills',
+      'method': 'Online Banking',
+    },
+    {
+      'title': 'Clothing Purchase',
+      'date': 'Oct 25, 2025',
+      'amount': '-₱1,800.00',
+      'category': 'Shopping',
       'method': 'Credit Card',
+    },
+    {
+      'title': 'Shoes from Lazada',
+      'date': 'Oct 24, 2025',
+      'amount': '-₱2,400.00',
+      'category': 'Shopping',
+      'method': 'Gcash',
+    },
+    {
+      'title': 'Salary',
+      'date': 'Oct 23, 2025',
+      'amount': '+₱25,000.00',
+      'category': 'Salary',
+      'method': 'Bank Transfer',
+    },
+    {
+      'title': 'Freelance Project',
+      'date': 'Oct 22, 2025',
+      'amount': '+₱8,000.00',
+      'category': 'Salary',
+      'method': 'PayPal',
+    },
+    {
+      'title': 'Charity Donation',
+      'date': 'Oct 21, 2025',
+      'amount': '-₱500.00',
+      'category': 'Other',
+      'method': 'Cash',
+    },
+    {
+      'title': 'Gift Received',
+      'date': 'Oct 20, 2025',
+      'amount': '+₱2,000.00',
+      'category': 'Other',
+      'method': 'Cash',
+    },
+    {
+      'title': 'Internet Bill',
+      'date': 'Oct 19, 2025',
+      'amount': '-₱1,000.00',
+      'category': 'Utilities',
+      'method': 'Credit Card',
+    },
+    {
+      'title': 'Mobile Load',
+      'date': 'Oct 18, 2025',
+      'amount': '-₱300.00',
+      'category': 'Utilities',
+      'method': 'Gcash',
     },
   ];
 
@@ -43,12 +114,24 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   DateTime? get endDate => _endDate;
   String get selectedCategory => _selectedCategory;
 
-  // Filtered transactions based on selected category
+  // Main filter: category + date range
   List<Map<String, String>> get filteredTransactions {
-    if (_selectedCategory == 'All') return _transactions;
-    return _transactions
-        .where((t) => t['category'] == _selectedCategory)
-        .toList();
+    final DateFormat formatter = DateFormat('MMM dd, yyyy');
+
+    return _transactions.where((t) {
+      final tDate = formatter.parse(t['date']!);
+
+      final matchesCategory =
+          _selectedCategory == 'All' || t['category'] == _selectedCategory;
+
+      final matchesDateRange =
+          (_startDate == null ||
+              tDate.isAfter(_startDate!.subtract(const Duration(days: 1)))) &&
+          (_endDate == null ||
+              tDate.isBefore(_endDate!.add(const Duration(days: 1))));
+
+      return matchesCategory && matchesDateRange;
+    }).toList();
   }
 
   bool isExpense(String amount) => amount.startsWith('-');
@@ -79,7 +162,6 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     return '${date.month}/${date.day}/${date.year}';
   }
 
-  // Handles category selection
   void selectCategory(String category) {
     _selectedCategory = category;
     notifyListeners();
