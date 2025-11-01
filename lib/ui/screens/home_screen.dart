@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 5),
             GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
@@ -101,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
               shrinkWrap: true,
               children: [
                 _menuCard(
-                  'Rekord sa Halin',
+                  'Halin',
                   'assets/record.png',
                   onTap: () => context.go('/transaction_record'),
                 ),
@@ -112,14 +112,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => context.go('/expenses'),
                 ),
                 _menuCard(
-                  'Stock-in',
+                  'Kumpra',
                   'assets/stockin.png',
                   onTap: () => context.go('/stockin'),
+                ),
+                _menuCard('Capital Management', 'assets/cash.png'),
+                _menuCard(
+                  'History',
+                  'assets/history.png',
+                  onTap: () => context.go('/transaction_history'),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            Text(
+            Text( 
               'Reports',
               style: GoogleFonts.poppins(
                 fontSize: 18,
@@ -134,13 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               children: [
-                _menuCard('Financial Report', 'assets/financial.png'),
-                _menuCard(
-                  'Transaction History',
-                  'assets/history.png',
-                  onTap: () => context.go('/transaction_history'),
-                ),
-                _menuCard('Cash Management', 'assets/cash.png'),
+                _menuCard('Balance Sheet', 'assets/balance_sheet.png'),
+                _menuCard('Income Statement', 'assets/income_statement.png'),
               ],
             ),
           ],
@@ -157,26 +158,28 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: 80,
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: const [
             BoxShadow(
               color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 5,
-              offset: Offset(0, 3),
+              blurRadius: 3,
+              offset: Offset(0, 2),
             ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(iconPath, height: 40),
-            const SizedBox(height: 8),
+            Image.asset(iconPath, height: 50), // unchanged icon
+            const SizedBox(height: 4),
             Text(
               title,
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
