@@ -66,4 +66,17 @@ class CreateAccountViewModel extends ChangeNotifier {
     lastNameController.dispose();
     answerController.dispose();
   }
+
+  void clearFields() {
+    mobileController.clear();
+    pinController.clear();
+    confirmPinController.clear();
+    firstNameController.clear();
+    middleNameController.clear();
+    lastNameController.clear();
+    answerController.clear();
+    selectedQuestion = null;
+    isFormValid = false;
+    notifyListeners();
+  }
 }

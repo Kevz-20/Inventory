@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
 import '../../viewmodels/create_account_viewmodel.dart';
 
 class CreateAccountScreen extends StatelessWidget {
@@ -12,13 +13,13 @@ class CreateAccountScreen extends StatelessWidget {
       create: (_) => CreateAccountViewModel(),
       child: Consumer<CreateAccountViewModel>(
         builder: (context, vm, _) => Scaffold(
-          backgroundColor: const Color(0xFFFAF7F0),
+          backgroundColor: AppColors.surface,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF3C6E71),
-            iconTheme: const IconThemeData(color: Colors.white),
+            backgroundColor: AppColors.background,
+            iconTheme: const IconThemeData(color: AppColors.textPrimary),
             title: const Text(
               "Bag-ong Account",
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.textPrimary),
             ),
             centerTitle: true,
             elevation: 0,
@@ -108,6 +109,7 @@ class CreateAccountScreen extends StatelessWidget {
                     child: DropdownButtonFormField<String>(
                       isExpanded: true,
                       decoration: const InputDecoration(
+                        fillColor: Colors.transparent,
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
@@ -140,7 +142,7 @@ class CreateAccountScreen extends StatelessWidget {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: vm.isFormValid
-                            ? const Color(0xFF3C6E71)
+                            ? AppColors.primary
                             : Colors.grey,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

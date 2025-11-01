@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-CustomTransitionPage<T> buildSlideTransitionPage<T>({
-  required Widget child,
-  Offset beginOffset = const Offset(1.0, 0.0),
-}) {
+CustomTransitionPage<T> buildSimpleTransitionPage<T>({required Widget child}) {
   return CustomTransitionPage<T>(
-    transitionDuration: const Duration(milliseconds: 350),
-    reverseTransitionDuration: const Duration(milliseconds: 300),
+    transitionDuration: const Duration(milliseconds: 300),
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final curvedAnimation = CurvedAnimation(
+      final curved = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeInOutCubic,
-        reverseCurve: Curves.easeOutCubic,
+        curve: Curves.easeInOut,
       );
 
-      final tween = Tween(begin: beginOffset, end: Offset.zero);
-
-      return SlideTransition(
-        position: tween.animate(curvedAnimation),
-        child: FadeTransition(opacity: curvedAnimation, child: child),
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0.1, 0.0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
       );
     },
   );

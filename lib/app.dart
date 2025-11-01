@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/routes/route_transitions.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/forgot_pin_screen.dart';
 import 'ui/screens/create_account_screen.dart';
@@ -8,66 +9,40 @@ import 'ui/screens/home_screen.dart';
 import 'ui/screens/expenses_screen.dart';
 import 'ui/screens/stockin_screen.dart';
 import 'ui/screens/transaction_record_screen.dart';
-import 'core/routes/route_transitions.dart';
 
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    // Login Screen
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-
-    // Create Account Screen
     GoRoute(
       path: '/create_account',
-      pageBuilder: (context, state) => buildSlideTransitionPage(
-        child: const CreateAccountScreen(),
-        beginOffset: const Offset(1.0, 0.0),
-      ),
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const CreateAccountScreen()),
     ),
-
-    // Forgot Pin Screen
     GoRoute(
       path: '/forgot_pin',
-      pageBuilder: (context, state) => buildSlideTransitionPage(
-        child: const ForgotPinScreen(),
-        beginOffset: const Offset(1.0, 0.0),
-      ),
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const ForgotPinScreen()),
     ),
-
-    // Home Screen
     GoRoute(
       path: '/home',
-      pageBuilder: (context, state) => buildSlideTransitionPage(
-        child: const HomeScreen(),
-        beginOffset: const Offset(1.0, 0.0),
-      ),
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const HomeScreen()),
     ),
-
-    // Expenses Screen
     GoRoute(
       path: '/expenses',
-      pageBuilder: (context, state) => buildSlideTransitionPage(
-        child: const ExpensesScreen(),
-        beginOffset: const Offset(1.0, 0.0),
-      ),
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const ExpensesScreen()),
     ),
-
-    // Stock In Screen
     GoRoute(
       path: '/stockin',
-      pageBuilder: (context, state) => buildSlideTransitionPage(
-        child: const StockinScreen(),
-        beginOffset: const Offset(1.0, 0.0),
-      ),
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const StockinScreen()),
     ),
-
-    // Transaction Record Screen
     GoRoute(
       path: '/transaction_record',
-      pageBuilder: (context, state) => buildSlideTransitionPage(
-        child: const TransactionRecordScreen(),
-        beginOffset: const Offset(1.0, 0.0),
-      ),
+      pageBuilder: (context, state) =>
+          buildSimpleTransitionPage(child: const TransactionRecordScreen()),
     ),
   ],
 );
