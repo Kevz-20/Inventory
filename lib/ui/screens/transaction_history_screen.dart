@@ -23,6 +23,16 @@ class _TransactionHistoryView extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = Provider.of<TransactionHistoryViewModel>(context);
 
+    final categories = [
+      'All',
+      'Food',
+      'Transport',
+      'Bills',
+      'Shopping',
+      'Salary',
+      'Other',
+    ];
+
     return Scaffold(
       appBar: const AppHeader(
         title: 'Rekord sa Transaksyon',
@@ -57,12 +67,62 @@ class _TransactionHistoryView extends StatelessWidget {
               ],
             ),
           ),
+
+          // Horizontal Filter Slider
+          SizedBox(
+            height: 46,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: categories.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                final isSelected = vm.selectedCategory == category;
+                return GestureDetector(
+                  onTap: () => vm.selectCategory(category),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Text(
+                      category,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: vm.transactions.length,
+              itemCount: vm.filteredTransactions.length,
               itemBuilder: (context, index) {
-                final transaction = vm.transactions[index];
+                final transaction = vm.filteredTransactions[index];
                 final isExpense = vm.isExpense(transaction['amount']!);
 
                 return Card(

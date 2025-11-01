@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
-// ViewModel for managing transaction history data and date filters
 class TransactionHistoryViewModel extends ChangeNotifier {
-  DateTime? _startDate; // selected start date
-  DateTime? _endDate; // selected end date
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   // sample transaction data
   final List<Map<String, String>> _transactions = [
@@ -37,14 +36,23 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     },
   ];
 
+  String _selectedCategory = 'All';
+
   List<Map<String, String>> get transactions => _transactions;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
+  String get selectedCategory => _selectedCategory;
 
-  // checks if the transaction is an expense
+  // Filtered transactions based on selected category
+  List<Map<String, String>> get filteredTransactions {
+    if (_selectedCategory == 'All') return _transactions;
+    return _transactions
+        .where((t) => t['category'] == _selectedCategory)
+        .toList();
+  }
+
   bool isExpense(String amount) => amount.startsWith('-');
 
-  // opens date picker and updates selected date
   Future<void> selectDate(BuildContext context, bool isStart) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -59,16 +67,21 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       } else {
         _endDate = picked;
       }
-      notifyListeners(); // refreshes UI
+      notifyListeners();
     }
   }
 
-  // returns formatted date or label text
   String getFormattedDate(bool isStart) {
     final date = isStart ? _startDate : _endDate;
     if (date == null) {
       return isStart ? 'Start Date' : 'End Date';
     }
     return '${date.month}/${date.day}/${date.year}';
+  }
+
+  // Handles category selection
+  void selectCategory(String category) {
+    _selectedCategory = category;
+    notifyListeners();
   }
 }
