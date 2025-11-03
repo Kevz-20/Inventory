@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dswd_slp/core/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../widgets/header.dart';
 import '../../viewmodels/income_statement_viewmodel.dart';
@@ -23,6 +24,7 @@ class _IncomeStatementView extends StatelessWidget {
     final vm = Provider.of<IncomeStatementViewModel>(context);
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Income Statement', showBackButton: true),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -53,6 +55,7 @@ class _IncomeStatementView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Card(
+              color: AppColors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

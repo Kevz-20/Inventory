@@ -14,7 +14,12 @@ class ExpensesApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Rekord sa mga Gasto',
-      theme: ThemeData(primarySwatch: Colors.blue, fontFamily: 'Roboto'),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: const Color(0xFF3C8DFF),
+        scaffoldBackgroundColor: AppColors.surface,
+        fontFamily: 'Roboto',
+      ),
       home: const ExpensesScreen(),
     );
   }
@@ -35,192 +40,241 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double radius = 18;
+    final radius = 18.0;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const AppHeader(
-        title: 'Rekord sa mga Gasto',
-        showBackButton: true,
-      ),
+      backgroundColor: AppColors.surface,
+      appBar: const AppHeader(title: 'Gasto', showBackButton: true),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-          child: Column(
-            children: [
-              _buildCard(
-                child: Row(
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8.0, right: 12.0),
-                      child: Text(
-                        'Petsa',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        _formatDate(selectedDate),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _pickDate,
-                      icon: const Icon(Icons.calendar_month_outlined),
-                    ),
-                  ],
-                ),
-                radius: radius,
-              ),
-              const SizedBox(height: 14),
-              _buildCard(
-                child: TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 12.0, right: 8.0),
-                      child: Text(
-                        '₱',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    border: InputBorder.none,
-                    hintText: 'Ibutang kantidad',
-                    hintStyle: const TextStyle(
-                      fontSize: 20,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 20),
-                ),
-                radius: radius,
-              ),
-              const SizedBox(height: 14),
-              _buildCard(
-                child: ListTile(
-                  title: Text(
-                    category ?? 'Kategorya sa Gasto',
-                    style: const TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  trailing: const Icon(Icons.keyboard_arrow_down),
-                  onTap: () => _showCategoryPicker(context),
-                ),
-                radius: radius,
-              ),
-              const SizedBox(height: 14),
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8.0),
-                      child: Text(
-                        'Deskripsyon (Gikinahanglan)',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    TextField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'e.g., Water bill, Supplier Name',
-                      ),
-                    ),
-                    const Divider(color: Colors.grey, thickness: 1),
-                  ],
-                ),
-                radius: radius,
-              ),
-              const SizedBox(height: 14),
-              _buildCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.camera_alt_outlined),
-                        SizedBox(width: 8),
-                        Text(
-                          'Resibo (opsyonal)',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      _buildSectionCard(
+                        title: 'Petsa',
+                        icon: Icons.calendar_month_outlined,
+                        child: GestureDetector(
+                          onTap: _pickDate,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDate(selectedDate),
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Icon(
+                                Icons.arrow_drop_down_rounded,
+                                size: 28,
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _pillButton('Photo', onPressed: () {}),
-                        _pillButton('Choose', onPressed: () {}),
-                        _pillButton('Remove', onPressed: () {}, isDanger: true),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 110,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        radius: radius,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        title: 'Kantidad',
+                        icon: Icons.payments_outlined,
+                        child: Row(
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(left: 4, right: 10),
+                              child: Text(
+                                '₱',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: amountController,
+                                keyboardType: TextInputType.number,
+                                textAlignVertical: TextAlignVertical.center,
+                                style: const TextStyle(fontSize: 20),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  border: InputBorder.none,
+                                  hintText: 'Ibutang kantidad',
+                                  hintStyle: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        radius: radius,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        title: 'Kategorya',
+                        icon: Icons.category_outlined,
+                        child: ListTile(
+                          title: Text(
+                            category ?? 'Pili kategorya sa gasto',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          trailing: const Icon(Icons.keyboard_arrow_down),
+                          onTap: () => _showCategoryPicker(context),
+                        ),
+                        radius: radius,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        title: 'Deskripsyon',
+                        icon: Icons.notes_outlined,
+                        child: TextField(
+                          controller: descriptionController,
+                          decoration: const InputDecoration(
+                            filled: false,
+                            hintText: 'e.g., Tubig, Kuryente, Supplier Name',
+                            border: InputBorder.none,
+                          ),
+                        ),
+                        radius: radius,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSectionCard(
+                        title: 'Resibo (opsyonal)',
+                        icon: Icons.receipt_long_outlined,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _pillButton('Kuháha', onPressed: () {}),
+                                _pillButton('Pili', onPressed: () {}),
+                                _pillButton(
+                                  'Tanggala',
+                                  onPressed: () {},
+                                  isDanger: true,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              height: 120,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.grey.shade100,
+                                    Colors.grey.shade300,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        radius: radius,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.save_rounded, size: 22),
+                    label: const Text(
+                      'Irekord',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
-                radius: radius,
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      backgroundColor: const Color(0xFF3C8DFF),
+                      elevation: 8,
+                      shadowColor: Colors.black26,
                     ),
-                    backgroundColor: const Color(0xFF3C8DFF),
-                    elevation: 8,
-                    shadowColor: Colors.black26,
-                  ),
-                  child: const Text(
-                    'Rekord',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-              const SizedBox(height: 60),
-            ],
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCard({required Widget child, double radius = 16}) {
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+    double radius = 16,
+  }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(radius),
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFF5F9FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: child,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: const Color(0xFF3C8DFF)),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const Divider(thickness: 1, height: 20, color: Colors.black12),
+          child,
+        ],
+      ),
     );
   }
 
@@ -235,10 +289,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: isDanger
-            ? const Color(0xFFef5960)
+            ? const Color(0xFFE74C3C)
             : const Color(0xFF3C8DFF),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 16)),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
     );
   }
 
@@ -266,6 +323,18 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       initialDate: selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF3C8DFF),
+              onPrimary: Colors.white,
+              onSurface: Colors.black87,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (dt != null) setState(() => selectedDate = dt);
   }
@@ -273,28 +342,23 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   void _showCategoryPicker(BuildContext ctx) {
     showModalBottomSheet(
       context: ctx,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (_) {
+        final categories = ['Food & Drinks', 'Bills', 'Supplies', 'Others'];
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('Food & Drinks'),
-                onTap: () => _setCategory('Food & Drinks'),
-              ),
-              ListTile(
-                title: const Text('Bills'),
-                onTap: () => _setCategory('Bills'),
-              ),
-              ListTile(
-                title: const Text('Supplies'),
-                onTap: () => _setCategory('Supplies'),
-              ),
-              ListTile(
-                title: const Text('Others'),
-                onTap: () => _setCategory('Others'),
-              ),
-            ],
+            children: categories
+                .map(
+                  (c) => ListTile(
+                    leading: const Icon(Icons.label_outline),
+                    title: Text(c),
+                    onTap: () => _setCategory(c),
+                  ),
+                )
+                .toList(),
           ),
         );
       },
