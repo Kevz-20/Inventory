@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/nav_bar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dswd_slp/core/theme/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,11 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF7F1),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0C4B3E),
+        backgroundColor: AppColors.background,
         title: Text(
-          'Welcome, gagvav!',
+          'Welcome, DSWD!',
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -41,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0C4B3E),
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -116,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   'assets/stockin.png',
                   onTap: () => context.go('/stockin'),
                 ),
-                _menuCard('Capital Management', 'assets/cash.png'),
+                _menuCard('Capital\nManagement', 'assets/cash.png'),
                 _menuCard(
                   'History',
                   'assets/history.png',
@@ -140,9 +141,9 @@ class _HomeScreenState extends State<HomeScreen> {
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               children: [
-                _menuCard('Balance Sheet', 'assets/balance_sheet.png'),
+                _menuCard('Balance\nSheet', 'assets/balance_sheet.png'),
                 _menuCard(
-                  'Income Statement',
+                  'Income\nStatement',
                   'assets/income_statement.png',
                   onTap: () => context.go('/income_statement'),
                 ),
@@ -166,22 +167,25 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: const [
             BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.05),
-              blurRadius: 3,
-              offset: Offset(0, 2),
+              color: Color.fromRGBO(0, 0, 0, 0.08),
+              blurRadius: 6,
+              offset: Offset(0, 3),
             ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(iconPath, height: 50), // unchanged icon
+            Image.asset(iconPath, height: 50),
             const SizedBox(height: 4),
             Text(
               title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,

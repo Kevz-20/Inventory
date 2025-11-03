@@ -17,7 +17,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       leading: showBackButton
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+              icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
               onPressed: () {
                 if (context.canPop()) {
                   context.pop();
@@ -30,7 +30,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         title,
         style: const TextStyle(
-          color: Colors.black,
+          color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
       ),

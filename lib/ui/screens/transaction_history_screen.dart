@@ -87,7 +87,7 @@ class _TransactionHistoryView extends StatelessWidget {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : Colors.white,
+                      color: isSelected ? AppColors.background : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
@@ -98,7 +98,7 @@ class _TransactionHistoryView extends StatelessWidget {
                       ],
                       border: Border.all(
                         color: isSelected
-                            ? AppColors.primary
+                            ? AppColors.background
                             : Colors.grey.shade300,
                       ),
                     ),
