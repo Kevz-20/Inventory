@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider((_) => LoginViewModel());
 
@@ -8,7 +9,6 @@ class LoginViewModel extends ChangeNotifier {
   String pin = '';
 
   void changeMobileNumber(BuildContext context) {
-    // Example: show dialog or input screen for mobile number
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Change mobile number tapped')),
     );
@@ -22,9 +22,7 @@ class LoginViewModel extends ChangeNotifier {
       }
     } else if (label == 'enter') {
       if (pin.length == 4) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('PIN accepted')));
+        GoRouter.of(context).go('/home');
       } else {
         ScaffoldMessenger.of(
           context,
