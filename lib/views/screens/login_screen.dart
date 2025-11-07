@@ -1,26 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../viewmodels/login_viewmodel.dart';
+import '../../view_models/login_view_model.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => LoginViewModel(),
-      child: const _LoginView(),
-    );
-  }
-}
-
-class _LoginView extends StatelessWidget {
-  const _LoginView();
-
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<LoginViewModel>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewModel = ref.watch(loginViewModelProvider);
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 253, 238, 224),
@@ -44,53 +32,46 @@ class _LoginView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            Center(
-              child: Consumer<LoginViewModel>(
-                builder: (context, viewModel, _) => GestureDetector(
-                  onTap: () => viewModel.changeMobileNumber(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 25,
-                      vertical: 10,
+            GestureDetector(
+              onTap: () => viewModel.changeMobileNumber(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(26, 0, 0, 0),
+                      blurRadius: 5,
+                      offset: const Offset(0, 3),
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromARGB(26, 0, 0, 0),
-                          blurRadius: 5,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Mobile Number: ",
+                      style: TextStyle(fontSize: 16, color: Colors.black54),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Mobile Number: ",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        Text(
-                          viewModel.mobileNumber,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.swap_horiz,
-                          color: Colors.black54,
-                          size: 22,
-                        ),
-                      ],
+                    Text(
+                      viewModel.mobileNumber,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.swap_horiz,
+                      color: Colors.black54,
+                      size: 22,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -187,10 +168,7 @@ class _LoginView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      // Navigate to Create Account Screen
-                      context.push('/create_account');
-                    },
+                    onTap: () => context.push('/create_account'),
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(
@@ -201,10 +179,7 @@ class _LoginView extends StatelessWidget {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      // Navigate to Forgot PIN Screen
-                      context.push('/forgot_pin');
-                    },
+                    onTap: () => context.push('/forgot_pin'),
                     child: const Text(
                       "NAKALIMOT SA PIN?",
                       style: TextStyle(

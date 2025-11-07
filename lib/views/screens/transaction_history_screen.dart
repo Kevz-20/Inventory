@@ -1,27 +1,19 @@
-import 'package:dswd_slp/core/theme/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../../view_models/transaction_history_view_model.dart';
+import '../../core/app_colors.dart';
 import '../widgets/header.dart';
-import '../../viewmodels/transaction_history_viewmodel.dart';
 
-class TransactionHistoryScreen extends StatelessWidget {
+final transactionHistoryProvider = ChangeNotifierProvider(
+  (ref) => TransactionHistoryViewModel(),
+);
+
+class TransactionHistoryScreen extends ConsumerWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TransactionHistoryViewModel(),
-      child: const _TransactionHistoryView(),
-    );
-  }
-}
-
-class _TransactionHistoryView extends StatelessWidget {
-  const _TransactionHistoryView();
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = Provider.of<TransactionHistoryViewModel>(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(transactionHistoryProvider);
 
     final categories = [
       'All',
@@ -67,8 +59,6 @@ class _TransactionHistoryView extends StatelessWidget {
               ],
             ),
           ),
-
-          // Horizontal Filter Slider
           SizedBox(
             height: 46,
             child: ListView.separated(
@@ -91,7 +81,7 @@ class _TransactionHistoryView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.2),
+                          color: Colors.grey.withValues(alpha: 51),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -115,7 +105,6 @@ class _TransactionHistoryView extends StatelessWidget {
               },
             ),
           ),
-
           Expanded(
             child: vm.filteredTransactions.isEmpty
                 ? const Center(
@@ -134,7 +123,6 @@ class _TransactionHistoryView extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final transaction = vm.filteredTransactions[index];
                       final isExpense = vm.isExpense(transaction['amount']!);
-
                       return Card(
                         color: Colors.white,
                         elevation: 1,
@@ -241,7 +229,7 @@ class _DateBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Colors.grey.withValues(alpha: 51),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

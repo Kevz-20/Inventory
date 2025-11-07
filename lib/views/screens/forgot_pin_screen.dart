@@ -1,11 +1,26 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import '../../view_models/forgot_pin_view_model.dart';
 
-class ForgotPinScreen extends StatelessWidget {
+class ForgotPinScreen extends ConsumerWidget {
   const ForgotPinScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final TextEditingController mobileController = TextEditingController();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(forgotPinViewModelProvider);
+    final viewModel = ref.read(forgotPinViewModelProvider.notifier);
+    final TextEditingController mobileController = TextEditingController(
+      text: state.mobileNumber,
+    );
+
+    ref.listen<ForgotPinState>(forgotPinViewModelProvider, (prev, next) {
+      if (next.message.isNotEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(next.message)));
+        viewModel.clearMessage();
+      }
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8E7),
@@ -83,6 +98,7 @@ class ForgotPinScreen extends StatelessWidget {
                       controller: mobileController,
                       keyboardType: TextInputType.number,
                       maxLength: 11,
+                      onChanged: viewModel.updateMobileNumber,
                       decoration: InputDecoration(
                         counterText: "",
                         hintText: "09XXXXXXXXX",
@@ -112,24 +128,7 @@ class ForgotPinScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          final input = mobileController.text.trim();
-                          if (input.length == 11 && input.startsWith("09")) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("PIN recovery sent to $input"),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Please enter a valid 11-digit mobile number.",
-                                ),
-                              ),
-                            );
-                          }
-                        },
+                        onPressed: viewModel.submit,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           backgroundColor: const Color.fromARGB(
@@ -156,9 +155,7 @@ class ForgotPinScreen extends StatelessWidget {
                     const SizedBox(height: 15),
                     Center(
                       child: GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
+                        onTap: () => Navigator.pop(context),
                         child: const Text(
                           "Back to Login",
                           style: TextStyle(

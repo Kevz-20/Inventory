@@ -1,96 +1,56 @@
-Install Flutter dependencies
-RUN: flutter pub get
+# Developer Guide
 
-GUIDE: Flutter Project Folder Structure (Offline-First + Sync)
+# Step 1: Install Dependencies
+Run the following command to install all required Flutter packages:
+> flutter pub get
 
-This is how you should organize your files in the lib/ folder for a maintainable Flutter app:
+
+# Step 2: Project Structure
+Organize your files inside the `lib/` folder as shown below for a clean, maintainable, and scalable Flutter project:
 
 lib/
 │
-├── main.dart                      # App entry point
-├── app.dart                       # App widget & routing
+├── main.dart                          # App entry point
+├── router.dart                        # App routing configuration
 │
-├── ui/                            # Presentation Layer
-│   ├── screens/
+├── core/                              # Global constants & themes
+│   ├── app_colors.dart
+│   └── app_theme.dart
+│
+├── models/                            # Data models
+│   └── user.dart
+│
+├── repositories/                      # Data repositories
+│   └── (future data repositories)
+│
+├── services/                          # Core services
+│   └── db_service.dart                # Local SQLite database service
+│
+├── views/                             # Presentation layer
+│   ├── screens/                       # UI screens
+│   │   ├── create_account_screen.dart
+│   │   ├── expenses_screen.dart
+│   │   ├── forgot_pin_screen.dart
 │   │   ├── home_screen.dart
+│   │   ├── income_statement_screen.dart
 │   │   ├── login_screen.dart
-│   │   └── profile_screen.dart
-│   └── widgets/
-│       ├── custom_button.dart
-│       └── loading_indicator.dart
+│   │   ├── stockin_screen.dart
+│   │   ├── transaction_history_screen.dart
+│   │   └── transaction_record_screen.dart
+│   │
+│   └── widgets/                       # Reusable UI components
+│       ├── header.dart
+│       └── nav_bar.dart
 │
-├── viewmodels/                    # ViewModels (UI logic & state)
-│   ├── home_viewmodel.dart
+├── view_models/                       # Business logic & state management
+│   ├── create_account_viewmodel.dart
+│   ├── income_statement_viewmodel.dart
 │   ├── login_viewmodel.dart
-│   └── profile_viewmodel.dart
+│   └── transaction_history_viewmodel.dart
 │
-├── repositories/                  # Data management layer
-│   ├── user_repository.dart       # Combines local + remote logic
-│   └── post_repository.dart
-│
-├── data/                          # Data sources
-│   ├── local/                     # Offline data (SQLite)
-│   │   ├── database_helper.dart
-│   │   ├── user_local_data.dart
-│   │   └── post_local_data.dart
-│   └── remote/                    # Online data (API)
-│       ├── api_service.dart       # Handles base HTTP logic
-│       ├── user_api_data.dart
-│       └── post_api_data.dart
-│
-├── models/                        # Data models
-│   ├── user.dart
-│   └── post.dart
-│
-├── services/                      # App-level services
-│   ├── network_service.dart       # Checks connectivity (online/offline)
-│   └── sync_service.dart          # Syncs offline → online when reconnected
-│
-└── core/                          # Common helpers & constants
-    ├── constants.dart
-    ├── enums.dart                 # e.g., NetworkStatus { online, offline }
-    └── helpers/
-        └── date_helper.dart
+└── guide.txt                          # Developer guide or notes
 
-Instructions:
-- Keep all Dart files inside lib/ following this structure.
-- ui/screens       → all pages/screens of the app
-- ui/widgets       → reusable UI components
-- controllers      → state management files
-- repositories     → business logic & data handling
-- data/local       → SQLite helpers for offline storage
-- data/remote      → API helper files
-- services         → sync service & API helper
-- models           → shared data models
-- core             → constants, helpers, enums
-- config           → configuration files like API URLs
 
-Flow to register new screens/widgets:
-1. Create new screen file
-    Example: lib/ui/screens/profile_screen.dart
-
-2. Import Flutter material package:
-    import 'package:flutter/material.dart';
-
-3. Create the widget class:
-    class ProfileScreen extends StatelessWidget {
-    const ProfileScreen({super.key});
-
-    @override
-    Widget build(BuildContext context) {
-        return Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
-        body: const Center(child: Text('Profile Screen')),
-        );
-    }
-    }
-
-4. Register the route in app.dart:
-    import 'ui/screens/profile_screen.dart';
-Add inside routes:
-    '/profile': (context) => const ProfileScreen(),
-
-5. Navigate to new screen:
-    Navigator.pushNamed(context, '/profile');
-
-Create file → Import material.dart → Define widget → Import in app.dart → Add route → Use Navigator.pushNamed()
+# Step 3: Run the Application
+Start the development server:
+> flutter run
