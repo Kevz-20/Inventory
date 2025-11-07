@@ -82,19 +82,31 @@ class IncomeStatementScreen extends ConsumerWidget {
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(12),
+          shadowColor: Colors.black.withValues(alpha: 0.3),
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFED1C24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide.none,
+                ),
+                elevation: 0,
               ),
-            ),
-            child: const Text(
-              'Download PDF',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              icon: const Icon(Icons.download, color: Colors.white),
+              label: const Text(
+                'Download PDF',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ),
