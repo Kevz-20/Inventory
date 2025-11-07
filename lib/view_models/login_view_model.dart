@@ -8,11 +8,7 @@ class LoginViewModel extends ChangeNotifier {
   String mobileNumber = '09XXXXXXXXX';
   String pin = '';
 
-  void changeMobileNumber(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Change mobile number tapped')),
-    );
-  }
+  void changeMobileNumber(BuildContext context) {}
 
   void onKeyTap(BuildContext context, String label) {
     if (label == 'back') {
@@ -23,10 +19,6 @@ class LoginViewModel extends ChangeNotifier {
     } else if (label == 'enter') {
       if (pin.length == 4) {
         GoRouter.of(context).go('/home');
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Incomplete PIN')));
       }
     } else {
       if (pin.length < 4) {

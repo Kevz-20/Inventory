@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../view_models/create_account_view_model.dart';
 import '../../core/app_colors.dart';
+import '../widgets/header.dart';
 
 class CreateAccountScreen extends ConsumerWidget {
   const CreateAccountScreen({super.key});
@@ -14,16 +15,7 @@ class CreateAccountScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        title: const Text(
-          "Bag-ong Account",
-          style: TextStyle(color: AppColors.textPrimary),
-        ),
-        centerTitle: true,
-        elevation: 0,
-      ),
+      appBar: const AppHeader(title: "Bag-ong Account", showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
         child: Form(
