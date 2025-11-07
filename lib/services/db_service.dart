@@ -9,7 +9,7 @@ class DBService {
   // Singleton database getter
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('business_data.db');
+    _database = await _initDB('app_data.db');
     return _database!;
   }
 
@@ -22,7 +22,7 @@ class DBService {
       version: 1,
       onCreate: _createDB,
       onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON'); // enable FK
+        await db.execute('PRAGMA foreign_keys = ON'); // enable Foreign Key
       },
     );
   }
@@ -33,8 +33,9 @@ class DBService {
     await db.execute('''
       CREATE TABLE account (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        phone_number INTEGER NOT NULL,
-        pin INTEGER NOT NULL,
+        association_name CHAR(50),
+        phone_number CHAR(15) NOT NULL,
+        pin CHAR(4) NOT NULL,
         security_question_id INTEGER,
         security_answer TEXT
       )
