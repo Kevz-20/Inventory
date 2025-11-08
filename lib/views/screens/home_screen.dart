@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../view_models/home_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/nav_bar.dart';
@@ -14,7 +13,7 @@ class HomeScreen extends ConsumerWidget {
       onTap: onTap,
       child: Container(
         height: 80,
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -36,7 +35,8 @@ class HomeScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
+              style: const TextStyle(
+                fontFamily: 'Poppins',
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -55,132 +55,143 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        title: Text(
+        backgroundColor: AppColors.primary,
+        title: const Text(
           'Welcome, DSWD!',
-          style: GoogleFonts.poppins(
+          style: TextStyle(
+            fontFamily: 'Poppins',
             color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Cash on Hand',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+      body: Column(
+        children: [
+          // Fixed top container
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Cash on Hand',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    color: Colors.white70,
+                    fontSize: 14,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'PHP 0.00',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Icon(
-                        Icons.remove_red_eye,
+                ),
+                SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'PHP 0.00',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
                         color: Colors.white,
-                        size: 24,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Mobile Number 09467678484',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 13,
                     ),
+                    Icon(Icons.remove_red_eye, color: Colors.white, size: 24),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Mobile Number 09467678484',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    color: Colors.white70,
+                    fontSize: 13,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Transactions',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 5),
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              children: [
-                _menuCard(
-                  'Halin',
-                  'lib/assets/record.png',
-                  onTap: () => context.go('/transaction_record'),
-                ),
-                _menuCard('Utang', 'lib/assets/utang.png'),
-                _menuCard(
-                  'Gasto',
-                  'lib/assets/gasto.png',
-                  onTap: () => context.go('/expenses'),
-                ),
-                _menuCard(
-                  'Kumpra',
-                  'lib/assets/stockin.png',
-                  onTap: () => context.go('/stockin'),
-                ),
-                _menuCard('Capital\nManagement', 'lib/assets/cash.png'),
-                _menuCard(
-                  'History',
-                  'lib/assets/history.png',
-                  onTap: () => context.go('/transaction_history'),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Reports',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
+          ),
+          // Scrollable content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _menuCard('Balance\nSheet', 'lib/assets/balance_sheet.png'),
-                _menuCard(
-                  'Income\nStatement',
-                  'lib/assets/income_statement.png',
-                  onTap: () => context.go('/income_statement'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Transactions',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                const SizedBox(height: 8),
+                GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _menuCard(
+                      'Halin',
+                      'lib/assets/record.png',
+                      onTap: () => context.go('/transaction_record'),
+                    ),
+                    _menuCard('Utang', 'lib/assets/utang.png'),
+                    _menuCard(
+                      'Gasto',
+                      'lib/assets/gasto.png',
+                      onTap: () => context.go('/expenses'),
+                    ),
+                    _menuCard(
+                      'Kumpra',
+                      'lib/assets/stockin.png',
+                      onTap: () => context.go('/stockin'),
+                    ),
+                    _menuCard('Capital\nManagement', 'lib/assets/cash.png'),
+                    _menuCard(
+                      'History',
+                      'lib/assets/history.png',
+                      onTap: () => context.go('/transaction_history'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Reports',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _menuCard('Balance\nSheet', 'lib/assets/balance_sheet.png'),
+                    _menuCard(
+                      'Income\nStatement',
+                      'lib/assets/income_statement.png',
+                      onTap: () => context.go('/income_statement'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: currentIndex,
