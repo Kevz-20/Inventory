@@ -19,7 +19,7 @@ class LoginScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             Column(
               children: [
-                Image.asset('assets/logo.png', height: 80),
+                Image.asset('lib/assets/logo.png', height: 80),
                 const SizedBox(height: 10),
                 const Text(
                   "E.M.P.O.W.E.R",

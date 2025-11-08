@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      showPerformanceOverlay: true,
+      showPerformanceOverlay: false,
       routerConfig: _router,
       title: 'SLP',
     );
