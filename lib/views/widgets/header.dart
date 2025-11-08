@@ -35,7 +35,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.primary,
       elevation: 2,
     );
   }
