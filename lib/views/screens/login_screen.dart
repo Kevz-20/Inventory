@@ -1,3 +1,4 @@
+import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,7 @@ class LoginScreen extends ConsumerWidget {
     final viewModel = ref.watch(loginViewModelProvider);
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 253, 238, 224),
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -55,20 +56,23 @@ class LoginScreen extends ConsumerWidget {
                   children: [
                     const Text(
                       "Mobile Number: ",
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     Text(
                       viewModel.mobileNumber,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 8),
                     const Icon(
                       Icons.swap_horiz,
-                      color: Colors.black54,
+                      color: AppColors.textPrimary,
                       size: 22,
                     ),
                   ],
@@ -78,7 +82,11 @@ class LoginScreen extends ConsumerWidget {
             const SizedBox(height: 25),
             const Text(
               "PIN",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 10),
             Row(
@@ -92,9 +100,9 @@ class LoginScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: index < viewModel.pin.length
-                        ? Colors.black
+                        ? AppColors.primaryLight
                         : Colors.transparent,
-                    border: Border.all(color: Colors.black54, width: 1),
+                    border: Border.all(color: Colors.black54, width: 2),
                   ),
                 ),
               ),
@@ -104,6 +112,8 @@ class LoginScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
                   itemCount: 12,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
@@ -127,7 +137,7 @@ class LoginScreen extends ConsumerWidget {
                     if (label == "back") {
                       icon = Icons.backspace_outlined;
                     } else if (label == "enter") {
-                      textColor = Colors.green;
+                      textColor = AppColors.primaryLight;
                     }
 
                     return GestureDetector(
@@ -138,9 +148,9 @@ class LoginScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color.fromARGB(26, 0, 0, 0),
-                              blurRadius: 3,
-                              offset: const Offset(0, 3),
+                              color: Colors.grey.withValues(alpha: 51),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
@@ -172,7 +182,7 @@ class LoginScreen extends ConsumerWidget {
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(
-                        color: Color(0xFF4B3B88),
+                        color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
                       ),
@@ -183,7 +193,7 @@ class LoginScreen extends ConsumerWidget {
                     child: const Text(
                       "NAKALIMOT SA PIN?",
                       style: TextStyle(
-                        color: Color(0xFF4B3B88),
+                        color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
                       ),

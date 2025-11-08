@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
 
 class BottomNavBar extends StatelessWidget {
@@ -17,7 +18,13 @@ class BottomNavBar extends StatelessWidget {
       height: 70,
       child: BottomNavigationBar(
         currentIndex: currentIndex,
-        onTap: onTap,
+        onTap: (index) {
+          if (index == 1) {
+            context.go('/login');
+          } else {
+            onTap(index);
+          }
+        },
         iconSize: 28,
         selectedFontSize: 14,
         unselectedFontSize: 12,
