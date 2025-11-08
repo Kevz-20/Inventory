@@ -51,6 +51,17 @@ lib/
 │   ├── login_viewmodel.dart
 │   └── transaction_history_viewmodel.dart
 │
+├── assets/                            # Assets
+│   ├── icons/
+│   │   └── sample_icon.png
+│   ├── images/
+│   │   └── sample_image.png
+│   ├── fonts/
+│   │   └── Poppins-Regular.ttf
+│   ├── animations/
+│   │   └── sample_animation.json
+│   └── example_asset.txt              # example file
+│
 └── guide.txt                          # Developer guide or notes
 
 

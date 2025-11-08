@@ -133,24 +133,24 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 _menuCard(
                   'Halin',
-                  'assets/record.png',
+                  'lib/assets/record.png',
                   onTap: () => context.go('/transaction_record'),
                 ),
-                _menuCard('Utang', 'assets/utang.png'),
+                _menuCard('Utang', 'lib/assets/utang.png'),
                 _menuCard(
                   'Gasto',
-                  'assets/gasto.png',
+                  'lib/assets/gasto.png',
                   onTap: () => context.go('/expenses'),
                 ),
                 _menuCard(
                   'Kumpra',
-                  'assets/stockin.png',
+                  'lib/assets/stockin.png',
                   onTap: () => context.go('/stockin'),
                 ),
-                _menuCard('Capital\nManagement', 'assets/cash.png'),
+                _menuCard('Capital\nManagement', 'lib/assets/cash.png'),
                 _menuCard(
                   'History',
-                  'assets/history.png',
+                  'lib/assets/history.png',
                   onTap: () => context.go('/transaction_history'),
                 ),
               ],
@@ -171,10 +171,10 @@ class HomeScreen extends ConsumerWidget {
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               children: [
-                _menuCard('Balance\nSheet', 'assets/balance_sheet.png'),
+                _menuCard('Balance\nSheet', 'lib/assets/balance_sheet.png'),
                 _menuCard(
                   'Income\nStatement',
-                  'assets/income_statement.png',
+                  'lib/assets/income_statement.png',
                   onTap: () => context.go('/income_statement'),
                 ),
               ],
