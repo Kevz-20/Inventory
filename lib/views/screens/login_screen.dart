@@ -61,19 +61,27 @@ class LoginScreen extends ConsumerWidget {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    Text(
-                      viewModel.mobileNumber,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                    Flexible(
+                      child: Text(
+                        viewModel.mobileNumber.isNotEmpty
+                            ? viewModel.mobileNumber
+                            : 'Not set',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Icon(
-                      Icons.swap_horiz,
-                      color: AppColors.textPrimary,
-                      size: 22,
+                    GestureDetector(
+                      onTap: () => viewModel.changeMobileNumber(context),
+                      child: const Icon(
+                        Icons.swap_horiz,
+                        color: AppColors.textPrimary,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),

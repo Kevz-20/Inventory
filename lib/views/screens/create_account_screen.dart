@@ -17,12 +17,20 @@ class CreateAccountScreen extends ConsumerWidget {
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: "Bag-ong Account", showBackButton: true),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Form(
           key: vm.formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              buildLabel("Association Name"),
+              buildTextField(
+                controller: vm.associationNameController,
+                hint: "e.g., SLP",
+              ),
+
+              const SizedBox(height: 15),
               buildLabel("Mobile Number"),
               buildTextField(
                 controller: vm.mobileController,
@@ -30,133 +38,133 @@ class CreateAccountScreen extends ConsumerWidget {
                 validator: vm.validateMobile,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 11,
+                keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 16),
+              buildLabel("PIN"),
               Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        buildLabel("4-digit PIN"),
-                        buildTextField(
-                          controller: vm.pinController,
-                          hint: "Enter 4-digit PIN",
-                          obscureText: true,
-                          maxLength: 4,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ],
+                    child: buildTextField(
+                      controller: vm.pinController,
+                      hint: "Enter 4-digit PIN",
+                      obscureText: true,
+                      maxLength: 4,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      keyboardType: TextInputType.number,
+                      validator: vm.validatePinMatch,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        buildLabel("Confirm PIN"),
-                        buildTextField(
-                          controller: vm.confirmPinController,
-                          hint: "Re-enter PIN",
-                          obscureText: true,
-                          maxLength: 4,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                        ),
-                      ],
+                    child: buildTextField(
+                      controller: vm.confirmPinController,
+                      hint: "Re-enter PIN",
+                      obscureText: true,
+                      maxLength: 4,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      keyboardType: TextInputType.number,
+                      validator: vm.validatePinMatch,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              buildLabel("First Name"),
-              buildTextField(
-                controller: vm.firstNameController,
-                hint: "e.g., Juan",
-              ),
-              const SizedBox(height: 16),
-              buildLabel("Middle Name"),
-              buildTextField(
-                controller: vm.middleNameController,
-                hint: "(optional)",
-              ),
-              const SizedBox(height: 16),
-              buildLabel("Last Name"),
-              buildTextField(
-                controller: vm.lastNameController,
-                hint: "e.g., Dela Cruz",
-              ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 15),
               buildLabel("Security Question (for PIN reset)"),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade900),
-                ),
-                child: DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade900),
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                      ),
+                      hint: const Text("Pili ug pangutana"),
+                      initialValue: vm.selectedQuestion,
+                      items: vm.questions
+                          .map(
+                            (q) => DropdownMenuItem(value: q, child: Text(q)),
+                          )
+                          .toList(),
+                      onChanged: vmNotifier.setSelectedQuestion,
+                      validator: (_) => null,
+                    ),
                   ),
-                  hint: const Text("Pili ug pangutana"),
-                  initialValue: vm.selectedQuestion,
-                  items: vm.questions
-                      .map((q) => DropdownMenuItem(value: q, child: Text(q)))
-                      .toList(),
-                  onChanged: (value) {
-                    vmNotifier.selectedQuestion = value;
-                    vmNotifier.validateForm();
-                  },
-                ),
+                  if (vm.submitted && vm.selectedQuestion == null)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6, left: 4),
+                      child: Text(
+                        'Please select a question',
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                ],
               ),
+
               const SizedBox(height: 16),
               buildLabel("Tubag (Answer)"),
               buildTextField(
                 controller: vm.answerController,
                 hint: "Isulat ang imong tubag",
               ),
+
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: vm.isFormValid
+                    backgroundColor: vm.isFormValid && !vm.isLoading
                         ? AppColors.primary
                         : Colors.grey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: vm.isFormValid
-                      ? () {
-                          if (vm.formKey.currentState!.validate()) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Account created successfully!'),
+                  onPressed: vm.isFormValid && !vm.isLoading
+                      ? () async {
+                          vmNotifier.setLoading(true);
+                          final success = await vm.createAccount();
+                          vmNotifier.setLoading(false);
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Account created successfully!'
+                                    : vm.errorMessage ??
+                                          'Failed to create account',
                               ),
-                            );
-                          }
+                            ),
+                          );
+                          if (success) vm.clearFields();
                         }
                       : null,
-                  child: const Text(
-                    "Create Account",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: vm.isLoading
+                      ? const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        )
+                      : const Text(
+                          "Create Account",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -178,12 +186,15 @@ class CreateAccountScreen extends ConsumerWidget {
     int? maxLength,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    TextInputType? keyboardType,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      keyboardType: TextInputType.text,
       inputFormatters: inputFormatters,
+      keyboardType: keyboardType ?? TextInputType.text,
+      maxLength: maxLength,
+      validator: validator,
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
@@ -194,9 +205,6 @@ class CreateAccountScreen extends ConsumerWidget {
           vertical: 14,
         ),
       ),
-      maxLength: maxLength,
-      validator: validator,
-      onChanged: (_) => validator?.call(controller.text),
     );
   }
 }

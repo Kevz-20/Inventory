@@ -32,9 +32,8 @@ class DBService {
     // Account table
     await db.execute('''
       CREATE TABLE account (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mobile_number CHAR(15) PRIMARY KEY,
         association_name CHAR(50),
-        phone_number CHAR(15) NOT NULL,
         pin CHAR(4) NOT NULL,
         security_question_id INTEGER,
         security_answer TEXT

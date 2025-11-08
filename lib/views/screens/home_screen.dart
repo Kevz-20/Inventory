@@ -57,7 +57,7 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         title: const Text(
-          'Welcome, DSWD!',
+          'E.M.P.O.W.E.R',
           style: TextStyle(
             fontFamily: 'Poppins',
             color: Colors.white,
@@ -89,7 +89,7 @@ class HomeScreen extends ConsumerWidget {
                   'Cash on Hand',
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w500, // Medium
+                    fontWeight: FontWeight.w500,
                     color: Colors.white70,
                     fontSize: 14,
                   ),
@@ -99,10 +99,10 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'PHP 0.00',
+                      'PHP 1569.70',
                       style: TextStyle(
                         fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700, // Bold
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
                         fontSize: 28,
                       ),
