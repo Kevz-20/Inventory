@@ -83,7 +83,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
                         boxShadow: [
                           BoxShadow(
                             color: Colors.grey.withValues(alpha: 51),
-                            blurRadius: 4,
+                            blurRadius: 2,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -121,13 +121,19 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     itemBuilder: (context, index) {
                       final transaction = vm.filteredTransactions[index];
                       final isExpense = vm.isExpense(transaction['amount']!);
-                      return Card(
-                        color: Colors.white,
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 51),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(

@@ -17,11 +17,11 @@ class HomeScreen extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.08),
-              blurRadius: 6,
-              offset: Offset(0, 3),
+              color: Colors.grey.withValues(alpha: 51),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -74,19 +74,27 @@ class HomeScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: AppColors.primary,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 51),
+                  blurRadius: 2,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'Cash on Hand',
                   style: TextStyle(
                     fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w500, // Medium
                     color: Colors.white70,
                     fontSize: 14,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -94,19 +102,24 @@ class HomeScreen extends ConsumerWidget {
                       'PHP 0.00',
                       style: TextStyle(
                         fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700, // Bold
                         color: Colors.white,
                         fontSize: 28,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Icon(Icons.remove_red_eye, color: Colors.white, size: 24),
+                    const Icon(
+                      Icons.remove_red_eye,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Mobile Number 09467678484',
                   style: TextStyle(
                     fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w400, // Regular
                     color: Colors.white70,
                     fontSize: 13,
                   ),
