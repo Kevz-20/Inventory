@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'core/page_transitions.dart';
 import 'views/screens/login_screen.dart';
-import 'views/screens/forgot_pin_screen.dart';
-import 'views/screens/create_account_screen.dart';
 import 'views/screens/home_screen.dart';
+import 'views/screens/create_account_screen.dart';
+import 'views/screens/forgot_pin_screen.dart';
 import 'views/screens/expenses_screen.dart';
 import 'views/screens/stockin_screen.dart';
 import 'views/screens/transaction_record_screen.dart';
@@ -13,35 +14,80 @@ import 'views/screens/income_statement_screen.dart';
 final _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/login',
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const LoginScreen(),
+        forward: true,
+      ),
+    ),
     GoRoute(
       path: '/create_account',
-      builder: (context, state) => const CreateAccountScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const CreateAccountScreen(),
+        forward: true,
+      ),
     ),
     GoRoute(
       path: '/forgot_pin',
-      builder: (context, state) => const ForgotPinScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const ForgotPinScreen(),
+        forward: true,
+      ),
     ),
-    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/home',
+      pageBuilder: (context, state) {
+        final from = state.extra as String?;
+        return slidePage(
+          key: state.pageKey,
+          child: const HomeScreen(),
+          forward: from == null || from == '/login',
+        );
+      },
+    ),
     GoRoute(
       path: '/expenses',
-      builder: (context, state) => const ExpensesScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const ExpensesScreen(),
+        forward: true,
+      ),
     ),
     GoRoute(
       path: '/stockin',
-      builder: (context, state) => const StockinScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const StockinScreen(),
+        forward: true,
+      ),
     ),
     GoRoute(
       path: '/transaction_record',
-      builder: (context, state) => const TransactionRecordScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const TransactionRecordScreen(),
+        forward: true,
+      ),
     ),
     GoRoute(
       path: '/transaction_history',
-      builder: (context, state) => const TransactionHistoryScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const TransactionHistoryScreen(),
+        forward: true,
+      ),
     ),
     GoRoute(
       path: '/income_statement',
-      builder: (context, state) => const IncomeStatementScreen(),
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const IncomeStatementScreen(),
+        forward: true,
+      ),
     ),
   ],
 );
@@ -53,7 +99,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      showPerformanceOverlay: false,
       routerConfig: _router,
       title: 'SLP',
     );

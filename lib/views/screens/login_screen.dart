@@ -4,11 +4,24 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import '../../view_models/login_view_model.dart';
 
-class LoginScreen extends ConsumerWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(loginViewModelProvider).loadSavedMobile();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final viewModel = ref.watch(loginViewModelProvider);
 
     return Scaffold(
@@ -97,23 +110,29 @@ class LoginScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                4,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: index < viewModel.pin.length
-                        ? AppColors.primaryLight
-                        : Colors.transparent,
-                    border: Border.all(color: Colors.black54, width: 2),
+            Consumer(
+              builder: (context, ref, _) {
+                final pin = ref.watch(loginViewModelProvider).pin;
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    4,
+                    (index) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: index < pin.length
+                            ? AppColors.primaryLight
+                            : Colors.transparent,
+                        border: Border.all(color: Colors.black54, width: 2),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 25),
             Expanded(
@@ -156,7 +175,7 @@ class LoginScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withValues(alpha: 51),
+                              color: Colors.grey.withAlpha(51),
                               blurRadius: 2,
                               offset: const Offset(0, 2),
                             ),
@@ -186,7 +205,7 @@ class LoginScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () => context.push('/create_account'),
+                    onTap: () => GoRouter.of(context).push('/create_account'),
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(
@@ -197,7 +216,7 @@ class LoginScreen extends ConsumerWidget {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => context.push('/forgot_pin'),
+                    onTap: () => GoRouter.of(context).push('/forgot_pin'),
                     child: const Text(
                       "NAKALIMOT SA PIN?",
                       style: TextStyle(

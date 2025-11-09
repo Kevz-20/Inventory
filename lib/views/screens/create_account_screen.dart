@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../view_models/create_account_view_model.dart';
+import '../../view_models/login_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 
@@ -23,6 +25,30 @@ class CreateAccountScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Response message
+              if (vm.errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: vm.isSuccessMessage
+                        ? AppColors.success
+                        : AppColors.error,
+                  ),
+                  child: Text(
+                    vm.errorMessage!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+
               // Association Name
               buildLabel("Association Name"),
               buildTextField(
@@ -82,12 +108,14 @@ class CreateAccountScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 15),
-
               // Security Question
               buildLabel("Security Question (for PIN reset)"),
               DropdownButtonFormField<String>(
                 initialValue: vm.selectedQuestion,
-                hint: const Text("Pili ug pangutana"),
+                hint: const Text(
+                  "Pili ug pangutana",
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
@@ -102,17 +130,26 @@ class CreateAccountScreen extends ConsumerWidget {
                   errorStyle: const TextStyle(
                     color: AppColors.error,
                     fontSize: 12,
+                    fontFamily: 'Poppins',
                   ),
                 ),
                 isExpanded: true,
                 items: vm.questions
-                    .map((q) => DropdownMenuItem(value: q, child: Text(q)))
+                    .map(
+                      (q) => DropdownMenuItem(
+                        value: q,
+                        child: Text(
+                          q,
+                          style: const TextStyle(fontFamily: 'Poppins'),
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   vmNotifier.setSelectedQuestion(value);
-                  vmNotifier.clearFieldError(
-                    vm.answerController,
-                  ); // optional for related fields
+                  if (vm.answerController.text.isNotEmpty) {
+                    vmNotifier.clearFieldError(vm.answerController);
+                  }
                 },
               ),
               const SizedBox(height: 15),
@@ -144,8 +181,27 @@ class CreateAccountScreen extends ConsumerWidget {
                   onPressed: !vm.isLoading
                       ? () async {
                           vmNotifier.setLoading(true);
-                          await vm.createAccount();
+                          bool success = await vm.createAccount();
                           vmNotifier.setLoading(false);
+
+                          if (success) {
+                            if (!context.mounted) return;
+
+                            // Delay for 3 seconds
+                            await Future.delayed(const Duration(seconds: 3));
+
+                            // Clear all fields
+                            vm.clearFields();
+
+                            // Update mobile number on login screen
+                            final loginVM = ref.read(loginViewModelProvider);
+                            await loginVM.loadSavedMobile();
+
+                            if (!context.mounted) return;
+
+                            // Navigate to login screen
+                            context.go('/login');
+                          }
                         }
                       : null,
                   child: vm.isLoading
@@ -155,9 +211,10 @@ class CreateAccountScreen extends ConsumerWidget {
                       : const Text(
                           "Create Account",
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
+                            fontFamily: 'Poppins',
                           ),
                         ),
                 ),
@@ -171,7 +228,13 @@ class CreateAccountScreen extends ConsumerWidget {
 
   Widget buildLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontFamily: 'Poppins',
+      ),
+    ),
   );
 
   Widget buildTextField({
@@ -191,10 +254,16 @@ class CreateAccountScreen extends ConsumerWidget {
       keyboardType: keyboardType ?? TextInputType.text,
       maxLength: maxLength,
       onChanged: onChanged,
+      style: const TextStyle(fontFamily: 'Poppins'),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
         errorText: errorText,
-        errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
+        errorStyle: const TextStyle(
+          color: AppColors.error,
+          fontSize: 12,
+          fontFamily: 'Poppins',
+        ),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

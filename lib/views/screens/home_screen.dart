@@ -153,24 +153,26 @@ class HomeScreen extends ConsumerWidget {
                     _menuCard(
                       'Halin',
                       'lib/assets/record.png',
-                      onTap: () => context.go('/transaction_record'),
+                      onTap: () =>
+                          GoRouter.of(context).push('/transaction_record'),
                     ),
                     _menuCard('Utang', 'lib/assets/utang.png'),
                     _menuCard(
                       'Gasto',
                       'lib/assets/gasto.png',
-                      onTap: () => context.go('/expenses'),
+                      onTap: () => GoRouter.of(context).push('/expenses'),
                     ),
                     _menuCard(
                       'Kumpra',
                       'lib/assets/stockin.png',
-                      onTap: () => context.go('/stockin'),
+                      onTap: () => GoRouter.of(context).push('/stockin'),
                     ),
                     _menuCard('Capital\nManagement', 'lib/assets/cash.png'),
                     _menuCard(
                       'History',
                       'lib/assets/history.png',
-                      onTap: () => context.go('/transaction_history'),
+                      onTap: () =>
+                          GoRouter.of(context).push('/transaction_history'),
                     ),
                   ],
                 ),
@@ -196,7 +198,8 @@ class HomeScreen extends ConsumerWidget {
                     _menuCard(
                       'Income\nStatement',
                       'lib/assets/income_statement.png',
-                      onTap: () => context.go('/income_statement'),
+                      onTap: () =>
+                          GoRouter.of(context).push('/income_statement'),
                     ),
                   ],
                 ),

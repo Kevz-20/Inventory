@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import '../repositories/create_account_repository.dart';
@@ -15,7 +16,7 @@ class CreateAccountViewModel extends ChangeNotifier {
   final CreateAccountRepository _repository;
 
   CreateAccountViewModel(this._repository) {
-    loadSecurityQuestions(); // Load questions from DB
+    loadSecurityQuestions(); // Load security questions from DB
 
     // Real-time validation for each field
     associationNameController.addListener(() {
@@ -48,18 +49,21 @@ class CreateAccountViewModel extends ChangeNotifier {
   String? selectedQuestion;
   List<String> questions = [];
 
-  bool isLoading = false; // Loading indicator
+  // State
+  bool isLoading = false; // For create account button
   bool submitted = false; // Form submitted flag
-  bool isLoadingQuestions = true; // Questions loading flag
+  bool isLoadingQuestions = true; // Loading questions
+  bool isSuccessMessage = false; // To differentiate success/error message
 
-  // Field-specific errors
+  // Field errors
   String? associationError;
   String? mobileError;
   String? pinError;
   String? confirmPinError;
   String? answerError;
   String? questionError;
-  String? errorMessage; // General error message
+
+  String? errorMessage; // General response message
 
   // Load security questions
   Future<void> loadSecurityQuestions() async {
@@ -69,7 +73,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     setLoading(false);
   }
 
-  // Set dropdown value and clear error
+  // Dropdown selection
   void setSelectedQuestion(String? value) {
     selectedQuestion = value;
     questionError = null;
@@ -79,31 +83,37 @@ class CreateAccountViewModel extends ChangeNotifier {
   // Create account
   Future<bool> createAccount() async {
     submitted = true;
-    if (!_validateForm()) return false; // Stop if validation fails
+    if (!_validateForm()) return false;
 
     setLoading(true);
     errorMessage = null;
 
     try {
       final account = Account(
-        associationName: associationNameController.text,
-        mobileNumber: mobileController.text,
-        pin: pinController.text,
+        associationName: associationNameController.text.trim(),
+        mobileNumber: mobileController.text.trim(),
+        pin: pinController.text.trim(),
         securityQuestionId: selectedQuestion != null
             ? questions.indexOf(selectedQuestion!) + 1
             : null,
-        securityAnswer: answerController.text,
+        securityAnswer: answerController.text.trim(),
       );
 
       await _repository.createAccount(account);
-      clearFields(); // Reset form after success
+
+      // Save the created mobile number locally
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('mobileNumber', account.mobileNumber);
+
+      clearFields();
+      showResponseMessage("Account created successfully!", success: true);
       return true;
     } catch (e) {
-      // Set error message for display
-      errorMessage = e.toString().contains('Mobile number already exists')
-          ? 'Mobile number already exists'
-          : 'Failed to create account';
-      notifyListeners();
+      showResponseMessage(
+        e.toString().contains('Mobile number already exists')
+            ? 'Mobile number already exists'
+            : 'Failed to create account',
+      );
       return false;
     } finally {
       setLoading(false);
@@ -118,7 +128,6 @@ class CreateAccountViewModel extends ChangeNotifier {
     _validateAnswer();
     _validateQuestion();
 
-    // Return true if all errors are null
     bool valid =
         associationError == null &&
         mobileError == null &&
@@ -139,7 +148,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Validate Mobile Number
+  // Check mobile number
   void _validateMobile() {
     if (mobileController.text.isEmpty) {
       mobileError = 'Please enter mobile number';
@@ -152,7 +161,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Validate PIN and Confirm PIN
+  // Check PIN
   void _validatePin() {
     if (pinController.text.isEmpty) {
       pinError = 'Please enter PIN';
@@ -173,7 +182,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Validate Answer
+  // Check answer
   void _validateAnswer() {
     answerError = answerController.text.isEmpty
         ? 'Please enter your answer'
@@ -181,7 +190,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Validate Security Question Selection
+  // Check question
   void _validateQuestion() {
     questionError = (selectedQuestion == null || selectedQuestion!.isEmpty)
         ? 'Please select a question'
@@ -195,7 +204,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Clear specific field error on user input
+  // Clear specific field error on input
   void clearFieldError(TextEditingController controller) {
     if (controller == associationNameController) associationError = null;
     if (controller == mobileController) mobileError = null;
@@ -205,7 +214,24 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Reset all fields and errors
+  // Show temporary message (error or success)
+  void showResponseMessage(
+    String message, {
+    bool success = false,
+    int durationSeconds = 3,
+  }) {
+    errorMessage = message;
+    isSuccessMessage = success;
+    notifyListeners();
+
+    Future.delayed(Duration(seconds: durationSeconds), () {
+      errorMessage = null;
+      isSuccessMessage = false;
+      notifyListeners();
+    });
+  }
+
+  // Clear all fields and errors
   void clearFields() {
     associationNameController.clear();
     mobileController.clear();
@@ -221,6 +247,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     answerError = null;
     questionError = null;
     errorMessage = null;
+    isSuccessMessage = false;
 
     formKey.currentState?.reset();
     notifyListeners();
