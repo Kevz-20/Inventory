@@ -109,7 +109,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     try {
       final account = Account(
         associationName: associationNameController.text,
-        phoneNumber: mobileController.text,
+        mobileNumber: mobileController.text,
         pin: pinController.text,
         securityQuestionId: selectedQuestion != null
             ? questions.indexOf(selectedQuestion!) + 1
@@ -120,8 +120,8 @@ class CreateAccountViewModel extends ChangeNotifier {
       await _repository.createAccount(account);
       return true;
     } catch (e) {
-      if (e.toString().contains('Phone number already exists')) {
-        errorMessage = 'Phone number already exists for this association';
+      if (e.toString().contains('Mobile number already exists')) {
+        errorMessage = 'Mobile number already exists for this association';
       } else {
         errorMessage = 'Failed to create account';
       }

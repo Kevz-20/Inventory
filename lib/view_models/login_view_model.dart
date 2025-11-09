@@ -85,7 +85,7 @@ class LoginViewModel extends ChangeNotifier {
                   keyboardType: TextInputType.phone,
                   maxLength: 11,
                   decoration: InputDecoration(
-                    hintText: 'e.g., 09123456789',
+                    hintText: '09123456789',
                     filled: true,
                     fillColor: Colors.grey[200],
                     counterText: '',
@@ -118,7 +118,7 @@ class LoginViewModel extends ChangeNotifier {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    // Error message centered
+                    // Error message
                     if (errorMessage != null)
                       Expanded(
                         child: Center(

@@ -9,14 +9,14 @@ class CreateAccountRepository {
 
   // Check if phone number exists for a specific association
   Future<bool> isPhoneNumberExists(
-    String phoneNumber,
+    String mobileNumber,
     String associationName,
   ) async {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
-      where: 'phone_number = ? AND association_name = ?',
-      whereArgs: [phoneNumber, associationName],
+      where: 'mobile_number = ? AND association_name = ?',
+      whereArgs: [mobileNumber, associationName],
     );
     return result.isNotEmpty;
   }
@@ -27,7 +27,7 @@ class CreateAccountRepository {
 
     // Prevent duplicate for same association
     if (await isPhoneNumberExists(
-      account.phoneNumber,
+      account.mobileNumber,
       account.associationName!,
     )) {
       throw Exception('Phone number already exists for this association');
@@ -45,7 +45,7 @@ class CreateAccountRepository {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
-      where: 'phone_number = ?',
+      where: 'mobile_number = ?',
       whereArgs: [phoneNumber],
     );
     if (result.isNotEmpty) return Account.fromMap(result.first);
