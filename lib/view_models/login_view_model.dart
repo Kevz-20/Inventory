@@ -85,7 +85,7 @@ class LoginViewModel extends ChangeNotifier {
                   keyboardType: TextInputType.phone,
                   maxLength: 11,
                   decoration: InputDecoration(
-                    hintText: '09123456789',
+                    hintText: '09XXXXXXXXX',
                     filled: true,
                     fillColor: Colors.grey[200],
                     counterText: '',

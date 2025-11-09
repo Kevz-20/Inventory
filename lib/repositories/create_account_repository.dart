@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 import '../models/create_account_model.dart';
 import '../services/db_service.dart';
 
@@ -7,7 +6,7 @@ class CreateAccountRepository {
 
   CreateAccountRepository(this._dbService);
 
-  // Check if phone number exists for a specific association
+  // Check if phone number exists
   Future<bool> isPhoneNumberExists(
     String mobileNumber,
     String associationName,
@@ -15,29 +14,18 @@ class CreateAccountRepository {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
-      where: 'mobile_number = ? AND association_name = ?',
+      where: 'mobile_number = ?',
       whereArgs: [mobileNumber, associationName],
     );
     return result.isNotEmpty;
   }
 
-  // Insert a new account, abort if duplicate for the same association
+  // Insert a new account
   Future<int> createAccount(Account account) async {
     final db = await _dbService.database;
 
-    // Prevent duplicate for same association
-    if (await isPhoneNumberExists(
-      account.mobileNumber,
-      account.associationName!,
-    )) {
-      throw Exception('Phone number already exists for this association');
-    }
-
-    return await db.insert(
-      'account',
-      account.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.abort, // do not replace
-    );
+    // Insert account into DB (will fail if primary key exists)
+    return await db.insert('account', account.toMap());
   }
 
   // Fetch account by phone number
@@ -57,5 +45,11 @@ class CreateAccountRepository {
     final db = await _dbService.database;
     final result = await db.query('security_questions');
     return result.map((row) => row['question'] as String).toList();
+  }
+
+  // Delete all accounts
+  Future<void> wipeAccounts() async {
+    final db = await _dbService.database;
+    await db.delete('account');
   }
 }
