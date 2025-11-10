@@ -35,11 +35,7 @@ class HomeScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -58,11 +54,7 @@ class HomeScreen extends ConsumerWidget {
         backgroundColor: AppColors.primary,
         title: const Text(
           'E.M.P.O.W.E.R',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Column(
@@ -88,7 +80,6 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   'Cash on Hand',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
                     fontWeight: FontWeight.w500,
                     color: Colors.white70,
                     fontSize: 14,
@@ -101,7 +92,6 @@ class HomeScreen extends ConsumerWidget {
                     Text(
                       'PHP 1569.70',
                       style: TextStyle(
-                        fontFamily: 'Poppins',
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         fontSize: 28,
@@ -118,7 +108,6 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   'Mobile Number 09467678484',
                   style: TextStyle(
-                    fontFamily: 'Poppins',
                     fontWeight: FontWeight.w400, // Regular
                     color: Colors.white70,
                     fontSize: 13,
@@ -135,11 +124,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'Transactions',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 GridView.count(
@@ -179,11 +164,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 const Text(
                   'Reports',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
                 GridView.count(
