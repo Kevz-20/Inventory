@@ -9,37 +9,59 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   Widget _menuCard(String title, String iconPath, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 80,
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
+    bool isPressed = false;
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return GestureDetector(
+          onTapDown: (_) {
+            setState(() => isPressed = true);
+          },
+          onTapUp: (_) {
+            setState(() => isPressed = false);
+            if (onTap != null) onTap();
+          },
+          onTapCancel: () {
+            setState(() => isPressed = false);
+          },
+          child: AnimatedScale(
+            scale: isPressed ? 0.95 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: Container(
+              height: 80,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 51),
+                    blurRadius: 2,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(iconPath, height: 50),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(iconPath, height: 50),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -59,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Fixed top container
+          // Top Container
           Container(
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.all(16),
@@ -80,8 +102,8 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   'Cash on Hand',
                   style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white70,
+                    fontWeight: FontWeight.w600,
+                    color: const Color.fromARGB(255, 219, 219, 219),
                     fontSize: 14,
                   ),
                 ),
@@ -106,10 +128,10 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Mobile Number 09467678484',
+                  'Mobile Number: 09467678484',
                   style: TextStyle(
-                    fontWeight: FontWeight.w400, // Regular
-                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                    color: Color.fromARGB(255, 219, 219, 219),
                     fontSize: 13,
                   ),
                 ),
