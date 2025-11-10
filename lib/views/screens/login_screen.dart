@@ -58,9 +58,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color.fromARGB(26, 0, 0, 0),
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
+                      color: Colors.grey.withValues(alpha: 51),
+                      blurRadius: 2,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -168,30 +168,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     }
 
                     return GestureDetector(
-                      onTap: () => viewModel.onKeyTap(context, label),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9F6F1),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withAlpha(51),
-                              blurRadius: 2,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: icon != null
-                              ? Icon(icon, size: 26, color: Colors.black87)
-                              : Text(
-                                  label,
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w500,
-                                    color: textColor,
+                      onTapDown: (_) => viewModel.setPressed(index, true),
+                      onTapUp: (_) {
+                        viewModel.setPressed(index, false);
+                        viewModel.onKeyTap(context, label);
+                      },
+                      onTapCancel: () => viewModel.setPressed(index, false),
+                      child: AnimatedScale(
+                        scale: viewModel.isPressed(index) ? 0.85 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.elasticOut,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9F6F1),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withValues(alpha: 51),
+                                blurRadius: 2,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: icon != null
+                                ? Icon(icon, size: 26, color: Colors.black87)
+                                : Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w500,
+                                      color: textColor,
+                                    ),
                                   ),
-                                ),
+                          ),
                         ),
                       ),
                     );

@@ -23,6 +23,17 @@ class LoginViewModel extends ChangeNotifier {
   String pin = ''; // current PIN input
   String? errorMessage; // login error message
 
+  final Set<int> _pressedKeys = {}; // NEW: track pressed buttons
+  bool isPressed(int index) => _pressedKeys.contains(index);
+  void setPressed(int index, bool pressed) {
+    if (pressed) {
+      _pressedKeys.add(index);
+    } else {
+      _pressedKeys.remove(index);
+    }
+    notifyListeners();
+  }
+
   // Load saved mobile from prefs
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
