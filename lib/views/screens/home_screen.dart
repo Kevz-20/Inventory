@@ -138,7 +138,6 @@ class HomeScreen extends ConsumerWidget {
               ],
             ),
           ),
-          // Scrollable content
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -180,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         duration: const Duration(milliseconds: 120),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF9F6F1),
+                            color: const Color.fromARGB(255, 255, 255, 255),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(

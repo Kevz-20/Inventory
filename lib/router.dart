@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
 import 'views/screens/login_screen.dart';
@@ -11,7 +10,7 @@ import 'views/screens/transaction_record_screen.dart';
 import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
 
-final _router = GoRouter(
+final router = GoRouter(
   initialLocation: '/login',
   routes: [
     GoRoute(
@@ -91,16 +90,3 @@ final _router = GoRouter(
     ),
   ],
 );
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: _router,
-      title: 'SLP',
-    );
-  }
-}

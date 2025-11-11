@@ -27,4 +27,5 @@ class AppColors {
 
   // Shadows
   static const Color shadow = Color.fromRGBO(0, 0, 0, 0.08);
+  
 }

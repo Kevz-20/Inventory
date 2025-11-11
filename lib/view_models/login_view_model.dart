@@ -75,12 +75,8 @@ class LoginViewModel extends ChangeNotifier {
 
   // Login
   Future<void> login(BuildContext context) async {
-    debugPrint('Login started');
-    debugPrint('Mobile: $mobileNumber, PIN: $pin');
-
     if (mobileNumber.isEmpty || pin.length != 4) {
       errorMessage = 'Enter valid mobile number and PIN';
-      debugPrint('Validation failed: $errorMessage');
       notifyListeners();
       if (context.mounted) {
         _showMessageDialog(context, errorMessage!, success: false);
@@ -89,16 +85,11 @@ class LoginViewModel extends ChangeNotifier {
     }
 
     final account = await _repository.getAccountByMobileNumber(mobileNumber);
-    debugPrint(
-      'Fetched account: ${account?.mobileNumber}, PIN: ${account?.pin}',
-    );
 
     if (account != null && account.pin == pin) {
-      debugPrint('Login successful');
       errorMessage = null;
       clearPin();
       await saveMobileNumber(account.mobileNumber);
-      debugPrint('Saved mobile number: ${account.mobileNumber}');
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
         await Future.delayed(const Duration(seconds: 1));
@@ -106,7 +97,6 @@ class LoginViewModel extends ChangeNotifier {
       }
     } else {
       errorMessage = 'Invalid mobile number or PIN';
-      debugPrint('Login failed: $errorMessage');
       notifyListeners();
       if (context.mounted) {
         _showMessageDialog(context, errorMessage!, success: false);

@@ -44,7 +44,6 @@ class CreateAccountScreen extends ConsumerWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins',
                     ),
                   ),
                 ),
@@ -112,10 +111,7 @@ class CreateAccountScreen extends ConsumerWidget {
               buildLabel("Security Question (for PIN reset)"),
               DropdownButtonFormField<String>(
                 initialValue: vm.selectedQuestion,
-                hint: const Text(
-                  "Pili ug pangutana",
-                  style: TextStyle(fontFamily: 'Poppins'),
-                ),
+                hint: const Text("Pili ug pangutana"),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
@@ -130,20 +126,11 @@ class CreateAccountScreen extends ConsumerWidget {
                   errorStyle: const TextStyle(
                     color: AppColors.error,
                     fontSize: 12,
-                    fontFamily: 'Poppins',
                   ),
                 ),
                 isExpanded: true,
                 items: vm.questions
-                    .map(
-                      (q) => DropdownMenuItem(
-                        value: q,
-                        child: Text(
-                          q,
-                          style: const TextStyle(fontFamily: 'Poppins'),
-                        ),
-                      ),
-                    )
+                    .map((q) => DropdownMenuItem(value: q, child: Text(q)))
                     .toList(),
                 onChanged: (value) {
                   vmNotifier.setSelectedQuestion(value);
@@ -214,7 +201,6 @@ class CreateAccountScreen extends ConsumerWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            fontFamily: 'Poppins',
                           ),
                         ),
                 ),
@@ -228,13 +214,7 @@ class CreateAccountScreen extends ConsumerWidget {
 
   Widget buildLabel(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontWeight: FontWeight.w600,
-        fontFamily: 'Poppins',
-      ),
-    ),
+    child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
   );
 
   Widget buildTextField({
@@ -254,16 +234,11 @@ class CreateAccountScreen extends ConsumerWidget {
       keyboardType: keyboardType ?? TextInputType.text,
       maxLength: maxLength,
       onChanged: onChanged,
-      style: const TextStyle(fontFamily: 'Poppins'),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+        hintStyle: const TextStyle(fontSize: 14),
         errorText: errorText,
-        errorStyle: const TextStyle(
-          color: AppColors.error,
-          fontSize: 12,
-          fontFamily: 'Poppins',
-        ),
+        errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
