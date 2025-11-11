@@ -82,6 +82,9 @@ class LoginViewModel extends ChangeNotifier {
       errorMessage = 'Enter valid mobile number and PIN';
       debugPrint('Validation failed: $errorMessage');
       notifyListeners();
+      if (context.mounted) {
+        _showMessageDialog(context, errorMessage!, success: false);
+      }
       return;
     }
 
@@ -96,12 +99,43 @@ class LoginViewModel extends ChangeNotifier {
       clearPin();
       await saveMobileNumber(account.mobileNumber);
       debugPrint('Saved mobile number: ${account.mobileNumber}');
-      if (context.mounted) GoRouter.of(context).go('/home');
+      if (context.mounted) {
+        _showMessageDialog(context, 'Login successful!', success: true);
+        await Future.delayed(const Duration(seconds: 1));
+        if (context.mounted) GoRouter.of(context).go('/home');
+      }
     } else {
       errorMessage = 'Invalid mobile number or PIN';
       debugPrint('Login failed: $errorMessage');
       notifyListeners();
+      if (context.mounted) {
+        _showMessageDialog(context, errorMessage!, success: false);
+      }
     }
+  }
+
+  // Message Dialog
+  void _showMessageDialog(
+    BuildContext context,
+    String message, {
+    required bool success,
+  }) {
+    final color = success ? Colors.green : Colors.red;
+    final icon = success ? Icons.check_circle_outline : Icons.error_outline;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   // Change mobile number dialog

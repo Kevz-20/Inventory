@@ -176,8 +176,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onTapCancel: () => viewModel.setPressed(index, false),
                       child: AnimatedScale(
                         scale: viewModel.isPressed(index) ? 0.85 : 1.0,
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.elasticOut,
+                        curve: Curves.easeOut,
+                        duration: const Duration(milliseconds: 120),
                         child: Container(
                           decoration: BoxDecoration(
                             color: const Color(0xFFF9F6F1),

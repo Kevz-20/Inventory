@@ -75,7 +75,7 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         title: const Text(
-          'E.M.P.O.W.E.R',
+          'Home',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
@@ -112,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'PHP 1569.70',
+                      'PHP 10,000',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
