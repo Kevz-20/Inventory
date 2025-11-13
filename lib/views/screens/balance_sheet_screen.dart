@@ -10,18 +10,24 @@ class BalanceSheetScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Balance Sheet', showBackButton: true),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Date Range
+            // Date Range Row
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildDateCard("Sugod", "Oct 16, 2025"),
-                _buildDateCard("Tapos", "Oct 23, 2025"),
+              children: const [
+                Expanded(
+                  child: _DateBox(
+                    title: "Start Date",
+                    dateLabel: "Oct 16, 2025",
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _DateBox(title: "End Date", dateLabel: "Oct 23, 2025"),
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -48,84 +54,39 @@ class BalanceSheetScreen extends StatelessWidget {
               footer: "Total Liabilities",
             ),
 
-            const SizedBox(height: 30),
-
-            // Download Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4B1EFF), // violet button
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  shadowColor: Colors.black.withAlpha((0.3 * 255).round()),
-                  elevation: 4,
-                ),
-                icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
-                label: const Text(
-                  "Download Balance Sheet (PDF)",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                onPressed: () {
-                  debugPrint("Download Balance Sheet tapped");
-                },
-              ),
-            ),
+            const SizedBox(height: 80), // Extra spacing for bottom button
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDateCard(String label, String date) {
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFDF5E6),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade400,
-            blurRadius: 4,
-            offset: const Offset(2, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFED1C24),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            date,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
+              shadowColor: Colors.black.withAlpha((0.3 * 255).round()),
+              elevation: 4,
             ),
+            icon: const Icon(Icons.download, color: Colors.white),
+            label: const Text(
+              "Download PDF",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            onPressed: () {
+              debugPrint("Download Balance Sheet tapped");
+            },
           ),
-        ],
+        ),
       ),
     );
   }
@@ -139,7 +100,7 @@ class BalanceSheetScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDF5E6),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
@@ -177,6 +138,51 @@ class BalanceSheetScreen extends StatelessWidget {
               fontSize: 17,
               color: Colors.black87,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateBox extends StatelessWidget {
+  final String title;
+  final String dateLabel;
+  const _DateBox({required this.title, required this.dateLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(51),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(dateLabel, style: const TextStyle(fontSize: 14)),
+              const Icon(Icons.calendar_today, size: 18),
+            ],
           ),
         ],
       ),
