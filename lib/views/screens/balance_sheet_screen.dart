@@ -1,4 +1,6 @@
+import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
+import '../widgets/header.dart';
 
 class BalanceSheetScreen extends StatelessWidget {
   const BalanceSheetScreen({super.key});
@@ -6,22 +8,9 @@ class BalanceSheetScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5EE), // soft beige background
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF004D40), // dark green top bar
-        title: const Text(
-          "Balance Sheet",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 22,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 4,
-      ),
+      backgroundColor: AppColors.surface,
+      appBar: const AppHeader(title: 'Balance Sheet', showBackButton: true),
 
-      // body content
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -68,8 +57,6 @@ class BalanceSheetScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4B1EFF), // violet button
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFF4B1EFF),
-                  disabledForegroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -94,32 +81,15 @@ class BalanceSheetScreen extends StatelessWidget {
           ],
         ),
       ),
-
-      // bottom nav bar
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF4B1EFF),
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: "History"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: "Settings",
-          ),
-        ],
-      ),
     );
   }
 
-  // Widget builder for date cards
   Widget _buildDateCard(String label, String date) {
     return Container(
       width: 150,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDF5E6), // light cream
+        color: const Color(0xFFFDF5E6),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -160,7 +130,6 @@ class BalanceSheetScreen extends StatelessWidget {
     );
   }
 
-  // Widget builder for section cards
   Widget _buildSectionCard({
     required String title,
     required List<String> items,

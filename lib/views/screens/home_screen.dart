@@ -196,7 +196,11 @@ class HomeScreen extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
-                    _menuCard('Balance\nSheet', 'lib/assets/balance_sheet.png'),
+                    _menuCard(
+                      'Balance\nSheet',
+                      'lib/assets/balance_sheet.png',
+                      onTap: () => GoRouter.of(context).push('/balance_sheet'),
+                    ),
                     _menuCard(
                       'Income\nStatement',
                       'lib/assets/income_statement.png',
