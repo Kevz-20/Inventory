@@ -112,6 +112,7 @@ class CreateAccountScreen extends ConsumerWidget {
               DropdownButtonFormField<String>(
                 initialValue: vm.selectedQuestion,
                 hint: const Text("Pili ug pangutana"),
+                dropdownColor: Colors.white,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.white,
