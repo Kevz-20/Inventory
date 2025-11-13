@@ -9,6 +9,7 @@ import 'views/screens/stockin_screen.dart';
 import 'views/screens/transaction_record_screen.dart';
 import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
+import 'views/screens/balance_sheet_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/login',
@@ -85,6 +86,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => slidePage(
         key: state.pageKey,
         child: const IncomeStatementScreen(),
+        forward: true,
+      ),
+    ),
+    GoRoute(
+      path: '/balance_sheet',
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const BalanceSheetScreen(),
         forward: true,
       ),
     ),

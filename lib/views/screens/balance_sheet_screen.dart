@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class BalanceSheetPage extends StatelessWidget {
-  const BalanceSheetPage({super.key});
+class BalanceSheetScreen extends StatelessWidget {
+  const BalanceSheetScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +74,7 @@ class BalanceSheetPage extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  shadowColor: Colors.black.withOpacity(0.3),
+                  shadowColor: Colors.black.withAlpha((0.3 * 255).round()),
                   elevation: 4,
                 ),
                 icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
@@ -102,14 +102,8 @@ class BalanceSheetPage extends StatelessWidget {
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: "History",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: "History"),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: "Settings",
@@ -203,10 +197,7 @@ class BalanceSheetPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 item,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
               ),
             ),
           const Divider(thickness: 1),
