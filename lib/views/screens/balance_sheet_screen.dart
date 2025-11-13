@@ -1,12 +1,20 @@
-import 'package:dswd_slp/core/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import '../../view_models/balance_sheet_view_model.dart';
+import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 
-class BalanceSheetScreen extends StatelessWidget {
+final balanceSheetProvider = ChangeNotifierProvider(
+  (ref) => BalanceSheetViewModel(),
+);
+
+class BalanceSheetScreen extends ConsumerWidget {
   const BalanceSheetScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(balanceSheetProvider);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Balance Sheet', showBackButton: true),
@@ -17,16 +25,25 @@ class BalanceSheetScreen extends StatelessWidget {
           children: [
             // Date Range Row
             Row(
-              children: const [
+              children: [
                 Expanded(
-                  child: _DateBox(
-                    title: "Start Date",
-                    dateLabel: "Oct 16, 2025",
+                  child: GestureDetector(
+                    onTap: () => vm.selectDate(context, true),
+                    child: _DateBox(
+                      title: 'Start Date',
+                      dateLabel: vm.getFormattedDate(true),
+                    ),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: _DateBox(title: "End Date", dateLabel: "Oct 23, 2025"),
+                  child: GestureDetector(
+                    onTap: () => vm.selectDate(context, false),
+                    child: _DateBox(
+                      title: 'End Date',
+                      dateLabel: vm.getFormattedDate(false),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -35,14 +52,8 @@ class BalanceSheetScreen extends StatelessWidget {
             // Assets Section
             _buildSectionCard(
               title: "Assets",
-              items: [
-                "Cash on Hand",
-                "Cash in Bank",
-                "Accounts Receivable",
-                "Inventory",
-                "Fixed Assets",
-              ],
-              footer: "Total Assets",
+              items: vm.assets,
+              footer: "Total Assets: ${vm.formatCurrency(vm.totalAssets)}",
             ),
 
             const SizedBox(height: 20),
@@ -50,41 +61,45 @@ class BalanceSheetScreen extends StatelessWidget {
             // Liabilities Section
             _buildSectionCard(
               title: "Liabilities",
-              items: ["Accounts Payable"],
-              footer: "Total Liabilities",
+              items: vm.liabilities,
+              footer:
+                  "Total Liabilities: ${vm.formatCurrency(vm.totalLiabilities)}",
             ),
 
-            const SizedBox(height: 80), // Extra spacing for bottom button
+            const SizedBox(height: 80),
           ],
         ),
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFED1C24),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(12),
+          shadowColor: Colors.black.withAlpha((0.3 * 255).round()),
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                debugPrint("Download Balance Sheet tapped");
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFED1C24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide.none,
+                ),
+                elevation: 0,
               ),
-              shadowColor: Colors.black.withAlpha((0.3 * 255).round()),
-              elevation: 4,
-            ),
-            icon: const Icon(Icons.download, color: Colors.white),
-            label: const Text(
-              "Download PDF",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+              icon: const Icon(Icons.download, color: Colors.white),
+              label: const Text(
+                'Download PDF',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
-            onPressed: () {
-              debugPrint("Download Balance Sheet tapped");
-            },
           ),
         ),
       ),
@@ -96,50 +111,43 @@ class BalanceSheetScreen extends StatelessWidget {
     required List<String> items,
     required String footer,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade400,
-            blurRadius: 5,
-            offset: const Offset(2, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 10),
-          for (var item in items)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                item,
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.black87,
               ),
             ),
-          const Divider(thickness: 1),
-          Text(
-            footer,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-              color: Colors.black87,
+            const SizedBox(height: 10),
+            for (var item in items)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  item,
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+              ),
+            const Divider(thickness: 1),
+            Text(
+              footer,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: Colors.black87,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -148,6 +156,7 @@ class BalanceSheetScreen extends StatelessWidget {
 class _DateBox extends StatelessWidget {
   final String title;
   final String dateLabel;
+
   const _DateBox({required this.title, required this.dateLabel});
 
   @override
@@ -159,7 +168,7 @@ class _DateBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withAlpha(51),
+            color: Colors.grey.withValues(alpha: 51),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
