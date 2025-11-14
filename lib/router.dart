@@ -10,6 +10,7 @@ import 'views/screens/transaction_record_screen.dart';
 import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
 import 'views/screens/balance_sheet_screen.dart';
+import 'views/screens/capital_management_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/login',
@@ -94,6 +95,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => slidePage(
         key: state.pageKey,
         child: const BalanceSheetScreen(),
+        forward: true,
+      ),
+    ),
+    GoRoute(
+      path: '/capital_management',
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const CapitalManagementScreen(),
         forward: true,
       ),
     ),
