@@ -1,3 +1,4 @@
+import 'package:dswd_slp/views/screens/record_sales.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
 import 'views/screens/login_screen.dart';
@@ -12,6 +13,7 @@ import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
 import 'views/screens/balance_sheet_screen.dart';
 import 'views/screens/capital_management_screen.dart';
+import 'views/screens/utang_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/login',
@@ -112,6 +114,22 @@ final router = GoRouter(
       pageBuilder: (context, state) => slidePage(
         key: state.pageKey,
         child: const ProfileScreen(),
+        forward: false,
+      ),
+    ),
+    GoRoute(
+      path: '/utang',
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const UtangScreen(),
+        forward: true,
+      ),
+    ),
+    GoRoute(
+      path: '/record_sales',
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const RecordSalesScreen(),
         forward: true,
       ),
     ),

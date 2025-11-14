@@ -330,15 +330,6 @@ class DBService {
 
   // Seed initial reference data
   Future<void> _insertDefaultData(Database db) async {
-    // Insert dummy account for development
-    await db.insert('account', {
-      'mobile_number': '09123456789',
-      'association_name': 'Development User',
-      'pin': '1234',
-      'security_question_id': 1,
-      'security_answer': 'dummy',
-    });
-
     const securityQuestions = [
       'Unsa ang una nimo negosyo?',
       'Kinsay imong unang silingan o suod nga amigo/amiga sa pagkabata?',

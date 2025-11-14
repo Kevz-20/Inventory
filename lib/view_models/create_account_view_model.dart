@@ -82,8 +82,12 @@ class CreateAccountViewModel extends ChangeNotifier {
 
   // Create account
   Future<bool> createAccount() async {
+    debugPrint('DEBUG: createAccount() called'); // debug entry point
     submitted = true;
-    if (!_validateForm()) return false;
+    if (!_validateForm()) {
+      debugPrint('DEBUG: Form validation failed'); // debug validation failure
+      return false;
+    }
 
     setLoading(true);
     errorMessage = null;
@@ -99,16 +103,30 @@ class CreateAccountViewModel extends ChangeNotifier {
         securityAnswer: answerController.text.trim(),
       );
 
+      debugPrint(
+        'DEBUG: Account object created -> $account',
+      ); // debug account data
+
       await _repository.createAccount(account);
+      debugPrint(
+        'DEBUG: Account inserted into repository',
+      ); // debug after insertion
 
       // Save the created mobile number locally
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('mobileNumber', account.mobileNumber);
+      debugPrint(
+        'DEBUG: Mobile number saved locally -> ${account.mobileNumber}',
+      );
 
       clearFields();
       showResponseMessage("Account created successfully!", success: true);
+      debugPrint(
+        'DEBUG: Account creation completed successfully',
+      ); // debug success
       return true;
     } catch (e) {
+      debugPrint('DEBUG: Exception occurred -> $e'); // debug exception
       showResponseMessage(
         e.toString().contains('Mobile number already exists')
             ? 'Mobile number already exists'
@@ -117,6 +135,7 @@ class CreateAccountViewModel extends ChangeNotifier {
       return false;
     } finally {
       setLoading(false);
+      debugPrint('DEBUG: setLoading(false) called'); // debug finally block
     }
   }
 
