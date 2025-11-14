@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 CustomTransitionPage<T> slidePage<T>({
   required Widget child,
   required LocalKey key,
-  bool forward = true, // true = right-to-left, false = left-to-right
+  bool forward = true,
 }) {
   final beginOffset = forward ? const Offset(1, 0) : const Offset(-1, 0);
 

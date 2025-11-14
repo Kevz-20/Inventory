@@ -17,10 +17,16 @@ class BottomNavBar extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (index) {
-        if (index == 1) {
-          context.go('/login');
-        } else {
-          onTap(index);
+        switch (index) {
+          case 0:
+            context.go('/home');
+            break;
+          case 1:
+            context.go('/profile');
+            break;
+          case 2:
+            context.go('/settings');
+            break;
         }
       },
       iconSize: 28,

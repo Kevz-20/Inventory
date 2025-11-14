@@ -5,6 +5,7 @@ import 'views/screens/home_screen.dart';
 import 'views/screens/create_account_screen.dart';
 import 'views/screens/forgot_pin_screen.dart';
 import 'views/screens/expenses_screen.dart';
+import 'views/screens/profile_screen.dart';
 import 'views/screens/stockin_screen.dart';
 import 'views/screens/transaction_record_screen.dart';
 import 'views/screens/transaction_history_screen.dart';
@@ -103,6 +104,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => slidePage(
         key: state.pageKey,
         child: const CapitalManagementScreen(),
+        forward: true,
+      ),
+    ),
+    GoRoute(
+      path: '/profile',
+      pageBuilder: (context, state) => slidePage(
+        key: state.pageKey,
+        child: const ProfileScreen(),
         forward: true,
       ),
     ),
