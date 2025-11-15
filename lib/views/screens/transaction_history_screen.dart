@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
@@ -34,6 +35,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
       body: Column(
         children: [
           // Date pickers
+          // Date pickers
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -51,9 +53,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     },
                     child: _DateBox(
                       title: 'Start Date',
-                      dateLabel: viewModel.startDate.toIso8601String().split(
-                        'T',
-                      )[0],
+                      dateLabel: DateFormat(
+                        'MMMM d, y',
+                      ).format(viewModel.startDate),
                     ),
                   ),
                 ),
@@ -71,9 +73,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     },
                     child: _DateBox(
                       title: 'End Date',
-                      dateLabel: viewModel.endDate.toIso8601String().split(
-                        'T',
-                      )[0],
+                      dateLabel: DateFormat(
+                        'MMMM d, y',
+                      ).format(viewModel.endDate),
                     ),
                   ),
                 ),
