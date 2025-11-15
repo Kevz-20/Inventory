@@ -29,6 +29,7 @@ class ProfileScreen extends StatelessWidget {
               radius: 55,
               backgroundImage: AssetImage("assets/profile.png"),
             ),
+            
             const SizedBox(height: 15),
 
             const Text(
@@ -56,7 +57,7 @@ class ProfileScreen extends StatelessWidget {
 
             _sectionTitle('Personal Information'),
             _infoCard([
-              _infoRow(Icons.person, 'Full Name', 'Oirec Dior'),
+              _infoRow(Icons.numbers, 'Mobile Number', '09918030406'),
               _infoRow(Icons.cake, 'Birthday', ' '),
               _infoRow(Icons.phone, 'Contact Number', ' '),
               _infoRow(Icons.location_on, 'Address', ' '),
@@ -68,19 +69,6 @@ class ProfileScreen extends StatelessWidget {
             _infoCard([
               _infoRow(Icons.badge, 'Category', '4Ps Beneficiary'),
               _infoRow(Icons.info, 'Status', 'Active'),
-            ]),
-
-            const SizedBox(height: 20),
-
-            _sectionTitle('Uploaded Documents'),
-            _infoCard([
-              _infoRow(Icons.picture_as_pdf, 'Valid ID', 'Uploaded'),
-              _infoRow(Icons.receipt_long, 'Barangay Certificate', 'Uploaded'),
-              _infoRow(
-                Icons.insert_drive_file,
-                'Birth Certificate',
-                'Uploaded',
-              ),
             ]),
 
             const SizedBox(height: 20),

@@ -1,70 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/history_model.dart';
+
+// Provider for the ViewModel
+final transactionHistoryProvider =
+    ChangeNotifierProvider<TransactionHistoryViewModel>(
+      (ref) => TransactionHistoryViewModel(),
+    );
 
 class TransactionHistoryViewModel extends ChangeNotifier {
+  List<HistoryModel> transactions = _dummyTransactions;
+
+  String _selectedCategory = 'All';
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
-  String selectedCategory = 'All';
 
-  final List<Map<String, String>> transactions = [
-    {
-      'title': 'Grocery',
-      'amount': '₱500',
-      'category': 'Food',
-      'method': 'Cash',
-      'date': '2025-11-01',
-    },
-    {
-      'title': 'Salary',
-      'amount': '₱20000',
-      'category': 'Salary',
-      'method': 'Bank',
-      'date': '2025-11-03',
-    },
-  ];
-
+  String get selectedCategory => _selectedCategory;
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
 
-  List<Map<String, String>> get filteredTransactions {
+  List<HistoryModel> get filteredTransactions {
     return transactions.where((tx) {
-      final date = DateTime.parse(tx['date']!);
       final matchesDate =
-          date.isAfter(_startDate.subtract(const Duration(days: 1))) &&
-          date.isBefore(_endDate.add(const Duration(days: 1)));
+          !tx.date.isBefore(_startDate) && !tx.date.isAfter(_endDate);
       final matchesCategory =
-          selectedCategory == 'All' || tx['category'] == selectedCategory;
+          _selectedCategory == 'All' || tx.category == _selectedCategory;
       return matchesDate && matchesCategory;
     }).toList();
   }
 
-  String getFormattedDate(bool isStart) {
-    final date = isStart ? _startDate : _endDate;
-    return DateFormat('yyyy-MM-dd').format(date);
-  }
-
-  Future<void> selectDate(BuildContext context, bool isStart) async {
-    final initialDate = isStart ? _startDate : _endDate;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      if (isStart) {
-        _startDate = picked;
-      } else {
-        _endDate = picked;
-      }
-      notifyListeners();
-    }
-  }
-
   void selectCategory(String category) {
-    selectedCategory = category;
+    _selectedCategory = category;
     notifyListeners();
   }
 
-  bool isExpense(String amount) => amount.contains('-');
+  void setStartDate(DateTime date) {
+    _startDate = date;
+    notifyListeners();
+  }
+
+  void setEndDate(DateTime date) {
+    _endDate = date;
+    notifyListeners();
+  }
 }
+
+final List<HistoryModel> _dummyTransactions = [
+  HistoryModel(
+    title: 'Grocery',
+    amount: 500,
+    category: 'Food',
+    method: 'Cash',
+    date: DateTime(2025, 11, 1),
+  ),
+  HistoryModel(
+    title: 'Salary',
+    amount: 20000,
+    category: 'Salary',
+    method: 'Bank',
+    date: DateTime(2025, 11, 3),
+  ),
+  HistoryModel(
+    title: 'Taxi Ride',
+    amount: 120,
+    category: 'Transport',
+    method: 'Cash',
+    date: DateTime(2025, 11, 4),
+  ),
+];

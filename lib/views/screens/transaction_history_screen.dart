@@ -1,5 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
@@ -13,7 +13,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(transactionHistoryProvider);
+    final viewModel = ref.watch(transactionHistoryProvider);
 
     final categories = [
       'All',
@@ -33,49 +33,74 @@ class TransactionHistoryScreen extends ConsumerWidget {
       backgroundColor: AppColors.surface,
       body: Column(
         children: [
+          // Date pickers
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => vm.selectDate(context, true),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: viewModel.startDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) viewModel.setStartDate(picked);
+                    },
                     child: _DateBox(
                       title: 'Start Date',
-                      dateLabel: vm.getFormattedDate(true),
+                      dateLabel: viewModel.startDate.toIso8601String().split(
+                        'T',
+                      )[0],
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => vm.selectDate(context, false),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: viewModel.endDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) viewModel.setEndDate(picked);
+                    },
                     child: _DateBox(
                       title: 'End Date',
-                      dateLabel: vm.getFormattedDate(false),
+                      dateLabel: viewModel.endDate.toIso8601String().split(
+                        'T',
+                      )[0],
                     ),
                   ),
                 ),
               ],
             ),
           ),
+          // Category chips
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SizedBox(
               height: 45,
               child: ListView.separated(
                 clipBehavior: Clip.none,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
                 itemCount: categories.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final category = categories[index];
-                  final isSelected = vm.selectedCategory == category;
+                  final isSelected = viewModel.selectedCategory == category;
                   return GestureDetector(
-                    onTap: () => vm.selectCategory(category),
+                    onTap: () => viewModel.selectCategory(category),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: isSelected ? AppColors.primary : Colors.white,
@@ -90,7 +115,6 @@ class TransactionHistoryScreen extends ConsumerWidget {
                       ),
                       child: Text(
                         category,
-                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
@@ -103,8 +127,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
               ),
             ),
           ),
+          // Transaction list
           Expanded(
-            child: vm.filteredTransactions.isEmpty
+            child: viewModel.filteredTransactions.isEmpty
                 ? const Center(
                     child: Text(
                       'No transactions found',
@@ -117,10 +142,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: vm.filteredTransactions.length,
+                    itemCount: viewModel.filteredTransactions.length,
                     itemBuilder: (context, index) {
-                      final transaction = vm.filteredTransactions[index];
-                      final isExpense = vm.isExpense(transaction['amount']!);
+                      final tx = viewModel.filteredTransactions[index];
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -144,17 +168,17 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    transaction['title']!,
+                                    tx.title,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
                                   ),
                                   Text(
-                                    transaction['amount']!,
+                                    '₱${tx.amount.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: isExpense
+                                      color: tx.isExpense
                                           ? Colors.red
                                           : Colors.green,
                                     ),
@@ -167,14 +191,14 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    transaction['category']!,
+                                    tx.category,
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Colors.black87,
                                     ),
                                   ),
                                   Text(
-                                    transaction['method']!,
+                                    tx.method,
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Colors.black54,
@@ -188,18 +212,18 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    transaction['date']!,
+                                    tx.date.toIso8601String().split('T')[0],
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.black45,
                                     ),
                                   ),
                                   Text(
-                                    isExpense ? 'Expense' : 'Income',
+                                    tx.isExpense ? 'Expense' : 'Income',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: isExpense
+                                      color: tx.isExpense
                                           ? Colors.red
                                           : Colors.green,
                                     ),
