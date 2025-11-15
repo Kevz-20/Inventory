@@ -54,8 +54,15 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: active ? AppColors.primary : Colors.grey[200],
-              borderRadius: BorderRadius.circular(20),
+              color: active ? AppColors.primary : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 51),
+                  blurRadius: 2,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             alignment: Alignment.center,
             child: Text(
@@ -103,28 +110,42 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
   Widget _searchBar() => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12),
     decoration: BoxDecoration(
-      color: Colors.grey[100],
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withValues(alpha: 51),
+          blurRadius: 2,
+          offset: const Offset(0, 2),
+        ),
+      ],
     ),
     child: const TextField(
       decoration: InputDecoration(
         border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
         hintText: "Search products",
-        icon: Icon(Icons.search, size: 20),
+        icon: Icon(Icons.search, size: 22, color: Colors.black),
+        hintStyle: TextStyle(color: Colors.black),
+        contentPadding: EdgeInsets.symmetric(vertical: 14),
       ),
     ),
   );
 
   Widget _categoryChips() => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
-    child: Row(
-      children: [
-        _chip("All", true),
-        _chip("Drinks"),
-        _chip("Alcohol"),
-        _chip("Food"),
-        const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      ],
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Row(
+        children: [
+          _chip("All", true),
+          _chip("Drinks"),
+          _chip("Alcohol"),
+          _chip("Food"),
+          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        ],
+      ),
     ),
   );
 
@@ -132,12 +153,22 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
     margin: const EdgeInsets.only(right: 8),
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     decoration: BoxDecoration(
-      color: selected ? AppColors.primaryLight : Colors.grey[200],
-      borderRadius: BorderRadius.circular(14),
+      color: selected ? AppColors.primary : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withValues(alpha: 51),
+          blurRadius: 2,
+          offset: const Offset(0, 2),
+        ),
+      ],
     ),
     child: Text(
       label,
-      style: TextStyle(color: selected ? AppColors.primary : Colors.black87),
+      style: TextStyle(
+        color: selected ? Colors.white : Colors.black87,
+        fontWeight: FontWeight.w500,
+      ),
     ),
   );
 
@@ -148,6 +179,13 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 51),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
