@@ -1,16 +1,17 @@
-import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
+import '../core/app_colors.dart';
+import '../models/login_model.dart';
 
-final loginViewModelProvider =
-    ChangeNotifierProvider.autoDispose<LoginViewModel>((ref) {
-      final repository = LoginRepository(DBService.instance);
-      return LoginViewModel(repository);
-    });
+// Provider for LoginViewModel (kept alive, no autoDispose)
+final loginViewModelProvider = ChangeNotifierProvider<LoginViewModel>((ref) {
+  final repository = LoginRepository(DBService.instance);
+  return LoginViewModel(repository);
+});
 
 class LoginViewModel extends ChangeNotifier {
   final LoginRepository _repository;
@@ -19,11 +20,13 @@ class LoginViewModel extends ChangeNotifier {
 
   final formKey = GlobalKey<FormState>();
 
-  String mobileNumber = ''; // saved mobile number
-  String pin = ''; // current PIN input
-  String? errorMessage; // login error message
+  String mobileNumber = ''; // Mobile number in memory
+  String pin = ''; // Current PIN input
+  String? errorMessage; // Login error message
 
-  final Set<int> _pressedKeys = {}; // NEW: track pressed buttons
+  LoginModel? _cachedAccount; // Cached account object
+
+  final Set<int> _pressedKeys = {};
   bool isPressed(int index) => _pressedKeys.contains(index);
   void setPressed(int index, bool pressed) {
     if (pressed) {
@@ -34,14 +37,14 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Load saved mobile from prefs
+  /// Load mobile number from SharedPreferences on app start
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
     mobileNumber = prefs.getString('mobileNumber') ?? '';
     notifyListeners();
   }
 
-  // Save mobile number locally
+  /// Save mobile number to SharedPreferences and memory
   Future<void> saveMobileNumber(String number) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('mobileNumber', number);
@@ -49,31 +52,24 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Keypad input handler
+  /// Handle keypad input
   void onKeyTap(BuildContext context, String label) {
     if (label == 'back') {
-      if (pin.isNotEmpty) {
-        pin = pin.substring(0, pin.length - 1);
-      }
+      if (pin.isNotEmpty) pin = pin.substring(0, pin.length - 1);
     } else if (label == 'enter') {
-      if (pin.length == 4) {
-        login(context);
-      }
+      if (pin.length == 4) login(context);
     } else {
-      if (pin.length < 4) {
-        pin += label;
-      }
+      if (pin.length < 4) pin += label;
     }
     notifyListeners();
   }
 
-  // Clear PIN
   void clearPin() {
     pin = '';
     notifyListeners();
   }
 
-  // Login
+  /// Login using PIN only; caches account for fast access
   Future<void> login(BuildContext context) async {
     if (mobileNumber.isEmpty || pin.length != 4) {
       errorMessage = 'Enter valid mobile number and PIN';
@@ -84,7 +80,12 @@ class LoginViewModel extends ChangeNotifier {
       return;
     }
 
-    final account = await _repository.getAccountByMobileNumber(mobileNumber);
+    LoginModel? account = _cachedAccount;
+
+    if (account == null || account.mobileNumber != mobileNumber) {
+      account = await _repository.getAccountByMobileNumber(mobileNumber);
+      _cachedAccount = account; // cache for future use
+    }
 
     if (account != null && account.pin == pin) {
       errorMessage = null;
@@ -106,7 +107,6 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
-  // Message Dialog
   void _showMessageDialog(
     BuildContext context,
     String message, {
@@ -130,7 +130,7 @@ class LoginViewModel extends ChangeNotifier {
     );
   }
 
-  // Change mobile number dialog
+  /// Change mobile number dialog
   Future<void> changeMobileNumber(BuildContext context) async {
     final controller = TextEditingController();
     final result = await showDialog<String>(
@@ -242,6 +242,9 @@ class LoginViewModel extends ChangeNotifier {
       },
     );
 
-    if (result != null) await saveMobileNumber(result);
+    if (result != null) {
+      await saveMobileNumber(result);
+      _cachedAccount = null; // clear cached account, will refetch if needed
+    }
   }
 }

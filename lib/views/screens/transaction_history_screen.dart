@@ -35,7 +35,6 @@ class TransactionHistoryScreen extends ConsumerWidget {
       body: Column(
         children: [
           // Date pickers
-          // Date pickers
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(

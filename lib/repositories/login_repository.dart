@@ -22,7 +22,7 @@ class LoginRepository {
     return null;
   }
 
-  // Optional: fetch only by mobile number
+  // Fetch only by mobile number
   Future<LoginModel?> getAccountByMobileNumber(String mobileNumber) async {
     final db = await _dbService.database;
     final result = await db.query(
