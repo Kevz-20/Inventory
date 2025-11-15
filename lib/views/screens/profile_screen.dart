@@ -16,7 +16,7 @@ class ProfileScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
-      bottomNavigationBar: BottomNavBar(currentIndex: 1, onTap: (index) {}),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 1),
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

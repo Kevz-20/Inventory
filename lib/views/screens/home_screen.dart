@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../view_models/home_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/nav_bar.dart';
 
@@ -67,9 +66,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(homeViewModelProvider);
-    final viewModel = ref.read(homeViewModelProvider.notifier);
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -223,10 +219,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: currentIndex,
-        onTap: viewModel.onNavTap,
-      ),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
     );
   }
 }

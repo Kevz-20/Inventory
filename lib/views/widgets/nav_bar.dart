@@ -4,30 +4,31 @@ import '../../core/app_colors.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
-  final Function(int) onTap;
-
-  const BottomNavBar({
-    super.key,
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const BottomNavBar({super.key, required this.currentIndex});
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (index) {
+        if (index == currentIndex) return;
+
+        String path;
         switch (index) {
           case 0:
-            context.go('/home');
+            path = '/home';
             break;
           case 1:
-            context.go('/profile');
+            path = '/profile';
             break;
           case 2:
-            context.go('/settings');
+            path = '/settings';
             break;
+          default:
+            path = '/home';
         }
+
+        context.go(path);
       },
       iconSize: 28,
       selectedFontSize: 14,

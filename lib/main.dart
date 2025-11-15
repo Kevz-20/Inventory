@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'services/db_service.dart';
 import 'core/app_theme.dart';
-import 'router.dart';
+import 'app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

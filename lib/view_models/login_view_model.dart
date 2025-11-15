@@ -93,7 +93,9 @@ class LoginViewModel extends ChangeNotifier {
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
         await Future.delayed(const Duration(seconds: 1));
-        if (context.mounted) GoRouter.of(context).go('/home');
+        if (context.mounted) {
+          GoRouter.of(context).go('/home', extra: 'fromLogin');
+        }
       }
     } else {
       errorMessage = 'Invalid mobile number or PIN';
