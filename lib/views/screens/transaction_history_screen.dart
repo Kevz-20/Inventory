@@ -80,53 +80,19 @@ class TransactionHistoryScreen extends ConsumerWidget {
               ],
             ),
           ),
-          // Category chips
+
+          // Category chips with dot indicator
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: SizedBox(
-              height: 45,
-              child: ListView.separated(
-                clipBehavior: Clip.none,
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: categories.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final isSelected = viewModel.selectedCategory == category;
-                  return GestureDetector(
-                    onTap: () => viewModel.selectCategory(category),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withValues(alpha: 51),
-                            blurRadius: 2,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        category,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: CategoryChipsWithDots(
+              categories: categories,
+              selectedCategory: viewModel.selectedCategory,
+              onCategorySelected: (category) {
+                viewModel.selectCategory(category);
+              },
             ),
           ),
+
           // Transaction list
           Expanded(
             child: viewModel.filteredTransactions.isEmpty
@@ -243,6 +209,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
   }
 }
 
+// Date box widget
 class _DateBox extends StatelessWidget {
   final String title;
   final String dateLabel;
@@ -284,6 +251,119 @@ class _DateBox extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Category Chips with Dot Indicator
+class CategoryChipsWithDots extends StatefulWidget {
+  final List<String> categories;
+  final String selectedCategory;
+  final Function(String) onCategorySelected;
+
+  const CategoryChipsWithDots({
+    super.key,
+    required this.categories,
+    required this.selectedCategory,
+    required this.onCategorySelected,
+  });
+
+  @override
+  State<CategoryChipsWithDots> createState() => _CategoryChipsWithDotsState();
+}
+
+class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
+  final ScrollController _scrollController = ScrollController();
+  double _scrollFraction = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      setState(() {
+        _scrollFraction = maxScroll == 0
+            ? 0
+            : _scrollController.offset / maxScroll;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 45,
+          child: ListView.separated(
+            clipBehavior: Clip.none,
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: widget.categories.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final category = widget.categories[index];
+              final isSelected = widget.selectedCategory == category;
+              return GestureDetector(
+                onTap: () => widget.onCategorySelected(category),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 51),
+                        blurRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    category,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(widget.categories.length, (index) {
+            final progress =
+                (index / (widget.categories.length - 1) - _scrollFraction)
+                    .abs();
+            final alpha = (1 - progress.clamp(0.0, 1.0));
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color.fromRGBO(128, 128, 128, alpha),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }
