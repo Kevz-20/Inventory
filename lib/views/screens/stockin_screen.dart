@@ -41,6 +41,7 @@ class _StockInScreenState extends State<StockInScreen> {
         backgroundColor: AppColors.primary,
         centerTitle: true,
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -94,20 +95,22 @@ class _StockInScreenState extends State<StockInScreen> {
               controller: quantityController,
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 30),
-
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {},
-              child: const Text('Save', style: TextStyle(fontSize: 18)),
-            ),
           ],
+        ),
+      ),
+
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: () {},
+          child: const Text('Save', style: TextStyle(fontSize: 18)),
         ),
       ),
     );
@@ -129,8 +132,14 @@ class _StockInScreenState extends State<StockInScreen> {
           Icon(icon, color: AppColors.primary),
           const SizedBox(width: 10),
           Text(label),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Center(
+              child: Text(
+                value,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ],
       ),
     );
