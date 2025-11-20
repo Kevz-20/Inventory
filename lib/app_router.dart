@@ -89,7 +89,7 @@ final router = GoRouter(
       path: '/stockin',
       pageBuilder: (context, state) => customPage(
         state,
-        const StockinScreen(),
+        const StockInScreen(),
         transition: PageTransitionType.forward,
       ),
     ),

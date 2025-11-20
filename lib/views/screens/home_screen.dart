@@ -168,7 +168,7 @@ class HomeScreen extends ConsumerWidget {
                       onTap: () => GoRouter.of(context).push('/expenses'),
                     ),
                     _menuCard(
-                      'Kumpra',
+                      'Stock In',
                       'lib/assets/stockin.png',
                       onTap: () => GoRouter.of(context).push('/stockin'),
                     ),
