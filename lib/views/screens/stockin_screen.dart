@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/stock_in_view_model.dart';
 import '../widgets/header.dart';
@@ -17,6 +18,52 @@ class StockInScreen extends ConsumerWidget {
     if (picked != null && picked != vm.selectedDate) {
       vm.pickDate(picked);
     }
+  }
+
+  Future<void> _pickProductImage(
+    BuildContext context,
+    StockInViewModel vm,
+  ) async {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                icon: const Icon(
+                  Icons.photo_library,
+                  size: 30,
+                  color: AppColors.primary,
+                ),
+                label: const Text("Gallery", style: TextStyle(fontSize: 18)),
+                onPressed: () {
+                  vm.pickImage(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                icon: const Icon(
+                  Icons.camera_alt,
+                  size: 30,
+                  color: AppColors.primary,
+                ),
+                label: const Text("Camera", style: TextStyle(fontSize: 18)),
+                onPressed: () {
+                  vm.pickImage(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -72,6 +119,28 @@ class StockInScreen extends ConsumerWidget {
               label: 'Gidaghanon',
               controller: vm.quantityController,
               keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 15),
+            GestureDetector(
+              onTap: () => _pickProductImage(context, vm),
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white,
+                ),
+                child: vm.productImage != null
+                    ? Image.file(vm.productImage!, fit: BoxFit.cover)
+                    : const Center(
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                      ),
+              ),
             ),
           ],
         ),
