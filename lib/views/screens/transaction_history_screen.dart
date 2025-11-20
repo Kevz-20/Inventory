@@ -27,10 +27,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      appBar: const AppHeader(
-        title: 'Transaksyon History',
-        showBackButton: true,
-      ),
+      appBar: const AppHeader(title: 'History', showBackButton: true),
       backgroundColor: AppColors.surface,
       body: Column(
         children: [

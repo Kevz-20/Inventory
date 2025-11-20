@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
+import '../widgets/header.dart';
 
 class CapitalManagementScreen extends StatelessWidget {
   const CapitalManagementScreen({super.key});
@@ -8,18 +9,9 @@ class CapitalManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        title: const Text(
-          "Capital Management",
-          style: TextStyle(
-            fontSize: 20,
-            color: Colors.white,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        centerTitle: true,
+      appBar: const AppHeader(
+        title: 'Capital Management',
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

@@ -1,188 +1,290 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import '../../view_models/expenses_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
+import '../../view_models/expenses_view_model.dart';
 import '../widgets/header.dart';
 
-class ExpensesScreen extends ConsumerWidget {
+class ExpensesScreen extends ConsumerStatefulWidget {
   const ExpensesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExpensesScreen> createState() => _ExpensesScreenState();
+}
+
+class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
+  @override
+  Widget build(BuildContext context) {
     final vm = ref.watch(expensesViewModelProvider);
-    final notifier = ref.read(expensesViewModelProvider.notifier);
-    final radius = 18.0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Gasto', showBackButton: true),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildSectionCard(
-                      title: 'Petsa',
-                      icon: Icons.calendar_month_outlined,
-                      child: GestureDetector(
-                        onTap: () async {
-                          final dt = await showDatePicker(
-                            context: context,
-                            initialDate: vm.selectedDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                            builder: (context, child) {
-                              return Theme(
-                                data: Theme.of(context).copyWith(
-                                  colorScheme: const ColorScheme.light(
-                                    primary: Color(0xFF3C8DFF),
-                                    onPrimary: Colors.white,
-                                    onSurface: Colors.black87,
-                                  ),
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (dt != null) notifier.setDate(dt);
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _formatDate(vm.selectedDate),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Icon(Icons.arrow_drop_down_rounded, size: 28),
-                          ],
-                        ),
-                      ),
-                      radius: radius,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildSectionCard(
-                      title: 'Kategorya',
-                      icon: Icons.category_outlined,
-                      child: ListTile(
-                        title: Text(
-                          vm.category ?? 'Pili kategorya sa gasto',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        trailing: const Icon(Icons.keyboard_arrow_down),
-                        onTap: () => _showCategoryPicker(context, notifier),
-                      ),
-                      radius: radius,
-                    ),
-                  ],
-                ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _datePicker(vm),
+            const SizedBox(height: 18),
+            _inputTextField(
+              icon: Icons.payments,
+              label: "Price",
+              controller: vm.amountController,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 18),
+            _categoryDropdown(vm),
+            const SizedBox(height: 18),
+            _inputTextField(
+              icon: Icons.description,
+              label: "Deskripsyon (Gikinahanglan)",
+              controller: vm.descriptionController,
+            ),
+            const SizedBox(height: 20),
+            _receiptButtons(vm),
+            const SizedBox(height: 120),
+          ],
+        ),
+      ),
+
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () async {
+              final saved = await vm.save();
+
+              if (!context.mounted) return;
+
+              if (!saved) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Complete all required fields")),
+                );
+                return;
+              }
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Saved successfully")),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
+            ),
+            child: const Text(
+              "Rekord",
+              style: TextStyle(fontSize: 18, color: Colors.white),
+            ),
           ),
         ),
       ),
     );
   }
 
-  void _showCategoryPicker(BuildContext context, ExpensesViewModel notifier) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (_) {
-        final categories = ['Food & Drinks', 'Bills', 'Supplies', 'Others'];
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: categories
-                .map(
-                  (c) => ListTile(
-                    leading: const Icon(Icons.label_outline),
-                    title: Text(c),
-                    onTap: () {
-                      notifier.setCategory(c);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                )
-                .toList(),
-          ),
+  // DATE PICKER
+  Widget _datePicker(ExpensesViewModel vm) {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: vm.selectedDate,
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2100),
         );
+        if (picked != null) vm.setDate(picked);
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 51),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  "Petsa",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  _formatDate(vm.selectedDate),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Icon(Icons.calendar_today, color: Colors.black87),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSectionCard({
-    required String title,
-    required IconData icon,
-    required Widget child,
-    double radius = 16,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: const LinearGradient(
-          colors: [Colors.white, Color(0xFFF5F9FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  String _formatDate(DateTime date) {
+    return "${_monthName(date.month)} ${date.day}, ${date.year}";
+  }
+
+  String _monthName(int m) {
+    const List<String> months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return months[m - 1];
+  }
+
+  // CATEGORY
+  Widget _categoryDropdown(ExpensesViewModel vm) {
+    return SizedBox(
+      height: 60,
+      child: DropdownButtonFormField<String>(
+        initialValue: vm.selectedCategory,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          labelText: "Kategorya sa Gasto",
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        items: vm.categories.map((cat) {
+          return DropdownMenuItem(value: cat, child: Text(cat));
+        }).toList(),
+        onChanged: (value) {
+          if (value != null) vm.setCategory(value);
+        },
+      ),
+    );
+  }
+
+  // RECEIPT BUTTONS
+  Widget _receiptButtons(ExpensesViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: const Color(0xFF3C8DFF)),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+          const Text(
+            "Resibo (opsyonal)",
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 20),
+
+          // preview
+          if (vm.receiptImage != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(vm.receiptImage!.path),
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildReceiptButton(
+                "Photo",
+                Colors.blue,
+                vm.pickReceiptFromCamera,
+              ),
+              _buildReceiptButton(
+                "Choose",
+                Colors.indigo,
+                vm.pickReceiptFromGallery,
+              ),
+              _buildReceiptButton("Remove", Colors.red, vm.removeReceipt),
             ],
           ),
-          const Divider(thickness: 1, height: 20, color: Colors.black12),
-          child,
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime dt) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+  Widget _buildReceiptButton(String label, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 5),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: onTap,
+          child: Text(label, style: const TextStyle(color: Colors.white)),
+        ),
+      ),
+    );
+  }
+
+  Widget _inputTextField({
+    required IconData icon,
+    required String label,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return SizedBox(
+      height: 60,
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: Icon(icon, color: AppColors.primary),
+          labelText: label,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.primary, width: 1.2),
+          ),
+        ),
+      ),
+    );
   }
 }

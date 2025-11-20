@@ -1,54 +1,83 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
-final expensesViewModelProvider =
-    StateNotifierProvider<ExpensesViewModel, ExpensesState>(
-      (ref) => ExpensesViewModel(),
-    );
+final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
+  ref,
+) {
+  return ExpensesViewModel();
+});
 
-class ExpensesState {
-  final DateTime selectedDate;
-  final String? category;
-  final String amount;
-  final String description;
+class ExpensesViewModel extends ChangeNotifier {
+  DateTime selectedDate = DateTime.now();
+  final TextEditingController amountController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
 
-  ExpensesState({
-    required this.selectedDate,
-    this.category,
-    this.amount = '',
-    this.description = '',
-  });
+  String? selectedCategory;
+  XFile? receiptImage;
 
-  ExpensesState copyWith({
-    DateTime? selectedDate,
-    String? category,
-    String? amount,
-    String? description,
-  }) {
-    return ExpensesState(
-      selectedDate: selectedDate ?? this.selectedDate,
-      category: category ?? this.category,
-      amount: amount ?? this.amount,
-      description: description ?? this.description,
-    );
-  }
-}
+  final List<String> categories = [
+    "Pagkaon",
+    "Tubig / Kuryente",
+    "Transportasyon",
+    "Mga Bayronon",
+    "Uban pa",
+  ];
 
-class ExpensesViewModel extends StateNotifier<ExpensesState> {
-  ExpensesViewModel() : super(ExpensesState(selectedDate: DateTime.now()));
-
-  void setDate(DateTime date) {
-    state = state.copyWith(selectedDate: date);
+  void setCategory(String value) {
+    selectedCategory = value;
+    notifyListeners();
   }
 
-  void setCategory(String category) {
-    state = state.copyWith(category: category);
+  void setDate(DateTime value) {
+    selectedDate = value;
+    notifyListeners();
   }
 
-  void setAmount(String amount) {
-    state = state.copyWith(amount: amount);
+  Future<void> pickReceiptFromCamera() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image != null) {
+      receiptImage = image;
+      notifyListeners();
+    }
   }
 
-  void setDescription(String description) {
-    state = state.copyWith(description: description);
+  Future<void> pickReceiptFromGallery() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      receiptImage = image;
+      notifyListeners();
+    }
+  }
+
+  void removeReceipt() {
+    receiptImage = null;
+    notifyListeners();
+  }
+
+  bool validate() {
+    if (amountController.text.isEmpty) return false;
+    if (selectedCategory == null) return false;
+    if (descriptionController.text.isEmpty) return false;
+    return true;
+  }
+
+  Future<bool> save() async {
+    if (!validate()) return false;
+
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    return true;
+  }
+
+  @override
+  void dispose() {
+    amountController.dispose();
+    descriptionController.dispose();
+    super.dispose();
   }
 }
