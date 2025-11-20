@@ -17,9 +17,21 @@ class _StockInScreenState extends State<StockInScreen> {
   final TextEditingController sellingPriceController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
 
-  int currentIndex = 0;
-
   final List<String> categories = ['Fruits', 'Vegetables', 'Snacks', 'Drinks'];
+  final List<String> months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
@@ -49,7 +61,7 @@ class _StockInScreenState extends State<StockInScreen> {
                 icon: Icons.calendar_today,
                 label: 'Date',
                 value:
-                    '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                    '${months[selectedDate.month - 1]} ${selectedDate.day}, ${selectedDate.year}',
               ),
             ),
             const SizedBox(height: 15),
