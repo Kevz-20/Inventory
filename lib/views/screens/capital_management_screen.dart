@@ -212,10 +212,15 @@ class CapitalManagementScreen extends StatelessWidget {
         ],
       ),
       child: const TextField(
+        maxLines: 1,
         decoration: InputDecoration(
           hintText: "Optional note",
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          disabledBorder: InputBorder.none,
           hintStyle: TextStyle(color: Colors.grey),
+          contentPadding: EdgeInsets.symmetric(vertical: 14),
         ),
       ),
     );
