@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_colors.dart';
 
 class CapitalManagementScreen extends StatelessWidget {
   const CapitalManagementScreen({super.key});
@@ -6,16 +7,16 @@ class CapitalManagementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F3E8),
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F4A3C),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text(
           "Capital Management",
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 20,
             color: Colors.white,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
         centerTitle: true,
@@ -25,115 +26,39 @@ class CapitalManagementScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 20),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Total Balance",
-                    style: TextStyle(fontSize: 15, color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 5),
-                  const Text(
-                    "₱0.00",
-                    style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    "Updated • Oct 23, 2025",
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _smallCard("Cash on ...", "₱0.00"),
-                _smallCard("Capital", "₱0.00"),
-                _smallCard("Cash in B...", "₱0.00"),
-              ],
-            ),
+            _balanceCard(),
             const SizedBox(height: 25),
             Row(
               children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D72FF),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      "Add Capital",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
+                Expanded(child: _smallCard("Cash on Hand", "₱0.00")),
                 const SizedBox(width: 10),
+                Expanded(child: _smallCard("Capital", "₱0.00")),
+                const SizedBox(width: 10),
+                Expanded(child: _smallCard("Bank Cash", "₱0.00")),
+              ],
+            ),
+            const SizedBox(height: 25),
+            Row(
+              children: [
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEDE9E2),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      "Bank Deposit",
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                  child: _actionButton(
+                    "Add Capital",
+                    AppColors.primary,
+                    Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _actionButton(
+                    "Bank Deposit",
+                    Colors.grey.shade200,
+                    Colors.black87,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 25),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 20),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: const TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  prefixText: "₱ ",
-                  prefixStyle: TextStyle(fontSize: 18, color: Colors.black87),
-                  border: InputBorder.none,
-                  hintText: "0.00",
-                  hintStyle: TextStyle(color: Colors.grey),
-                ),
-              ),
-            ),
+            _amountInput(),
             const SizedBox(height: 10),
             const Text(
               "Enter a valid amount (greater than 0).",
@@ -144,63 +69,64 @@ class CapitalManagementScreen extends StatelessWidget {
               "Remarks",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-            const SizedBox(height: 5),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 20),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: const TextField(
-                decoration: InputDecoration(
-                  hintText: "Optional note",
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
-                ),
-              ),
-            ),
+            const SizedBox(height: 8),
+            _remarksInput(),
             const SizedBox(height: 30),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: Color(0xFFD6D4D0),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                "Add Capital",
-                style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-            ),
+            _submitButton(),
           ],
         ),
       ),
     );
   }
 
-  Widget _smallCard(String label, String value) {
+  Widget _balanceCard() {
     return Container(
-      width: 105,
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 20),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
+            color: Colors.grey.withValues(alpha: 51),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Total Balance",
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "₱0.00",
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Updated • Oct 23, 2025",
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _smallCard(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 51),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -214,6 +140,110 @@ class CapitalManagementScreen extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _actionButton(String label, Color bgColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 51),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _amountInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 51),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const TextField(
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          prefixText: "₱ ",
+          prefixStyle: TextStyle(fontSize: 18, color: Colors.black87),
+          border: InputBorder.none,
+          hintText: "0.00",
+          hintStyle: TextStyle(color: Colors.grey),
+        ),
+      ),
+    );
+  }
+
+  Widget _remarksInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 51),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const TextField(
+        decoration: InputDecoration(
+          hintText: "Optional note",
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: Colors.grey),
+        ),
+      ),
+    );
+  }
+
+  Widget _submitButton() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 51),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        "Add Capital",
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Colors.black54,
+        ),
       ),
     );
   }
