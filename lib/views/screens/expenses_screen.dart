@@ -207,7 +207,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               borderRadius: BorderRadius.circular(12),
               child: Image.file(
                 File(vm.receiptImage!.path),
-                height: 120,
+                height: 180,
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
