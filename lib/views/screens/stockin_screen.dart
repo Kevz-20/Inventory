@@ -1,113 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
+import '../../view_models/stock_in_view_model.dart';
 import '../widgets/header.dart';
 
-class StockInScreen extends StatefulWidget {
+class StockInScreen extends ConsumerWidget {
   const StockInScreen({super.key});
 
-  @override
-  State<StockInScreen> createState() => _StockInScreenState();
-}
-
-class _StockInScreenState extends State<StockInScreen> {
-  DateTime selectedDate = DateTime.now();
-  String? selectedCategory;
-  final TextEditingController productController = TextEditingController();
-  final TextEditingController purchasePriceController = TextEditingController();
-  final TextEditingController sellingPriceController = TextEditingController();
-  final TextEditingController quantityController = TextEditingController();
-
-  final List<String> categories = ['Fruits', 'Vegetables', 'Snacks', 'Drinks'];
-  final List<String> months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-
-  Future<void> _pickDate() async {
+  Future<void> _pickDate(BuildContext context, StockInViewModel vm) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: vm.selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null && picked != selectedDate) {
-      setState(() => selectedDate = picked);
+    if (picked != null && picked != vm.selectedDate) {
+      vm.pickDate(picked);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(stockInViewModelProvider);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Stock In', showBackButton: true),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             InkWell(
-              onTap: _pickDate,
+              onTap: () => _pickDate(context, vm),
               child: _inputRow(
                 icon: Icons.calendar_today,
                 label: 'Date',
-                value:
-                    '${months[selectedDate.month - 1]} ${selectedDate.day}, ${selectedDate.year}',
+                value: vm.formattedDate,
               ),
             ),
             const SizedBox(height: 15),
-
             _inputDropdown(
               icon: Icons.category,
               label: 'Category',
-              value: selectedCategory,
-              items: categories,
-              onChanged: (val) => setState(() => selectedCategory = val),
+              value: vm.selectedCategory,
+              items: vm.categories,
+              onChanged: vm.setCategory,
             ),
             const SizedBox(height: 15),
-
             _inputTextField(
               icon: Icons.edit,
               label: 'Pangalan sa produkto',
-              controller: productController,
+              controller: vm.productController,
             ),
             const SizedBox(height: 15),
-
             _inputTextField(
               icon: Icons.attach_money,
               label: 'Presyo sa pagpalit',
-              controller: purchasePriceController,
+              controller: vm.purchasePriceController,
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 15),
-
             _inputTextField(
               icon: Icons.calculate,
               label: 'Presyo sa pagbaligya',
-              controller: sellingPriceController,
+              controller: vm.sellingPriceController,
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 15),
-
             _inputTextField(
               icon: Icons.shopping_cart,
               label: 'Gidaghanon',
-              controller: quantityController,
+              controller: vm.quantityController,
               keyboardType: TextInputType.number,
             ),
           ],
         ),
       ),
-
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(20),
         child: ElevatedButton(
