@@ -83,6 +83,7 @@ class StockInScreen extends ConsumerWidget {
                 icon: Icons.calendar_today,
                 label: 'Date',
                 value: vm.formattedDate,
+                onTap: () => _pickDate(context, vm),
               ),
             ),
             const SizedBox(height: 15),
@@ -166,31 +167,37 @@ class StockInScreen extends ConsumerWidget {
     required IconData icon,
     required String label,
     required String value,
+    required VoidCallback onTap,
   }) {
     return SizedBox(
       height: 60,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade400, width: 1.2),
+      child: TextFormField(
+        readOnly: true,
+        onTap: onTap,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Text(label),
-            Expanded(
-              child: Center(
-                child: Text(
-                  value,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: Icon(icon, color: AppColors.primary),
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.primary, width: 1.2),
+          ),
         ),
+        controller: TextEditingController(text: value),
       ),
     );
   }
@@ -205,6 +212,11 @@ class StockInScreen extends ConsumerWidget {
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+      ),
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
@@ -224,7 +236,19 @@ class StockInScreen extends ConsumerWidget {
         ),
       ),
       items: items
-          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(
+                item,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
     );
@@ -241,6 +265,10 @@ class StockInScreen extends ConsumerWidget {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
