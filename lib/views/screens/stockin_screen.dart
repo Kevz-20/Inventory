@@ -14,7 +14,21 @@ class StockInScreen extends ConsumerWidget {
       initialDate: vm.selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+            dialogTheme: DialogThemeData(backgroundColor: Colors.grey.shade100),
+          ),
+          child: child!,
+        );
+      },
     );
+
     if (picked != null && picked != vm.selectedDate) {
       vm.pickDate(picked);
     }
@@ -217,6 +231,7 @@ class StockInScreen extends ConsumerWidget {
         fontWeight: FontWeight.bold,
         fontSize: 16,
       ),
+      dropdownColor: Colors.white,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,

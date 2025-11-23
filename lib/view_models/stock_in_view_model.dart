@@ -5,14 +5,14 @@ import 'package:image_picker/image_picker.dart';
 
 final stockInViewModelProvider =
     ChangeNotifierProvider.autoDispose<StockInViewModel>((ref) {
-  return StockInViewModel();
-});
+      return StockInViewModel();
+    });
 
 class StockInViewModel extends ChangeNotifier {
   DateTime selectedDate = DateTime.now();
   String? selectedCategory;
   File? productImage;
-  
+
   final TextEditingController productController = TextEditingController();
   final TextEditingController purchasePriceController = TextEditingController();
   final TextEditingController sellingPriceController = TextEditingController();
@@ -20,8 +20,18 @@ class StockInViewModel extends ChangeNotifier {
 
   final List<String> categories = ['Fruits', 'Vegetables', 'Snacks', 'Drinks'];
   final List<String> months = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   void pickDate(DateTime date) {
