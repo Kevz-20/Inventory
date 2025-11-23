@@ -14,6 +14,7 @@ final stockInViewModelProvider =
 class StockInViewModel extends ChangeNotifier {
   late final StockInRepository _repository;
   bool isInitialized = false;
+  bool showValidationErrors = false;
 
   DateTime selectedDate = DateTime.now();
   String? selectedCategory;
@@ -171,6 +172,11 @@ class StockInViewModel extends ChangeNotifier {
     );
 
     return result ?? false;
+  }
+
+  void triggerValidation() {
+    showValidationErrors = true;
+    notifyListeners();
   }
 
   void setLoading(bool value) {

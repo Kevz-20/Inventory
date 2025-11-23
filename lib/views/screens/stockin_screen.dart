@@ -61,6 +61,7 @@ class StockInScreen extends ConsumerWidget {
               label: 'Kategorya',
               value: vm.selectedCategory,
               items: vm.categories,
+              showError: vm.showValidationErrors,
               onChanged: vm.setCategory,
             ),
             const SizedBox(height: 15),
@@ -68,19 +69,26 @@ class StockInScreen extends ConsumerWidget {
               prefix: const Icon(Icons.edit, color: AppColors.primary),
               label: 'Pangalan sa produkto',
               controller: vm.productController,
+              showError: vm.showValidationErrors,
             ),
             const SizedBox(height: 15),
             _inputTextField(
-              prefix: const Text(
-                '₱',
-                style: TextStyle(
-                  fontSize: 20,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
+              prefix: SizedBox(
+                width: 48,
+                child: Center(
+                  child: Text(
+                    '₱',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               label: 'Presyo sa pagpalit',
               controller: vm.purchasePriceController,
+              showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 15),
@@ -88,6 +96,7 @@ class StockInScreen extends ConsumerWidget {
               prefix: const Icon(Icons.calculate, color: AppColors.primary),
               label: 'Presyo sa pagbaligya',
               controller: vm.sellingPriceController,
+              showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 15),
@@ -95,6 +104,7 @@ class StockInScreen extends ConsumerWidget {
               prefix: const Icon(Icons.shopping_cart, color: AppColors.primary),
               label: 'Gidaghanon',
               controller: vm.quantityController,
+              showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 15),
@@ -148,7 +158,12 @@ class StockInScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          onPressed: vm.isLoading ? null : vm.saveProduct,
+          onPressed: vm.isLoading
+              ? null
+              : () {
+                  vm.triggerValidation();
+                  vm.saveProduct();
+                },
           child: vm.isLoading
               ? const CircularProgressIndicator(color: Colors.white)
               : const Text('Save', style: TextStyle(fontSize: 18)),
@@ -269,15 +284,13 @@ class StockInScreen extends ConsumerWidget {
     required String? value,
     required List<String> items,
     required void Function(String?) onChanged,
+    required bool showError,
   }) {
+    final bool isError = showError && value == null;
+
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontWeight: FontWeight.bold,
-        fontSize: 16,
-      ),
       dropdownColor: Colors.white,
       decoration: InputDecoration(
         filled: true,
@@ -290,27 +303,21 @@ class StockInScreen extends ConsumerWidget {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
+          borderSide: BorderSide(
+            color: isError ? Colors.red : Colors.grey.shade400,
+            width: 1.2,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.primary, width: 1.2),
+          borderSide: BorderSide(
+            color: isError ? Colors.red : AppColors.primary,
+            width: 1.2,
+          ),
         ),
       ),
       items: items
-          .map(
-            (item) => DropdownMenuItem(
-              value: item,
-              child: Text(
-                item,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          )
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
       onChanged: onChanged,
     );
@@ -320,8 +327,11 @@ class StockInScreen extends ConsumerWidget {
     Widget? prefix,
     required String label,
     required TextEditingController controller,
+    required bool showError,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final bool isError = showError && controller.text.isEmpty;
+
     return SizedBox(
       height: 60,
       child: TextField(
@@ -334,16 +344,7 @@ class StockInScreen extends ConsumerWidget {
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
-          prefixIcon: prefix != null
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(width: 12),
-                    prefix,
-                    const SizedBox(width: 8),
-                  ],
-                )
-              : null,
+          prefixIcon: prefix,
           labelText: label,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
@@ -351,11 +352,17 @@ class StockInScreen extends ConsumerWidget {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : Colors.grey.shade400,
+              width: 1.2,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.primary, width: 1.2),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : AppColors.primary,
+              width: 1.2,
+            ),
           ),
         ),
       ),
