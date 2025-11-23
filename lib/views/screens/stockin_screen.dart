@@ -8,30 +8,176 @@ import '../widgets/header.dart';
 class StockInScreen extends ConsumerWidget {
   const StockInScreen({super.key});
 
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(stockInViewModelProvider);
+
+    if (!vm.isInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: const AppHeader(title: 'Stock In', showBackButton: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            if (vm.errorMessage != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 15),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        vm.errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () => vm.errorMessage = null,
+                    ),
+                  ],
+                ),
+              ),
+            InkWell(
+              onTap: () => _pickDate(context, vm),
+              child: _inputRow(
+                icon: Icons.calendar_today,
+                label: 'Date',
+                value: vm.formattedDate,
+                onTap: () => _pickDate(context, vm),
+              ),
+            ),
+            const SizedBox(height: 15),
+            _inputDropdown(
+              icon: Icons.category,
+              label: 'Kategorya',
+              value: vm.selectedCategory,
+              items: vm.categories,
+              onChanged: vm.setCategory,
+            ),
+            const SizedBox(height: 15),
+            _inputTextField(
+              prefix: const Icon(Icons.edit, color: AppColors.primary),
+              label: 'Pangalan sa produkto',
+              controller: vm.productController,
+            ),
+            const SizedBox(height: 15),
+            _inputTextField(
+              prefix: const Text(
+                '₱',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              label: 'Presyo sa pagpalit',
+              controller: vm.purchasePriceController,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 15),
+            _inputTextField(
+              prefix: const Icon(Icons.calculate, color: AppColors.primary),
+              label: 'Presyo sa pagbaligya',
+              controller: vm.sellingPriceController,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 15),
+            _inputTextField(
+              prefix: const Icon(Icons.shopping_cart, color: AppColors.primary),
+              label: 'Gidaghanon',
+              controller: vm.quantityController,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 15),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Upload Image',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _pickProductImage(context, vm),
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white,
+                    ),
+                    child: vm.productImage != null
+                        ? Image.file(vm.productImage!, fit: BoxFit.cover)
+                        : const Center(
+                            child: Icon(
+                              Icons.camera_alt,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: vm.isLoading ? null : vm.saveProduct,
+          child: vm.isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text('Save', style: TextStyle(fontSize: 18)),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickDate(BuildContext context, StockInViewModel vm) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: vm.selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              onSurface: AppColors.textPrimary,
-            ),
-            dialogTheme: DialogThemeData(backgroundColor: Colors.grey.shade100),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary,
           ),
-          child: child!,
-        );
-      },
+          dialogTheme: DialogThemeData(backgroundColor: Colors.grey.shade100),
+        ),
+        child: child!,
+      ),
     );
-
-    if (picked != null && picked != vm.selectedDate) {
-      vm.pickDate(picked);
-    }
+    if (picked != null && picked != vm.selectedDate) vm.pickDate(picked);
   }
 
   Future<void> _pickProductImage(
@@ -75,103 +221,6 @@ class StockInScreen extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(stockInViewModelProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Stock In', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            InkWell(
-              onTap: () => _pickDate(context, vm),
-              child: _inputRow(
-                icon: Icons.calendar_today,
-                label: 'Date',
-                value: vm.formattedDate,
-                onTap: () => _pickDate(context, vm),
-              ),
-            ),
-            const SizedBox(height: 15),
-            _inputDropdown(
-              icon: Icons.category,
-              label: 'Category',
-              value: vm.selectedCategory,
-              items: vm.categories,
-              onChanged: vm.setCategory,
-            ),
-            const SizedBox(height: 15),
-            _inputTextField(
-              icon: Icons.edit,
-              label: 'Pangalan sa produkto',
-              controller: vm.productController,
-            ),
-            const SizedBox(height: 15),
-            _inputTextField(
-              icon: Icons.attach_money,
-              label: 'Presyo sa pagpalit',
-              controller: vm.purchasePriceController,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 15),
-            _inputTextField(
-              icon: Icons.calculate,
-              label: 'Presyo sa pagbaligya',
-              controller: vm.sellingPriceController,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 15),
-            _inputTextField(
-              icon: Icons.shopping_cart,
-              label: 'Gidaghanon',
-              controller: vm.quantityController,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 15),
-            GestureDetector(
-              onTap: () => _pickProductImage(context, vm),
-              child: Container(
-                height: 150,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.white,
-                ),
-                child: vm.productImage != null
-                    ? Image.file(vm.productImage!, fit: BoxFit.cover)
-                    : const Center(
-                        child: Icon(
-                          Icons.camera_alt,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {},
-          child: const Text('Save', style: TextStyle(fontSize: 18)),
         ),
       ),
     );
@@ -270,7 +319,7 @@ class StockInScreen extends ConsumerWidget {
   }
 
   Widget _inputTextField({
-    required IconData icon,
+    Widget? prefix,
     required String label,
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
@@ -287,7 +336,16 @@ class StockInScreen extends ConsumerWidget {
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
-          prefixIcon: Icon(icon, color: AppColors.primary),
+          prefixIcon: prefix != null
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 12),
+                    prefix,
+                    const SizedBox(width: 8),
+                  ],
+                )
+              : null,
           labelText: label,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,

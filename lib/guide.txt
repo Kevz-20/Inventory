@@ -71,3 +71,124 @@ lib/
 # Step 3: Run the Application
 Start the development server:
 > flutter run
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+lib/
+ ├─ models/           # Data classes (Product, User, etc.)
+ ├─ services/         # API calls or database services
+ ├─ repositories/     # Handles data from services and prepares for ViewModel
+ ├─ viewmodels/       # Business logic (StateNotifier / ChangeNotifier)
+ ├─ providers/        # Riverpod providers
+ ├─ views/            # Flutter UI screens
+
+ 1. Model layer
+ Purpose: Represents the data.
+ Example: A Product class.
+
+ class Product {
+  final int id;
+  final String name;
+
+  Product({required this.id, required this.name});
+}
+
+2. Service Layer
+Purpose: Fetch data from API or local DB.
+Example: ProductService simulates an API call.
+
+class ProductService {
+  Future<List<Product>> fetchProducts() async {
+    await Future.delayed(Duration(seconds: 1)); // simulate network
+    return [Product(id: 1, name: "Milk"), Product(id: 2, name: "Bread")];
+  }
+}
+
+3. Repository Layer
+Purpose: Acts as a middleman between Service and ViewModel.
+Handles data transformation or caching if needed.
+
+import '../services/product_service.dart';
+import '../models/product.dart';
+
+class ProductRepository {
+  final ProductService service;
+  ProductRepository(this.service);
+
+  Future<List<Product>> getProducts() => service.fetchProducts();
+}
+
+4. ViewModel Layer
+Purpose: Business logic & state management.
+Using Riverpod’s StateNotifier for reactive updates.
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../repositories/product_repository.dart';
+import '../models/product.dart';
+
+class ProductViewModel extends StateNotifier<AsyncValue<List<Product>>> {
+  final ProductRepository repository;
+
+  ProductViewModel(this.repository) : super(const AsyncValue.loading()) {
+    loadProducts();
+  }
+
+  Future<void> loadProducts() async {
+    try {
+      final data = await repository.getProducts();
+      state = AsyncValue.data(data);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+}
+
+5. Providers (Riverpod Wiring)
+Purpose: Inject dependencies cleanly.
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/product_service.dart';
+import '../repositories/product_repository.dart';
+import '../viewmodels/product_viewmodel.dart';
+
+final productServiceProvider = Provider((ref) => ProductService());
+
+final productRepositoryProvider = Provider(
+  (ref) => ProductRepository(ref.read(productServiceProvider)),
+);
+
+final productViewModelProvider =
+    StateNotifierProvider<ProductViewModel, AsyncValue<List<Product>>>(
+  (ref) => ProductViewModel(ref.read(productRepositoryProvider)),
+);
+
+
+6. View Layer
+Purpose: UI reacts to state changes in ViewModel.
+Uses ConsumerWidget to watch the provider.
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/product_providers.dart';
+import 'package:flutter/material.dart';
+
+class ProductView extends ConsumerWidget {
+  const ProductView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(productViewModelProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Products")),
+      body: state.when(
+        loading: () => Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text("Error: $e")),
+        data: (products) => ListView.builder(
+          itemCount: products.length,
+          itemBuilder: (_, i) => ListTile(title: Text(products[i].name)),
+        ),
+      ),
+    );
+  }
+}

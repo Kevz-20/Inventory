@@ -32,7 +32,8 @@ class DBService {
     // Account table
     await db.execute('''
       CREATE TABLE account (
-        mobile_number TEXT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mobile_number TEXT UNIQUE NOT NULL,
         association_name TEXT,
         pin TEXT NOT NULL,
         security_question_id INTEGER,
@@ -102,12 +103,16 @@ class DBService {
     await db.execute('''
       CREATE TABLE product (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
         name TEXT,
         category TEXT,
+        purchase_price REAL,
         selling_price REAL,
+        quantity INTEGER,
         image TEXT,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');
 
@@ -172,7 +177,7 @@ class DBService {
 
     // Stock in
     await db.execute('''
-      CREATE TABLE stock_in (
+      CREATE TABLE stock_in ( 
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
         product_id INTEGER,

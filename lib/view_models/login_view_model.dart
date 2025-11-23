@@ -7,7 +7,6 @@ import '../services/db_service.dart';
 import '../core/app_colors.dart';
 import '../models/login_model.dart';
 
-// Provider for LoginViewModel (kept alive, no autoDispose)
 final loginViewModelProvider = ChangeNotifierProvider<LoginViewModel>((ref) {
   final repository = LoginRepository(DBService.instance);
   return LoginViewModel(repository);
