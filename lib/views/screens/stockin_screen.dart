@@ -25,13 +25,15 @@ class StockInScreen extends ConsumerWidget {
           children: [
             if (vm.errorMessage != null)
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 15),
+                margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: Colors.red.shade100,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(Icons.error, color: Colors.red),
                     const SizedBox(width: 8),
@@ -40,10 +42,6 @@ class StockInScreen extends ConsumerWidget {
                         vm.errorMessage!,
                         style: const TextStyle(color: Colors.red),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () => vm.errorMessage = null,
                     ),
                   ],
                 ),
