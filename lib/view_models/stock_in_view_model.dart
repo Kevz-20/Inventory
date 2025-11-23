@@ -116,6 +116,8 @@ class StockInViewModel extends ChangeNotifier {
     try {
       await _repository.addProduct(stock);
       clearFields();
+
+      errorMessage = null;
     } catch (e, stackTrace) {
       errorMessage = 'Failed to save product: ${e.toString()}';
       debugPrint('Error saving product: $e');
