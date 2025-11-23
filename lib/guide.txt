@@ -1,8 +1,7 @@
 # Developer Guide
 
 # ChatGPT Prompt
-> Create a view model for this page, and use Riverpod for MVVM; do not use Provider.
-
+> Create a view model for this screen, and use Riverpod for MVVM; do not use Provider.
 
 # Step 1: Install Dependencies
 Run the following command to install all required Flutter packages:

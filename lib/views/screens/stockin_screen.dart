@@ -202,36 +202,31 @@ class StockInScreen extends ConsumerWidget {
     required List<String> items,
     required void Function(String?) onChanged,
   }) {
-    return SizedBox(
-      height: 60,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade400, width: 1.2),
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: Icon(icon, color: AppColors.primary),
+        labelText: label,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
         ),
-        child: DropdownButtonFormField<String>(
-          initialValue: value,
-          isDense: true,
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 0,
-            ),
-            prefixIcon: Icon(icon, color: AppColors.primary),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 40,
-              minHeight: 40,
-            ),
-            labelText: label,
-            border: InputBorder.none,
-          ),
-          items: items
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-              .toList(),
-          onChanged: onChanged,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primary, width: 1.2),
         ),
       ),
+      items: items
+          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .toList(),
+      onChanged: onChanged,
     );
   }
 
