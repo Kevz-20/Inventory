@@ -21,6 +21,7 @@ class StockInViewModel extends ChangeNotifier {
   File? productImage;
   List<String> productNames = [];
   List<ProductModel> allProducts = [];
+  ProductModel? selectedProduct;
 
   final TextEditingController productController = TextEditingController();
   final purchasePriceController = TextEditingController();
@@ -104,32 +105,30 @@ class StockInViewModel extends ChangeNotifier {
       return;
     }
 
-    // final isDuplicate = await _repository.isDuplicateProduct(
-    //   productController.text,
-    // );
-    // if (isDuplicate) {
-    //   errorMessage = 'Product name already exists';
-    //   notifyListeners();
-    //   return;
-    // }
-
     setLoading(true);
 
     final stock = ProductModel(
+      id: selectedProduct?.id,
       name: productController.text,
       category: selectedCategory!,
       sellingPrice: double.tryParse(sellingPriceController.text) ?? 0,
       purchasePrice: double.tryParse(purchasePriceController.text) ?? 0,
       quantity: int.tryParse(quantityController.text) ?? 0,
       image: productImage?.path,
-      createdAt: DateTime.now(),
+      createdAt: selectedProduct?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
     try {
-      await _repository.addProduct(stock);
+      if (selectedProduct != null) {
+        await _repository.updateProduct(stock);
+        successMessage = 'Product updated successfully';
+      } else {
+        await _repository.addProduct(stock);
+        successMessage = 'Product saved successfully';
+      }
       clearFields();
-      successMessage = 'Product saved successfully';
+      selectedProduct = null;
     } catch (e) {
       errorMessage = 'Failed to save product: ${e.toString()}';
     } finally {

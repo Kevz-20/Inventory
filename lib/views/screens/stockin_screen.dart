@@ -155,12 +155,11 @@ class StockInScreen extends ConsumerWidget {
                     );
                   },
               onSelected: (value) {
-                // Find the full product object
                 final product = vm.allProducts.firstWhere(
                   (p) => p.name == value,
                 );
+                vm.selectedProduct = product;
 
-                // Populate all fields
                 vm.productController.text = product.name;
                 vm.setCategory(product.category);
                 vm.purchasePriceController.text = product.purchasePrice
