@@ -38,11 +38,13 @@ class StockInViewModel extends ChangeNotifier {
       productImage != null;
 
   final List<String> categories = [
-    'Food',
-    'Vegetables',
-    'Snacks',
-    'Drinks',
-    'Others',
+    'Imnonon',
+    'Alak',
+    'Pagkaon',
+    'Panglimpyo',
+    'Gamit sa Panimalay',
+    'Gamit sa Eskwelahan',
+    'Uban Pa',
   ];
   final List<String> months = [
     'January',
