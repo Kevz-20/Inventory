@@ -19,8 +19,10 @@ class StockInViewModel extends ChangeNotifier {
   DateTime selectedDate = DateTime.now();
   String? selectedCategory;
   File? productImage;
+  List<String> productNames = [];
+  List<ProductModel> allProducts = [];
 
-  final productController = TextEditingController();
+  final TextEditingController productController = TextEditingController();
   final purchasePriceController = TextEditingController();
   final sellingPriceController = TextEditingController();
   final quantityController = TextEditingController();
@@ -57,6 +59,7 @@ class StockInViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   String? errorMessage;
+  String? successMessage;
 
   StockInViewModel() {
     _init();
@@ -65,6 +68,7 @@ class StockInViewModel extends ChangeNotifier {
   Future<void> _init() async {
     final db = await DBService.instance.database;
     _repository = StockInRepository(db);
+    await loadProductNames();
     isInitialized = true;
     notifyListeners();
   }
@@ -100,6 +104,15 @@ class StockInViewModel extends ChangeNotifier {
       return;
     }
 
+    // final isDuplicate = await _repository.isDuplicateProduct(
+    //   productController.text,
+    // );
+    // if (isDuplicate) {
+    //   errorMessage = 'Product name already exists';
+    //   notifyListeners();
+    //   return;
+    // }
+
     setLoading(true);
 
     final stock = ProductModel(
@@ -116,14 +129,13 @@ class StockInViewModel extends ChangeNotifier {
     try {
       await _repository.addProduct(stock);
       clearFields();
-
-      errorMessage = null;
-    } catch (e, stackTrace) {
+      successMessage = 'Product saved successfully';
+    } catch (e) {
       errorMessage = 'Failed to save product: ${e.toString()}';
-      debugPrint('Error saving product: $e');
-      debugPrintStack(stackTrace: stackTrace);
     } finally {
       setLoading(false);
+      notifyListeners();
+      autoClearMessages();
     }
   }
 
@@ -176,6 +188,12 @@ class StockInViewModel extends ChangeNotifier {
     return result ?? false;
   }
 
+  Future<void> loadProductNames() async {
+    allProducts = await _repository.loadAllProducts();
+    productNames = allProducts.map((p) => p.name).toList();
+    notifyListeners();
+  }
+
   void triggerValidation() {
     showValidationErrors = true;
     notifyListeners();
@@ -186,6 +204,14 @@ class StockInViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void autoClearMessages() {
+    Future.delayed(const Duration(seconds: 3), () {
+      errorMessage = null;
+      successMessage = null;
+      notifyListeners();
+    });
+  }
+
   void clearFields() {
     productController.clear();
     purchasePriceController.clear();
@@ -194,6 +220,8 @@ class StockInViewModel extends ChangeNotifier {
     selectedCategory = null;
     productImage = null;
     errorMessage = null;
+    successMessage = null;
+    showValidationErrors = false;
     notifyListeners();
   }
 }

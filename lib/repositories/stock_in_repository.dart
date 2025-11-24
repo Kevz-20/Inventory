@@ -120,6 +120,47 @@ class StockInRepository {
     );
   }
 
+  // Check if product name already exists
+  Future<bool> isDuplicateProduct(String name) async {
+    final accountId = await getAccountId();
+
+    final result = await db.query(
+      'product',
+      columns: ['id'],
+      where: 'account_id = ? AND LOWER(name) = ?',
+      whereArgs: [accountId, name.toLowerCase()],
+      limit: 1,
+    );
+
+    return result.isNotEmpty;
+  }
+
+  // Load all products for autocomplete
+  Future<List<ProductModel>> loadAllProducts() async {
+    final accountId = await getAccountId();
+
+    final result = await db.query(
+      'product',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+      orderBy: 'name ASC',
+    );
+
+    return result.map(ProductModel.fromMap).toList();
+  }
+
+  // Delete all products
+  Future<int> deleteAllProducts() async {
+    final accountId = await getAccountId();
+
+    return await db.delete(
+      'product',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+  }
+
+  // Clear cache
   void clearCache() {
     cachedAccountId = null;
     cachedModileNumber = null;

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,6 +25,29 @@ class StockInScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            if (vm.successMessage != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.check_circle, color: AppColors.success),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        vm.successMessage!,
+                        style: const TextStyle(color: AppColors.success),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (vm.errorMessage != null)
               Container(
                 width: double.infinity,
@@ -35,12 +60,12 @@ class StockInScreen extends ConsumerWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.error, color: Colors.red),
+                    const Icon(Icons.error, color: AppColors.error),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         vm.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
+                        style: const TextStyle(color: AppColors.error),
                       ),
                     ),
                   ],
@@ -65,11 +90,127 @@ class StockInScreen extends ConsumerWidget {
               onChanged: vm.setCategory,
             ),
             const SizedBox(height: 15),
-            _inputTextField(
-              prefix: const Icon(Icons.edit, color: AppColors.primary),
-              label: 'Pangalan sa produkto',
-              controller: vm.productController,
-              showError: vm.showValidationErrors,
+            Autocomplete<String>(
+              optionsBuilder: (TextEditingValue value) {
+                if (value.text.isEmpty) return const Iterable<String>.empty();
+
+                return vm.productNames.where(
+                  (name) =>
+                      name.toLowerCase().contains(value.text.toLowerCase()),
+                );
+              },
+              displayStringForOption: (option) => option,
+              fieldViewBuilder:
+                  (context, fieldController, focusNode, onSubmit) {
+                    final bool isError =
+                        vm.showValidationErrors && fieldController.text.isEmpty;
+
+                    return SizedBox(
+                      height: 60,
+                      child: TextField(
+                        controller: fieldController,
+                        focusNode: focusNode,
+                        keyboardType: TextInputType.text,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(
+                            Icons.edit,
+                            color: AppColors.primary,
+                          ),
+                          labelText: 'Pangalan sa produkto',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 16,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isError
+                                  ? Colors.red
+                                  : Colors.grey.shade400,
+                              width: 1.2,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isError ? Colors.red : AppColors.primary,
+                              width: 1.2,
+                            ),
+                          ),
+                        ),
+                        onChanged: (text) {
+                          vm.productController.text = text;
+                          vm.productController.selection =
+                              TextSelection.fromPosition(
+                                TextPosition(offset: text.length),
+                              );
+                        },
+                      ),
+                    );
+                  },
+              onSelected: (value) {
+                // Find the full product object
+                final product = vm.allProducts.firstWhere(
+                  (p) => p.name == value,
+                );
+
+                // Populate all fields
+                vm.productController.text = product.name;
+                vm.setCategory(product.category);
+                vm.purchasePriceController.text = product.purchasePrice
+                    .toString();
+                vm.sellingPriceController.text = product.sellingPrice
+                    .toString();
+                vm.quantityController.text = product.quantity.toString();
+                vm.productImage = product.image != null
+                    ? File(product.image!)
+                    : null;
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(12),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        itemCount: options.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final option = options.elementAt(index);
+                          return InkWell(
+                            onTap: () => onSelected(option),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
+                              child: Text(
+                                option,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 15),
             _inputTextField(
