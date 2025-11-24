@@ -10,7 +10,7 @@ class StockInRepository {
   int? cachedAccountId;
 
   // Cache mobile number
-  int? cachedModileNumber;
+  int? cachedMobileNumber;
 
   // Get current timestamp
   String _now() => DateTime.now().toIso8601String();
@@ -27,7 +27,7 @@ class StockInRepository {
     if (mobileNumber == null) throw Exception('Account not found');
 
     if (cachedAccountId != null &&
-        cachedModileNumber != mobileNumber.hashCode) {
+        cachedMobileNumber != mobileNumber.hashCode) {
       cachedAccountId = null;
     }
 
@@ -44,7 +44,7 @@ class StockInRepository {
     if (result.isEmpty) throw Exception('Account not found');
 
     cachedAccountId = result.first['id'] as int;
-    cachedModileNumber = mobileNumber.hashCode;
+    cachedMobileNumber = mobileNumber.hashCode;
     return cachedAccountId!;
   }
 
@@ -163,6 +163,6 @@ class StockInRepository {
   // Clear cache
   void clearCache() {
     cachedAccountId = null;
-    cachedModileNumber = null;
+    cachedMobileNumber = null;
   }
 }

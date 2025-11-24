@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
+import '../../view_models/profle_view_model.dart';
 import '../widgets/nav_bar.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(profileViewModelProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
       appBar: AppBar(
@@ -17,98 +21,75 @@ class ProfileScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: const BottomNavBar(currentIndex: 1),
+      body: vm.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : vm.error != null
+          ? Center(child: Text('Error: ${vm.error}'))
+          : vm.account == null
+          ? const Center(child: Text('No account found'))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 10),
+                  const CircleAvatar(
+                    radius: 55,
+                    backgroundImage: AssetImage("assets/profile.png"),
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    vm.account!.associationName ?? 'No Name Provided',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 25),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 10),
+                  _sectionTitle('Account Information'),
+                  _infoCard([
+                    _infoRow(
+                      Icons.numbers,
+                      'Mobile Number',
+                      vm.account!.mobileNumber,
+                    ),
+                    if (vm.account!.associationName != null)
+                      _infoRow(
+                        Icons.business,
+                        'Association',
+                        vm.account!.associationName!,
+                      ),
+                    if (vm.account!.securityQuestionId != null)
+                      _infoRow(
+                        Icons.security,
+                        'Security Question ID',
+                        vm.account!.securityQuestionId.toString(),
+                      ),
+                    if (vm.account!.securityAnswer != null)
+                      _infoRow(
+                        Icons.question_answer,
+                        'Security Answer',
+                        vm.account!.securityAnswer!,
+                      ),
+                  ]),
 
-            const CircleAvatar(
-              radius: 55,
-              backgroundImage: AssetImage("assets/profile.png"),
-            ),
-            
-            const SizedBox(height: 15),
+                  const SizedBox(height: 20),
 
-            const Text(
-              'Ashley Mae Tanio',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.greenAccent.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.check_circle, color: Colors.green),
-                  SizedBox(width: 6),
-                  Text('Verified Beneficiary'),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryLight,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {},
+                    child: const Text('Edit Profile'),
+                  ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 25),
-
-            _sectionTitle('Personal Information'),
-            _infoCard([
-              _infoRow(Icons.numbers, 'Mobile Number', '09918030406'),
-              _infoRow(Icons.cake, 'Birthday', ' '),
-              _infoRow(Icons.phone, 'Contact Number', ' '),
-              _infoRow(Icons.location_on, 'Address', ' '),
-            ]),
-
-            const SizedBox(height: 20),
-
-            _sectionTitle('Beneficiary Information'),
-            _infoCard([
-              _infoRow(Icons.badge, 'Category', '4Ps Beneficiary'),
-              _infoRow(Icons.info, 'Status', 'Active'),
-            ]),
-
-            const SizedBox(height: 20),
-
-            _sectionTitle('Assistance History'),
-            _infoCard([
-              _infoRow(Icons.check, 'Last Assistance', 'Food Package'),
-              _infoRow(Icons.calendar_today, 'Date Received', 'Oct 18, 2025'),
-            ]),
-
-            const SizedBox(height: 20),
-
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {},
-              child: const Text('Edit Profile'),
-            ),
-
-            const SizedBox(height: 10),
-
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {},
-              child: const Text('Logout'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -133,9 +114,9 @@ Widget _infoCard(List<Widget> children) {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withValues(alpha: 0.3),
-          spreadRadius: 1,
-          blurRadius: 5,
+          color: Colors.grey.withValues(alpha: 51),
+          blurRadius: 2,
+          offset: const Offset(0, 2),
         ),
       ],
     ),

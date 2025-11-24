@@ -40,11 +40,11 @@ class AppTheme {
         ),
       ),
 
-  textSelectionTheme: TextSelectionThemeData(
-    cursorColor: AppColors.textPrimary,
-    selectionColor: AppColors.textPrimary,
-    selectionHandleColor: AppColors.textPrimary,
-  ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: AppColors.primaryLight,
+        selectionColor: AppColors.primaryLight,
+        selectionHandleColor: AppColors.primaryLight,
+      ),
 
       dropdownMenuTheme: DropdownMenuThemeData(
         menuStyle: MenuStyle(

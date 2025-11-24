@@ -110,6 +110,17 @@ class StockInViewModel extends ChangeNotifier {
 
     setLoading(true);
 
+    // Check if product exists in DB by name (case insensitive)
+    ProductModel? existingProduct;
+    for (var p in allProducts) {
+      if (p.name.toLowerCase() == productController.text.toLowerCase()) {
+        existingProduct = p;
+        break;
+      }
+    }
+    // If user didn't select suggestion but typed existing name, use it
+    selectedProduct ??= existingProduct;
+
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productController.text,
@@ -126,12 +137,12 @@ class StockInViewModel extends ChangeNotifier {
       if (selectedProduct != null) {
         await _repository.updateProduct(stock);
         successMessage = 'Product updated successfully';
-        await loadProductNames();
       } else {
         await _repository.addProduct(stock);
         successMessage = 'Product saved successfully';
-        await loadProductNames();
       }
+
+      await loadProductNames();
       clearFields();
       selectedProduct = null;
     } catch (e) {
