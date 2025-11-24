@@ -12,10 +12,12 @@ class SettingsViewModel extends ChangeNotifier {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text("Logout"),
         content: const Text("Are you sure you want to logout?"),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
             child: const Text("Cancel"),
             onPressed: () => Navigator.pop(context),
           ),
