@@ -125,7 +125,6 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                     const SizedBox(height: 25),
 
                     if (vmState.account != null) ...[
-                      const SizedBox(height: 20),
                       const Text(
                         "New PIN",
                         style: TextStyle(
@@ -164,16 +163,22 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 25),
 
-                      Text(
-                        "Answer Security Question (ID: ${vmState.account!.securityQuestionId})",
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w500,
+                      if (vmState.account != null)
+                        FutureBuilder<String>(
+                          future: vmState.securityQuestion,
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) return const SizedBox();
+                            return Text(
+                              snapshot.data!,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
                         ),
-                      ),
                       const SizedBox(height: 10),
                       TextField(
                         controller: vmState.answerController,
@@ -248,9 +253,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                                 color: Colors.white,
                               )
                             : Text(
-                                vmState.account == null
-                                    ? "Submit"
-                                    : "Validate Answer",
+                                vmState.account == null ? "Submit" : "Submit",
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,

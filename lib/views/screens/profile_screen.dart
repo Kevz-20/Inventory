@@ -37,7 +37,7 @@ class ProfileScreen extends ConsumerWidget {
                   ElevatedButton(
                     onPressed: () async {
                       debugPrint('[ProfileScreen] Refresh pressed');
-                      await ref.read(profileViewModelProvider).refreshAccount();
+                      await ref.read(profileViewModelProvider).loadAccount();
                     },
                     child: const Text('Retry'),
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../repositories/forgot_pin_repository.dart';
 import '../services/db_service.dart';
 import '../models/forgot_pin_model.dart';
@@ -7,8 +8,7 @@ import '../models/forgot_pin_model.dart';
 final forgotPinViewModelProvider = ChangeNotifierProvider<ForgotPinViewModel>((
   ref,
 ) {
-  final repository = ForgotPinRepositoryWrapper();
-  return ForgotPinViewModel(repository);
+  return ForgotPinViewModel(ForgotPinRepositoryWrapper());
 });
 
 class ForgotPinRepositoryWrapper {
@@ -16,6 +16,12 @@ class ForgotPinRepositoryWrapper {
     final db = await DBService.instance.database;
     final repo = ForgotPinRepository(db);
     return repo.getAccountByMobileNumber(mobileNumber);
+  }
+
+  Future<void> updatePin(String mobile, String pin) async {
+    final db = await DBService.instance.database;
+    final repo = ForgotPinRepository(db);
+    await repo.updatePin(mobile, pin);
   }
 }
 
@@ -33,71 +39,69 @@ class ForgotPinViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  String get mobileNumber => mobileController.text.trim();
   ForgotPinModel? get account => _cachedAccount;
 
   Future<void> fetchAccount() async {
     final mobile = mobileController.text.trim();
+
     if (!_validateMobile(mobile)) return;
 
     _setLoading(true);
 
     try {
-      ForgotPinModel? acc = _cachedAccount;
-      if (acc == null || acc.mobileNumber != mobile) {
-        acc = await _repository.getAccountByMobile(mobile);
-        _cachedAccount = acc;
+      if (_cachedAccount == null || _cachedAccount!.mobileNumber != mobile) {
+        _cachedAccount = await _repository.getAccountByMobile(mobile);
       }
 
-      if (acc == null) {
+      if (_cachedAccount == null) {
         _setError("Mobile number not found");
       } else {
         errorMessage = null;
+        notifyListeners();
       }
     } catch (e) {
-      _setError(e.toString());
+      _setError("Something went wrong");
     }
 
     _setLoading(false);
   }
 
   bool validateAnswer() {
-    final answer = answerController.text.trim();
     if (_cachedAccount == null) {
       _setError("No account loaded");
       return false;
     }
+
+    final answer = answerController.text.trim();
     if (answer.isEmpty) {
       _setError("Please enter your answer");
       return false;
     }
+
     if (answer != _cachedAccount!.securityAnswer) {
       _setError("Incorrect answer");
       return false;
     }
+
     return true;
   }
 
   Future<bool> updatePin() async {
     final newPin = newPinController.text.trim();
 
-    if (newPin.isEmpty ||
-        newPin.length != 4 ||
-        !RegExp(r'^[0-9]+$').hasMatch(newPin)) {
-      _setError("PIN must be 4 digits");
-      return false;
-    }
-
+    if (!_validatePin(newPin)) return false;
     if (_cachedAccount == null) {
       _setError("No account loaded");
       return false;
     }
 
     _setLoading(true);
+
     try {
-      final db = await DBService.instance.database;
-      final repo = ForgotPinRepository(db);
-      await repo.updatePin(_cachedAccount!.mobileNumber, newPin);
+      await _repository.updatePin(_cachedAccount!.mobileNumber, newPin);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('mobileNumber', _cachedAccount!.mobileNumber);
 
       _cachedAccount = ForgotPinModel(
         mobileNumber: _cachedAccount!.mobileNumber,
@@ -107,14 +111,37 @@ class ForgotPinViewModel extends ChangeNotifier {
       );
 
       errorMessage = null;
-      clear();
+
       _setLoading(false);
+
+      mobileController.clear();
+      answerController.clear();
+      newPinController.clear();
+
+      notifyListeners();
+
       return true;
     } catch (e) {
-      _setError("Failed to update PIN: $e");
+      _setError("Failed to update PIN");
       _setLoading(false);
       return false;
     }
+  }
+
+  Future<String> get securityQuestion async {
+    if (_cachedAccount == null) return "";
+    final db = await DBService.instance.database;
+    final id = _cachedAccount!.securityQuestionId;
+    final result = await db.query(
+      'security_questions',
+      columns: ['question'],
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    return result.isNotEmpty
+        ? result.first['question'] as String
+        : "Question not found";
   }
 
   void clear() {
@@ -130,8 +157,21 @@ class ForgotPinViewModel extends ChangeNotifier {
     if (mobile.isEmpty) {
       _setError("Please enter mobile number");
       return false;
-    } else if (mobile.length != 11 || !RegExp(r'^[0-9]+$').hasMatch(mobile)) {
+    }
+    if (mobile.length != 11 || !RegExp(r'^[0-9]+$').hasMatch(mobile)) {
       _setError("Invalid mobile number");
+      return false;
+    }
+    return true;
+  }
+
+  bool _validatePin(String pin) {
+    if (pin.isEmpty) {
+      _setError("Please enter new PIN");
+      return false;
+    }
+    if (pin.length != 4 || !RegExp(r'^[0-9]+$').hasMatch(pin)) {
+      _setError("PIN must be 4 digits");
       return false;
     }
     return true;

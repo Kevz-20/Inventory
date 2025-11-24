@@ -42,6 +42,7 @@ class LoginViewModel extends ChangeNotifier {
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
     mobileNumber = prefs.getString('mobileNumber') ?? '';
+    debugPrint('loadSavedMobile called, mobileNumber: $mobileNumber');
     notifyListeners();
   }
 

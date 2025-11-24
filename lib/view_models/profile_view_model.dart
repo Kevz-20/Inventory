@@ -12,48 +12,36 @@ class ProfileViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  Account? _cachedAccount;
-
-  Account? get account => _cachedAccount ?? _account;
+  Account? get account => _account;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  ProfileViewModel() {
-    debugPrint('[ProfileVM] Constructor called');
-    _init();
-  }
+  ProfileViewModel();
 
-  Future<void> _init() async {
-    debugPrint('[ProfileVM] _init() started');
+  Future<void> init() async {
+    debugPrint('[ProfileVM] init() started');
 
     _isLoading = true;
     notifyListeners();
 
     try {
       final db = await DBService.instance.database;
-      debugPrint('[ProfileVM] Database loaded');
-
       repository = AccountRepository(db);
       debugPrint('[ProfileVM] Repository initialized');
 
       await loadAccount();
     } catch (e) {
-      debugPrint('[ProfileVM] ERROR in _init(): $e');
+      debugPrint('[ProfileVM] ERROR in init(): $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
-      debugPrint('[ProfileVM] _init() completed');
+      debugPrint('[ProfileVM] init() completed');
     }
   }
 
   Future<void> loadAccount() async {
     debugPrint('[ProfileVM] loadAccount() called');
-
-    if (_cachedAccount != null) {
-      debugPrint('[ProfileVM] Using cached account: ${_cachedAccount?.id}');
-      return;
-    }
 
     _isLoading = true;
     _error = null;
@@ -68,27 +56,15 @@ class ProfileViewModel extends ChangeNotifier {
       } else {
         debugPrint('[ProfileVM] Account loaded: ${_account!.id}');
       }
-
-      _cachedAccount = _account;
     } catch (e) {
       debugPrint('[ProfileVM] ERROR in loadAccount(): $e');
       _error = e.toString();
       _account = null;
-      _cachedAccount = null;
     } finally {
       _isLoading = false;
       notifyListeners();
       debugPrint('[ProfileVM] loadAccount() completed');
     }
-  }
-
-  Future<void> refreshAccount() async {
-    debugPrint('[ProfileVM] refreshAccount() called');
-
-    _cachedAccount = null;
-    debugPrint('[ProfileVM] Cache cleared');
-
-    await loadAccount();
   }
 
   Future<void> setMobileNumber(String mobileNumber) async {
@@ -98,12 +74,7 @@ class ProfileViewModel extends ChangeNotifier {
     await prefs.setString('mobileNumber', mobileNumber);
     debugPrint('[ProfileVM] Mobile number saved to SharedPrefs');
 
-    repository.cachedAccountId = null;
-    repository.cachedMobileNumber = null;
-
-    _cachedAccount = null;
-    debugPrint('[ProfileVM] Repository cache cleared');
-
+    _account = null;
     await loadAccount();
   }
 
@@ -111,25 +82,22 @@ class ProfileViewModel extends ChangeNotifier {
     debugPrint('[ProfileVM] clearAccountCache() called');
 
     _account = null;
-    _cachedAccount = null;
     _error = null;
     _isLoading = false;
-
-    repository.cachedAccountId = null;
-    repository.cachedMobileNumber = null;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('mobileNumber');
     debugPrint('[ProfileVM] SharedPrefs mobileNumber removed');
 
     notifyListeners();
-    debugPrint('[ProfileVM] Account cache cleared and listeners notified');
+    debugPrint('[ProfileVM] Account cleared and listeners notified');
   }
 }
 
 final profileViewModelProvider = ChangeNotifierProvider<ProfileViewModel>((
   ref,
 ) {
-  debugPrint('[ProfileVM] Provider created');
-  return ProfileViewModel();
+  final vm = ProfileViewModel();
+  vm.init();
+  return vm;
 });
