@@ -102,6 +102,8 @@ class StockInScreen extends ConsumerWidget {
               displayStringForOption: (option) => option,
               fieldViewBuilder:
                   (context, fieldController, focusNode, onSubmit) {
+                    vm.autocompleteFieldController = fieldController;
+
                     final bool isError =
                         vm.showValidationErrors && fieldController.text.isEmpty;
 

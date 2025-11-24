@@ -23,6 +23,7 @@ class StockInViewModel extends ChangeNotifier {
   List<ProductModel> allProducts = [];
   ProductModel? selectedProduct;
 
+  TextEditingController? autocompleteFieldController;
   final TextEditingController productController = TextEditingController();
   final purchasePriceController = TextEditingController();
   final sellingPriceController = TextEditingController();
@@ -123,9 +124,11 @@ class StockInViewModel extends ChangeNotifier {
       if (selectedProduct != null) {
         await _repository.updateProduct(stock);
         successMessage = 'Product updated successfully';
+        await loadProductNames();
       } else {
         await _repository.addProduct(stock);
         successMessage = 'Product saved successfully';
+        await loadProductNames();
       }
       clearFields();
       selectedProduct = null;
@@ -190,6 +193,12 @@ class StockInViewModel extends ChangeNotifier {
   Future<void> loadProductNames() async {
     allProducts = await _repository.loadAllProducts();
     productNames = allProducts.map((p) => p.name).toList();
+
+    debugPrint('All products:');
+    for (var name in productNames) {
+      debugPrint(name);
+    }
+
     notifyListeners();
   }
 
@@ -218,9 +227,10 @@ class StockInViewModel extends ChangeNotifier {
     quantityController.clear();
     selectedCategory = null;
     productImage = null;
+    selectedProduct = null;
     errorMessage = null;
-    successMessage = null;
     showValidationErrors = false;
+    autocompleteFieldController?.clear();
     notifyListeners();
   }
 }
