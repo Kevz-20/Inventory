@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
-import '../../view_models/profle_view_model.dart';
+import '../../view_models/profile_view_model.dart';
 import '../widgets/nav_bar.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -9,7 +9,12 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    debugPrint('[ProfileScreen] build() called');
+
     final vm = ref.watch(profileViewModelProvider);
+    debugPrint(
+      '[ProfileScreen] Provider watched: isLoading=${vm.isLoading}, account=${vm.account}',
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
@@ -24,7 +29,21 @@ class ProfileScreen extends ConsumerWidget {
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.error != null
-          ? Center(child: Text('Error: ${vm.error}'))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: ${vm.error}'),
+                  ElevatedButton(
+                    onPressed: () async {
+                      debugPrint('[ProfileScreen] Refresh pressed');
+                      await ref.read(profileViewModelProvider).refreshAccount();
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
           : vm.account == null
           ? const Center(child: Text('No account found'))
           : SingleChildScrollView(
@@ -33,9 +52,14 @@ class ProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 10),
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 55,
-                    backgroundImage: AssetImage("assets/profile.png"),
+                    backgroundColor: Colors.grey[300],
+                    child: const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 15),
                   Text(
@@ -84,7 +108,9 @@ class ProfileScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      debugPrint('[ProfileScreen] Edit Profile pressed');
+                    },
                     child: const Text('Edit Profile'),
                   ),
                 ],

@@ -96,14 +96,13 @@ class StockInScreen extends ConsumerWidget {
 
                 return vm.productNames.where(
                   (name) =>
-                      name.toLowerCase().contains(value.text.toLowerCase()),
+                      name.toLowerCase().startsWith(value.text.toLowerCase()),
                 );
               },
               displayStringForOption: (option) => option,
               fieldViewBuilder:
                   (context, fieldController, focusNode, onSubmit) {
                     vm.autocompleteFieldController = fieldController;
-
                     final bool isError =
                         vm.showValidationErrors && fieldController.text.isEmpty;
 
@@ -112,7 +111,6 @@ class StockInScreen extends ConsumerWidget {
                       child: TextField(
                         controller: fieldController,
                         focusNode: focusNode,
-                        keyboardType: TextInputType.text,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
@@ -161,7 +159,6 @@ class StockInScreen extends ConsumerWidget {
                   (p) => p.name == value,
                 );
                 vm.selectedProduct = product;
-
                 vm.productController.text = product.name;
                 vm.setCategory(product.category);
                 vm.purchasePriceController.text = product.purchasePrice
@@ -177,22 +174,23 @@ class StockInScreen extends ConsumerWidget {
                 return Material(
                   elevation: 4,
                   borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: options.length * 48.0,
                       ),
-                      child: ListView.separated(
+                      child: ListView.builder(
                         padding: EdgeInsets.zero,
                         itemCount: options.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final option = options.elementAt(index);
                           return InkWell(
                             onTap: () => onSelected(option),
-                            child: Padding(
+                            child: Container(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 12,
                                 horizontal: 16,

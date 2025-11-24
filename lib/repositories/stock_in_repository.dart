@@ -6,10 +6,8 @@ class StockInRepository {
   final Database db;
   StockInRepository(this.db);
 
-  // Cache account id
+  // Account cache
   int? cachedAccountId;
-
-  // Cache mobile number
   int? cachedMobileNumber;
 
   // Get current timestamp

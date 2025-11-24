@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>(
-  (ref) => SettingsViewModel(),
-);
+import 'profile_view_model.dart';
+
+final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
+  ref,
+) {
+  return SettingsViewModel(ref);
+});
 
 class SettingsViewModel extends ChangeNotifier {
+  final Ref ref;
+
+  SettingsViewModel(this.ref);
+
   void logout(BuildContext context) {
     showDialog(
       context: context,
@@ -24,8 +32,12 @@ class SettingsViewModel extends ChangeNotifier {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text("Logout"),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
+
+              // Clear cached account cleanly
+              await ref.read(profileViewModelProvider).clearAccountCache();
+
               if (!context.mounted) return;
               GoRouter.of(context).go('/login', extra: 'fromLogout');
             },

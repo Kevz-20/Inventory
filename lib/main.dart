@@ -6,10 +6,7 @@ import 'app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize local database
   await DBService.instance.database;
-
   runApp(const ProviderScope(child: MyApp()));
 }
 

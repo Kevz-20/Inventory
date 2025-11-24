@@ -12,77 +12,104 @@ class ProfileViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  // Cache to avoid repeated DB queries
   Account? _cachedAccount;
 
-  // Getters
   Account? get account => _cachedAccount ?? _account;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   ProfileViewModel() {
+    debugPrint('[ProfileVM] Constructor called');
     _init();
   }
 
-  // Initialize repository and load account
   Future<void> _init() async {
+    debugPrint('[ProfileVM] _init() started');
+
     _isLoading = true;
     notifyListeners();
 
     try {
       final db = await DBService.instance.database;
+      debugPrint('[ProfileVM] Database loaded');
+
       repository = AccountRepository(db);
+      debugPrint('[ProfileVM] Repository initialized');
+
       await loadAccount();
     } catch (e) {
+      debugPrint('[ProfileVM] ERROR in _init(): $e');
       _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
+      debugPrint('[ProfileVM] _init() completed');
     }
   }
 
-  // Load account details from repository
   Future<void> loadAccount() async {
-    // Return cached account if available
-    if (_cachedAccount != null) return;
+    debugPrint('[ProfileVM] loadAccount() called');
+
+    if (_cachedAccount != null) {
+      debugPrint('[ProfileVM] Using cached account: ${_cachedAccount?.id}');
+      return;
+    }
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      debugPrint('[ProfileVM] Fetching account from repository...');
       _account = await repository.getAccountDetails();
-      _cachedAccount = _account; // Cache account
+
+      if (_account == null) {
+        debugPrint('[ProfileVM] No account found.');
+      } else {
+        debugPrint('[ProfileVM] Account loaded: ${_account!.id}');
+      }
+
+      _cachedAccount = _account;
     } catch (e) {
+      debugPrint('[ProfileVM] ERROR in loadAccount(): $e');
       _error = e.toString();
       _account = null;
       _cachedAccount = null;
     } finally {
       _isLoading = false;
       notifyListeners();
+      debugPrint('[ProfileVM] loadAccount() completed');
     }
   }
 
-  // Force refresh account data from DB
   Future<void> refreshAccount() async {
-    _cachedAccount = null; // Clear cache
+    debugPrint('[ProfileVM] refreshAccount() called');
+
+    _cachedAccount = null;
+    debugPrint('[ProfileVM] Cache cleared');
+
     await loadAccount();
   }
 
-  // Set mobile number in SharedPreferences and reload
   Future<void> setMobileNumber(String mobileNumber) async {
+    debugPrint('[ProfileVM] setMobileNumber($mobileNumber)');
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('mobileNumber', mobileNumber);
+    debugPrint('[ProfileVM] Mobile number saved to SharedPrefs');
 
     repository.cachedAccountId = null;
     repository.cachedMobileNumber = null;
+
     _cachedAccount = null;
+    debugPrint('[ProfileVM] Repository cache cleared');
 
     await loadAccount();
   }
 
-  // Clear cached account data (logout)
   Future<void> clearAccountCache() async {
+    debugPrint('[ProfileVM] clearAccountCache() called');
+
     _account = null;
     _cachedAccount = null;
     _error = null;
@@ -93,16 +120,16 @@ class ProfileViewModel extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('mobileNumber');
+    debugPrint('[ProfileVM] SharedPrefs mobileNumber removed');
 
     notifyListeners();
+    debugPrint('[ProfileVM] Account cache cleared and listeners notified');
   }
 }
 
-/// ----------------------
-/// Riverpod Provider
-/// ----------------------
 final profileViewModelProvider = ChangeNotifierProvider<ProfileViewModel>((
   ref,
 ) {
+  debugPrint('[ProfileVM] Provider created');
   return ProfileViewModel();
 });
