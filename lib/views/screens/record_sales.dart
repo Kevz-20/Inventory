@@ -241,8 +241,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         Image.network(
           product.image ??
               'https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg',
-          width: 50,
-          height: 50,
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          cacheWidth: 100,
+          cacheHeight: 100,
         ),
         const SizedBox(width: 12),
         Expanded(
