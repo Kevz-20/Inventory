@@ -171,7 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onTapDown: (_) => viewModel.setPressed(index, true),
                       onTapUp: (_) {
                         viewModel.setPressed(index, false);
-                        viewModel.onKeyTap(context, label);
+                        viewModel.onKeyTap(context, label, ref);
                       },
                       onTapCancel: () => viewModel.setPressed(index, false),
                       child: AnimatedScale(

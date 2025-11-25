@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'profile_view_model.dart';
 
 final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
   ref,
@@ -43,11 +44,30 @@ class SettingsViewModel extends ChangeNotifier {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
+    debugPrint('⭐ [SettingsViewModel] Logout pressed');
+
     Navigator.pop(context);
+    debugPrint('⭐ [SettingsViewModel] Logout dialog closed');
 
     await _clearStoredMobileNumber();
+    debugPrint('⭐ [SettingsViewModel] SharedPreferences cleared');
+
+    // Get ProfileViewModel instance and reset it
+    final profileVM = await ref.read(profileViewModelProvider.future);
+    debugPrint(
+      '⭐ [SettingsViewModel] ProfileViewModel before reset: '
+      'account=${profileVM.account}, isLoading=${profileVM.isLoading}, error=${profileVM.error}',
+    );
+
+    profileVM.reset();
+    debugPrint(
+      '⭐ [SettingsViewModel] ProfileViewModel after reset: '
+      'account=${profileVM.account}, isLoading=${profileVM.isLoading}, error=${profileVM.error}',
+    );
+
     if (!context.mounted) return;
     GoRouter.of(context).go('/login', extra: 'fromLogout');
+    debugPrint('⭐ [SettingsViewModel] Navigated to /login');
   }
 
   Future<void> _clearStoredMobileNumber() async {

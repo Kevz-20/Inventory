@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
 import '../core/app_colors.dart';
-import '../models/login_model.dart';
+import 'profile_view_model.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider<LoginViewModel>((ref) {
   final repository = LoginRepository(DBService.instance);
@@ -16,7 +16,7 @@ class LoginViewModel extends ChangeNotifier {
   final LoginRepository _repository;
 
   LoginViewModel(this._repository) {
-    loadSavedMobile(); // auto-load saved number on startup
+    loadSavedMobile();
   }
 
   final formKey = GlobalKey<FormState>();
@@ -24,8 +24,6 @@ class LoginViewModel extends ChangeNotifier {
   String mobileNumber = '';
   String pin = '';
   String? errorMessage;
-
-  LoginModel? _cachedAccount;
 
   final Set<int> _pressedKeys = {};
   bool isPressed(int index) => _pressedKeys.contains(index);
@@ -42,7 +40,7 @@ class LoginViewModel extends ChangeNotifier {
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
     mobileNumber = prefs.getString('mobileNumber') ?? '';
-    debugPrint('loadSavedMobile called, mobileNumber: $mobileNumber');
+    debugPrint('⭐ [LoginViewModel] loadSavedMobile: $mobileNumber');
     notifyListeners();
   }
 
@@ -50,14 +48,15 @@ class LoginViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('mobileNumber', number);
     mobileNumber = number;
+    debugPrint('⭐ [LoginViewModel] Saved mobileNumber: $mobileNumber');
     notifyListeners();
   }
 
-  void onKeyTap(BuildContext context, String label) {
+  void onKeyTap(BuildContext context, String label, WidgetRef ref) {
     if (label == 'back') {
       if (pin.isNotEmpty) pin = pin.substring(0, pin.length - 1);
     } else if (label == 'enter') {
-      if (pin.length == 4) login(context);
+      if (pin.length == 4) login(context, ref);
     } else {
       if (pin.length < 4) pin += label;
     }
@@ -69,28 +68,33 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(BuildContext context) async {
+  Future<void> login(BuildContext context, WidgetRef ref) async {
     if (mobileNumber.isEmpty || pin.length != 4) {
       errorMessage = 'Enter valid mobile number and PIN';
       notifyListeners();
-      if (context.mounted) {
-        _showMessageDialog(context, errorMessage!, success: false);
-      }
+      _showMessageDialog(context, errorMessage!, success: false);
       return;
     }
 
-    LoginModel? account = _cachedAccount;
+    debugPrint('⭐ [LoginViewModel] Attempting login: $mobileNumber');
 
-    if (account == null || account.mobileNumber != mobileNumber) {
-      account = await _repository.getAccountByMobileNumber(mobileNumber);
-      _cachedAccount = account;
-    }
+    final account = await _repository.getAccountByMobileNumber(mobileNumber);
+    debugPrint(
+      '⭐ [LoginViewModel] Fetched account: ${account?.mobileNumber}, PIN: ${account!.pin}',
+    );
 
-    if (account != null && account.pin == pin) {
+    if (account.pin == pin) {
       errorMessage = null;
       clearPin();
 
+      // Save mobile number to SharedPreferences
       await saveMobileNumber(account.mobileNumber);
+
+      // Update the mobile number provider so ProfileViewModel reloads automatically
+      ref.read(mobileNumberProvider.notifier).state = account.mobileNumber;
+      debugPrint(
+        '⭐ [LoginViewModel] Mobile number changed to: ${account.mobileNumber}',
+      );
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
@@ -252,7 +256,7 @@ class LoginViewModel extends ChangeNotifier {
 
     if (result != null) {
       await saveMobileNumber(result);
-      _cachedAccount = null;
+      debugPrint('⭐ [LoginViewModel] Mobile number changed to: $result');
     }
   }
 }
