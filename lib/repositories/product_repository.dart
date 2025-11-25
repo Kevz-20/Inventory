@@ -45,4 +45,34 @@ class ProductRepository {
     }
     return null;
   }
+
+  Future<void> savePurchase(List<Map<String, dynamic>> purchasedItems) async {
+    final accountId = await accountRepo.getAccountId();
+    final batch = db.batch();
+
+    for (var item in purchasedItems) {
+      final data = {
+        'account_id': accountId,
+        'product_id': item['productId'],
+        'name': item['name'],
+        'quantity': item['quantity'],
+        'price': item['price'],
+        'total': item['total'],
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      batch.insert('purchase', data);
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchases() async {
+    final accountId = await accountRepo.getAccountId();
+    return await db.query(
+      'purchase',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+      orderBy: 'timestamp DESC',
+    );
+  }
 }

@@ -121,4 +121,38 @@ class SalesViewModel extends ChangeNotifier {
       total += (p.sellingPrice * qty).toInt();
     }
   }
+
+  // Called when user completes purchase
+  Future<void> checkout() async {
+    final purchasedItems = <Map<String, dynamic>>[];
+
+    for (var p in products) {
+      final qty = productQuantities[p.id!] ?? 0;
+      if (qty > 0) {
+        purchasedItems.add({
+          'productId': p.id,
+          'name': p.name,
+          'quantity': qty,
+          'price': p.sellingPrice,
+          'total': qty * p.sellingPrice,
+        });
+
+        // Optionally reduce stock
+        p.quantity -= qty;
+      }
+    }
+
+    // Save to database or backend
+    if (_repository != null) {
+      await _repository!.savePurchase(purchasedItems);
+    }
+
+    // Reset quantities
+    for (var id in productQuantities.keys) {
+      productQuantities[id] = 0;
+    }
+
+    calculateTotal();
+    notifyListeners();
+  }
 }

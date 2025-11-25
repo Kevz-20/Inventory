@@ -298,6 +298,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               controller: controller,
               textAlign: TextAlign.center,
               keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.black),
               onSubmitted: (value) {
                 int qty = int.tryParse(value) ?? 0;
                 vm.updateQuantity(product, qty);
