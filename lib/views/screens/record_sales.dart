@@ -13,6 +13,14 @@ class RecordSalesScreen extends ConsumerStatefulWidget {
 
 class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   bool isCash = true;
+  TextEditingController searchController = TextEditingController();
+  String searchQuery = '';
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -98,38 +106,45 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         ),
       );
 
-  Widget _cashList(SalesViewModel vm) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _searchBar(),
-      const SizedBox(height: 12),
-      _categoryChips(vm),
-      const SizedBox(height: 16),
-      if (vm.filteredProducts.isEmpty)
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              'No products found',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-                fontWeight: FontWeight.w500,
+  Widget _cashList(SalesViewModel vm) {
+    final displayedProducts = vm.filteredProducts
+        .where((p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _searchBar(vm),
+        const SizedBox(height: 12),
+        _categoryChips(vm),
+        const SizedBox(height: 16),
+        if (displayedProducts.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                'No products found',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
+          )
+        else
+          ...displayedProducts.map(
+            (p) => _productCard(
+              p.name,
+              p.sellingPrice,
+              p.quantity,
+              p.image ??
+                  'https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg',
+            ),
           ),
-        )
-      else
-        ...vm.filteredProducts.map(
-          (p) => _productCard(
-            p.name,
-            p.sellingPrice,
-            p.quantity,
-            p.image ?? 'https://i.imgur.com/0T9QZQH.png',
-          ),
-        ),
-    ],
-  );
+      ],
+    );
+  }
 
   Widget _utangList() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +159,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     ],
   );
 
-  Widget _searchBar() => Container(
+  Widget _searchBar(SalesViewModel vm) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12),
     decoration: BoxDecoration(
       color: Colors.white,
@@ -157,9 +172,15 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         ),
       ],
     ),
-    child: const TextField(
-      decoration: InputDecoration(
+    child: TextField(
+      controller: searchController,
+      onChanged: (value) {
+        setState(() => searchQuery = value);
+      },
+      decoration: const InputDecoration(
         border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
         hintText: "Search products",
         icon: Icon(Icons.search, size: 22, color: Colors.black),
         hintStyle: TextStyle(color: Colors.black),
