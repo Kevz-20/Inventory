@@ -15,6 +15,8 @@ class SalesViewModel extends ChangeNotifier {
   int total = 0;
   int selectedCategoryIndex = 0;
 
+  final Map<int, int> productQuantities = {};
+
   static const List<String> categories = [
     'All',
     'Imnonon',
@@ -37,12 +39,17 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   Future<void> loadProducts() async {
-    if (_repository == null) return; // Guard in case repository is not ready
+    if (_repository == null) return;
 
     isLoading = true;
     notifyListeners();
 
     products = await _repository!.getProducts();
+
+    // Initialize quantities only for products with non-null IDs
+    for (var p in products) {
+      if (p.id != null) productQuantities[p.id!] = 0;
+    }
 
     isLoading = false;
     notifyListeners();
@@ -64,5 +71,54 @@ class SalesViewModel extends ChangeNotifier {
               categories[selectedCategoryIndex].toLowerCase(),
         )
         .toList();
+  }
+
+  void incrementQuantity(ProductModel product) {
+    if (product.id == null) return;
+
+    final currentQty = productQuantities[product.id!] ?? 0;
+
+    if (currentQty < product.quantity) {
+      // ensure it does not exceed stock
+      productQuantities[product.id!] = currentQty + 1;
+      calculateTotal();
+      notifyListeners();
+    }
+  }
+
+  void decrementQuantity(ProductModel product) {
+    if (product.id == null) return;
+    final current = productQuantities[product.id!] ?? 0;
+    if (current > 0) {
+      productQuantities[product.id!] = current - 1;
+      calculateTotal();
+      notifyListeners();
+    }
+  }
+
+  void updateQuantity(ProductModel product, int qty) {
+    if (product.id == null) return;
+
+    // Clamp quantity between 0 and available stock
+    if (qty < 0) qty = 0;
+    if (qty > product.quantity) qty = product.quantity;
+
+    productQuantities[product.id!] = qty;
+    calculateTotal();
+    notifyListeners();
+  }
+
+  int getQuantity(ProductModel product) {
+    if (product.id == null) return 0;
+    return productQuantities[product.id!] ?? 0;
+  }
+
+  void calculateTotal() {
+    total = 0;
+    for (var p in products) {
+      if (p.id == null) continue;
+      final qty = productQuantities[p.id!] ?? 0;
+      total += (p.sellingPrice * qty).toInt();
+    }
   }
 }

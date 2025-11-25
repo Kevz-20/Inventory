@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
+import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
 
@@ -133,15 +134,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             ),
           )
         else
-          ...displayedProducts.map(
-            (p) => _productCard(
-              p.name,
-              p.sellingPrice,
-              p.quantity,
-              p.image ??
-                  'https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg',
-            ),
-          ),
+          ...displayedProducts.map((p) => _productCard(p, vm)),
       ],
     );
   }
@@ -229,66 +222,105 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     ),
   );
 
-  Widget _productCard(String name, double price, int stock, String imageUrl) =>
-      Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Image.network(imageUrl, width: 50, height: 50),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Text(
-                    "Price: ₱$price",
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                  Text(
-                    "Stock: $stock",
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            _quantitySelector(),
-          ],
-        ),
-      );
-
-  Widget _quantitySelector() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 4),
+  Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
+    margin: const EdgeInsets.symmetric(vertical: 4),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      border: Border.all(color: Colors.grey[300]!),
-      borderRadius: BorderRadius.circular(50),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withValues(alpha: 51),
+          blurRadius: 2,
+          offset: const Offset(0, 2),
+        ),
+      ],
     ),
     child: Row(
       children: [
-        IconButton(onPressed: () {}, icon: const Icon(Icons.remove, size: 18)),
-        const Text("0", style: TextStyle(fontWeight: FontWeight.bold)),
-        IconButton(onPressed: () {}, icon: const Icon(Icons.add, size: 18)),
+        Image.network(
+          product.image ??
+              'https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg',
+          width: 50,
+          height: 50,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                product.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                "Price: ₱${product.sellingPrice}",
+                style: const TextStyle(color: Colors.black87),
+              ),
+              Text(
+                "Stock: ${product.quantity}",
+                style: const TextStyle(color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+        _quantitySelector(product, vm),
       ],
     ),
   );
+
+  Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
+    final controller = TextEditingController(
+      text: vm.getQuantity(product).toString(),
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[400]!),
+        borderRadius: BorderRadius.circular(50),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () {
+              vm.decrementQuantity(product);
+              controller.text = vm.getQuantity(product).toString();
+            },
+            icon: const Icon(Icons.remove, size: 18),
+          ),
+          SizedBox(
+            width: 40,
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              onSubmitted: (value) {
+                int qty = int.tryParse(value) ?? 0;
+                vm.updateQuantity(product, qty);
+                controller.text = vm.getQuantity(product).toString();
+              },
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              vm.incrementQuantity(product);
+              controller.text = vm.getQuantity(product).toString();
+            },
+            icon: const Icon(Icons.add, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _dueDateCard() => Container(
     padding: const EdgeInsets.all(14),
@@ -360,9 +392,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            "Total: ₱${vm.total}",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          child: RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(
+                  text: "Total: ",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                  ),
+                ),
+                TextSpan(
+                  text: "₱${vm.total}",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 10),
