@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
-import '../../view_models/profile_view_model.dart';
+import '../../providers/profile_view_model_provider.dart';
 import '../widgets/nav_bar.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -9,126 +9,112 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the FutureProvider (ViewModel) - handles loading/error/data automatically
-    final profileAsync = ref.watch(profileViewModelProvider);
+    final asyncVM = ref.watch(profileViewModelProvider);
 
-    return profileAsync.when(
-      // While loading DB/ViewModel
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      // If an error occurs while initializing ViewModel
-      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
-      // Data is ready (ProfileViewModel instance)
-      data: (vm) {
-        // Watch state provider to rebuild UI when ViewModel triggers _notify()
-        ref.watch(profileStateProvider);
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F6F6),
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        title: const Text(
+          'Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 1),
+      body: asyncVM.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF6F6F6),
-          appBar: AppBar(
-            backgroundColor: AppColors.primary,
-            title: const Text(
-              'Profile',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+        error: (err, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $err'),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => ref.refresh(profileViewModelProvider),
+                child: const Text('Retry'),
               ),
-            ),
+            ],
           ),
-          bottomNavigationBar: const BottomNavBar(currentIndex: 1),
-          body: vm.isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(),
-                ) // loading account
-              : vm.error != null
-              ? Center(
-                  // error fetching account
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Error: ${vm.error}'),
-                      ElevatedButton(
-                        onPressed: () => vm.loadAccount(), // retry fetch
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : vm.account == null
-              ? const Center(child: Text('No account found')) // no account
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 10),
-                      CircleAvatar(
-                        radius: 55,
-                        backgroundColor: Colors.grey[300],
-                        child: const Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Text(
-                        vm.account!.associationName ?? 'No Name Provided',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-                      _sectionTitle('Account Information'),
-                      _infoCard([
-                        _infoRow(
-                          Icons.numbers,
-                          'Mobile Number',
-                          vm.account!.mobileNumber,
-                        ),
-                        if (vm.account!.associationName != null)
-                          _infoRow(
-                            Icons.business,
-                            'Association',
-                            vm.account!.associationName!,
-                          ),
-                        if (vm.account!.securityQuestionId != null)
-                          _infoRow(
-                            Icons.security,
-                            'Security Question ID',
-                            vm.account!.securityQuestionId.toString(),
-                          ),
-                        if (vm.account!.securityAnswer != null)
-                          _infoRow(
-                            Icons.question_answer,
-                            'Security Answer',
-                            vm.account!.securityAnswer!,
-                          ),
-                      ]),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryLight,
-                          minimumSize: const Size(double.infinity, 48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () =>
-                            debugPrint('[ProfileScreen] Edit Profile pressed'),
-                        child: const Text('Edit Profile'),
-                      ),
-                    ],
+        ),
+
+        data: (vm) {
+          if (vm.account == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 10),
+                CircleAvatar(
+                  radius: 55,
+                  backgroundColor: Colors.grey[300],
+                  child: const Icon(
+                    Icons.person,
+                    size: 50,
+                    color: Colors.white,
                   ),
                 ),
-        );
-      },
+                const SizedBox(height: 15),
+                Text(
+                  vm.account!.associationName ?? 'No Name Provided',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 25),
+                _sectionTitle('Account Information'),
+                _infoCard([
+                  _infoRow(
+                    Icons.numbers,
+                    'Mobile Number',
+                    vm.account!.mobileNumber,
+                  ),
+                  if (vm.account!.associationName != null)
+                    _infoRow(
+                      Icons.business,
+                      'Association',
+                      vm.account!.associationName!,
+                    ),
+                  if (vm.account!.securityQuestionId != null)
+                    _infoRow(
+                      Icons.security,
+                      'Security Question ID',
+                      vm.account!.securityQuestionId.toString(),
+                    ),
+                  if (vm.account!.securityAnswer != null)
+                    _infoRow(
+                      Icons.question_answer,
+                      'Security Answer',
+                      vm.account!.securityAnswer!,
+                    ),
+                ]),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryLight,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () =>
+                      debugPrint('⭐ [ProfileScreen] Edit Profile pressed'),
+                  child: const Text('Edit Profile'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-// Section title
 Widget _sectionTitle(String title) => Align(
   alignment: Alignment.centerLeft,
   child: Text(
@@ -137,7 +123,6 @@ Widget _sectionTitle(String title) => Align(
   ),
 );
 
-// Card container for account info
 Widget _infoCard(List<Widget> children) => Container(
   width: double.infinity,
   margin: const EdgeInsets.only(top: 8),
@@ -156,12 +141,11 @@ Widget _infoCard(List<Widget> children) => Container(
   child: Column(children: children),
 );
 
-// Row for a single account field
 Widget _infoRow(IconData icon, String label, String value) => Column(
   children: [
     Row(
       children: [
-        Icon(icon, color: Colors.teal),
+        Icon(icon, color: AppColors.primaryLight),
         const SizedBox(width: 10),
         Expanded(child: Text(label)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),

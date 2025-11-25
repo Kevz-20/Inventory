@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'profile_view_model.dart';
+import '../providers/profile_view_model_provider.dart';
 
 final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
   ref,
@@ -13,14 +13,9 @@ final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
 
 class SettingsViewModel extends ChangeNotifier {
   final Ref ref;
-
   SettingsViewModel(this.ref);
 
   void logout(BuildContext context) {
-    _showLogoutDialog(context);
-  }
-
-  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -44,34 +39,14 @@ class SettingsViewModel extends ChangeNotifier {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    debugPrint('⭐ [SettingsViewModel] Logout pressed');
-
     Navigator.pop(context);
-    debugPrint('⭐ [SettingsViewModel] Logout dialog closed');
 
-    await _clearStoredMobileNumber();
-    debugPrint('⭐ [SettingsViewModel] SharedPreferences cleared');
+    ref.read(profileViewModelProvider).whenData((vm) => vm.reset());
 
-    // Get ProfileViewModel instance and reset it
-    final profileVM = await ref.read(profileViewModelProvider.future);
-    debugPrint(
-      '⭐ [SettingsViewModel] ProfileViewModel before reset: '
-      'account=${profileVM.account}, isLoading=${profileVM.isLoading}, error=${profileVM.error}',
-    );
-
-    profileVM.reset();
-    debugPrint(
-      '⭐ [SettingsViewModel] ProfileViewModel after reset: '
-      'account=${profileVM.account}, isLoading=${profileVM.isLoading}, error=${profileVM.error}',
-    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('mobileNumber');
 
     if (!context.mounted) return;
     GoRouter.of(context).go('/login', extra: 'fromLogout');
-    debugPrint('⭐ [SettingsViewModel] Navigated to /login');
-  }
-
-  Future<void> _clearStoredMobileNumber() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('mobileNumber');
   }
 }

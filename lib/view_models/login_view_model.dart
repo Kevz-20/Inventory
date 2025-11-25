@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/current_mobile_number_provider.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
 import '../core/app_colors.dart';
-import 'profile_view_model.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider<LoginViewModel>((ref) {
   final repository = LoginRepository(DBService.instance);
@@ -76,25 +76,16 @@ class LoginViewModel extends ChangeNotifier {
       return;
     }
 
-    debugPrint('⭐ [LoginViewModel] Attempting login: $mobileNumber');
-
     final account = await _repository.getAccountByMobileNumber(mobileNumber);
-    debugPrint(
-      '⭐ [LoginViewModel] Fetched account: ${account?.mobileNumber}, PIN: ${account!.pin}',
-    );
 
-    if (account.pin == pin) {
+    if (account!.pin == pin) {
       errorMessage = null;
       clearPin();
 
-      // Save mobile number to SharedPreferences
       await saveMobileNumber(account.mobileNumber);
 
-      // Update the mobile number provider so ProfileViewModel reloads automatically
-      ref.read(mobileNumberProvider.notifier).state = account.mobileNumber;
-      debugPrint(
-        '⭐ [LoginViewModel] Mobile number changed to: ${account.mobileNumber}',
-      );
+      ref.read(currentMobileNumberProvider.notifier).state =
+          account.mobileNumber;
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
