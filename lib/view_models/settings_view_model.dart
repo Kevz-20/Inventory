@@ -2,8 +2,7 @@ import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import 'profile_view_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
   ref,
@@ -17,6 +16,10 @@ class SettingsViewModel extends ChangeNotifier {
   SettingsViewModel(this.ref);
 
   void logout(BuildContext context) {
+    _showLogoutDialog(context);
+  }
+
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -32,18 +35,23 @@ class SettingsViewModel extends ChangeNotifier {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text("Logout"),
-            onPressed: () async {
-              Navigator.pop(context);
-
-              // Clear cached account cleanly
-              await ref.read(profileViewModelProvider).clearAccountCache();
-
-              if (!context.mounted) return;
-              GoRouter.of(context).go('/login', extra: 'fromLogout');
-            },
+            onPressed: () async => await _handleLogout(context),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    Navigator.pop(context);
+
+    await _clearStoredMobileNumber();
+    if (!context.mounted) return;
+    GoRouter.of(context).go('/login', extra: 'fromLogout');
+  }
+
+  Future<void> _clearStoredMobileNumber() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('mobileNumber');
   }
 }

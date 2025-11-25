@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/account_model.dart';
@@ -6,27 +7,19 @@ class AccountRepository {
   final Database db;
   AccountRepository(this.db);
 
-  int? cachedAccountId;
-  int? cachedMobileNumber;
-
   // Get mobile number
   Future<String?> getMobileNumber() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('mobileNumber');
+    final mobileNumber = prefs.getString('mobileNumber');
+    debugPrint('⭐ Stored mobile number: $mobileNumber');
+    return mobileNumber;
   }
 
-  // Get account id
+  // Get account ID
   Future<int> getAccountId() async {
     final mobileNumber = await getMobileNumber();
+    debugPrint('⭐ Stored mobile number: $mobileNumber');
     if (mobileNumber == null) throw Exception('Account not found');
-
-    if (cachedAccountId != null &&
-        cachedMobileNumber != mobileNumber.hashCode) {
-      cachedAccountId = null;
-    }
-
-    if (cachedAccountId != null) return cachedAccountId!;
-
     final result = await db.query(
       'account',
       columns: ['id'],
@@ -34,12 +27,8 @@ class AccountRepository {
       whereArgs: [mobileNumber],
       limit: 1,
     );
-
     if (result.isEmpty) throw Exception('Account not found');
-
-    cachedAccountId = result.first['id'] as int;
-    cachedMobileNumber = mobileNumber.hashCode;
-    return cachedAccountId!;
+    return result.first['id'] as int;
   }
 
   // Get account details
@@ -51,7 +40,6 @@ class AccountRepository {
       whereArgs: [accountId],
       limit: 1,
     );
-
     if (result.isEmpty) throw Exception('Account not found');
     return Account.fromMap(result.first);
   }

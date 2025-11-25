@@ -1,49 +1,70 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
+import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
 
-class RecordSalesScreen extends StatefulWidget {
+class RecordSalesScreen extends ConsumerStatefulWidget {
   const RecordSalesScreen({super.key});
 
   @override
-  RecordSalesScreenState createState() => RecordSalesScreenState();
+  ConsumerState<RecordSalesScreen> createState() => _RecordSalesScreenState();
 }
 
-class RecordSalesScreenState extends State<RecordSalesScreen> {
+class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   bool isCash = true;
-  int total = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(salesViewModelProvider).reloadProducts();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final vm = ref.watch(salesViewModelProvider);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Halin', showBackButton: true),
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _cashUtangSwitch(),
-                  const SizedBox(height: 16),
-                  isCash ? _cashList() : _utangList(),
-                ],
-              ),
-            ),
+            child: vm.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _cashUtangSwitch(vm),
+                        const SizedBox(height: 16),
+                        isCash ? _cashList(vm) : _utangList(),
+                      ],
+                    ),
+                  ),
           ),
-          _bottomBar(),
+          _bottomBar(vm),
         ],
       ),
     );
   }
 
-  Widget _cashUtangSwitch() => Row(
+  Widget _cashUtangSwitch(SalesViewModel vm) => Row(
     children: [
-      _switchButton("Cash", isCash, () => setState(() => isCash = true)),
+      _switchButton("Cash", isCash, () {
+        setState(() => isCash = true);
+        vm.reloadProducts();
+      }),
       const SizedBox(width: 10),
-      _switchButton("Utang", !isCash, () => setState(() => isCash = false)),
+      _switchButton("Utang", !isCash, () {
+        setState(() => isCash = false);
+      }),
     ],
   );
 
@@ -77,20 +98,36 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
         ),
       );
 
-  Widget _cashList() => Column(
+  Widget _cashList(SalesViewModel vm) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _searchBar(),
       const SizedBox(height: 12),
-      _categoryChips(),
+      _categoryChips(vm),
       const SizedBox(height: 16),
-      _productCard("Coke 8Oz", 11, 70, "https://i.imgur.com/0T9QZQH.png"),
-      const SizedBox(height: 12),
-      _productCard(
-        "Piattos 250Grams",
-        18,
-        54,
-        "https://i.imgur.com/8qWsw0k.png",
-      ),
+      if (vm.filteredProducts.isEmpty)
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'No products found',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        )
+      else
+        ...vm.filteredProducts.map(
+          (p) => _productCard(
+            p.name,
+            p.sellingPrice,
+            p.quantity,
+            p.image ?? 'https://i.imgur.com/0T9QZQH.png',
+          ),
+        ),
     ],
   );
 
@@ -123,8 +160,6 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
     child: const TextField(
       decoration: InputDecoration(
         border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
         hintText: "Search products",
         icon: Icon(Icons.search, size: 22, color: Colors.black),
         hintStyle: TextStyle(color: Colors.black),
@@ -133,42 +168,43 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
     ),
   );
 
-  Widget _categoryChips() => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Align(
-      alignment: Alignment.centerLeft,
-      child: Row(
-        children: [
-          _chip("All", true),
-          _chip("Drinks"),
-          _chip("Alcohol"),
-          _chip("Food"),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-        ],
-      ),
-    ),
-  );
-
-  Widget _chip(String label, [bool selected = false]) => Container(
-    margin: const EdgeInsets.only(right: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-    decoration: BoxDecoration(
-      color: selected ? AppColors.primary : Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withValues(alpha: 51),
-          blurRadius: 2,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: selected ? Colors.white : Colors.black87,
-        fontWeight: FontWeight.w500,
-      ),
+  Widget _categoryChips(SalesViewModel vm) => SizedBox(
+    height: 50,
+    child: ListView.separated(
+      clipBehavior: Clip.none,
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(left: 0, right: 8),
+      itemCount: SalesViewModel.categories.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final selected = index == vm.selectedCategoryIndex;
+        return GestureDetector(
+          onTap: () => vm.selectCategory(index),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 51),
+                  blurRadius: 2,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              SalesViewModel.categories[index],
+              style: TextStyle(
+                color: selected ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        );
+      },
     ),
   );
 
@@ -289,11 +325,11 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
     ),
   );
 
-  Widget _bottomBar() => Container(
+  Widget _bottomBar(SalesViewModel vm) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: Colors.white,
-      boxShadow: [
+      boxShadow: const [
         BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
       ],
     ),
@@ -304,7 +340,7 @@ class RecordSalesScreenState extends State<RecordSalesScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            "Total: ₱$total",
+            "Total: ₱${vm.total}",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ),
