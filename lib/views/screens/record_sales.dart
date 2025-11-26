@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
@@ -200,7 +202,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: selected ? AppColors.primary : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withValues(alpha: 51),
@@ -230,7 +232,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withValues(alpha: 51),
+          color: Colors.grey.withAlpha(51),
           blurRadius: 2,
           offset: const Offset(0, 2),
         ),
@@ -238,15 +240,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     ),
     child: Row(
       children: [
-        Image.network(
-          product.image ??
-              'https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg',
-          width: 60,
-          height: 60,
-          fit: BoxFit.cover,
-          cacheWidth: 100,
-          cacheHeight: 100,
-        ),
+        _productImage(product),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -275,6 +269,18 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     ),
   );
 
+  Widget _productImage(ProductModel product) {
+    if (product.image == null || product.image!.isEmpty) {
+      return const Placeholder(fallbackWidth: 60, fallbackHeight: 60);
+    }
+    return Image.file(
+      File(product.image!),
+      width: 60,
+      height: 60,
+      fit: BoxFit.cover,
+    );
+  }
+
   Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
     final controller = TextEditingController(
       text: vm.getQuantity(product).toString(),
@@ -296,7 +302,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             icon: const Icon(Icons.remove, size: 18),
           ),
           SizedBox(
-            width: 40,
+            width: 30,
             child: TextField(
               controller: controller,
               textAlign: TextAlign.center,
