@@ -282,10 +282,21 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       ],
     ),
   );
-
   Widget _productImage(ProductModel product) {
     if (product.image == null || product.image!.isEmpty) {
-      return const Placeholder(fallbackWidth: 60, fallbackHeight: 60);
+      return Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(
+          Icons.image_not_supported,
+          size: 30,
+          color: Colors.grey,
+        ),
+      );
     }
     return Image.file(
       File(product.image!),
@@ -307,17 +318,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          GestureDetector(
-            onTap: () {
+          IconButton(
+            onPressed: () {
               vm.decrementQuantity(product);
               controller.text = vm.getQuantity(product).toString();
             },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Icon(Icons.remove, size: 18),
-            ),
+            icon: const Icon(Icons.remove, size: 18),
           ),
           SizedBox(
             width: 40,
@@ -340,15 +347,12 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               ),
             ),
           ),
-          GestureDetector(
-            onTap: () {
+          IconButton(
+            onPressed: () {
               vm.incrementQuantity(product);
               controller.text = vm.getQuantity(product).toString();
             },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Icon(Icons.add, size: 18),
-            ),
+            icon: const Icon(Icons.add, size: 18),
           ),
         ],
       ),
