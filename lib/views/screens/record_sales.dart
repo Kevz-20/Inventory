@@ -20,22 +20,23 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   String searchQuery = '';
 
   @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    // Ensure products load after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(salesViewModelProvider).reloadProducts();
     });
   }
 
   @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final vm = ref.watch(salesViewModelProvider);
+    final vm = ref.watch(salesViewModelProvider); // triggers SalesViewModel
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -45,19 +46,31 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           Expanded(
             child: vm.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _cashUtangSwitch(vm),
-                        const SizedBox(height: 16),
-                        isCash ? _cashList(vm) : _utangList(),
-                      ],
-                    ),
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _cashUtangSwitch(vm),
+                            const SizedBox(height: 16),
+                            _searchBar(vm),
+                            const SizedBox(height: 12),
+                            _categoryChips(vm),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: isCash
+                            ? _cashList(vm)
+                            : _utangList(), // scrollable list
+                      ),
+                    ],
                   ),
           ),
           _bottomBar(vm),
@@ -90,7 +103,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 51),
+                  color: Colors.grey.withAlpha(51),
                   blurRadius: 2,
                   offset: const Offset(0, 2),
                 ),
@@ -114,44 +127,46 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         .where((p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _searchBar(vm),
-        const SizedBox(height: 12),
-        _categoryChips(vm),
-        const SizedBox(height: 16),
-        if (displayedProducts.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Text(
-                'No products found',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+    if (displayedProducts.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Text(
+            'No products found',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
             ),
-          )
-        else
-          ...displayedProducts.map((p) => _productCard(p, vm)),
-      ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: displayedProducts.length,
+      itemBuilder: (context, index) {
+        final product = displayedProducts[index];
+        return _productCard(product, vm);
+      },
     );
   }
 
-  Widget _utangList() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _dueDateCard(),
-      const SizedBox(height: 12),
-      _customerInput(),
-      const SizedBox(height: 12),
-      _customerItem("Drake Kan", 900),
-      const SizedBox(height: 8),
-      _customerItem("Kiel Fen", 1000),
-    ],
+  Widget _utangList() => SingleChildScrollView(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _dueDateCard(),
+        const SizedBox(height: 12),
+        _customerInput(),
+        const SizedBox(height: 12),
+        _customerItem("Drake Kan", 900),
+        const SizedBox(height: 8),
+        _customerItem("Kiel Fen", 1000),
+      ],
+    ),
   );
 
   Widget _searchBar(SalesViewModel vm) => Container(
@@ -161,7 +176,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withValues(alpha: 51),
+          color: Colors.grey.withAlpha(51),
           blurRadius: 2,
           offset: const Offset(0, 2),
         ),
@@ -187,7 +202,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   Widget _categoryChips(SalesViewModel vm) => SizedBox(
     height: 50,
     child: ListView.separated(
-      clipBehavior: Clip.none,
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(left: 0, right: 8),
@@ -205,7 +219,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 51),
+                  color: Colors.grey.withAlpha(51),
                   blurRadius: 2,
                   offset: const Offset(0, 2),
                 ),
@@ -293,16 +307,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               vm.decrementQuantity(product);
               controller.text = vm.getQuantity(product).toString();
             },
-            icon: const Icon(Icons.remove, size: 18),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(Icons.remove, size: 18),
+            ),
           ),
           SizedBox(
-            width: 30,
+            width: 40,
             child: TextField(
               controller: controller,
               textAlign: TextAlign.center,
@@ -315,17 +333,22 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               },
               decoration: const InputDecoration(
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(vertical: 8),
               ),
             ),
           ),
-          IconButton(
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               vm.incrementQuantity(product);
               controller.text = vm.getQuantity(product).toString();
             },
-            icon: const Icon(Icons.add, size: 18),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(Icons.add, size: 18),
+            ),
           ),
         ],
       ),

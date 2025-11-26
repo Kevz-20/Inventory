@@ -29,60 +29,92 @@ class SalesViewModel extends ChangeNotifier {
   ];
 
   SalesViewModel() {
-    _initRepository();
+    debugPrint('⭐ SalesViewModel initialized');
+    // Ensure async initialization runs after construction
+    Future.microtask(() => _initRepository());
   }
 
   Future<void> _initRepository() async {
-    final db = await DBService.instance.database;
-    _repository = ProductRepository(db);
-    await loadProducts();
+    debugPrint('⭐ _initRepository() called');
+    try {
+      final dbFuture = DBService.instance.database;
+      debugPrint('⭐ DBService.database future created: $dbFuture');
+
+      final db = await dbFuture;
+      debugPrint('⭐ DBService.database resolved: $db');
+
+      _repository = ProductRepository(db);
+      debugPrint('⭐ ProductRepository initialized: $_repository');
+
+      await loadProducts();
+      debugPrint('⭐ loadProducts() completed');
+    } catch (e, st) {
+      debugPrint('⭐ Error in _initRepository(): $e');
+      debugPrint('⭐ Stack trace: $st');
+    }
   }
 
   Future<void> loadProducts() async {
     if (_repository == null) return;
 
+    debugPrint('⭐ Loading products...');
     isLoading = true;
     notifyListeners();
 
-    products = await _repository!.getProducts();
+    try {
+      products = await _repository!.getProducts();
+      debugPrint('⭐ Products loaded: ${products.length}');
+    } catch (e, st) {
+      debugPrint('⭐ Error loading products: $e');
+      debugPrint('⭐ Stack trace: $st');
+    }
 
-    // Initialize quantities only for products with non-null IDs
     for (var p in products) {
-      if (p.id != null) productQuantities[p.id!] = 0;
+      if (p.id != null) {
+        productQuantities[p.id!] = 0;
+        debugPrint('⭐ Product initialized: ${p.name} (ID: ${p.id})');
+      }
     }
 
     isLoading = false;
     notifyListeners();
+    debugPrint('⭐ Finished loading products');
   }
 
-  Future<void> reloadProducts() async => loadProducts();
+  Future<void> reloadProducts() async {
+    debugPrint('⭐ Reloading products...');
+    await loadProducts();
+  }
 
   void selectCategory(int index) {
     selectedCategoryIndex = index;
     notifyListeners();
+    debugPrint('⭐ Selected category: ${categories[index]}');
   }
 
   List<ProductModel> get filteredProducts {
     if (selectedCategoryIndex == 0) return products;
-    return products
+    final filtered = products
         .where(
           (p) =>
               p.category.toLowerCase() ==
               categories[selectedCategoryIndex].toLowerCase(),
         )
         .toList();
+    debugPrint('⭐ Filtered products count: ${filtered.length}');
+    return filtered;
   }
 
   void incrementQuantity(ProductModel product) {
     if (product.id == null) return;
-
     final currentQty = productQuantities[product.id!] ?? 0;
-
     if (currentQty < product.quantity) {
-      // ensure it does not exceed stock
       productQuantities[product.id!] = currentQty + 1;
       calculateTotal();
       notifyListeners();
+      debugPrint(
+        '⭐ Incremented ${product.name} to ${productQuantities[product.id!]}',
+      );
     }
   }
 
@@ -93,24 +125,28 @@ class SalesViewModel extends ChangeNotifier {
       productQuantities[product.id!] = current - 1;
       calculateTotal();
       notifyListeners();
+      debugPrint(
+        '⭐ Decremented ${product.name} to ${productQuantities[product.id!]}',
+      );
     }
   }
 
   void updateQuantity(ProductModel product, int qty) {
     if (product.id == null) return;
-
-    // Clamp quantity between 0 and available stock
     if (qty < 0) qty = 0;
     if (qty > product.quantity) qty = product.quantity;
 
     productQuantities[product.id!] = qty;
     calculateTotal();
     notifyListeners();
+    debugPrint('⭐ Updated ${product.name} quantity to $qty');
   }
 
   int getQuantity(ProductModel product) {
     if (product.id == null) return 0;
-    return productQuantities[product.id!] ?? 0;
+    final qty = productQuantities[product.id!] ?? 0;
+    debugPrint('⭐ Quantity for ${product.name}: $qty');
+    return qty;
   }
 
   void calculateTotal() {
@@ -120,10 +156,11 @@ class SalesViewModel extends ChangeNotifier {
       final qty = productQuantities[p.id!] ?? 0;
       total += (p.sellingPrice * qty).toInt();
     }
+    debugPrint('⭐ Total calculated: $total');
   }
 
-  // Called when user completes purchase
   Future<void> checkout() async {
+    debugPrint('⭐ Checkout started');
     final purchasedItems = <Map<String, dynamic>>[];
 
     for (var p in products) {
@@ -136,23 +173,22 @@ class SalesViewModel extends ChangeNotifier {
           'price': p.sellingPrice,
           'total': qty * p.sellingPrice,
         });
-
-        // Optionally reduce stock
         p.quantity -= qty;
+        debugPrint('⭐ Purchased ${p.name}: $qty');
       }
     }
 
-    // Save to database or backend
     if (_repository != null) {
       await _repository!.savePurchase(purchasedItems);
+      debugPrint('⭐ Purchase saved to repository');
     }
 
-    // Reset quantities
     for (var id in productQuantities.keys) {
       productQuantities[id] = 0;
     }
 
     calculateTotal();
     notifyListeners();
+    debugPrint('⭐ Checkout completed');
   }
 }

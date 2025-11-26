@@ -155,8 +155,12 @@ class HomeScreen extends ConsumerWidget {
                     _menuCard(
                       'Halin',
                       'lib/assets/record.png',
-                      onTap: () => GoRouter.of(context).push('/record_sales'),
+                      onTap: () {
+                        debugPrint('⭐ Record sales tapped!');
+                        GoRouter.of(context).push('/record_sales');
+                      },
                     ),
+
                     _menuCard(
                       'Utang',
                       'lib/assets/utang.png',
