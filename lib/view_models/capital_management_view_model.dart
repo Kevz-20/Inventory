@@ -21,24 +21,36 @@ class CapitalManagementViewModel extends ChangeNotifier {
   Future<void> loadCapitals() async {
     _setLoading(true);
     error = null;
+    debugPrint("loadCapitals: Start loading capitals");
 
     try {
       capitals = await capitalRepository.getCapitalByAccount();
+      debugPrint("loadCapitals: Loaded ${capitals.length} capitals");
+      for (var c in capitals) {
+        debugPrint(
+          "Capital ID: ${c.id}, Cash: ${c.cashOnHand}, Capital: ${c.capital}, BankCash: ${c.bankCash}, Remarks: ${c.remarks}",
+        );
+      }
     } catch (e) {
       capitals = [];
       error = e.toString();
+      debugPrint("loadCapitals: Error - $error");
     }
 
     _setLoading(false);
+    debugPrint("loadCapitals: Finished loading capitals");
   }
 
-  // Load total balance
+  // Load total balance by summing cashOnHand + bankCash
   Future<void> loadTotalBalance() async {
     _setLoading(true);
     error = null;
 
     try {
-      totalBalance = await capitalRepository.getTotalBalanceByAccount();
+      totalBalance = capitals.fold<double>(
+        0.0,
+        (sum, c) => sum + c.cashOnHand + c.bankCash,
+      );
     } catch (e) {
       totalBalance = 0.0;
       error = e.toString();

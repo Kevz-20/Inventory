@@ -3,9 +3,12 @@ import '../view_models/capital_management_view_model.dart';
 import 'capital_management_repository_provider.dart';
 
 final capitalManagementViewModelProvider =
-    FutureProvider<CapitalManagementViewModel>((ref) async {
-      final repository = await ref.watch(
-        capitalManagementRepositoryProvider.future,
+    ChangeNotifierProvider<CapitalManagementViewModel?>((ref) {
+      final repoAsync = ref.watch(capitalManagementRepositoryProvider);
+
+      return repoAsync.maybeWhen(
+        data: (repo) => CapitalManagementViewModel(repo),
+        loading: () => null,
+        orElse: () => null,
       );
-      return CapitalManagementViewModel(repository);
     });
