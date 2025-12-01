@@ -86,6 +86,19 @@ class DBService {
       )
     ''');
 
+    // Capital Management
+    await db.execute('''
+      CREATE TABLE capital_management (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        cash_on_hand REAL,
+        capital REAL,
+        bank_cash REAL,
+        remarks TEXT,
+        FOREIGN KEY (account_id) REFERENCES account(id)
+      )
+    ''');
+
     // Customer
     await db.execute('''
       CREATE TABLE customer (

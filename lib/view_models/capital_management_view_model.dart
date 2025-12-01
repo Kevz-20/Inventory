@@ -1,0 +1,119 @@
+import 'package:flutter/foundation.dart';
+import '../models/capital_management_model.dart';
+import '../repositories/capital_management_repository.dart';
+
+class CapitalManagementViewModel extends ChangeNotifier {
+  final CapitalManagementRepository capitalRepository;
+
+  CapitalManagementViewModel(this.capitalRepository);
+
+  List<CapitalManagementModel> capitals = [];
+  double totalBalance = 0.0;
+  bool isLoading = false;
+  String? error;
+
+  void _setLoading(bool value) {
+    isLoading = value;
+    notifyListeners();
+  }
+
+  // Load all capital records
+  Future<void> loadCapitals() async {
+    _setLoading(true);
+    error = null;
+
+    try {
+      capitals = await capitalRepository.getCapitalByAccount();
+    } catch (e) {
+      capitals = [];
+      error = e.toString();
+    }
+
+    _setLoading(false);
+  }
+
+  // Load total balance
+  Future<void> loadTotalBalance() async {
+    _setLoading(true);
+    error = null;
+
+    try {
+      totalBalance = await capitalRepository.getTotalBalanceByAccount();
+    } catch (e) {
+      totalBalance = 0.0;
+      error = e.toString();
+    }
+
+    _setLoading(false);
+  }
+
+  // Add new capital (accountId handled by repository)
+  Future<void> addCapital({
+    required double cashOnHand,
+    double capital = 0,
+    double bankCash = 0,
+    String remarks = '',
+  }) async {
+    _setLoading(true);
+    error = null;
+
+    try {
+      final model = CapitalManagementModel(
+        accountId: 0, // repository will override
+        cashOnHand: cashOnHand,
+        capital: capital,
+        bankCash: bankCash,
+        remarks: remarks,
+      );
+
+      await capitalRepository.insertCapital(model);
+      await loadCapitals();
+      await loadTotalBalance();
+    } catch (e) {
+      error = e.toString();
+    }
+
+    _setLoading(false);
+  }
+
+  // Update capital
+  Future<void> updateCapital(CapitalManagementModel model) async {
+    _setLoading(true);
+    error = null;
+
+    try {
+      await capitalRepository.updateCapital(model);
+      await loadCapitals();
+      await loadTotalBalance();
+    } catch (e) {
+      error = e.toString();
+    }
+
+    _setLoading(false);
+  }
+
+  // Delete capital
+  Future<void> deleteCapital(int id) async {
+    _setLoading(true);
+    error = null;
+
+    try {
+      await capitalRepository.deleteCapital(id);
+      await loadCapitals();
+      await loadTotalBalance();
+    } catch (e) {
+      error = e.toString();
+    }
+
+    _setLoading(false);
+  }
+
+  // Reset state
+  void reset() {
+    capitals = [];
+    totalBalance = 0.0;
+    isLoading = false;
+    error = null;
+    notifyListeners();
+  }
+}
