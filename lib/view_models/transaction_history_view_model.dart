@@ -1,70 +1,93 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/history_model.dart';
-
-// Provider for the ViewModel
-final transactionHistoryProvider =
-    ChangeNotifierProvider<TransactionHistoryViewModel>(
-      (ref) => TransactionHistoryViewModel(),
-    );
+import 'package:flutter/foundation.dart';
+import '../models/transaction_history_model.dart';
+import '../repositories/transaction_history_repository.dart';
 
 class TransactionHistoryViewModel extends ChangeNotifier {
-  List<HistoryModel> transactions = _dummyTransactions;
+  final TransactionHistoryRepository repository;
 
-  String _selectedCategory = 'All';
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
-  DateTime _endDate = DateTime.now();
+  TransactionHistoryViewModel({required this.repository});
 
-  String get selectedCategory => _selectedCategory;
-  DateTime get startDate => _startDate;
-  DateTime get endDate => _endDate;
+  List<TransactionHistory> _transactions = [];
+  List<TransactionHistory> get transactions => _transactions;
 
-  List<HistoryModel> get filteredTransactions {
-    return transactions.where((tx) {
-      final matchesDate =
-          !tx.date.isBefore(_startDate) && !tx.date.isAfter(_endDate);
-      final matchesCategory =
-          _selectedCategory == 'All' || tx.category == _selectedCategory;
-      return matchesDate && matchesCategory;
-    }).toList();
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  String? _error;
+  String? get error => _error;
+
+  // Filters
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _category = 'All';
+
+  DateTime? get startDate => _startDate;
+  DateTime? get endDate => _endDate;
+  String get category => _category;
+
+  // Set filters
+  void setDateRange(DateTime? start, DateTime? end) {
+    _startDate = start;
+    _endDate = end;
+    fetchTransactions();
   }
 
-  void selectCategory(String category) {
-    _selectedCategory = category;
-    notifyListeners();
+  void setCategory(String category) {
+    _category = category;
+    fetchTransactions();
   }
 
-  void setStartDate(DateTime date) {
-    _startDate = date;
+  // Fetch transactions from repository
+  Future<void> fetchTransactions() async {
+    _isLoading = true;
+    _error = null;
     notifyListeners();
+
+    try {
+      _transactions = await repository.getTransactions(
+        startDate: _startDate,
+        endDate: _endDate,
+        category: _category,
+      );
+    } catch (e) {
+      _error = 'Failed to load transactions: $e';
+      _transactions = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  void setEndDate(DateTime date) {
-    _endDate = date;
-    notifyListeners();
+  // Add a new transaction
+  Future<void> addTransaction(TransactionHistory transaction) async {
+    try {
+      await repository.insertTransaction(transaction);
+      await fetchTransactions(); // refresh list
+    } catch (e) {
+      _error = 'Failed to add transaction: $e';
+      notifyListeners();
+    }
+  }
+
+  // Update a transaction
+  Future<void> updateTransaction(TransactionHistory transaction) async {
+    try {
+      await repository.updateTransaction(transaction);
+      await fetchTransactions(); // refresh list
+    } catch (e) {
+      _error = 'Failed to update transaction: $e';
+      notifyListeners();
+    }
+  }
+
+  // Delete a transaction
+  Future<void> deleteTransaction(int id) async {
+    try {
+      await repository.deleteTransaction(id);
+      await fetchTransactions(); // refresh list
+    } catch (e) {
+      _error = 'Failed to delete transaction: $e';
+      notifyListeners();
+    }
   }
 }
-
-final List<HistoryModel> _dummyTransactions = [
-  HistoryModel(
-    title: 'Grocery',
-    amount: 500,
-    category: 'Food',
-    method: 'Cash',
-    date: DateTime(2025, 11, 1),
-  ),
-  HistoryModel(
-    title: 'Salary',
-    amount: 20000,
-    category: 'Salary',
-    method: 'Bank',
-    date: DateTime(2025, 11, 3),
-  ),
-  HistoryModel(
-    title: 'Taxi Ride',
-    amount: 120,
-    category: 'Transport',
-    method: 'Cash',
-    date: DateTime(2025, 11, 4),
-  ),
-];

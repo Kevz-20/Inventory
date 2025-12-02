@@ -129,6 +129,23 @@ class DBService {
       )
     ''');
 
+    // Transaction History
+    await db.execute('''
+      CREATE TABLE transaction_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        account_id INTEGER,
+        type TEXT,
+        quantity_before INTEGER,
+        quantity_after INTEGER,
+        quantity_change INTEGER,
+        description TEXT,
+        created_at TEXT,
+        FOREIGN KEY (product_id) REFERENCES product(id),
+        FOREIGN KEY (account_id) REFERENCES account(id)
+      )
+    ''');
+
     // Capital transaction
     await db.execute('''
       CREATE TABLE capital_transaction (
@@ -155,6 +172,34 @@ class DBService {
         created_at TEXT,
         FOREIGN KEY (product_id) REFERENCES product (id),
         FOREIGN KEY (customer_id) REFERENCES customer (id)
+      )
+    ''');
+
+    // Transaction History (Universal Ledger)
+    await db.execute('''
+      CREATE TABLE transaction_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        account_id INTEGER,
+        type TEXT NOT NULL,
+
+        -- Optional links to related tables
+        product_id INTEGER,
+        sale_id INTEGER,
+        expense_id INTEGER,
+        capital_transaction_id INTEGER,
+
+        amount REAL,
+        quantity INTEGER,
+        description TEXT,
+
+        created_at TEXT NOT NULL,
+
+        FOREIGN KEY (account_id) REFERENCES account(id),
+        FOREIGN KEY (product_id) REFERENCES product(id),
+        FOREIGN KEY (sale_id) REFERENCES sale(id),
+        FOREIGN KEY (expense_id) REFERENCES expenses(id),
+        FOREIGN KEY (capital_transaction_id) REFERENCES capital_transaction(id)
       )
     ''');
 

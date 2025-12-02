@@ -43,7 +43,7 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(iconPath, height: 50),
+                  Image.asset(iconPath, height: 48),
                   const SizedBox(height: 4),
                   Text(
                     title,

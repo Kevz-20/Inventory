@@ -1,208 +1,216 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../providers/transaction_history_repository_provider.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 
-final transactionHistoryProvider = ChangeNotifierProvider(
-  (ref) => TransactionHistoryViewModel(),
-);
-
+// TransactionHistoryScreen
 class TransactionHistoryScreen extends ConsumerWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.watch(transactionHistoryProvider);
+    final repoAsync = ref.watch(transactionHistoryRepoProvider);
 
-    final categories = [
-      'All',
-      'Food',
-      'Transport',
-      'Bills',
-      'Shopping',
-      'Salary',
-      'Other',
-    ];
+    return repoAsync.when(
+      data: (repo) {
+        // Create a provider for the view model using the repo
+        final viewModelProvider =
+            ChangeNotifierProvider<TransactionHistoryViewModel>(
+              (ref) => TransactionHistoryViewModel(repository: repo),
+            );
 
-    return Scaffold(
-      appBar: const AppHeader(title: 'History', showBackButton: true),
-      backgroundColor: AppColors.surface,
-      body: Column(
-        children: [
-          // Date pickers
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: viewModel.startDate,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) viewModel.setStartDate(picked);
-                    },
-                    child: _DateBox(
-                      title: 'Start Date',
-                      dateLabel: DateFormat(
-                        'MMMM d, y',
-                      ).format(viewModel.startDate),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: viewModel.endDate,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) viewModel.setEndDate(picked);
-                    },
-                    child: _DateBox(
-                      title: 'End Date',
-                      dateLabel: DateFormat(
-                        'MMMM d, y',
-                      ).format(viewModel.endDate),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        return Consumer(
+          builder: (context, ref, _) {
+            final viewModel = ref.watch(viewModelProvider);
+            final categories = ['All', 'Gasto', 'Halin', 'Withdraw', 'Deposit'];
 
-          // Category chips with dot indicator
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: CategoryChipsWithDots(
-              categories: categories,
-              selectedCategory: viewModel.selectedCategory,
-              onCategorySelected: (category) {
-                viewModel.selectCategory(category);
-              },
-            ),
-          ),
-
-          // Transaction list
-          Expanded(
-            child: viewModel.filteredTransactions.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No transactions found',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
+            return Scaffold(
+              appBar: const AppHeader(
+                title: 'Transaction History',
+                showBackButton: true,
+              ),
+              backgroundColor: AppColors.surface,
+              body: Column(
+                children: [
+                  // Date pickers
+                  Padding(
                     padding: const EdgeInsets.all(16),
-                    itemCount: viewModel.filteredTransactions.length,
-                    itemBuilder: (context, index) {
-                      final tx = viewModel.filteredTransactions[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withValues(alpha: 51),
-                              blurRadius: 2,
-                              offset: const Offset(0, 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate:
+                                    viewModel.startDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                viewModel.setDateRange(
+                                  picked,
+                                  viewModel.endDate,
+                                );
+                              }
+                            },
+                            child: _DateBox(
+                              title: 'Start Date',
+                              dateLabel: viewModel.startDate != null
+                                  ? DateFormat(
+                                      'MMMM d, y',
+                                    ).format(viewModel.startDate!)
+                                  : 'Select',
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    tx.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  Text(
-                                    '₱${tx.amount.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: tx.isExpense
-                                          ? Colors.red
-                                          : Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    tx.category,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  Text(
-                                    tx.method,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    tx.date.toIso8601String().split('T')[0],
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black45,
-                                    ),
-                                  ),
-                                  Text(
-                                    tx.isExpense ? 'Expense' : 'Income',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: tx.isExpense
-                                          ? Colors.red
-                                          : Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
                           ),
                         ),
-                      );
-                    },
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate:
+                                    viewModel.endDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                viewModel.setDateRange(
+                                  viewModel.startDate,
+                                  picked,
+                                );
+                              }
+                            },
+                            child: _DateBox(
+                              title: 'End Date',
+                              dateLabel: viewModel.endDate != null
+                                  ? DateFormat(
+                                      'MMMM d, y',
+                                    ).format(viewModel.endDate!)
+                                  : 'Select',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-          ),
-        ],
-      ),
+
+                  // Category chips
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: CategoryChipsWithDots(
+                      categories: categories,
+                      selectedCategory: viewModel.category,
+                      onCategorySelected: (category) =>
+                          viewModel.setCategory(category),
+                    ),
+                  ),
+
+                  // Transaction list
+                  Expanded(
+                    child: viewModel.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : viewModel.transactions.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No transactions found',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: viewModel.transactions.length,
+                            itemBuilder: (context, index) {
+                              final tx = viewModel.transactions[index];
+                              final isExpense =
+                                  tx.type == 'Gasto' || tx.type == 'Withdraw';
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withValues(alpha: 51),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            tx.description ?? tx.type,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: isExpense
+                                                  ? Colors.red
+                                                  : Colors.green,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            tx.type,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          Text(
+                                            tx.createdAt
+                                                .toIso8601String()
+                                                .split('T')[0],
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black45,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 }
@@ -223,7 +231,7 @@ class _DateBox extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 51),
-            blurRadius: 4,
+            blurRadius: 2,
             offset: const Offset(0, 2),
           ),
         ],
@@ -233,11 +241,7 @@ class _DateBox extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
           ),
           const SizedBox(height: 4),
           Row(
@@ -253,7 +257,7 @@ class _DateBox extends StatelessWidget {
   }
 }
 
-// Category Chips with Dot Indicator
+// Category Chips with Dot Indicator (dynamic & smooth)
 class CategoryChipsWithDots extends StatefulWidget {
   final List<String> categories;
   final String selectedCategory;
@@ -288,6 +292,22 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
   }
 
   @override
+  void didUpdateWidget(covariant CategoryChipsWithDots oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Scroll to selected category smoothly
+    final index = widget.categories.indexOf(widget.selectedCategory);
+    if (index != -1 && _scrollController.hasClients) {
+      final itemWidth = 72.0; // Approximate width per chip including margin
+      final targetOffset = index * itemWidth - 16;
+      _scrollController.animateTo(
+        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
@@ -300,7 +320,6 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
         SizedBox(
           height: 45,
           child: ListView.separated(
-            clipBehavior: Clip.none,
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -342,6 +361,7 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
           ),
         ),
         const SizedBox(height: 12),
+        // Dot indicators
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(widget.categories.length, (index) {
@@ -349,14 +369,18 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
                 (index / (widget.categories.length - 1) - _scrollFraction)
                     .abs();
             final alpha = (1 - progress.clamp(0.0, 1.0));
+            final isSelected =
+                widget.selectedCategory == widget.categories[index];
 
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 8,
-              height: 8,
+              width: isSelected ? 10 : 8,
+              height: isSelected ? 10 : 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color.fromRGBO(128, 128, 128, alpha),
+                color: isSelected
+                    ? AppColors.primary
+                    : Color.fromRGBO(128, 128, 128, alpha),
               ),
             );
           }),

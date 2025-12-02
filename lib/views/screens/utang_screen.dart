@@ -1,6 +1,5 @@
-import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
-
+import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 
 class UtangScreen extends StatefulWidget {
@@ -11,147 +10,243 @@ class UtangScreen extends StatefulWidget {
 }
 
 class _UtangScreenState extends State<UtangScreen> {
-  bool isCustomerSelected = true;
-
-  final TextEditingController searchController = TextEditingController();
-  bool hideHint = false;
+  int selectedTab = 0; // 0 = Customer, 1 = Owner
+  int selectedFilter = 0; // 0 = Tanan, 1 = Overdue, 2 = Nabayran
+  int navIndex = 1; // History highlighted
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
 
-      appBar: const AppHeader(title: 'Gasto', showBackButton: true),
+      appBar: const AppHeader(title: 'Utang', showBackButton: true),
 
       body: Column(
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
 
-          // TOP TAB BUTTONS
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(40),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => isCustomerSelected = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isCustomerSelected
-                            ? Colors.blue
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        "Customer Utang",
-                        style: TextStyle(
-                          color: isCustomerSelected
-                              ? Colors.white
-                              : Colors.black87,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => isCustomerSelected = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: !isCustomerSelected
-                            ? Colors.blue
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        "Owner Utang",
-                        style: TextStyle(
-                          color: !isCustomerSelected
-                              ? Colors.white
-                              : Colors.black87,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 15),
-
-          // SEARCH BAR (Keyboard works normally; suggestion bar suppressed)
+          /// TOGGLE BUTTONS
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: Colors.black54),
-                const SizedBox(width: 10),
-
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-
-                    onTap: () {
-                      setState(() => hideHint = true);
-                    },
-
-                    onChanged: (value) {
-                      setState(() => hideHint = value.isNotEmpty);
-                    },
-
-                    decoration: InputDecoration(
-                      hintText: hideHint ? "" : "Pangalan sa Utangan",
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(40),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedTab = 0),
+                      child: toggleButton("Customer Utang", selectedTab == 0),
                     ),
-
-                    style: const TextStyle(fontSize: 16),
-
-                    // ✅ Keyboard shows normally
-                    keyboardType: TextInputType.visiblePassword,
-
-                    // ❌ Suggestion bar OFF (as much as Android allows)
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    smartDashesType: SmartDashesType.disabled,
-                    smartQuotesType: SmartQuotesType.disabled,
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedTab = 1),
+                      child: toggleButton("Owner Utang", selectedTab == 1),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
           const SizedBox(height: 15),
 
-          // EMPTY STATE LIST
+          /// PAGE CONTENT
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: const [
-                SizedBox(height: 40),
-                Center(
-                  child: Text(
-                    "No Customer Records",
-                    style: TextStyle(fontSize: 18, color: Colors.black54),
-                  ),
-                ),
-              ],
+            child: IndexedStack(
+              index: selectedTab,
+              children: [customerPage(), ownerPage()],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // CUSTOMER UTANG PAGE
+  // ============================================================
+  Widget customerPage() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: const TextField(
+              decoration: InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: "Pangalan sa Utangan",
+                border: InputBorder.none, // removes main border
+                enabledBorder: InputBorder.none, // removes enabled border
+                focusedBorder: InputBorder.none, // removes focused border
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 100),
+
+        const Text(
+          "Walay utangan",
+          style: TextStyle(fontSize: 18, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // OWNER UTANG PAGE
+  // ============================================================
+  Widget ownerPage() {
+    return Column(
+      children: [
+        /// MAIN CONTENT
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: smallCard("Overdue", "₱0.00 (0)", true)),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: smallCard("Due this Week", "₱0.00 (0)", false),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    filterButton(0, "Tanan"),
+                    const SizedBox(width: 12),
+                    filterButton(1, "Overdue"),
+                    const SizedBox(width: 12),
+                    filterButton(2, "Nabayran"),
+                  ],
+                ),
+
+                const SizedBox(height: 80),
+
+                const Text(
+                  "Walay bayranan",
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+
+                const SizedBox(height: 120),
+              ],
+            ),
+          ),
+        ),
+
+        /// ADD BUTTON
+        Container(
+          margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+          height: 55,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0C4B3E),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: const Center(
+            child: Text(
+              "Pagdugang og Bayronon",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // REUSABLE WIDGETS
+  // ============================================================
+  Widget toggleButton(String text, bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFF0C4B3E) : Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: TextStyle(
+          color: active ? Colors.white : Colors.black,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget smallCard(String title, String value, bool red) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, color: Color(0xff444444)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: red ? Colors.red : Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget filterButton(int index, String text) {
+    bool active = selectedFilter == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => selectedFilter = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 23, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF0C4B3E) : Colors.white,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: active ? Colors.white : Colors.black,
+            fontSize: 15,
+          ),
+        ),
       ),
     );
   }
