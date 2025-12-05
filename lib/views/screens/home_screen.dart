@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
+import '../../app_router.dart'; // import for routeObserver
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -12,14 +13,28 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Fetch the latest data whenever screen appears
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+
+    // Initial fetch
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(homeViewModelProvider.notifier).fetchHomeData();
     });
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when user comes back to this screen (e.g., using back button)
+    ref.read(homeViewModelProvider.notifier).fetchHomeData();
   }
 
   Widget _menuCard(String title, String iconPath, {VoidCallback? onTap}) {
@@ -78,7 +93,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
-    ref.read(homeViewModelProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -91,7 +105,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Top Container
           Container(
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.all(16),
