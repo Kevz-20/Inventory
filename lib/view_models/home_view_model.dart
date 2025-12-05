@@ -3,11 +3,9 @@ import '../providers/database_provider.dart';
 import '../repositories/capital_management_repository.dart';
 import '../repositories/account_repository.dart';
 
-final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>((
-  ref,
-) {
-  return HomeViewModel(ref);
-});
+final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>(
+  (ref) => HomeViewModel(ref),
+);
 
 class HomeViewModel extends StateNotifier<HomeState> {
   final Ref ref;
@@ -52,6 +50,10 @@ class HomeViewModel extends StateNotifier<HomeState> {
   void onNavTap(int index) {
     state = state.copyWith(selectedIndex: index);
   }
+
+  void toggleMoneyVisibility() {
+    state = state.copyWith(isMoneyVisible: !state.isMoneyVisible);
+  }
 }
 
 class HomeState {
@@ -59,27 +61,32 @@ class HomeState {
   final String? mobileNumber;
   final double cashOnHand;
   final String? error;
+  final bool isMoneyVisible;
 
   HomeState({
     required this.selectedIndex,
     this.mobileNumber,
     required this.cashOnHand,
     this.error,
+    this.isMoneyVisible = true,
   });
 
-  factory HomeState.initial() => HomeState(selectedIndex: 0, cashOnHand: 0.0);
+  factory HomeState.initial() =>
+      HomeState(selectedIndex: 0, cashOnHand: 0.0, isMoneyVisible: true);
 
   HomeState copyWith({
     int? selectedIndex,
     String? mobileNumber,
     double? cashOnHand,
     String? error,
+    bool? isMoneyVisible,
   }) {
     return HomeState(
       selectedIndex: selectedIndex ?? this.selectedIndex,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       cashOnHand: cashOnHand ?? this.cashOnHand,
       error: error ?? this.error,
+      isMoneyVisible: isMoneyVisible ?? this.isMoneyVisible,
     );
   }
 }

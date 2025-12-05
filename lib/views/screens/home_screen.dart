@@ -135,17 +135,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'PHP ${homeState.cashOnHand.toStringAsFixed(2)}',
+                      homeState.isMoneyVisible
+                          ? 'PHP ${homeState.cashOnHand.toStringAsFixed(2)}'
+                          : 'PHP ****',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         fontSize: 28,
                       ),
                     ),
-                    const Icon(
-                      Icons.remove_red_eye,
-                      color: Colors.white,
-                      size: 24,
+                    GestureDetector(
+                      onTap: () => ref
+                          .read(homeViewModelProvider.notifier)
+                          .toggleMoneyVisibility(),
+                      child: Icon(
+                        homeState.isMoneyVisible
+                            ? Icons.remove_red_eye
+                            : Icons.visibility_off,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ],
                 ),

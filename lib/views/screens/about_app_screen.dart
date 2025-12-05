@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/app_colors.dart';
+import '../widgets/header.dart';
 
 class AboutAppScreen extends StatelessWidget {
   const AboutAppScreen({super.key});
@@ -8,13 +8,7 @@ class AboutAppScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white, // White background
-      appBar: AppBar(
-        title: const Text(
-          "About App",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppColors.primary,
-      ),
+      appBar: const AppHeader(title: 'About App', showBackButton: true),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
@@ -35,7 +29,7 @@ class AboutAppScreen extends StatelessWidget {
                 "account management simple and effective.\n\n"
                 "Created by the students of CTU Ginatilan:\n"
                 "Project Manager: Director GLicerio Baguia\n"
-                "Team Members: Kevin Mejares, Alduane Mirasol, Jay Suizo, "
+                "Team Members: Kevin Mejares, Al Duane Mirasol, Jay Suizo, "
                 "Jessel Cardeinte, Mariel, Aiza, Shen, Ashleyy, Lhory\n\n"
                 "Thank you for using the DSWD POS System!",
                 style: TextStyle(
