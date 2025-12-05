@@ -15,11 +15,13 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFF6F6F6),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Profile',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
+
       bottomNavigationBar: const BottomNavBar(currentIndex: 1),
       body: asyncVM.when(
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../view_models/settings_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/nav_bar.dart';
@@ -62,16 +63,20 @@ class SettingsScreen extends ConsumerWidget {
           _settingsTile(
             title: "Edit Profile",
             icon: Icons.person,
-            onTap: () {},
+            onTap: () => GoRouter.of(context).push('/profile'),
           ),
           _settingsTile(
             title: "Change PIN / Password",
             icon: Icons.lock,
-            onTap: () {},
+            onTap: () => GoRouter.of(context).push('/change_pin'),
           ),
           const SizedBox(height: 20),
           _sectionTitle("About"),
-          _settingsTile(title: "About App", icon: Icons.info, onTap: () {}),
+          _settingsTile(
+            title: "About App",
+            icon: Icons.info,
+            onTap: () => GoRouter.of(context).push('/about_app'),
+          ),
           const SizedBox(height: 20),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
