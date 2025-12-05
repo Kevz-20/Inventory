@@ -73,4 +73,26 @@ class CapitalManagementRepository {
     final total = result.first['total_cash'];
     return total != null ? (total as num).toDouble() : 0.0;
   }
+
+  // Fetch only cash_on_hand for the current account
+  Future<List<CapitalManagementModel>> getCashOnHandOnly() async {
+    final accountId = await accountRepository.getAccountId();
+    final result = await database.query(
+      'capital_management',
+      columns: ['cash_on_hand'], // only fetch cash_on_hand
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+
+    return result
+        .map(
+          (e) => CapitalManagementModel(
+            accountId: accountId,
+            cashOnHand: (e['cash_on_hand'] as num).toDouble(),
+            capital: 0, // default
+            bankCash: 0, // default
+          ),
+        )
+        .toList();
+  }
 }

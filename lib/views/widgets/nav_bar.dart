@@ -4,7 +4,13 @@ import '../../core/app_colors.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
-  const BottomNavBar({super.key, required this.currentIndex});
+  final Function(int)? onTap; // added optional onTap callback
+
+  const BottomNavBar({
+    super.key,
+    required this.currentIndex,
+    this.onTap, // accept onTap from parent
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +19,11 @@ class BottomNavBar extends StatelessWidget {
       onTap: (index) {
         if (index == currentIndex) return;
 
+        if (onTap != null) {
+          onTap!(index); // notify parent
+        }
+
+        // Navigate using GoRouter
         String path;
         switch (index) {
           case 0:

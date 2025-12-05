@@ -129,23 +129,6 @@ class DBService {
       )
     ''');
 
-    // Transaction History
-    await db.execute('''
-      CREATE TABLE transaction_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER,
-        account_id INTEGER,
-        type TEXT,
-        quantity_before INTEGER,
-        quantity_after INTEGER,
-        quantity_change INTEGER,
-        description TEXT,
-        created_at TEXT,
-        FOREIGN KEY (product_id) REFERENCES product(id),
-        FOREIGN KEY (account_id) REFERENCES account(id)
-      )
-    ''');
-
     // Capital transaction
     await db.execute('''
       CREATE TABLE capital_transaction (
@@ -183,7 +166,6 @@ class DBService {
         account_id INTEGER,
         type TEXT NOT NULL,
 
-        -- Optional links to related tables
         product_id INTEGER,
         sale_id INTEGER,
         expense_id INTEGER,

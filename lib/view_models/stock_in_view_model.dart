@@ -15,6 +15,7 @@ class StockInViewModel extends ChangeNotifier {
   late final StockInRepository _repository;
   bool isInitialized = false;
   bool showValidationErrors = false;
+  bool _isDisposed = false;
 
   DateTime selectedDate = DateTime.now();
   String? selectedCategory;
@@ -46,6 +47,7 @@ class StockInViewModel extends ChangeNotifier {
     'Gamit sa Eskwelahan',
     'Uban Pa',
   ];
+
   final List<String> months = [
     'January',
     'February',
@@ -69,22 +71,36 @@ class StockInViewModel extends ChangeNotifier {
     _init();
   }
 
+  @override
+  void dispose() {
+    _isDisposed = true;
+    productController.dispose();
+    purchasePriceController.dispose();
+    sellingPriceController.dispose();
+    quantityController.dispose();
+    super.dispose();
+  }
+
+  void safeNotifyListeners() {
+    if (!_isDisposed) notifyListeners();
+  }
+
   Future<void> _init() async {
     final db = await DBService.instance.database;
     _repository = StockInRepository(db);
     await loadProductNames();
     isInitialized = true;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void pickDate(DateTime date) {
     selectedDate = date;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void setCategory(String? category) {
     selectedCategory = category;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   String get formattedDate =>
@@ -95,7 +111,7 @@ class StockInViewModel extends ChangeNotifier {
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
     if (pickedFile != null) {
       productImage = File(pickedFile.path);
-      notifyListeners();
+      safeNotifyListeners();
     }
   }
 
@@ -104,13 +120,12 @@ class StockInViewModel extends ChangeNotifier {
 
     if (productController.text.isEmpty || selectedCategory == null) {
       errorMessage = 'Please fill all required fields';
-      notifyListeners();
+      safeNotifyListeners();
       return;
     }
 
     setLoading(true);
 
-    // Check if product exists in DB by name (case insensitive)
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productController.text.toLowerCase()) {
@@ -118,7 +133,7 @@ class StockInViewModel extends ChangeNotifier {
         break;
       }
     }
-    // If user didn't select suggestion but typed existing name, use it
+
     selectedProduct ??= existingProduct;
 
     final stock = ProductModel(
@@ -149,7 +164,7 @@ class StockInViewModel extends ChangeNotifier {
       errorMessage = 'Failed to save product: ${e.toString()}';
     } finally {
       setLoading(false);
-      notifyListeners();
+      safeNotifyListeners();
       autoClearMessages();
     }
   }
@@ -162,7 +177,7 @@ class StockInViewModel extends ChangeNotifier {
   Future<void> updateStock(ProductModel stock) async {
     try {
       await _repository.updateProduct(stock);
-      notifyListeners();
+      safeNotifyListeners();
     } catch (_) {
       errorMessage = 'Failed to update product';
     }
@@ -171,7 +186,7 @@ class StockInViewModel extends ChangeNotifier {
   Future<void> deleteStock(int id) async {
     try {
       await _repository.deleteProduct(id);
-      notifyListeners();
+      safeNotifyListeners();
     } catch (_) {
       errorMessage = 'Failed to delete product';
     }
@@ -212,24 +227,25 @@ class StockInViewModel extends ChangeNotifier {
       debugPrint(name);
     }
 
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void triggerValidation() {
     showValidationErrors = true;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void setLoading(bool value) {
     isLoading = value;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void autoClearMessages() {
     Future.delayed(const Duration(seconds: 3), () {
+      if (_isDisposed) return;
       errorMessage = null;
       successMessage = null;
-      notifyListeners();
+      safeNotifyListeners();
     });
   }
 
@@ -244,6 +260,6 @@ class StockInViewModel extends ChangeNotifier {
     errorMessage = null;
     showValidationErrors = false;
     autocompleteFieldController?.clear();
-    notifyListeners();
+    safeNotifyListeners();
   }
 }

@@ -104,7 +104,7 @@ class _CapitalManagementScreenState
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: const Text(
@@ -133,7 +133,7 @@ class _CapitalManagementScreenState
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withAlpha(51),
+            color: Colors.grey.withValues(alpha: 51),
             blurRadius: 2,
             offset: const Offset(0, 2),
           ),
@@ -168,7 +168,7 @@ class _CapitalManagementScreenState
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withAlpha(51),
+          color: Colors.grey.withValues(alpha: 51),
           blurRadius: 2,
           offset: const Offset(0, 2),
         ),
@@ -237,13 +237,13 @@ class _CapitalManagementScreenState
     String? prefix,
     required Function(String) onSubmitted,
   }) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(10),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withAlpha(51),
+          color: Colors.grey.withValues(alpha: 51),
           blurRadius: 2,
           offset: const Offset(0, 2),
         ),
@@ -254,8 +254,15 @@ class _CapitalManagementScreenState
       onSubmitted: onSubmitted,
       decoration: InputDecoration(
         hintText: hint,
-        prefixText: prefix,
-        prefixStyle: const TextStyle(fontSize: 18, color: Colors.black87),
+        prefix: prefix != null
+            ? Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(
+                  prefix,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+              )
+            : null,
         border: InputBorder.none,
         focusedBorder: InputBorder.none,
         enabledBorder: InputBorder.none,

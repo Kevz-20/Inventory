@@ -2,26 +2,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
+import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch the latest data whenever screen appears
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(homeViewModelProvider.notifier).fetchHomeData();
+    });
+  }
 
   Widget _menuCard(String title, String iconPath, {VoidCallback? onTap}) {
     bool isPressed = false;
     return StatefulBuilder(
       builder: (context, setState) {
         return GestureDetector(
-          onTapDown: (_) {
-            setState(() => isPressed = true);
-          },
+          onTapDown: (_) => setState(() => isPressed = true),
           onTapUp: (_) {
             setState(() => isPressed = false);
             if (onTap != null) onTap();
           },
-          onTapCancel: () {
-            setState(() => isPressed = false);
-          },
+          onTapCancel: () => setState(() => isPressed = false),
           child: AnimatedScale(
             scale: isPressed ? 0.95 : 1.0,
             duration: const Duration(milliseconds: 150),
@@ -34,7 +45,7 @@ class HomeScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withValues(alpha: 51),
+                    color: Colors.grey.withAlpha(51),
                     blurRadius: 2,
                     offset: const Offset(0, 2),
                   ),
@@ -65,7 +76,10 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final homeState = ref.watch(homeViewModelProvider);
+    ref.read(homeViewModelProvider.notifier);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -86,7 +100,7 @@ class HomeScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 51),
+                  color: Colors.grey.withAlpha(51),
                   blurRadius: 2,
                   offset: const Offset(0, 2),
                 ),
@@ -95,11 +109,11 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Cash on Hand',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: const Color.fromARGB(255, 219, 219, 219),
+                    color: Color.fromARGB(255, 219, 219, 219),
                     fontSize: 14,
                   ),
                 ),
@@ -108,8 +122,8 @@ class HomeScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'PHP 10,000',
-                      style: TextStyle(
+                      'PHP ${homeState.cashOnHand.toStringAsFixed(2)}',
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         fontSize: 28,
@@ -124,13 +138,24 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Mobile Number: 09467678484',
-                  style: TextStyle(
+                  'Mobile Number: ${homeState.mobileNumber ?? "Not set"}',
+                  style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     color: Color.fromARGB(255, 219, 219, 219),
                     fontSize: 13,
                   ),
                 ),
+                if (homeState.error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Error: ${homeState.error}',
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -155,12 +180,8 @@ class HomeScreen extends ConsumerWidget {
                     _menuCard(
                       'Halin',
                       'lib/assets/record.png',
-                      onTap: () {
-                        debugPrint('⭐ Record sales tapped!');
-                        GoRouter.of(context).push('/record_sales');
-                      },
+                      onTap: () => GoRouter.of(context).push('/record_sales'),
                     ),
-
                     _menuCard(
                       'Utang',
                       'lib/assets/utang.png',
@@ -223,7 +244,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
+      bottomNavigationBar: BottomNavBar(currentIndex: homeState.selectedIndex),
     );
   }
 }
