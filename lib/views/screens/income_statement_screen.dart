@@ -1,19 +1,62 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
-import '../../view_models/income_statement_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
+import '../../view_models/income_statement_view_model.dart';
 
-final incomeStatementProvider = ChangeNotifierProvider(
-  (ref) => IncomeStatementViewModel(),
-);
-
-class IncomeStatementScreen extends ConsumerWidget {
+class IncomeStatementScreen extends ConsumerStatefulWidget {
   const IncomeStatementScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(incomeStatementProvider);
+  ConsumerState<IncomeStatementScreen> createState() =>
+      _IncomeStatementScreenState();
+}
+
+class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
+  DateTime start = DateTime.now();
+  DateTime end = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStart) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: isStart ? start : end,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          start = picked;
+        } else {
+          end = picked;
+        }
+      });
+      _loadData();
+    }
+  }
+
+  void _loadData() {
+    ref
+        .read(incomeStatementViewModelProvider.notifier)
+        .load(startDate: start, endDate: end);
+  }
+
+  String _format(DateTime date) {
+    return "${date.year}-${date.month}-${date.day}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final incomeState = ref.watch(incomeStatementViewModelProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -26,86 +69,94 @@ class IncomeStatementScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => vm.selectDate(context, true),
+                    onTap: () => _selectDate(context, true),
                     child: _DateBox(
                       title: 'Start Date',
-                      dateLabel: vm.getFormattedDate(true),
+                      dateLabel: _format(start),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => vm.selectDate(context, false),
-                    child: _DateBox(
-                      title: 'End Date',
-                      dateLabel: vm.getFormattedDate(false),
-                    ),
+                    onTap: () => _selectDate(context, false),
+                    child: _DateBox(title: 'End Date', dateLabel: _format(end)),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+
+            // AsyncValue UI Handler
+            incomeState.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.only(top: 40),
+                child: CircularProgressIndicator(),
               ),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildRow('Sales', vm.formatCurrency(vm.merchandiseSales)),
-                    _buildRow(
-                      '  - Merchandise Sales',
-                      vm.formatCurrency(vm.merchandiseSales),
-                    ),
-                    _buildRow('Total Sales', vm.formatCurrency(vm.totalSales)),
-                    _buildRow('Expenses', vm.formatCurrency(vm.totalExpenses)),
-                    _buildRow('  - Kumpra', vm.formatCurrency(vm.kumpra)),
-                    _buildRow(
-                      '  - Transportation',
-                      vm.formatCurrency(vm.transportation),
-                    ),
-                    _buildRow(
-                      'Total Expenses',
-                      vm.formatCurrency(vm.totalExpenses),
-                    ),
-                    _buildRow('Net Income', vm.formatCurrency(vm.netIncome)),
-                  ],
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.only(top: 40),
+                child: Text(
+                  e.toString(),
+                  style: const TextStyle(color: Colors.red),
                 ),
               ),
+              data: (income) {
+                return Card(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _buildRow('Sales', income.sales),
+                        _buildRow('Merchandise Sales', income.merchandiseSales),
+                        _buildRow('Total Sales', income.sales),
+                        _buildRow('Expenses', income.totalExpenses),
+                        _buildRow('Kumpra', income.kumpra),
+                        _buildRow('Transportation', income.transportation),
+                        _buildRow('Total Expenses', income.totalExpenses),
+                        _buildRow('Net Income', income.netIncome, bold: true),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
       ),
+
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
-        child: Material(
-          elevation: 8,
-          borderRadius: BorderRadius.circular(12),
-          shadowColor: Colors.black.withValues(alpha: 0.3),
-          child: SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFED1C24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide.none,
-                ),
-                elevation: 0,
+        child: SizedBox(
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              final vm = ref.read(incomeStatementViewModelProvider.notifier);
+              final state = ref.read(incomeStatementViewModelProvider);
+
+              if (state.asData?.value == null) return;
+
+              await vm.exportPdf();
+            },
+
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFED1C24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              icon: const Icon(Icons.download, color: Colors.white),
-              label: const Text(
-                'Download PDF',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+              elevation: 4,
+            ),
+            icon: const Icon(Icons.download, color: Colors.white),
+            label: const Text(
+              'Download PDF',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
             ),
           ),
@@ -114,23 +165,23 @@ class IncomeStatementScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRow(String title, String value) {
+  Widget _buildRow(String title, double value, {bool bold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
             color: Colors.black87,
           ),
         ),
         Text(
-          value,
-          style: const TextStyle(
+          value.toStringAsFixed(2),
+          style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.bold,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.bold,
             color: Colors.black54,
           ),
         ),

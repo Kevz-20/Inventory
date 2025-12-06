@@ -1,46 +1,96 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import '../models/income_statement_model.dart';
+import '../repositories/income_statement_repository.dart';
 
-class IncomeStatementViewModel extends ChangeNotifier {
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
-  DateTime _endDate = DateTime.now();
+final incomeStatementViewModelProvider =
+    StateNotifierProvider<
+      IncomeStatementViewModel,
+      AsyncValue<IncomeStatementModel>
+    >((ref) => IncomeStatementViewModel(IncomeStatementRepository()));
 
-  double merchandiseSales = 50000;
-  double totalSales = 50000;
-  double kumpra = 15000;
-  double transportation = 5000;
-  double totalExpenses = 20000;
-  double netIncome = 30000;
+class IncomeStatementViewModel
+    extends StateNotifier<AsyncValue<IncomeStatementModel>> {
+  final IncomeStatementRepository repository;
 
-  DateTime get startDate => _startDate;
-  DateTime get endDate => _endDate;
+  // Expose dates
+  DateTime startDate = DateTime.now();
+  DateTime endDate = DateTime.now();
 
-  String getFormattedDate(bool isStart) {
-    final date = isStart ? _startDate : _endDate;
-    return DateFormat('yyyy-MM-dd').format(date);
-  }
+  IncomeStatementViewModel(this.repository) : super(const AsyncValue.loading());
 
-  Future<void> selectDate(BuildContext context, bool isStart) async {
-    final initialDate = isStart ? _startDate : _endDate;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
+  Future<void> load({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    this.startDate = startDate;
+    this.endDate = endDate;
 
-    if (picked != null) {
-      if (isStart) {
-        _startDate = picked;
-      } else {
-        _endDate = picked;
-      }
-      notifyListeners();
+    debugPrint('debug: Loading income statement from $startDate to $endDate');
+
+    state = const AsyncValue.loading();
+
+    try {
+      final result = await repository.fetchIncomeStatement(
+        startDate: startDate,
+        endDate: endDate,
+      );
+      state = AsyncValue.data(result);
+      debugPrint('debug: Income statement loaded successfully: $result');
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      debugPrint('debug: Error loading income statement: $e\n$st');
     }
   }
 
-  String formatCurrency(double value) {
-    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
-    return formatter.format(value);
+  Future<void> exportPdf() async {
+    final data = state.value;
+    if (data == null) return;
+
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              "Income Statement",
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              "Period: ${startDate.toString().substring(0, 10)}  -  ${endDate.toString().substring(0, 10)}",
+            ),
+            pw.Divider(),
+
+            pw.SizedBox(height: 12),
+            _row("Sales", data.sales),
+            _row("Merchandise Sales", data.merchandiseSales),
+            _row("Total Sales", data.sales),
+
+            pw.SizedBox(height: 12),
+            _row("Expenses", data.totalExpenses),
+            _row("Kumpra", data.kumpra),
+            _row("Transportation", data.transportation),
+            _row("Total Expenses", data.totalExpenses),
+
+            pw.Divider(),
+            _row("Net Income", data.netIncome),
+          ],
+        ),
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
+
+  pw.Widget _row(String title, double value) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [pw.Text(title), pw.Text(value.toStringAsFixed(2))],
+    );
   }
 }
