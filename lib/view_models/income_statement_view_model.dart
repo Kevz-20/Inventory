@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import '../models/income_statement_model.dart';
 import '../repositories/income_statement_repository.dart';
 
@@ -65,18 +68,15 @@ class IncomeStatementViewModel
               "Period: ${startDate.toString().substring(0, 10)}  -  ${endDate.toString().substring(0, 10)}",
             ),
             pw.Divider(),
-
             pw.SizedBox(height: 12),
             _row("Sales", data.sales),
             _row("Merchandise Sales", data.merchandiseSales),
             _row("Total Sales", data.sales),
-
             pw.SizedBox(height: 12),
             _row("Expenses", data.totalExpenses),
             _row("Kumpra", data.kumpra),
             _row("Transportation", data.transportation),
             _row("Total Expenses", data.totalExpenses),
-
             pw.Divider(),
             _row("Net Income", data.netIncome),
           ],
@@ -84,7 +84,16 @@ class IncomeStatementViewModel
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/income_statement.pdf');
+      await file.writeAsBytes(await pdf.save());
+
+      // Open the PDF
+      await OpenFile.open(file.path);
+    } catch (e) {
+      debugPrint('Error saving or opening PDF: $e');
+    }
   }
 
   pw.Widget _row(String title, double value) {
