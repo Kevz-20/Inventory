@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/database_provider.dart';
 import '../repositories/capital_management_repository.dart';
 import '../repositories/account_repository.dart';
@@ -13,6 +14,8 @@ class HomeViewModel extends StateNotifier<HomeState> {
   AccountRepository? _accountRepo;
   bool _initialized = false;
 
+  static const _prefsKeyMoneyVisible = 'isMoneyVisible';
+
   HomeViewModel(this.ref) : super(HomeState.initial()) {
     _init();
   }
@@ -21,6 +24,13 @@ class HomeViewModel extends StateNotifier<HomeState> {
     final db = await ref.read(databaseProvider.future);
     _accountRepo = AccountRepository(db);
     _capitalRepo = CapitalManagementRepository(db);
+
+    // Load saved visibility from preferences
+    final prefs = await SharedPreferences.getInstance();
+    final savedVisibility = prefs.getBool(_prefsKeyMoneyVisible) ?? true;
+
+    state = state.copyWith(isMoneyVisible: savedVisibility);
+
     _initialized = true;
     await fetchHomeData();
   }
@@ -51,8 +61,12 @@ class HomeViewModel extends StateNotifier<HomeState> {
     state = state.copyWith(selectedIndex: index);
   }
 
-  void toggleMoneyVisibility() {
-    state = state.copyWith(isMoneyVisible: !state.isMoneyVisible);
+  Future<void> toggleMoneyVisibility() async {
+    final newVisibility = !state.isMoneyVisible;
+    state = state.copyWith(isMoneyVisible: newVisibility);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefsKeyMoneyVisible, newVisibility);
   }
 }
 
