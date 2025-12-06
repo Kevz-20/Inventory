@@ -1,24 +1,38 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../models/income_statement_model.dart';
+import '../providers/database_provider.dart';
+import '../repositories/account_repository.dart';
 import '../repositories/income_statement_repository.dart';
 
 final incomeStatementViewModelProvider =
     StateNotifierProvider<
       IncomeStatementViewModel,
       AsyncValue<IncomeStatementModel>
-    >((ref) => IncomeStatementViewModel(IncomeStatementRepository()));
+    >((ref) {
+      final dbAsync = ref.watch(databaseProvider);
+
+      return dbAsync.when(
+        data: (db) {
+          final accountRepository = AccountRepository(db);
+          final repository = IncomeStatementRepository(
+            accountRepository: accountRepository,
+          );
+          return IncomeStatementViewModel(repository);
+        },
+        loading: () => IncomeStatementViewModel(null), // handle DB not ready
+        error: (_, _) => throw Exception('Database initialization failed'),
+      );
+    });
 
 class IncomeStatementViewModel
     extends StateNotifier<AsyncValue<IncomeStatementModel>> {
-  final IncomeStatementRepository repository;
+  final IncomeStatementRepository? repository;
 
-  // Expose dates
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
 
@@ -28,15 +42,15 @@ class IncomeStatementViewModel
     required DateTime startDate,
     required DateTime endDate,
   }) async {
+    if (repository == null) return;
+
     this.startDate = startDate;
     this.endDate = endDate;
-
-    debugPrint('debug: Loading income statement from $startDate to $endDate');
 
     state = const AsyncValue.loading();
 
     try {
-      final result = await repository.fetchIncomeStatement(
+      final result = await repository!.fetchIncomeStatement(
         startDate: startDate,
         endDate: endDate,
       );
@@ -88,8 +102,6 @@ class IncomeStatementViewModel
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/income_statement.pdf');
       await file.writeAsBytes(await pdf.save());
-
-      // Open the PDF
       await OpenFile.open(file.path);
     } catch (e) {
       debugPrint('Error saving or opening PDF: $e');

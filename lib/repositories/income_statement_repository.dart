@@ -1,13 +1,19 @@
 import 'package:sqflite/sqflite.dart';
 import '../services/db_service.dart';
 import '../models/income_statement_model.dart';
+import 'account_repository.dart';
 
 class IncomeStatementRepository {
+  final AccountRepository accountRepository;
+
+  IncomeStatementRepository({required this.accountRepository});
+
   Future<IncomeStatementModel> fetchIncomeStatement({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     final Database db = await DBService.instance.database;
+    final accountId = await accountRepository.getAccountId();
 
     final start = startDate.toIso8601String();
     final end = endDate.toIso8601String();
@@ -22,12 +28,12 @@ class IncomeStatementRepository {
       SELECT SUM(si.unit_price * si.quantity) AS total
       FROM sale_item si
       JOIN sale s ON si.sale_id = s.id
-      WHERE s.created_at BETWEEN ? AND ?
+      WHERE s.account_id = ?
+        AND s.created_at BETWEEN ? AND ?
       ''',
-      [start, end],
+      [accountId, start, end],
     );
 
-    // Merchandise sales (same as sales)
     final merchandiseSalesResult = salesResult;
 
     // Kumpra (cost of goods sold)
@@ -37,9 +43,10 @@ class IncomeStatementRepository {
       FROM sale_item si
       JOIN stock_in p ON si.stock_in_id = p.id
       JOIN sale s ON si.sale_id = s.id
-      WHERE s.created_at BETWEEN ? AND ?
+      WHERE s.account_id = ?
+        AND s.created_at BETWEEN ? AND ?
       ''',
-      [start, end],
+      [accountId, start, end],
     );
 
     // Transportation expenses
@@ -47,10 +54,11 @@ class IncomeStatementRepository {
       '''
       SELECT SUM(amount) AS total
       FROM expenses
-      WHERE description = "Transportation"
+      WHERE account_id = ?
+        AND description = "Transportation"
         AND created_at BETWEEN ? AND ?
       ''',
-      [start, end],
+      [accountId, start, end],
     );
 
     // Total expenses
@@ -58,9 +66,10 @@ class IncomeStatementRepository {
       '''
       SELECT SUM(amount) AS total
       FROM expenses
-      WHERE created_at BETWEEN ? AND ?
+      WHERE account_id = ?
+        AND created_at BETWEEN ? AND ?
       ''',
-      [start, end],
+      [accountId, start, end],
     );
 
     final sales = getValue(salesResult);
