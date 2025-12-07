@@ -226,7 +226,10 @@ class ExpensesScreen extends ConsumerWidget {
         fillColor: Colors.white,
         prefixIcon: Icon(icon, color: AppColors.primary),
         labelText: label,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 17,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -300,13 +303,25 @@ class ExpensesScreen extends ConsumerWidget {
   // ---------------------------
 
   Future<void> _pickDate(BuildContext context, ExpensesViewModel vm) async {
-    final picked = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: vm.selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary,
+          ),
+          dialogTheme: DialogThemeData(backgroundColor: Colors.grey.shade100),
+        ),
+        child: child!,
+      ),
     );
-    if (picked != null) vm.setDate(picked);
+
+    if (picked != null && picked != vm.selectedDate) vm.setDate(picked);
   }
 
   Future<void> _pickReceiptImage(
