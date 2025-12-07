@@ -152,9 +152,11 @@ class DBService {
         selling_price REAL,
         sale_type TEXT,
         customer_id INTEGER,
+        account_id INTEGER,
         created_at TEXT,
         FOREIGN KEY (product_id) REFERENCES product (id),
-        FOREIGN KEY (customer_id) REFERENCES customer (id)
+        FOREIGN KEY (customer_id) REFERENCES customer (id),
+        FOREIGN KEY (account_id) REFERENCES account (id)
       )
     ''');
 
