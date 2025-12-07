@@ -35,7 +35,7 @@ class ExpensesViewModel extends ChangeNotifier {
   // Getters used by the screen
   // -------------------------------------------------------------
   String get formattedDate {
-    return DateFormat('yyyy-MM-dd').format(selectedDate);
+    return DateFormat('MMMM d, yyyy').format(selectedDate);
   }
 
   // -------------------------------------------------------------

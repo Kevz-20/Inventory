@@ -49,7 +49,7 @@ class ExpensesScreen extends ConsumerWidget {
 
             _inputDropdown(
               icon: Icons.category,
-              label: 'Kategorya sa Gasto',
+              label: 'Kategorya',
               value: vm.selectedCategory,
               items: vm.categories,
               showError: vm.showValidationErrors,
@@ -58,17 +58,30 @@ class ExpensesScreen extends ConsumerWidget {
             const SizedBox(height: 15),
 
             _inputTextField(
-              prefix: const Icon(Icons.payments, color: AppColors.primary),
-              label: 'Price',
+              prefix: const SizedBox(
+                width: 48,
+                child: Center(
+                  child: Text(
+                    '₱',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              label: 'Presyo',
               controller: vm.amountController,
               showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
             ),
+
             const SizedBox(height: 15),
 
             _inputTextField(
               prefix: const Icon(Icons.description, color: AppColors.primary),
-              label: 'Deskripsyon (Gikinahanglan)',
+              label: 'Deskripsyon',
               controller: vm.descriptionController,
               showError: vm.showValidationErrors,
             ),
