@@ -1,271 +1,189 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
 import '../widgets/header.dart';
 
-class ExpensesScreen extends ConsumerStatefulWidget {
+class ExpensesScreen extends ConsumerWidget {
   const ExpensesScreen({super.key});
 
   @override
-  ConsumerState<ExpensesScreen> createState() => _ExpensesScreenState();
-}
-
-class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(expensesViewModelProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Gasto', showBackButton: true),
-
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _datePicker(vm),
-            const SizedBox(height: 18),
+            if (vm.successMessage != null)
+              _banner(
+                vm.successMessage!,
+                Icons.check_circle,
+                AppColors.success,
+                Colors.green.shade100,
+              ),
+
+            if (vm.errorMessage != null)
+              _banner(
+                vm.errorMessage!,
+                Icons.error,
+                AppColors.error,
+                Colors.red.shade100,
+              ),
+
+            InkWell(
+              onTap: () => _pickDate(context, vm),
+              child: _inputRow(
+                icon: Icons.calendar_today,
+                label: 'Petsa',
+                value: vm.formattedDate,
+                onTap: () => _pickDate(context, vm),
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            _inputDropdown(
+              icon: Icons.category,
+              label: 'Kategorya sa Gasto',
+              value: vm.selectedCategory,
+              items: vm.categories,
+              showError: vm.showValidationErrors,
+              onChanged: vm.setCategory,
+            ),
+            const SizedBox(height: 15),
+
             _inputTextField(
-              icon: Icons.payments,
-              label: "Price",
+              prefix: const Icon(Icons.payments, color: AppColors.primary),
+              label: 'Price',
               controller: vm.amountController,
+              showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 18),
-            _categoryDropdown(vm),
-            const SizedBox(height: 18),
+            const SizedBox(height: 15),
+
             _inputTextField(
-              icon: Icons.description,
-              label: "Deskripsyon (Gikinahanglan)",
+              prefix: const Icon(Icons.description, color: AppColors.primary),
+              label: 'Deskripsyon (Gikinahanglan)',
               controller: vm.descriptionController,
+              showError: vm.showValidationErrors,
             ),
-            const SizedBox(height: 20),
-            _receiptButtons(vm),
-            const SizedBox(height: 120),
+            const SizedBox(height: 25),
+
+            _receiptSection(context, vm),
           ],
         ),
       ),
 
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: () async {
-              final saved = await vm.save();
-
-              if (!context.mounted) return;
-
-              if (!saved) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Complete all required fields")),
-                );
-                return;
-              }
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Saved successfully")),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: const Text(
-              "Rekord",
-              style: TextStyle(fontSize: 18, color: Colors.white),
+        padding: const EdgeInsets.all(20),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
+          onPressed: vm.isLoading
+              ? null
+              : () async {
+                  vm.triggerValidation();
+                  vm.save();
+                },
+          child: vm.isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text('Rekord', style: TextStyle(fontSize: 18)),
         ),
       ),
     );
   }
 
-  // DATE PICKER
-  Widget _datePicker(ExpensesViewModel vm) {
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: vm.selectedDate,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-        );
-        if (picked != null) vm.setDate(picked);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _receiptSection(BuildContext context, ExpensesViewModel vm) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Resibo (opsyonal)",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  "Petsa",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  _formatDate(vm.selectedDate),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+        const SizedBox(height: 12),
+
+        GestureDetector(
+          onTap: () => _pickReceiptImage(context, vm),
+          child: Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+            ),
+            child: vm.receiptImage != null
+                ? Image.file(File(vm.receiptImage!.path), fit: BoxFit.cover)
+                : const Center(
+                    child: Icon(Icons.camera_alt, size: 50, color: Colors.grey),
                   ),
-                ),
-              ],
-            ),
-            const Icon(Icons.calendar_today, color: Colors.black87),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  String _formatDate(DateTime date) {
-    return "${_monthName(date.month)} ${date.day}, ${date.year}";
-  }
+  // ---------------------------
+  // Shared UI Components
+  // ---------------------------
 
-  String _monthName(int m) {
-    const List<String> months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    return months[m - 1];
-  }
-
-  // CATEGORY
-  Widget _categoryDropdown(ExpensesViewModel vm) {
-    return SizedBox(
-      height: 60,
-      child: DropdownButtonFormField<String>(
-        initialValue: vm.selectedCategory,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white,
-          labelText: "Kategorya sa Gasto",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        items: vm.categories.map((cat) {
-          return DropdownMenuItem(value: cat, child: Text(cat));
-        }).toList(),
-        onChanged: (value) {
-          if (value != null) vm.setCategory(value);
-        },
-      ),
-    );
-  }
-
-  // RECEIPT BUTTONS
-  Widget _receiptButtons(ExpensesViewModel vm) {
+  Widget _banner(
+    String message,
+    IconData icon,
+    Color iconColor,
+    Color bgColor,
+  ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Resibo (opsyonal)",
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 20),
-
-          // preview
-          if (vm.receiptImage != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                File(vm.receiptImage!.path),
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildReceiptButton(
-                "Photo",
-                Colors.blue,
-                vm.pickReceiptFromCamera,
-              ),
-              _buildReceiptButton(
-                "Choose",
-                Colors.indigo,
-                vm.pickReceiptFromGallery,
-              ),
-              _buildReceiptButton("Remove", Colors.red, vm.removeReceipt),
-            ],
+          Icon(icon, color: iconColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(message, style: TextStyle(color: iconColor)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildReceiptButton(String label, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 5),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onPressed: onTap,
-          child: Text(label, style: const TextStyle(color: Colors.white)),
-        ),
-      ),
-    );
-  }
-
-  Widget _inputTextField({
+  Widget _inputRow({
     required IconData icon,
     required String label,
-    required TextEditingController controller,
-    TextInputType keyboardType = TextInputType.text,
+    required String value,
+    required VoidCallback onTap,
   }) {
     return SizedBox(
       height: 60,
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
+      child: TextFormField(
+        readOnly: true,
+        onTap: onTap,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
@@ -281,7 +199,156 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppColors.primary, width: 1.2),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+          ),
+        ),
+        controller: TextEditingController(text: value),
+      ),
+    );
+  }
+
+  Widget _inputDropdown({
+    required IconData icon,
+    required String label,
+    required String? value,
+    required List<String> items,
+    required bool showError,
+    required void Function(String?) onChanged,
+  }) {
+    final bool isError = showError && value == null;
+
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      isExpanded: true,
+      dropdownColor: Colors.white,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: Icon(icon, color: AppColors.primary),
+        labelText: label,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isError ? Colors.red : Colors.grey.shade400,
+            width: 1.2,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isError ? Colors.red : AppColors.primary,
+            width: 1.2,
+          ),
+        ),
+      ),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _inputTextField({
+    required Widget? prefix,
+    required String label,
+    required TextEditingController controller,
+    required bool showError,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    final bool isError = showError && controller.text.isEmpty;
+
+    return SizedBox(
+      height: 60,
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: prefix,
+          labelText: label,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : Colors.grey.shade400,
+              width: 1.2,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : AppColors.primary,
+              width: 1.2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------
+  // Image + Date Pickers
+  // ---------------------------
+
+  Future<void> _pickDate(BuildContext context, ExpensesViewModel vm) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: vm.selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) vm.setDate(picked);
+  }
+
+  Future<void> _pickReceiptImage(
+    BuildContext context,
+    ExpensesViewModel vm,
+  ) async {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton.icon(
+                icon: const Icon(
+                  Icons.photo_library,
+                  size: 30,
+                  color: AppColors.primary,
+                ),
+                label: const Text("Gallery", style: TextStyle(fontSize: 18)),
+                onPressed: () {
+                  vm.pickReceipt(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                icon: const Icon(
+                  Icons.camera_alt,
+                  size: 30,
+                  color: AppColors.primary,
+                ),
+                label: const Text("Camera", style: TextStyle(fontSize: 18)),
+                onPressed: () {
+                  vm.pickReceipt(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
           ),
         ),
       ),
