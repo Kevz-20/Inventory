@@ -120,7 +120,7 @@ class ExpensesScreen extends ConsumerWidget {
         GestureDetector(
           onTap: () => _pickReceiptImage(context, vm),
           child: Container(
-            height: 150,
+            height: 300,
             width: double.infinity,
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade400),
@@ -134,6 +134,16 @@ class ExpensesScreen extends ConsumerWidget {
                   ),
           ),
         ),
+
+        if (vm.receiptImage != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: vm.removeReceipt,
+              icon: const Icon(Icons.delete, color: Colors.red),
+              label: const Text("Remove", style: TextStyle(color: Colors.red)),
+            ),
+          ),
       ],
     );
   }
