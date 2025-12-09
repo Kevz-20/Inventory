@@ -49,21 +49,31 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                     viewModel.startDate ?? DateTime.now(),
                                 firstDate: DateTime(2000),
                                 lastDate: DateTime(2100),
+                                builder: (context, child) => Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: ColorScheme.light(
+                                      primary: AppColors.primary,
+                                      onPrimary: Colors.white,
+                                      onSurface: AppColors.textPrimary,
+                                    ),
+                                    dialogTheme: DialogThemeData(
+                                      backgroundColor: Colors.grey.shade100,
+                                    ),
+                                  ),
+                                  child: child!,
+                                ),
                               );
-                              if (picked != null) {
-                                viewModel.setDateRange(
-                                  picked,
-                                  viewModel.endDate,
-                                );
-                              }
+
+                              viewModel.setDateRange(
+                                picked ?? viewModel.startDate,
+                                viewModel.endDate,
+                              );
                             },
                             child: _DateBox(
                               title: 'Start Date',
-                              dateLabel: viewModel.startDate != null
-                                  ? DateFormat(
-                                      'MMMM d, y',
-                                    ).format(viewModel.startDate!)
-                                  : 'Select',
+                              dateLabel: DateFormat(
+                                'MMMM d, y',
+                              ).format(viewModel.startDate ?? DateTime.now()),
                             ),
                           ),
                         ),
@@ -77,21 +87,31 @@ class TransactionHistoryScreen extends ConsumerWidget {
                                     viewModel.endDate ?? DateTime.now(),
                                 firstDate: DateTime(2000),
                                 lastDate: DateTime(2100),
+                                builder: (context, child) => Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: ColorScheme.light(
+                                      primary: AppColors.primary,
+                                      onPrimary: Colors.white,
+                                      onSurface: AppColors.textPrimary,
+                                    ),
+                                    dialogTheme: DialogThemeData(
+                                      backgroundColor: Colors.grey.shade100,
+                                    ),
+                                  ),
+                                  child: child!,
+                                ),
                               );
-                              if (picked != null) {
-                                viewModel.setDateRange(
-                                  viewModel.startDate,
-                                  picked,
-                                );
-                              }
+
+                              viewModel.setDateRange(
+                                viewModel.startDate,
+                                picked ?? viewModel.endDate,
+                              );
                             },
                             child: _DateBox(
                               title: 'End Date',
-                              dateLabel: viewModel.endDate != null
-                                  ? DateFormat(
-                                      'MMMM d, y',
-                                    ).format(viewModel.endDate!)
-                                  : 'Select',
+                              dateLabel: DateFormat(
+                                'MMMM d, y',
+                              ).format(viewModel.endDate ?? DateTime.now()),
                             ),
                           ),
                         ),
