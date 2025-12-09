@@ -43,18 +43,27 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    debugPrint(
+      'debug - Fetching transactions from $_startDate to $_endDate, category: $_category',
+    );
+
     try {
       _transactions = await repository.getTransactions(
         startDate: _startDate,
         endDate: _endDate,
         category: _category,
       );
+      debugPrint(
+        'debug - Fetched ${_transactions.length} transactions successfully',
+      );
     } catch (e) {
       _error = 'Failed to load transactions: $e';
       _transactions = [];
+      debugPrint('debug - Error fetching transactions: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
+      debugPrint('debug - Finished fetching transactions');
     }
   }
 

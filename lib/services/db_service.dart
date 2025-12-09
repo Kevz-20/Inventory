@@ -359,15 +359,12 @@ class DBService {
       CREATE TABLE expenses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
-        product_id INTEGER,
         amount REAL,
         category TEXT,
         description TEXT,
         receipt TEXT,
         created_at TEXT,
-        is_fixed_asset INTEGER,
-        FOREIGN KEY (account_id) REFERENCES account (id),
-        FOREIGN KEY (product_id) REFERENCES product (id)
+        FOREIGN KEY (account_id) REFERENCES account (id)
       )
     ''');
 

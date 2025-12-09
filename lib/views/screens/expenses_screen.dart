@@ -27,7 +27,6 @@ class ExpensesScreen extends ConsumerWidget {
                 AppColors.success,
                 Colors.green.shade100,
               ),
-
             if (vm.errorMessage != null)
               _banner(
                 vm.errorMessage!,
@@ -76,7 +75,6 @@ class ExpensesScreen extends ConsumerWidget {
               showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
             ),
-
             const SizedBox(height: 15),
 
             _inputTextField(
@@ -91,7 +89,6 @@ class ExpensesScreen extends ConsumerWidget {
           ],
         ),
       ),
-
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(20),
         child: ElevatedButton(
@@ -106,7 +103,7 @@ class ExpensesScreen extends ConsumerWidget {
               ? null
               : () async {
                   vm.triggerValidation();
-                  vm.save();
+                  await vm.save();
                 },
           child: vm.isLoading
               ? const CircularProgressIndicator(color: Colors.white)
@@ -129,7 +126,6 @@ class ExpensesScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 12),
-
         GestureDetector(
           onTap: () => _pickReceiptImage(context, vm),
           child: Container(
@@ -147,7 +143,6 @@ class ExpensesScreen extends ConsumerWidget {
                   ),
           ),
         ),
-
         if (vm.receiptImage != null)
           Align(
             alignment: Alignment.centerRight,
@@ -160,10 +155,6 @@ class ExpensesScreen extends ConsumerWidget {
       ],
     );
   }
-
-  // ---------------------------
-  // Shared UI Components
-  // ---------------------------
 
   Widget _banner(
     String message,
@@ -322,11 +313,11 @@ class ExpensesScreen extends ConsumerWidget {
   }
 
   // ---------------------------
-  // Image + Date Pickers
+  // Date + Receipt Pickers
   // ---------------------------
 
   Future<void> _pickDate(BuildContext context, ExpensesViewModel vm) async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: vm.selectedDate,
       firstDate: DateTime(2020),
@@ -344,7 +335,7 @@ class ExpensesScreen extends ConsumerWidget {
       ),
     );
 
-    if (picked != null && picked != vm.selectedDate) vm.setDate(picked);
+    if (picked != null) vm.setDate(picked);
   }
 
   Future<void> _pickReceiptImage(

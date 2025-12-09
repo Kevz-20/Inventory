@@ -1,21 +1,24 @@
+import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/expense_model.dart';
 import '../models/transaction_history_model.dart';
-import 'account_repository.dart'; // make sure to import your account repo
+import 'account_repository.dart';
+import 'expense_repository.dart'; // import your expense repo provider
 
 class TransactionHistoryRepository {
   final Database database;
   final AccountRepository accountRepo;
+  final ExpenseRepository expenseRepo;
 
   TransactionHistoryRepository({
     required this.database,
     required this.accountRepo,
+    required this.expenseRepo,
   });
 
   // Insert a new transaction (auto fetch account_id)
   Future<int> insertTransaction(TransactionHistory transaction) async {
-    // Get the current account ID
     final accountId = await accountRepo.getAccountId();
-
     final transactionWithAccount = TransactionHistory(
       id: transaction.id,
       accountId: accountId,
@@ -28,6 +31,10 @@ class TransactionHistoryRepository {
       quantity: transaction.quantity,
       description: transaction.description,
       createdAt: transaction.createdAt,
+    );
+
+    debugPrint(
+      "debug - Inserting transaction: ${transactionWithAccount.toMap()}",
     );
 
     return await database.insert(
@@ -48,10 +55,40 @@ class TransactionHistoryRepository {
       orderBy: 'created_at DESC',
     );
 
+    debugPrint(
+      'debug - Retrieved ${maps.length} transactions from transaction_history',
+    );
+
     return List.generate(
       maps.length,
       (i) => TransactionHistory.fromMap(maps[i]),
     );
+  }
+
+  // Fetch expenses as transactions
+  Future<List<ExpenseModel>> fetchExpensesAsTransactions({
+    String? category,
+  }) async {
+    try {
+      final allExpenses = await expenseRepo.fetchExpensesForCurrentAccount();
+
+      debugPrint(
+        "debug - Fetched ${allExpenses.length} expenses from expenses table",
+      );
+
+      final filteredExpenses = category != null && category != 'All'
+          ? allExpenses.where((e) => e.category == category).toList()
+          : allExpenses;
+
+      debugPrint(
+        "debug - Filtered ${filteredExpenses.length} expenses by category: $category",
+      );
+
+      return filteredExpenses;
+    } catch (e) {
+      debugPrint("debug - Failed to fetch expenses: $e");
+      return [];
+    }
   }
 
   // Get transactions filtered by date range and/or category
@@ -61,6 +98,7 @@ class TransactionHistoryRepository {
     String? category,
   }) async {
     final accountId = await accountRepo.getAccountId();
+    debugPrint('debug - Account ID: $accountId');
 
     String whereClause = 'account_id = ?';
     List<dynamic> whereArgs = [accountId];
@@ -71,12 +109,20 @@ class TransactionHistoryRepository {
         startDate.toIso8601String(),
         endDate.toIso8601String(),
       ]);
+      debugPrint(
+        'debug - Filtering by date: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+      );
     }
 
     if (category != null && category != 'All') {
       whereClause += ' AND type = ?';
       whereArgs.add(category);
+      debugPrint('debug - Filtering by category: $category');
     }
+
+    debugPrint(
+      'debug - Querying transaction_history with whereClause: $whereClause, whereArgs: $whereArgs',
+    );
 
     final List<Map<String, dynamic>> maps = await database.query(
       'transaction_history',
@@ -84,6 +130,8 @@ class TransactionHistoryRepository {
       whereArgs: whereArgs,
       orderBy: 'created_at DESC',
     );
+
+    debugPrint('debug - Retrieved ${maps.length} transactions');
 
     return List.generate(
       maps.length,
@@ -105,7 +153,6 @@ class TransactionHistoryRepository {
   // Update a transaction
   Future<int> updateTransaction(TransactionHistory transaction) async {
     final accountId = await accountRepo.getAccountId();
-
     final transactionWithAccount = TransactionHistory(
       id: transaction.id,
       accountId: accountId,
@@ -118,6 +165,10 @@ class TransactionHistoryRepository {
       quantity: transaction.quantity,
       description: transaction.description,
       createdAt: transaction.createdAt,
+    );
+
+    debugPrint(
+      "debug - Updating transaction: ${transactionWithAccount.toMap()}",
     );
 
     return await database.update(

@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../models/expense_model.dart';
+import '../repositories/expense_repository.dart';
 
 final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
   ref,
 ) {
-  return ExpensesViewModel();
+  final repoFuture = ref.watch(expenseRepositoryProvider.future);
+  return ExpensesViewModel(expenseRepositoryFuture: repoFuture);
 });
 
 class ExpensesViewModel extends ChangeNotifier {
+  final Future<ExpenseRepository> expenseRepositoryFuture;
+
+  ExpensesViewModel({required this.expenseRepositoryFuture});
+
   DateTime selectedDate = DateTime.now();
   final amountController = TextEditingController();
   final descriptionController = TextEditingController();
@@ -31,16 +38,10 @@ class ExpensesViewModel extends ChangeNotifier {
     "Uban pa",
   ];
 
-  // -------------------------------------------------------------
-  // Getters used by the screen
-  // -------------------------------------------------------------
   String get formattedDate {
-    return DateFormat('MMMM d, yyyy').format(selectedDate);
+    return DateFormat('MMMM d, y').format(selectedDate);
   }
 
-  // -------------------------------------------------------------
-  // Setters
-  // -------------------------------------------------------------
   void setCategory(String? value) {
     selectedCategory = value;
     notifyListeners();
@@ -51,9 +52,6 @@ class ExpensesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------------------------------------------------------------
-  // Receipt Picker (screen expects pickReceipt())
-  // -------------------------------------------------------------
   Future<void> pickReceipt(ImageSource source) async {
     final picker = ImagePicker();
     final img = await picker.pickImage(source: source);
@@ -69,9 +67,6 @@ class ExpensesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------------------------------------------------------------
-  // Validation
-  // -------------------------------------------------------------
   void triggerValidation() {
     showValidationErrors = true;
     notifyListeners();
@@ -84,9 +79,6 @@ class ExpensesViewModel extends ChangeNotifier {
     return true;
   }
 
-  // -------------------------------------------------------------
-  // Save
-  // -------------------------------------------------------------
   Future<bool> save() async {
     triggerValidation();
 
@@ -101,20 +93,52 @@ class ExpensesViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 400));
+    try {
+      final repo = await expenseRepositoryFuture;
 
-    isLoading = false;
-    successMessage = "Expense saved.";
-    errorMessage = null;
-    notifyListeners();
+      final expense = ExpenseModel(
+        accountId: await repo.accountRepository.getAccountId(),
+        amount: double.parse(amountController.text),
+        category: selectedCategory!,
+        description: descriptionController.text,
+        receipt: receiptImage?.path,
+        createdAt: selectedDate.toIso8601String(),
+      );
 
-    resetForm();
-    return true;
+      debugPrint("debug - Saving Expense (before insert): ${expense.toMap()}");
+
+      final newId = await repo.addExpense(
+        expense,
+      ); // SQLite returns generated id
+
+      final savedExpense = ExpenseModel(
+        id: newId,
+        accountId: expense.accountId,
+        amount: expense.amount,
+        category: expense.category,
+        description: expense.description,
+        receipt: expense.receipt,
+        createdAt: expense.createdAt,
+      );
+
+      debugPrint(
+        "debug - Expense saved successfully: ${savedExpense.toMap()}",
+      ); // after saving
+
+      successMessage = "Expense saved.";
+      isLoading = false;
+      notifyListeners();
+      resetForm();
+      return true;
+    } catch (e) {
+      debugPrint("debug - Failed to save expense: $e");
+      errorMessage = e.toString();
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
-  // -------------------------------------------------------------
-  // Reset Form
-  // -------------------------------------------------------------
   void resetForm() {
     amountController.clear();
     descriptionController.clear();
