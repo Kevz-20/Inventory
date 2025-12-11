@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../view_models/transaction_history_view_model.dart';
 import '../../core/app_colors.dart';
+import '../../view_models/transaction_history_view_model.dart';
 import '../widgets/header.dart';
 
 class TransactionHistoryScreen extends ConsumerWidget {
@@ -10,16 +10,11 @@ class TransactionHistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the transactions state from the ViewModel
-    final transactionsAsync = ref.watch(transactionHistoryViewModelProvider);
-
+    final viewModelAsync = ref.watch(transactionHistoryViewModelProvider);
     final categories = ['All', 'Gasto', 'Halin', 'Withdraw', 'Deposit'];
 
-    return transactionsAsync.when(
-      data: (transactions) {
-        // Filter by category
-        String selectedCategory = 'All';
-
+    return viewModelAsync.when(
+      data: (viewModel) {
         return Scaffold(
           appBar: const AppHeader(
             title: 'Transaction History',
@@ -36,13 +31,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     Expanded(
                       child: _DatePickerBox(
                         title: 'Start Date',
-                        date: DateTime.now(),
+                        date: viewModel.startDate ?? DateTime.now(),
                         onDateSelected: (picked) {
-                          ref
-                              .read(
-                                transactionHistoryViewModelProvider.notifier,
-                              )
-                              .loadTransactions(startDate: picked);
+                          viewModel.setDateRange(picked, viewModel.endDate);
                         },
                       ),
                     ),
@@ -50,13 +41,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                     Expanded(
                       child: _DatePickerBox(
                         title: 'End Date',
-                        date: DateTime.now(),
+                        date: viewModel.endDate ?? DateTime.now(),
                         onDateSelected: (picked) {
-                          ref
-                              .read(
-                                transactionHistoryViewModelProvider.notifier,
-                              )
-                              .loadTransactions(endDate: picked);
+                          viewModel.setDateRange(viewModel.startDate, picked);
                         },
                       ),
                     ),
@@ -69,16 +56,16 @@ class TransactionHistoryScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: CategoryChipsWithDots(
                   categories: categories,
-                  selectedCategory: selectedCategory,
-                  onCategorySelected: (category) {
-                    selectedCategory = category;
-                  },
+                  selectedCategory: viewModel.category,
+                  onCategorySelected: viewModel.setCategory,
                 ),
               ),
 
               // Transaction list
               Expanded(
-                child: transactions.isEmpty
+                child: viewModel.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : viewModel.transactions.isEmpty
                     ? const Center(
                         child: Text(
                           'No transactions found',
@@ -87,9 +74,9 @@ class TransactionHistoryScreen extends ConsumerWidget {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: transactions.length,
+                        itemCount: viewModel.transactions.length,
                         itemBuilder: (context, index) {
-                          final tx = transactions[index];
+                          final tx = viewModel.transactions[index];
                           final isExpense =
                               tx.type == 'Gasto' || tx.type == 'Withdraw';
                           return Container(
