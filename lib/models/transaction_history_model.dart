@@ -1,7 +1,7 @@
-class TransactionHistory {
+class TransactionHistoryModel {
   final int? id;
-  final int? accountId;
-  final String type; // e.g., 'Gasto', 'Halin', 'Withdraw', 'Deposit'
+  final int accountId;
+  final String type;
   final int? productId;
   final int? saleId;
   final int? expenseId;
@@ -11,9 +11,9 @@ class TransactionHistory {
   final String? description;
   final DateTime createdAt;
 
-  TransactionHistory({
+  TransactionHistoryModel({
     this.id,
-    this.accountId,
+    required this.accountId,
     required this.type,
     this.productId,
     this.saleId,
@@ -25,24 +25,22 @@ class TransactionHistory {
     required this.createdAt,
   });
 
-  // Convert a Map object from the database into a TransactionHistory
-  factory TransactionHistory.fromMap(Map<String, dynamic> map) {
-    return TransactionHistory(
+  factory TransactionHistoryModel.fromMap(Map<String, dynamic> map) {
+    return TransactionHistoryModel(
       id: map['id'] as int?,
-      accountId: map['account_id'] as int?,
+      accountId: map['account_id'] as int,
       type: map['type'] as String,
       productId: map['product_id'] as int?,
       saleId: map['sale_id'] as int?,
       expenseId: map['expense_id'] as int?,
       capitalTransactionId: map['capital_transaction_id'] as int?,
-      amount: map['amount'] != null ? map['amount'] as double : null,
+      amount: map['amount'] != null ? (map['amount'] as num).toDouble() : null,
       quantity: map['quantity'] as int?,
       description: map['description'] as String?,
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: DateTime.parse(map['created_at'] ?? map['date']),
     );
   }
 
-  // Convert the TransactionHistory into a Map object for DB operations
   Map<String, dynamic> toMap() {
     return {
       'id': id,

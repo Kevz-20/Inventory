@@ -1,181 +1,100 @@
-import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
-import '../models/expense_model.dart';
-import '../models/transaction_history_model.dart';
-import 'account_repository.dart';
-import 'expense_repository.dart'; // import your expense repo provider
+import '../services/db_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TransactionHistoryRepository {
-  final Database database;
-  final AccountRepository accountRepo;
-  final ExpenseRepository expenseRepo;
+  final DBService dbService;
 
-  TransactionHistoryRepository({
-    required this.database,
-    required this.accountRepo,
-    required this.expenseRepo,
-  });
+  TransactionHistoryRepository({required this.dbService});
 
-  // Insert a new transaction (auto fetch account_id)
-  Future<int> insertTransaction(TransactionHistory transaction) async {
-    final accountId = await accountRepo.getAccountId();
-    final transactionWithAccount = TransactionHistory(
-      id: transaction.id,
-      accountId: accountId,
-      type: transaction.type,
-      productId: transaction.productId,
-      saleId: transaction.saleId,
-      expenseId: transaction.expenseId,
-      capitalTransactionId: transaction.capitalTransactionId,
-      amount: transaction.amount,
-      quantity: transaction.quantity,
-      description: transaction.description,
-      createdAt: transaction.createdAt,
-    );
-
-    debugPrint(
-      "debug - Inserting transaction: ${transactionWithAccount.toMap()}",
-    );
-
-    return await database.insert(
-      'transaction_history',
-      transactionWithAccount.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  // Get all transactions
-  Future<List<TransactionHistory>> getAllTransactions() async {
-    final accountId = await accountRepo.getAccountId();
-
-    final List<Map<String, dynamic>> maps = await database.query(
-      'transaction_history',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      orderBy: 'created_at DESC',
-    );
-
-    debugPrint(
-      'debug - Retrieved ${maps.length} transactions from transaction_history',
-    );
-
-    return List.generate(
-      maps.length,
-      (i) => TransactionHistory.fromMap(maps[i]),
-    );
-  }
-
-  // Fetch expenses as transactions
-  Future<List<ExpenseModel>> fetchExpensesAsTransactions({
-    String? category,
-  }) async {
-    try {
-      final allExpenses = await expenseRepo.fetchExpensesForCurrentAccount();
-
-      debugPrint(
-        "debug - Fetched ${allExpenses.length} expenses from expenses table",
-      );
-
-      final filteredExpenses = category != null && category != 'All'
-          ? allExpenses.where((e) => e.category == category).toList()
-          : allExpenses;
-
-      debugPrint(
-        "debug - Filtered ${filteredExpenses.length} expenses by category: $category",
-      );
-
-      return filteredExpenses;
-    } catch (e) {
-      debugPrint("debug - Failed to fetch expenses: $e");
-      return [];
+  Future<String?> getMobileNumber() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mobile = prefs.getString('mobileNumber');
+    if (mobile == null) {
+      throw Exception('No mobile number stored in SharedPreferences');
     }
+    return mobile;
   }
 
-  // Get transactions filtered by date range and/or category
-  Future<List<TransactionHistory>> getTransactions({
+  Future<int> getAccountId() async {
+    final mobileNumber = await getMobileNumber();
+    final db = await dbService.database;
+    final result = await db.query(
+      'account',
+      columns: ['id'],
+      where: 'mobile_number = ?',
+      whereArgs: [mobileNumber],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      throw Exception('No account found for mobile number $mobileNumber');
+    }
+    return result.first['id'] as int;
+  }
+
+  Future<List<Map<String, dynamic>>> getAllTransactions({
     DateTime? startDate,
     DateTime? endDate,
-    String? category,
   }) async {
-    final accountId = await accountRepo.getAccountId();
-    debugPrint('debug - Account ID: $accountId');
+    final db = await dbService.database;
+    final accountId = await getAccountId();
 
-    String whereClause = 'account_id = ?';
-    List<dynamic> whereArgs = [accountId];
+    // Fetch all relevant tables first
+    final expenses = await db.query(
+      'expenses',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
 
-    if (startDate != null && endDate != null) {
-      whereClause += ' AND created_at BETWEEN ? AND ?';
-      whereArgs.addAll([
-        startDate.toIso8601String(),
-        endDate.toIso8601String(),
-      ]);
-      debugPrint(
-        'debug - Filtering by date: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
-      );
+    final salesCash = await db.query(
+      'sales_cash',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+
+    final salesCredit = await db.query(
+      'sales_credit',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+
+    final capitalTransactions = await db.query(
+      'capital_transaction',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+
+    // Combine all transactions
+    List<Map<String, dynamic>> allTransactions = [
+      ...expenses,
+      ...salesCash,
+      ...salesCredit,
+      ...capitalTransactions,
+    ];
+
+    // Filter by start date
+    if (startDate != null) {
+      allTransactions = allTransactions.where((tx) {
+        final txDate = DateTime.parse(tx['created_at'] ?? tx['date']);
+        return !txDate.isBefore(startDate);
+      }).toList();
     }
 
-    if (category != null && category != 'All') {
-      whereClause += ' AND type = ?';
-      whereArgs.add(category);
-      debugPrint('debug - Filtering by category: $category');
+    // Filter by end date
+    if (endDate != null) {
+      allTransactions = allTransactions.where((tx) {
+        final txDate = DateTime.parse(tx['created_at'] ?? tx['date']);
+        return !txDate.isAfter(endDate);
+      }).toList();
     }
 
-    debugPrint(
-      'debug - Querying transaction_history with whereClause: $whereClause, whereArgs: $whereArgs',
-    );
+    // Sort by date descending (optional)
+    allTransactions.sort((a, b) {
+      final dateA = DateTime.parse(a['created_at'] ?? a['date']);
+      final dateB = DateTime.parse(b['created_at'] ?? b['date']);
+      return dateB.compareTo(dateA);
+    });
 
-    final List<Map<String, dynamic>> maps = await database.query(
-      'transaction_history',
-      where: whereClause,
-      whereArgs: whereArgs,
-      orderBy: 'created_at DESC',
-    );
-
-    debugPrint('debug - Retrieved ${maps.length} transactions');
-
-    return List.generate(
-      maps.length,
-      (i) => TransactionHistory.fromMap(maps[i]),
-    );
-  }
-
-  // Delete a transaction
-  Future<int> deleteTransaction(int id) async {
-    final accountId = await accountRepo.getAccountId();
-
-    return await database.delete(
-      'transaction_history',
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [id, accountId],
-    );
-  }
-
-  // Update a transaction
-  Future<int> updateTransaction(TransactionHistory transaction) async {
-    final accountId = await accountRepo.getAccountId();
-    final transactionWithAccount = TransactionHistory(
-      id: transaction.id,
-      accountId: accountId,
-      type: transaction.type,
-      productId: transaction.productId,
-      saleId: transaction.saleId,
-      expenseId: transaction.expenseId,
-      capitalTransactionId: transaction.capitalTransactionId,
-      amount: transaction.amount,
-      quantity: transaction.quantity,
-      description: transaction.description,
-      createdAt: transaction.createdAt,
-    );
-
-    debugPrint(
-      "debug - Updating transaction: ${transactionWithAccount.toMap()}",
-    );
-
-    return await database.update(
-      'transaction_history',
-      transactionWithAccount.toMap(),
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [transaction.id, accountId],
-    );
+    return allTransactions;
   }
 }

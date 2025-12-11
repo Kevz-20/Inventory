@@ -11,7 +11,6 @@ class AccountRepository {
   Future<String?> getMobileNumber() async {
     final prefs = await SharedPreferences.getInstance();
     final mobile = prefs.getString('mobileNumber');
-    debugPrint('⭐ [AccountRepository] getMobileNumber -> $mobile');
     if (mobile == null) {
       throw Exception('No mobile number stored in SharedPreferences');
     }
@@ -21,10 +20,6 @@ class AccountRepository {
   // Get account ID
   Future<int> getAccountId() async {
     final mobileNumber = await getMobileNumber();
-    debugPrint(
-      '⭐ [AccountRepository] getAccountId -> mobileNumber: $mobileNumber',
-    );
-
     final result = await database.query(
       'account',
       columns: ['id'],
@@ -32,7 +27,6 @@ class AccountRepository {
       whereArgs: [mobileNumber],
       limit: 1,
     );
-    debugPrint('⭐ [AccountRepository] getAccountId -> query result: $result');
 
     if (result.isEmpty) {
       throw Exception('No account found for mobile number $mobileNumber');
