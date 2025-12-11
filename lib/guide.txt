@@ -81,3 +81,4 @@ Repository – async → waits for DB and SharedPreferences.
 ViewModel – async → waits for repository to return data, then updates state (sync).
 View/UI – sync → watches ViewModel state; renders when state changes.
 
+This pattern is called asynchronous dependency chaining or simply async/await chaining.
