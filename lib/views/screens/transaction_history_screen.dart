@@ -1,161 +1,179 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../widgets/header.dart';
 
-class TransactionHistoryScreen extends ConsumerWidget {
+class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final viewModelAsync = ref.watch(transactionHistoryViewModelProvider);
-    final categories = ['All', 'Gasto', 'Halin', 'Withdraw', 'Deposit'];
+  State<TransactionHistoryScreen> createState() =>
+      _TransactionHistoryScreenState();
+}
 
-    return viewModelAsync.when(
-      data: (viewModel) {
-        return Scaffold(
-          appBar: const AppHeader(
-            title: 'Transaction History',
-            showBackButton: true,
+class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
+  final TransactionHistoryViewModel viewModel = TransactionHistoryViewModel();
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel.addListener(() {
+      setState(() {}); // Rebuild UI when viewModel changes
+    });
+    viewModel.loadHistory(); // Load initial data
+  }
+
+  @override
+  void dispose() {
+    viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const AppHeader(
+        title: 'Transaction History',
+        showBackButton: true,
+      ),
+      backgroundColor: AppColors.surface,
+      body: Column(
+        children: [
+          // Date pickers
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _DatePickerBox(
+                    title: 'Start Date',
+                    date: viewModel.startDate ?? DateTime.now(),
+                    onDateSelected: (picked) {
+                      viewModel.setStartDate(picked);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _DatePickerBox(
+                    title: 'End Date',
+                    date: viewModel.endDate ?? DateTime.now(),
+                    onDateSelected: (picked) {
+                      viewModel.setEndDate(picked);
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-          backgroundColor: AppColors.surface,
-          body: Column(
-            children: [
-              // Date pickers
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _DatePickerBox(
-                        title: 'Start Date',
-                        date: viewModel.startDate ?? DateTime.now(),
-                        onDateSelected: (picked) {
-                          viewModel.setDateRange(picked, viewModel.endDate);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _DatePickerBox(
-                        title: 'End Date',
-                        date: viewModel.endDate ?? DateTime.now(),
-                        onDateSelected: (picked) {
-                          viewModel.setDateRange(viewModel.startDate, picked);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              // Category chips
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: CategoryChipsWithDots(
-                  categories: categories,
-                  selectedCategory: viewModel.category,
-                  onCategorySelected: viewModel.setCategory,
-                ),
-              ),
+          // Category chips
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: CategoryChipsWithDots(
+              categories: TransactionCategory.values,
+              selectedCategory: viewModel.selectedCategory,
+              onCategorySelected: viewModel.setSelectedCategory,
+            ),
+          ),
 
-              // Transaction list
-              Expanded(
-                child: viewModel.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : viewModel.transactions.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No transactions found',
-                          style: TextStyle(fontSize: 15, color: Colors.black54),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: viewModel.transactions.length,
-                        itemBuilder: (context, index) {
-                          final tx = viewModel.transactions[index];
-                          final isExpense =
-                              tx.type == 'Gasto' || tx.type == 'Withdraw';
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withAlpha(51),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+          // Transaction list
+          Expanded(
+            child: viewModel.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : viewModel.transactions.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No transactions found',
+                      style: TextStyle(fontSize: 15, color: Colors.black54),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: viewModel.transactions.length,
+                    itemBuilder: (context, index) {
+                      final tx = viewModel.transactions[index];
+                      final isExpense =
+                          tx.type == 'Gasto' || tx.type == 'Withdraw';
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withAlpha(51),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Description and amount
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        tx.description ?? tx.type,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
+                                  Flexible(
+                                    child: Text(
+                                      tx.description ?? tx.type,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                       ),
-                                      Text(
-                                        '₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: isExpense
-                                              ? Colors.red
-                                              : Colors.green,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        tx.type,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        DateFormat(
-                                          'yyyy-MM-dd',
-                                        ).format(tx.createdAt),
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.black45,
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    '₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isExpense
+                                          ? Colors.red
+                                          : Colors.green,
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+
+                              const SizedBox(height: 6),
+
+                              // Type and date
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    tx.type,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(tx.createdAt),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black45,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
-        );
-      },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
+        ],
+      ),
     );
   }
 }
@@ -235,11 +253,11 @@ class _DatePickerBox extends StatelessWidget {
   }
 }
 
-// Category Chips with Dot Indicator (dynamic & smooth)
+// Category Chips with Dot Indicator (Enum-Based)
 class CategoryChipsWithDots extends StatefulWidget {
-  final List<String> categories;
-  final String selectedCategory;
-  final Function(String) onCategorySelected;
+  final List<TransactionCategory> categories;
+  final TransactionCategory selectedCategory;
+  final Function(TransactionCategory) onCategorySelected;
 
   const CategoryChipsWithDots({
     super.key,
@@ -272,10 +290,9 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
   @override
   void didUpdateWidget(covariant CategoryChipsWithDots oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Scroll to selected category smoothly
     final index = widget.categories.indexOf(widget.selectedCategory);
     if (index != -1 && _scrollController.hasClients) {
-      final itemWidth = 72.0; // Approximate width per chip including margin
+      const itemWidth = 72.0;
       final targetOffset = index * itemWidth - 16;
       _scrollController.animateTo(
         targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
@@ -306,6 +323,7 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
             itemBuilder: (context, index) {
               final category = widget.categories[index];
               final isSelected = widget.selectedCategory == category;
+
               return GestureDetector(
                 onTap: () => widget.onCategorySelected(category),
                 child: Container(
@@ -319,14 +337,14 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withValues(alpha: 51),
+                        color: Colors.grey.withAlpha(51),
                         blurRadius: 2,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: Text(
-                    category,
+                    category.displayName,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -339,7 +357,6 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
           ),
         ),
         const SizedBox(height: 12),
-        // Dot indicators
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(widget.categories.length, (index) {

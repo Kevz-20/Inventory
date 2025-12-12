@@ -5,6 +5,7 @@ class CapitalManagementModel {
   double capital;
   double bankCash;
   String? remarks;
+  DateTime createdAt;
 
   CapitalManagementModel({
     this.id,
@@ -13,9 +14,10 @@ class CapitalManagementModel {
     required this.capital,
     required this.bankCash,
     this.remarks,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
-  // Convert model to map for DB
+  // Convert model to map for DB insertion
   Map<String, dynamic> toMap({bool includeId = false}) {
     final map = {
       'account_id': accountId,
@@ -23,6 +25,7 @@ class CapitalManagementModel {
       'capital': capital,
       'bank_cash': bankCash,
       'remarks': remarks,
+      'created_at': createdAt.toIso8601String(),
     };
     if (includeId && id != null) {
       map['id'] = id;
@@ -39,6 +42,7 @@ class CapitalManagementModel {
       capital: map['capital'],
       bankCash: map['bank_cash'],
       remarks: map['remarks'],
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 }

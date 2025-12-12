@@ -1,99 +1,78 @@
-import '../services/db_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/transaction_history_model.dart';
+import '../services/db_service.dart';
 
 class TransactionHistoryRepository {
-  final DBService dbService;
-  TransactionHistoryRepository({required this.dbService});
+  final dbService = DBService.instance;
 
-  Future<String?> getMobileNumber() async {
-    final prefs = await SharedPreferences.getInstance();
-    final mobile = prefs.getString('mobileNumber');
-    if (mobile == null) {
-      throw Exception('No mobile number stored in SharedPreferences');
-    }
-    return mobile;
-  }
-
-  Future<int> getAccountId() async {
-    final mobileNumber = await getMobileNumber();
-    final db = await dbService.database;
-    final result = await db.query(
-      'account',
-      columns: ['id'],
-      where: 'mobile_number = ?',
-      whereArgs: [mobileNumber],
-      limit: 1,
-    );
-
-    if (result.isEmpty) {
-      throw Exception('No account found for mobile number $mobileNumber');
-    }
-    return result.first['id'] as int;
-  }
-
-  Future<List<Map<String, dynamic>>> getAllTransactions({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
+  Future<TransactionHistoryModel> loadHistory() async {
     final db = await dbService.database;
     final accountId = await getAccountId();
 
-    // Fetch all relevant tables first
+    // Get expenses
     final expenses = await db.query(
       'expenses',
       where: 'account_id = ?',
       whereArgs: [accountId],
+      orderBy: 'created_at DESC',
     );
 
+    // Get sales cash
     final salesCash = await db.query(
       'sales_cash',
       where: 'account_id = ?',
       whereArgs: [accountId],
+      orderBy: 'created_at DESC',
     );
 
+    // Get sales credit
     final salesCredit = await db.query(
       'sales_credit',
       where: 'account_id = ?',
       whereArgs: [accountId],
+      orderBy: 'created_at DESC',
     );
 
-    final capitalTransactions = await db.query(
-      'capital_transaction',
+    // Get capital management
+    final capitalManagement = await db.query(
+      'capital_management',
       where: 'account_id = ?',
       whereArgs: [accountId],
+      orderBy: 'created_at DESC',
     );
 
-    // Combine all transactions
-    List<Map<String, dynamic>> allTransactions = [
-      ...expenses,
-      ...salesCash,
-      ...salesCredit,
-      ...capitalTransactions,
-    ];
+    return TransactionHistoryModel(
+      expenses: expenses,
+      salesCash: salesCash,
+      salesCredit: salesCredit,
+      capitalManagement: capitalManagement,
+    );
+  }
 
-    // Filter by start date
-    if (startDate != null) {
-      allTransactions = allTransactions.where((tx) {
-        final txDate = DateTime.parse(tx['created_at'] ?? tx['date']);
-        return !txDate.isBefore(startDate);
-      }).toList();
+  // Get mobile number
+  Future<String> getMobileNumber() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('mobileNumber') ??
+        (throw Exception('No mobile number stored'));
+  }
+
+  // Get account id
+  Future<int> getAccountId() async {
+    final db = await dbService.database;
+    final mobile = await getMobileNumber();
+
+    final result = await db.query(
+      'account',
+      columns: ['id'],
+      where: 'mobile_number = ?',
+      whereArgs: [mobile],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      throw Exception('No account found for mobile $mobile');
     }
 
-    // Filter by end date
-    if (endDate != null) {
-      allTransactions = allTransactions.where((tx) {
-        final txDate = DateTime.parse(tx['created_at'] ?? tx['date']);
-        return !txDate.isAfter(endDate);
-      }).toList();
-    }
-
-    // Sort by date descending (optional)
-    allTransactions.sort((a, b) {
-      final dateA = DateTime.parse(a['created_at'] ?? a['date']);
-      final dateB = DateTime.parse(b['created_at'] ?? b['date']);
-      return dateB.compareTo(dateA);
-    });
-
-    return allTransactions;
+    return result.first['id'] as int;
   }
 }

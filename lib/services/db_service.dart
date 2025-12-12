@@ -95,6 +95,7 @@ class DBService {
         capital REAL,
         bank_cash REAL,
         remarks TEXT,
+        created_at TEXT,
         FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');

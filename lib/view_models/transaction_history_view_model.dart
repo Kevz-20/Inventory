@@ -1,76 +1,193 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/transaction_history_repository_provider.dart';
-import '../repositories/transaction_history_repository.dart';
+import 'package:flutter/material.dart';
 import '../models/transaction_history_model.dart';
+import '../repositories/transaction_history_repository.dart';
 
-class TransactionHistoryViewModel
-    extends StateNotifier<AsyncValue<List<TransactionHistoryModel>>> {
-  final TransactionHistoryRepository repository;
+// Model for single transaction
+class TransactionItem {
+  final String type;
+  final String? description;
+  final double? amount;
+  final DateTime createdAt;
 
-  DateTime? _startDate;
-  DateTime? _endDate;
-  String _category = 'All';
-  bool _isLoading = false;
+  TransactionItem({
+    required this.type,
+    this.description,
+    this.amount,
+    required this.createdAt,
+  });
 
-  TransactionHistoryViewModel({required this.repository})
-    : super(const AsyncValue.loading()) {
-    loadTransactions();
+  // Convert map to TransactionItem
+  factory TransactionItem.fromMap(Map<String, dynamic> map) {
+    return TransactionItem(
+      type: map['type'] ?? '',
+      description: map['description'],
+      amount: map['amount'] != null ? (map['amount'] as num).toDouble() : 0.0,
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+    );
   }
+}
 
-  DateTime? get startDate => _startDate;
-  DateTime? get endDate => _endDate;
-  String get category => _category;
-  bool get isLoading => _isLoading;
-  List<TransactionHistoryModel> get transactions => state.value ?? [];
+// Transaction categories
+enum TransactionCategory {
+  all,
+  expenses,
+  salesCash,
+  salesCredit,
+  capitalManagement,
+}
 
-  void setDateRange(DateTime? start, DateTime? end) {
-    _startDate = start;
-    _endDate = end;
-    loadTransactions(startDate: _startDate, endDate: _endDate);
-  }
-
-  void setCategory(String category) {
-    _category = category;
-    loadTransactions(startDate: _startDate, endDate: _endDate);
-  }
-
-  Future<void> loadTransactions({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    _isLoading = true;
-    state = AsyncValue.loading();
-    try {
-      final data = await repository.getAllTransactions(
-        startDate: startDate,
-        endDate: endDate,
-      );
-
-      var transactions = data
-          .map((e) => TransactionHistoryModel.fromMap(e))
-          .toList();
-
-      // Filter by category if not "All"
-      if (_category != 'All') {
-        transactions = transactions
-            .where((tx) => tx.type == _category)
-            .toList();
-      }
-
-      state = AsyncValue.data(transactions);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    } finally {
-      _isLoading = false;
+// Extension to get display name for categories
+extension TransactionCategoryExtension on TransactionCategory {
+  String get displayName {
+    switch (this) {
+      case TransactionCategory.all:
+        return 'All';
+      case TransactionCategory.expenses:
+        return 'Expenses';
+      case TransactionCategory.salesCash:
+        return 'Sales Cash';
+      case TransactionCategory.salesCredit:
+        return 'Sales Credit';
+      case TransactionCategory.capitalManagement:
+        return 'Capital Transactions';
     }
   }
 }
 
-// Provider for the ViewModel
-final transactionHistoryViewModelProvider =
-    FutureProvider<TransactionHistoryViewModel>((ref) async {
-      final repository = await ref.watch(
-        transactionHistoryRepositoryProvider.future,
+// Extension to convert raw history maps into TransactionItem list
+extension TransactionHistoryViewModelExtension on TransactionHistoryViewModel {
+  List<TransactionItem> get transactions {
+    if (_history == null) return [];
+
+    List<Map<String, dynamic>> rawList;
+
+    // Select transactions based on current category
+    switch (selectedCategory) {
+      case TransactionCategory.expenses:
+        rawList = _history!.expenses;
+        break;
+      case TransactionCategory.salesCash:
+        rawList = _history!.salesCash;
+        break;
+      case TransactionCategory.salesCredit:
+        rawList = _history!.salesCredit;
+        break;
+      case TransactionCategory.capitalManagement:
+        rawList = _history!.capitalManagement;
+        break;
+      case TransactionCategory.all:
+        rawList = [
+          ..._history!.expenses,
+          ..._history!.salesCash,
+          ..._history!.salesCredit,
+          ..._history!.capitalManagement,
+        ];
+        break;
+    }
+
+    // Map each raw transaction to TransactionItem
+    return rawList.map((e) => TransactionItem.fromMap(e)).toList();
+  }
+}
+
+// ViewModel for managing transaction history
+class TransactionHistoryViewModel extends ChangeNotifier {
+  final TransactionHistoryRepository _repository =
+      TransactionHistoryRepository();
+
+  TransactionHistoryModel? _history;
+  bool _isLoading = false;
+  String? _error;
+
+  TransactionCategory selectedCategory = TransactionCategory.all;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  // Getters for state
+  TransactionHistoryModel? get history => _history;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  DateTime? get startDate => _startDate;
+  DateTime? get endDate => _endDate;
+
+  // Load transaction history with optional filters
+  Future<void> loadHistory({
+    TransactionCategory? category,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    final currentCategory = category ?? selectedCategory;
+    final currentStart = startDate ?? _startDate;
+    final currentEnd = endDate ?? _endDate;
+
+    try {
+      final fullHistory = await _repository.loadHistory();
+
+      // Filter transactions by date range
+      List<Map<String, dynamic>> filterByDate(List<Map<String, dynamic>> data) {
+        if (currentStart == null && currentEnd == null) return data;
+        return data.where((item) {
+          final createdAt = DateTime.tryParse(item['created_at'] ?? '');
+          if (createdAt == null) return false;
+          if (currentStart != null && createdAt.isBefore(currentStart)) {
+            return false;
+          }
+          if (currentEnd != null && createdAt.isAfter(currentEnd)) return false;
+          return true;
+        }).toList();
+      }
+
+      // Apply category filter and date filter
+      _history = TransactionHistoryModel(
+        expenses:
+            currentCategory == TransactionCategory.expenses ||
+                currentCategory == TransactionCategory.all
+            ? filterByDate(fullHistory.expenses)
+            : [],
+        salesCash:
+            currentCategory == TransactionCategory.salesCash ||
+                currentCategory == TransactionCategory.all
+            ? filterByDate(fullHistory.salesCash)
+            : [],
+        salesCredit:
+            currentCategory == TransactionCategory.salesCredit ||
+                currentCategory == TransactionCategory.all
+            ? filterByDate(fullHistory.salesCredit)
+            : [],
+        capitalManagement:
+            currentCategory == TransactionCategory.capitalManagement ||
+                currentCategory == TransactionCategory.all
+            ? filterByDate(fullHistory.capitalManagement)
+            : [],
       );
-      return TransactionHistoryViewModel(repository: repository);
-    });
+    } catch (e) {
+      _error = e.toString();
+      _history = null;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // Update selected category
+  void setSelectedCategory(TransactionCategory category) {
+    selectedCategory = category;
+    loadHistory();
+  }
+
+  // Update start date
+  void setStartDate(DateTime? date) {
+    _startDate = date;
+    loadHistory();
+  }
+
+  // Update end date
+  void setEndDate(DateTime? date) {
+    _endDate = date;
+    loadHistory();
+  }
+}
