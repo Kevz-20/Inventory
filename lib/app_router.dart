@@ -71,7 +71,7 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const ProfileScreen(),
-        transition: PageTransitionType.none,
+        transition: PageTransitionType.forward,
       ),
     ),
     GoRoute(

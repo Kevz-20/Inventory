@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class TransactionHistoryRepository {
   final DBService dbService;
-
   TransactionHistoryRepository({required this.dbService});
 
   Future<String?> getMobileNumber() async {

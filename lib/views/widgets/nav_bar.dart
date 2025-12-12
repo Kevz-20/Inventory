@@ -4,23 +4,22 @@ import '../../core/app_colors.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
-  final Function(int)? onTap; // added optional onTap callback
+  final Function(int)? onTap;
 
-  const BottomNavBar({
-    super.key,
-    required this.currentIndex,
-    this.onTap, // accept onTap from parent
-  });
+  const BottomNavBar({super.key, required this.currentIndex, this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    // Ensure currentIndex is within valid range
+    final safeIndex = currentIndex.clamp(0, 1);
+
     return BottomNavigationBar(
-      currentIndex: currentIndex,
+      currentIndex: safeIndex,
       onTap: (index) {
-        if (index == currentIndex) return;
+        if (index == safeIndex) return;
 
         if (onTap != null) {
-          onTap!(index); // notify parent
+          onTap!(index);
         }
 
         // Navigate using GoRouter
@@ -30,9 +29,6 @@ class BottomNavBar extends StatelessWidget {
             path = '/home';
             break;
           case 1:
-            path = '/profile';
-            break;
-          case 2:
             path = '/settings';
             break;
           default:
@@ -49,7 +45,6 @@ class BottomNavBar extends StatelessWidget {
       unselectedItemColor: Colors.grey[600],
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
       ],
     );

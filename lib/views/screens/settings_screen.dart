@@ -61,7 +61,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           _sectionTitle("General Settings"),
           _settingsTile(
-            title: "Edit Profile",
+            title: "Profile",
             icon: Icons.person,
             onTap: () => GoRouter.of(context).push('/profile'),
           ),

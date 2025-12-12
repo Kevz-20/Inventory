@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../providers/profile_view_model_provider.dart';
+import '../widgets/header.dart';
 import '../widgets/nav_bar.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -13,14 +14,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
+      appBar: const AppHeader(title: 'Profile', showBackButton: true),
 
       bottomNavigationBar: const BottomNavBar(currentIndex: 1),
       body: asyncVM.when(
