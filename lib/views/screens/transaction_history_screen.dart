@@ -233,7 +233,10 @@ class _DatePickerBox extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Row(
@@ -241,7 +244,7 @@ class _DatePickerBox extends StatelessWidget {
               children: [
                 Text(
                   DateFormat('MMMM d, y').format(date),
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
                 ),
                 const Icon(Icons.calendar_today, size: 18),
               ],
@@ -308,6 +311,7 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             itemCount: widget.categories.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
