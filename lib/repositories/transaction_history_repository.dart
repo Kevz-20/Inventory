@@ -49,6 +49,25 @@ class TransactionHistoryRepository {
     );
   }
 
+  // Pagination
+  Future<List<Map<String, dynamic>>> getTransactions(
+    String table,
+    int accountId, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final db = await dbService.database;
+
+    return await db.query(
+      table,
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+      orderBy: 'created_at DESC',
+      limit: limit,
+      offset: offset,
+    );
+  }
+
   // Get mobile number
   Future<String> getMobileNumber() async {
     final prefs = await SharedPreferences.getInstance();

@@ -14,24 +14,37 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   final TransactionHistoryViewModel viewModel = TransactionHistoryViewModel();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     viewModel.addListener(() {
-      setState(() {}); // Rebuild UI when viewModel changes
+      setState(() {}); // rebuild UI on ViewModel change
     });
-    viewModel.loadHistory(); // Load initial data
+    viewModel.resetPagination(); // clear previous data
+    viewModel.loadNextPage(); // load first page
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 100) {
+        // Load next page when near bottom
+        viewModel.loadNextPage();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     viewModel.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final transactions = viewModel.transactions;
+
     return Scaffold(
       appBar: const AppHeader(
         title: 'Transaction History',
@@ -80,22 +93,26 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
           // Transaction list
           Expanded(
-            child: viewModel.isLoading
+            child: transactions.isEmpty && viewModel.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : viewModel.transactions.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No transactions found',
-                      style: TextStyle(fontSize: 15, color: Colors.black54),
-                    ),
-                  )
                 : ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: viewModel.transactions.length,
+                    itemCount:
+                        transactions.length + (viewModel.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      final tx = viewModel.transactions[index];
+                      if (index == transactions.length) {
+                        // Bottom loading indicator
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      final tx = transactions[index];
                       final isExpense =
                           tx.type == 'Gasto' || tx.type == 'Withdraw';
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
@@ -114,7 +131,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Description and amount
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -139,10 +155,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                   ),
                                 ],
                               ),
-
                               const SizedBox(height: 6),
-
-                              // Type and date
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,

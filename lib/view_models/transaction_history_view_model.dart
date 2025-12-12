@@ -57,30 +57,28 @@ extension TransactionCategoryExtension on TransactionCategory {
 // Extension to convert raw history maps into TransactionItem list
 extension TransactionHistoryViewModelExtension on TransactionHistoryViewModel {
   List<TransactionItem> get transactions {
-    if (_history == null) return [];
-
     List<Map<String, dynamic>> rawList;
 
     // Select transactions based on current category
     switch (selectedCategory) {
       case TransactionCategory.expenses:
-        rawList = _history!.expenses;
+        rawList = _history.expenses;
         break;
       case TransactionCategory.salesCash:
-        rawList = _history!.salesCash;
+        rawList = _history.salesCash;
         break;
       case TransactionCategory.salesCredit:
-        rawList = _history!.salesCredit;
+        rawList = _history.salesCredit;
         break;
       case TransactionCategory.capitalManagement:
-        rawList = _history!.capitalManagement;
+        rawList = _history.capitalManagement;
         break;
       case TransactionCategory.all:
         rawList = [
-          ..._history!.expenses,
-          ..._history!.salesCash,
-          ..._history!.salesCredit,
-          ..._history!.capitalManagement,
+          ..._history.expenses,
+          ..._history.salesCash,
+          ..._history.salesCredit,
+          ..._history.capitalManagement,
         ];
         break;
     }
@@ -95,7 +93,13 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   final TransactionHistoryRepository _repository =
       TransactionHistoryRepository();
 
-  TransactionHistoryModel? _history;
+  TransactionHistoryModel _history = TransactionHistoryModel(
+    expenses: [],
+    salesCash: [],
+    salesCredit: [],
+    capitalManagement: [],
+  );
+
   bool _isLoading = false;
   String? _error;
 
@@ -103,9 +107,14 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  bool _hasMore = true;
+  int _page = 0;
+  final int _pageSize = 20;
+
   // Getters for state
   TransactionHistoryModel? get history => _history;
   bool get isLoading => _isLoading;
+  bool get hasMore => _hasMore;
   String? get error => _error;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
@@ -166,17 +175,162 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       );
     } catch (e) {
       _error = e.toString();
-      _history = null;
+      _history;
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
+  // Load next page for selected category
+  Future<void> loadNextPage() async {
+    if (_isLoading || !_hasMore) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final accountId = await _repository.getAccountId();
+      final offset = _page * _pageSize;
+      List<Map<String, dynamic>> newData = [];
+
+      switch (selectedCategory) {
+        // Expenses
+        case TransactionCategory.expenses:
+          newData = await _repository.getTransactions(
+            'expenses',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          _history = TransactionHistoryModel(
+            expenses: [..._history.expenses, ...newData],
+            salesCash: _history.salesCash,
+            salesCredit: _history.salesCredit,
+            capitalManagement: _history.capitalManagement,
+          );
+          break;
+
+        // Sales Cash
+        case TransactionCategory.salesCash:
+          newData = await _repository.getTransactions(
+            'sales_cash',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          _history = TransactionHistoryModel(
+            expenses: _history.expenses,
+            salesCash: [..._history.salesCash, ...newData],
+            salesCredit: _history.salesCredit,
+            capitalManagement: _history.capitalManagement,
+          );
+          break;
+
+        // Sales Credit
+        case TransactionCategory.salesCredit:
+          newData = await _repository.getTransactions(
+            'sales_credit',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          _history = TransactionHistoryModel(
+            expenses: _history.expenses,
+            salesCash: _history.salesCash,
+            salesCredit: [..._history.salesCredit, ...newData],
+            capitalManagement: _history.capitalManagement,
+          );
+          break;
+
+        // Capital Management
+        case TransactionCategory.capitalManagement:
+          newData = await _repository.getTransactions(
+            'capital_management',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          _history = TransactionHistoryModel(
+            expenses: _history.expenses,
+            salesCash: _history.salesCash,
+            salesCredit: _history.salesCredit,
+            capitalManagement: [..._history.capitalManagement, ...newData],
+          );
+          break;
+
+        // All
+        case TransactionCategory.all:
+          final expensesData = await _repository.getTransactions(
+            'expenses',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          final salesCashData = await _repository.getTransactions(
+            'sales_cash',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          final salesCreditData = await _repository.getTransactions(
+            'sales_credit',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+          final capitalData = await _repository.getTransactions(
+            'capital_management',
+            accountId,
+            limit: _pageSize,
+            offset: offset,
+          );
+
+          _history = TransactionHistoryModel(
+            expenses: [..._history.expenses, ...expensesData],
+            salesCash: [..._history.salesCash, ...salesCashData],
+            salesCredit: [..._history.salesCredit, ...salesCreditData],
+            capitalManagement: [..._history.capitalManagement, ...capitalData],
+          );
+
+          _hasMore = [
+            expensesData.length,
+            salesCashData.length,
+            salesCreditData.length,
+            capitalData.length,
+          ].any((len) => len == _pageSize);
+
+          if (_hasMore) _page++;
+          break;
+      }
+
+      _hasMore = newData.length == _pageSize;
+      if (_hasMore) _page++;
+    } catch (e) {
+      _hasMore = false;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // Reset pagination
+  void resetPagination() {
+    _page = 0;
+    _hasMore = true;
+    _history = TransactionHistoryModel(
+      expenses: [],
+      salesCash: [],
+      salesCredit: [],
+      capitalManagement: [],
+    );
+  }
+
   // Update selected category
   void setSelectedCategory(TransactionCategory category) {
     selectedCategory = category;
-    loadHistory();
+    resetPagination();
+    loadNextPage();
   }
 
   // Update start date
