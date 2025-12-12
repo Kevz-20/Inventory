@@ -290,16 +290,6 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
   @override
   void didUpdateWidget(covariant CategoryChipsWithDots oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final index = widget.categories.indexOf(widget.selectedCategory);
-    if (index != -1 && _scrollController.hasClients) {
-      const itemWidth = 72.0;
-      final targetOffset = index * itemWidth - 16;
-      _scrollController.animateTo(
-        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   @override
