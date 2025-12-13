@@ -8,29 +8,42 @@ class TransactionItem {
   final String? description;
   final double? amount;
   final DateTime createdAt;
+  final String? paymentType; // Cash/Utang/Deposit/Withdraw
 
   TransactionItem({
     required this.type,
     this.description,
     this.amount,
     required this.createdAt,
+    this.paymentType,
   });
 
-  // Convert a map to TransactionItem
   factory TransactionItem.fromMap(
     Map<String, dynamic> map, {
     String fallbackType = '',
     bool isCapital = false,
   }) {
-    final value = isCapital
-        ? (map['capital'] as num?)?.toDouble() ?? 0.0
-        : (map['amount'] as num?)?.toDouble() ?? 0.0;
+    double value;
+    String? paymentType;
+
+    // Determine type and paymentType
+    if (isCapital) {
+      value = (map['capital'] as num?)?.toDouble() ?? 0.0;
+      if (value > 0) paymentType = 'Deposit';
+    } else if (map.containsKey('bank_cash')) {
+      value = (map['bank_cash'] as num?)?.toDouble() ?? 0.0;
+      if (value > 0) paymentType = 'Withdraw';
+    } else {
+      value = (map['amount'] as num?)?.toDouble() ?? 0.0;
+      paymentType = map['payment_type'];
+    }
 
     return TransactionItem(
       type: map['type'] ?? fallbackType,
       description: map['description'] ?? map['remarks'],
       amount: value,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      paymentType: paymentType,
     );
   }
 }

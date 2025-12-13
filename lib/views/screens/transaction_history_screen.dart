@@ -122,9 +122,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                     )
                                   : const SizedBox.shrink();
                             }
+
                             final tx = vm.transactionAt(index);
-                            final isExpense =
-                                tx.type == 'Gasto' || tx.type == 'Halin';
+
+                            final isHalin = tx.type == 'Halin';
+                            final isExpense = tx.type == 'Gasto';
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -141,58 +143,187 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            tx.type,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                            ),
+
+                                // Halin card layout
+                                child: isHalin
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Top row: Halin + Product name and amount
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Flexible(
+                                                child: Row(
+                                                  children: [
+                                                    Text(
+                                                      'Halin',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Flexible(
+                                                      child: Text(
+                                                        tx.description ??
+                                                            'Product',
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          fontSize: 14,
+                                                        ),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Text(
+                                                '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        Text(
-                                          '${isExpense ? '-₱' : '+₱'}${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: isExpense
-                                                ? Colors.red
-                                                : Colors.green,
+                                          const SizedBox(height: 6),
+                                          // Payment type (Cash/Utang) and date
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                tx.paymentType ?? '',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'MMMM d, yyyy',
+                                                ).format(tx.createdAt),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.black45,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          tx.description ?? tx.type,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.black87,
+                                        ],
+                                      )
+                                    // Expenses (Gasto) card layout
+                                    : isExpense
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Top row: type and amount
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                tx.type, // Gasto
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              Text(
+                                                '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        Text(
-                                          DateFormat(
-                                            'MMMM d, yyyy',
-                                          ).format(tx.createdAt),
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black45,
+                                          const SizedBox(height: 6),
+                                          // Bottom row: description as category and date
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                tx.description ??
+                                                    '', // Show category text
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'MMMM d, yyyy',
+                                                ).format(tx.createdAt),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.black45,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                                        ],
+                                      )
+                                    // Default layout for other types
+                                    : Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  tx.type,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              Text(
+                                                '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                tx.description ?? tx.type,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                              Text(
+                                                DateFormat(
+                                                  'MMMM d, yyyy',
+                                                ).format(tx.createdAt),
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.black45,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                               ),
                             );
                           },
