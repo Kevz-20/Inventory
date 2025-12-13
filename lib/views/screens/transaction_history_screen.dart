@@ -180,7 +180,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                   ),
                                   Text(
                                     DateFormat(
-                                      'yyyy-MM-dd',
+                                      'MMMM d, yyyy',
                                     ).format(tx.createdAt),
                                     style: const TextStyle(
                                       fontSize: 12,

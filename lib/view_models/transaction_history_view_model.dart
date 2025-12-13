@@ -109,7 +109,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
 
-  // Load transaction history with optional filters
+  // Load transaction history with optional filters (no pagination)
   Future<void> loadHistory({
     TransactionCategory? category,
     DateTime? startDate,
