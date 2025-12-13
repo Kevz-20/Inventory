@@ -304,6 +304,20 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Category-specific messages
+  String get emptyStateMessage {
+    switch (selectedCategory) {
+      case TransactionCategory.expenses:
+        return 'No expense transactions yet';
+      case TransactionCategory.sales:
+        return 'No sales transactions yet';
+      case TransactionCategory.capitalManagement:
+        return 'No capital transactions yet';
+      case TransactionCategory.all:
+        return 'No transactions found';
+    }
+  }
+
   // Reset pagination
   void resetPagination() {
     _page = 0;

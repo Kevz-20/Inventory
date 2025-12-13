@@ -95,10 +95,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             child: viewModel.isLoading && transactions.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : transactions.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'No transactions found',
-                      style: TextStyle(
+                      viewModel.emptyStateMessage,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black54,
                         fontWeight: FontWeight.w500,
