@@ -8,7 +8,7 @@ class TransactionItem {
   final String? description;
   final double? amount;
   final DateTime createdAt;
-  final String? paymentType; // Cash/Utang/Deposit/Withdraw
+  final String? paymentType;
 
   TransactionItem({
     required this.type,
