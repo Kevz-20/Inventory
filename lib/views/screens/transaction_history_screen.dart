@@ -257,9 +257,9 @@ class _DatePickerBox extends StatelessWidget {
               children: [
                 Text(
                   DateFormat('MMMM d, y').format(date),
-                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                  style: const TextStyle(fontSize: 13, color: Colors.black),
                 ),
-                const Icon(Icons.calendar_today, size: 18),
+                const Icon(Icons.calendar_today, size: 17),
               ],
             ),
           ],
@@ -269,8 +269,7 @@ class _DatePickerBox extends StatelessWidget {
   }
 }
 
-// Category Chips with Dot Indicator (Enum-Based)
-class CategoryChipsWithDots extends StatefulWidget {
+class CategoryChipsWithDots extends StatelessWidget {
   final List<TransactionCategory> categories;
   final TransactionCategory selectedCategory;
   final Function(TransactionCategory) onCategorySelected;
@@ -283,72 +282,35 @@ class CategoryChipsWithDots extends StatefulWidget {
   });
 
   @override
-  State<CategoryChipsWithDots> createState() => _CategoryChipsWithDotsState();
-}
-
-class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
-  final ScrollController _scrollController = ScrollController();
-  double _scrollFraction = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(() {
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      setState(() {
-        _scrollFraction = maxScroll == 0
-            ? 0
-            : _scrollController.offset / maxScroll;
-      });
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant CategoryChipsWithDots oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         SizedBox(
           height: 45,
           child: ListView.separated(
-            controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            itemCount: widget.categories.length,
+            itemCount: categories.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
-              final category = widget.categories[index];
-              final isSelected = widget.selectedCategory == category;
+              final category = categories[index];
+              final isSelected = selectedCategory == category;
 
               return GestureDetector(
-                onTap: () => widget.onCategorySelected(category),
+                onTap: () => onCategorySelected(category),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
                   ),
-                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withAlpha(51),
-                        blurRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary
+                          : Colors.grey.shade300,
+                    ),
                   ),
                   child: Text(
                     category.displayName,
@@ -363,29 +325,25 @@ class _CategoryChipsWithDotsState extends State<CategoryChipsWithDots> {
             },
           ),
         ),
-        const SizedBox(height: 12),
+
+        const SizedBox(height: 10),
+
+        // Simple dot indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(widget.categories.length, (index) {
-            final progress =
-                (index / (widget.categories.length - 1) - _scrollFraction)
-                    .abs();
-            final alpha = (1 - progress.clamp(0.0, 1.0));
-            final isSelected =
-                widget.selectedCategory == widget.categories[index];
+          children: categories.map((category) {
+            final isSelected = selectedCategory == category;
 
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: isSelected ? 10 : 8,
-              height: isSelected ? 10 : 8,
+              width: isSelected ? 8 : 6,
+              height: isSelected ? 8 : 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected
-                    ? AppColors.primary
-                    : Color.fromRGBO(128, 128, 128, alpha),
+                color: isSelected ? AppColors.primary : Colors.grey.shade400,
               ),
             );
-          }),
+          }).toList(),
         ),
       ],
     );

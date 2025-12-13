@@ -28,28 +28,20 @@ class TransactionItem {
 }
 
 // Transaction categories
-enum TransactionCategory {
-  all,
-  expenses,
-  salesCash,
-  salesCredit,
-  capitalManagement,
-}
+enum TransactionCategory { all, expenses, sales, capitalManagement }
 
 // Extension to get display name for categories
 extension TransactionCategoryExtension on TransactionCategory {
   String get displayName {
     switch (this) {
       case TransactionCategory.all:
-        return 'All';
+        return 'Tanan';
       case TransactionCategory.expenses:
-        return 'Expenses';
-      case TransactionCategory.salesCash:
-        return 'Sales Cash';
-      case TransactionCategory.salesCredit:
-        return 'Sales Credit';
+        return 'Gasto';
+      case TransactionCategory.sales:
+        return 'Halin';
       case TransactionCategory.capitalManagement:
-        return 'Capital Transactions';
+        return 'Capital';
     }
   }
 }
@@ -59,20 +51,19 @@ extension TransactionHistoryViewModelExtension on TransactionHistoryViewModel {
   List<TransactionItem> get transactions {
     List<Map<String, dynamic>> rawList;
 
-    // Select transactions based on current category
     switch (selectedCategory) {
       case TransactionCategory.expenses:
         rawList = _history.expenses;
         break;
-      case TransactionCategory.salesCash:
-        rawList = _history.salesCash;
+
+      case TransactionCategory.sales:
+        rawList = [..._history.salesCash, ..._history.salesCredit];
         break;
-      case TransactionCategory.salesCredit:
-        rawList = _history.salesCredit;
-        break;
+
       case TransactionCategory.capitalManagement:
         rawList = _history.capitalManagement;
         break;
+
       case TransactionCategory.all:
         rawList = [
           ..._history.expenses,
@@ -83,8 +74,7 @@ extension TransactionHistoryViewModelExtension on TransactionHistoryViewModel {
         break;
     }
 
-    // Map each raw transaction to TransactionItem
-    return rawList.map((e) => TransactionItem.fromMap(e)).toList();
+    return rawList.map(TransactionItem.fromMap).toList();
   }
 }
 
@@ -157,16 +147,19 @@ class TransactionHistoryViewModel extends ChangeNotifier {
                 currentCategory == TransactionCategory.all
             ? filterByDate(fullHistory.expenses)
             : [],
+
         salesCash:
-            currentCategory == TransactionCategory.salesCash ||
+            currentCategory == TransactionCategory.sales ||
                 currentCategory == TransactionCategory.all
             ? filterByDate(fullHistory.salesCash)
             : [],
+
         salesCredit:
-            currentCategory == TransactionCategory.salesCredit ||
+            currentCategory == TransactionCategory.sales ||
                 currentCategory == TransactionCategory.all
             ? filterByDate(fullHistory.salesCredit)
             : [],
+
         capitalManagement:
             currentCategory == TransactionCategory.capitalManagement ||
                 currentCategory == TransactionCategory.all
@@ -211,36 +204,33 @@ class TransactionHistoryViewModel extends ChangeNotifier {
           );
           break;
 
-        // Sales Cash
-        case TransactionCategory.salesCash:
-          newData = await _repository.getTransactions(
+        // Sales
+        case TransactionCategory.sales:
+          final cashData = await _repository.getTransactions(
             'sales_cash',
             accountId,
             limit: _pageSize,
             offset: offset,
           );
-          _history = TransactionHistoryModel(
-            expenses: _history.expenses,
-            salesCash: [..._history.salesCash, ...newData],
-            salesCredit: _history.salesCredit,
-            capitalManagement: _history.capitalManagement,
-          );
-          break;
 
-        // Sales Credit
-        case TransactionCategory.salesCredit:
-          newData = await _repository.getTransactions(
+          final creditData = await _repository.getTransactions(
             'sales_credit',
             accountId,
             limit: _pageSize,
             offset: offset,
           );
+
           _history = TransactionHistoryModel(
             expenses: _history.expenses,
-            salesCash: _history.salesCash,
-            salesCredit: [..._history.salesCredit, ...newData],
+            salesCash: [..._history.salesCash, ...cashData],
+            salesCredit: [..._history.salesCredit, ...creditData],
             capitalManagement: _history.capitalManagement,
           );
+
+          _hasMore =
+              cashData.length == _pageSize || creditData.length == _pageSize;
+
+          if (_hasMore) _page++;
           break;
 
         // Capital Management
