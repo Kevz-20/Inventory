@@ -5,6 +5,6 @@ import 'database_provider.dart';
 final accountRepositoryProvider = FutureProvider<AccountRepository>((
   ref,
 ) async {
-  final db = await ref.watch(databaseProvider.future);
-  return AccountRepository(db);
+  await ref.watch(databaseProvider.future);
+  return AccountRepository();
 });

@@ -1,18 +1,30 @@
 import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/profile_view_model_provider.dart';
-
-final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
-  ref,
-) {
-  return SettingsViewModel(ref);
-});
+import '../repositories/account_repository.dart';
 
 class SettingsViewModel extends ChangeNotifier {
-  final Ref ref;
-  SettingsViewModel(this.ref);
+  final AccountRepository repository;
+  SettingsViewModel(this.repository);
+
+  String? associationName;
+  bool isLoading = false;
+  String? error;
+
+  Future<void> loadAssociationName() async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      associationName = await repository.getAssociationName();
+    } catch (e) {
+      error = e.toString();
+    }
+
+    isLoading = false;
+    notifyListeners();
+  }
 
   void logout(BuildContext context) {
     showDialog(
@@ -39,7 +51,6 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> _handleLogout(BuildContext context) async {
     Navigator.pop(context);
-    ref.read(profileViewModelProvider).whenData((vm) => vm.reset());
     if (!context.mounted) return;
     GoRouter.of(context).go('/login', extra: 'fromLogout');
   }

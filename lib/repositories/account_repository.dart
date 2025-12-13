@@ -1,13 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
 import '../models/account_model.dart';
+import '../services/db_service.dart';
 
 class AccountRepository {
-  final Database database;
-  AccountRepository(this.database);
+  final dbService = DBService.instance;
 
-  // Get mobile number
   Future<String?> getMobileNumber() async {
     final prefs = await SharedPreferences.getInstance();
     final mobile = prefs.getString('mobileNumber');
@@ -17,10 +14,10 @@ class AccountRepository {
     return mobile;
   }
 
-  // Get account ID
   Future<int> getAccountId() async {
     final mobileNumber = await getMobileNumber();
-    final result = await database.query(
+    final db = await dbService.database;
+    final result = await db.query(
       'account',
       columns: ['id'],
       where: 'mobile_number = ?',
@@ -34,30 +31,36 @@ class AccountRepository {
     return result.first['id'] as int;
   }
 
-  // Get account details
   Future<Account> getAccountDetails() async {
     final accountId = await getAccountId();
-    debugPrint(
-      '⭐ [AccountRepository] getAccountDetails -> accountId: $accountId',
-    );
-
-    final result = await database.query(
+    final db = await dbService.database;
+    final result = await db.query(
       'account',
       where: 'id = ?',
       whereArgs: [accountId],
       limit: 1,
     );
-    debugPrint(
-      '⭐ [AccountRepository] getAccountDetails -> query result: $result',
-    );
 
     if (result.isEmpty) {
       throw Exception('Account details not found for account ID $accountId');
     }
-    final account = Account.fromMap(result.first);
-    debugPrint(
-      '⭐ [AccountRepository] getAccountDetails -> loaded account: ${account.toMap()}',
+    return Account.fromMap(result.first);
+  }
+
+  Future<String?> getAssociationName() async {
+    final mobileNumber = await getMobileNumber();
+    final db = await dbService.database;
+    final result = await db.query(
+      'account',
+      columns: ['association_name'],
+      where: 'mobile_number = ?',
+      whereArgs: [mobileNumber],
+      limit: 1,
     );
-    return account;
+
+    if (result.isNotEmpty) {
+      return result.first['association_name'] as String?;
+    }
+    return null;
   }
 }

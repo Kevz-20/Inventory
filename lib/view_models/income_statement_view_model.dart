@@ -18,7 +18,7 @@ final incomeStatementViewModelProvider =
 
       return dbAsync.when(
         data: (db) {
-          final accountRepository = AccountRepository(db);
+          final accountRepository = AccountRepository();
           final repository = IncomeStatementRepository(
             accountRepository: accountRepository,
           );

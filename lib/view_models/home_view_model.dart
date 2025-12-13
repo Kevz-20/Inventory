@@ -22,7 +22,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
 
   Future<void> _init() async {
     final db = await ref.read(databaseProvider.future);
-    _accountRepo = AccountRepository(db);
+    _accountRepo = AccountRepository();
     _capitalRepo = CapitalManagementRepository(db);
 
     // Load saved visibility from preferences

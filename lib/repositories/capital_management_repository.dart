@@ -8,7 +8,7 @@ class CapitalManagementRepository {
   final AccountRepository accountRepository;
 
   CapitalManagementRepository(this.database)
-    : accountRepository = AccountRepository(database);
+    : accountRepository = AccountRepository();
 
   // Insert new capital record
   Future<int> insertCapital(CapitalManagementModel model) async {
