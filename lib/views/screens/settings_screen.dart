@@ -40,7 +40,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // Profile section
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -58,13 +57,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          vm.associationName ?? "Your Name",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        if (vm.associationName != null)
+                          Text(
+                            vm.associationName!,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        else
+                          const SizedBox(height: 22, width: 140),
                         const SizedBox(height: 4),
                         const Text(
                           "Association Name",
@@ -95,7 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => GoRouter.of(context).push('/about_app'),
               ),
               const SizedBox(height: 20),
-              // Logout
               _settingsTile(
                 title: "Logout",
                 icon: Icons.logout,

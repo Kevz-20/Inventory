@@ -1,29 +1,41 @@
-import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../repositories/account_repository.dart';
+import '../core/app_colors.dart';
 
 class SettingsViewModel extends ChangeNotifier {
   final AccountRepository repository;
   SettingsViewModel(this.repository);
 
-  String? associationName;
-  bool isLoading = false;
-  String? error;
+  String? _associationName;
+  final bool _isLoading = false;
+  String? _error;
+
+  String? get associationName => _associationName;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   Future<void> loadAssociationName() async {
-    isLoading = true;
-    error = null;
-    notifyListeners();
+    debugPrint('[VM] loadAssociationName called');
 
-    try {
-      associationName = await repository.getAssociationName();
-    } catch (e) {
-      error = e.toString();
+    if (_associationName != null) {
+      debugPrint('[VM] already cached → skip');
+      return;
     }
 
-    isLoading = false;
-    notifyListeners();
+    try {
+      final name = await repository.getAssociationName();
+      debugPrint('[VM] fetched name=$name');
+
+      if (name != null) {
+        _associationName = name;
+        debugPrint('[VM] notify once');
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 
   void logout(BuildContext context) {
@@ -36,13 +48,13 @@ class SettingsViewModel extends ChangeNotifier {
         actions: [
           TextButton(
             style: TextButton.styleFrom(foregroundColor: AppColors.textPrimary),
-            child: const Text("Cancel"),
             onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async => _handleLogout(context),
             child: const Text("Logout"),
-            onPressed: () async => await _handleLogout(context),
           ),
         ],
       ),
