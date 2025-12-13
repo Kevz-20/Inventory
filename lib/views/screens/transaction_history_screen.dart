@@ -148,7 +148,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                 children: [
                                   Flexible(
                                     child: Text(
-                                      tx.description ?? tx.type,
+                                      tx.type,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,

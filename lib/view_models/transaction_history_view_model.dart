@@ -17,9 +17,12 @@ class TransactionItem {
   });
 
   // Convert map to TransactionItem
-  factory TransactionItem.fromMap(Map<String, dynamic> map) {
+  factory TransactionItem.fromMap(
+    Map<String, dynamic> map, {
+    String fallbackType = '',
+  }) {
     return TransactionItem(
-      type: map['type'] ?? '',
+      type: map['type'] ?? fallbackType,
       description: map['description'],
       amount: map['amount'] != null ? (map['amount'] as num).toDouble() : 0.0,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
@@ -49,32 +52,49 @@ extension TransactionCategoryExtension on TransactionCategory {
 // Extension to convert raw history maps into TransactionItem list
 extension TransactionHistoryViewModelExtension on TransactionHistoryViewModel {
   List<TransactionItem> get transactions {
-    List<Map<String, dynamic>> rawList;
+    final List<TransactionItem> allTransactions = [];
 
-    switch (selectedCategory) {
-      case TransactionCategory.expenses:
-        rawList = _history.expenses;
-        break;
+    // Expenses
+    allTransactions.addAll(
+      _history.expenses.map(
+        (map) => TransactionItem.fromMap(map, fallbackType: 'Gasto'),
+      ),
+    );
 
-      case TransactionCategory.sales:
-        rawList = [..._history.salesCash, ..._history.salesCredit];
-        break;
+    // Sales Cash
+    allTransactions.addAll(
+      _history.salesCash.map(
+        (map) => TransactionItem.fromMap(map, fallbackType: 'Halin'),
+      ),
+    );
 
-      case TransactionCategory.capitalManagement:
-        rawList = _history.capitalManagement;
-        break;
+    // Sales Credit
+    allTransactions.addAll(
+      _history.salesCredit.map(
+        (map) => TransactionItem.fromMap(map, fallbackType: 'Halin'),
+      ),
+    );
 
-      case TransactionCategory.all:
-        rawList = [
-          ..._history.expenses,
-          ..._history.salesCash,
-          ..._history.salesCredit,
-          ..._history.capitalManagement,
-        ];
-        break;
+    // Capital Management
+    allTransactions.addAll(
+      _history.capitalManagement.map(
+        (map) => TransactionItem.fromMap(map, fallbackType: 'Capital'),
+      ),
+    );
+
+    // If a specific category is selected, filter the list
+    if (selectedCategory == TransactionCategory.expenses) {
+      return allTransactions.where((tx) => tx.type == 'Gasto').toList();
+    }
+    if (selectedCategory == TransactionCategory.sales) {
+      return allTransactions.where((tx) => tx.type == 'Halin').toList();
+    }
+    if (selectedCategory == TransactionCategory.capitalManagement) {
+      return allTransactions.where((tx) => tx.type == 'Capital').toList();
     }
 
-    return rawList.map(TransactionItem.fromMap).toList();
+    // For "All" return everything
+    return allTransactions;
   }
 }
 
