@@ -91,10 +91,20 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
-          // Transaction list
           Expanded(
-            child: transactions.isEmpty && viewModel.isLoading
+            child: viewModel.isLoading && transactions.isEmpty
                 ? const Center(child: CircularProgressIndicator())
+                : transactions.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No transactions found',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -102,7 +112,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         transactions.length + (viewModel.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == transactions.length) {
-                        // Bottom loading indicator
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           child: Center(child: CircularProgressIndicator()),
