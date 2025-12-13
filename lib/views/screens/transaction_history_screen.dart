@@ -91,6 +91,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
 
+          // Transaction List
           Expanded(
             child: viewModel.isLoading && transactions.isEmpty
                 ? const Center(child: CircularProgressIndicator())
@@ -362,6 +363,7 @@ class CategoryChipsWithDots extends StatelessWidget {
             );
           }).toList(),
         ),
+        const SizedBox(height: 5),
       ],
     );
   }
