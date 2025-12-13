@@ -41,7 +41,7 @@ extension TransactionCategoryExtension on TransactionCategory {
       case TransactionCategory.sales:
         return 'Halin';
       case TransactionCategory.capitalManagement:
-        return 'Capital';
+        return 'Capital ';
     }
   }
 }

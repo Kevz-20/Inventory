@@ -311,6 +311,13 @@ class CategoryChipsWithDots extends StatelessWidget {
                           ? AppColors.primary
                           : Colors.grey.shade300,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withAlpha(51),
+                        blurRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Text(
                     category.displayName,

@@ -2,7 +2,6 @@ import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/profile_view_model_provider.dart';
 
 final settingsViewModelProvider = ChangeNotifierProvider<SettingsViewModel>((
@@ -40,12 +39,7 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> _handleLogout(BuildContext context) async {
     Navigator.pop(context);
-
     ref.read(profileViewModelProvider).whenData((vm) => vm.reset());
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('mobileNumber');
-
     if (!context.mounted) return;
     GoRouter.of(context).go('/login', extra: 'fromLogout');
   }
