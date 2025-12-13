@@ -94,7 +94,9 @@ class _CapitalManagementScreenState
                   if (amount == null || amount <= 0) return;
 
                   await vm.addCapital(
-                    cashOnHand: amount,
+                    capitalAmount: amount,
+                    cashOnHand: 0,
+                    bankCash: 0,
                     remarks: _remarksController.text,
                   );
 
@@ -205,7 +207,9 @@ class _CapitalManagementScreenState
         if (amount == null || amount <= 0) return;
 
         await vm.addCapital(
-          cashOnHand: amount,
+          capitalAmount: amount,
+          cashOnHand: 0,
+          bankCash: 0,
           remarks: _remarksController.text,
         );
 
@@ -223,7 +227,12 @@ class _CapitalManagementScreenState
         final amount = double.tryParse(_amountController.text);
         if (amount == null || amount <= 0) return;
 
-        await vm.addCapital(cashOnHand: amount, remarks: value);
+        await vm.addCapital(
+          capitalAmount: amount,
+          cashOnHand: 0,
+          bankCash: 0,
+          remarks: _remarksController.text,
+        );
 
         _amountController.clear();
         _remarksController.clear();

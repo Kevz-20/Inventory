@@ -49,7 +49,7 @@ class CapitalManagementViewModel extends ChangeNotifier {
     try {
       totalBalance = capitals.fold<double>(
         0.0,
-        (sum, c) => sum + c.cashOnHand + c.bankCash,
+        (sum, c) => sum + c.capital + c.cashOnHand + c.bankCash,
       );
     } catch (e) {
       totalBalance = 0.0;
@@ -59,10 +59,10 @@ class CapitalManagementViewModel extends ChangeNotifier {
     _setLoading(false);
   }
 
-  // Add new capital (accountId handled by repository)
+  // Add new capital
   Future<void> addCapital({
-    required double cashOnHand,
-    double capital = 0,
+    required double capitalAmount,
+    double cashOnHand = 0,
     double bankCash = 0,
     String remarks = '',
   }) async {
@@ -71,9 +71,9 @@ class CapitalManagementViewModel extends ChangeNotifier {
 
     try {
       final model = CapitalManagementModel(
-        accountId: 0, // repository will override
+        accountId: 0,
         cashOnHand: cashOnHand,
-        capital: capital,
+        capital: capitalAmount,
         bankCash: bankCash,
         remarks: remarks,
       );

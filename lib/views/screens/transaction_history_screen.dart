@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../widgets/header.dart';
@@ -13,25 +14,14 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  final TransactionHistoryViewModel viewModel = TransactionHistoryViewModel();
+  late final TransactionHistoryViewModel viewModel;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    viewModel.addListener(() {
-      setState(() {}); // rebuild UI on ViewModel change
-    });
-    viewModel.resetPagination(); // clear previous data
-    viewModel.loadNextPage(); // load first page
-
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 100) {
-        // Load next page when near bottom
-        viewModel.loadNextPage();
-      }
-    });
+    viewModel = TransactionHistoryViewModel();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -41,168 +31,183 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     super.dispose();
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      viewModel.loadNextPage();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final transactions = viewModel.transactions;
-
-    return Scaffold(
-      appBar: const AppHeader(
-        title: 'Transaction History',
-        showBackButton: true,
-      ),
-      backgroundColor: AppColors.surface,
-      body: Column(
-        children: [
-          // Date pickers
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+    return ChangeNotifierProvider.value(
+      value: viewModel,
+      child: Consumer<TransactionHistoryViewModel>(
+        builder: (_, vm, _) {
+          final count = vm.transactionCount;
+          return Scaffold(
+            appBar: const AppHeader(
+              title: 'Transaction History',
+              showBackButton: true,
+            ),
+            backgroundColor: AppColors.surface,
+            body: Column(
               children: [
-                Expanded(
-                  child: _DatePickerBox(
-                    title: 'Start Date',
-                    date: viewModel.startDate ?? DateTime.now(),
-                    onDateSelected: (picked) {
-                      viewModel.setStartDate(picked);
+                // Date pickers
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _DatePickerBox(
+                          title: 'Start Date',
+                          date: vm.startDate ?? DateTime.now(),
+                          onDateSelected: vm.setStartDate,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _DatePickerBox(
+                          title: 'End Date',
+                          date: vm.endDate ?? DateTime.now(),
+                          onDateSelected: vm.setEndDate,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Category chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: CategoryChipsWithDots(
+                    categories: TransactionCategory.values,
+                    selectedCategory: vm.selectedCategory,
+                    onCategorySelected: (cat) {
+                      vm.setSelectedCategory(cat);
+                      vm.resetPagination();
                     },
                   ),
                 ),
-                const SizedBox(width: 12),
+                // Transaction list
                 Expanded(
-                  child: _DatePickerBox(
-                    title: 'End Date',
-                    date: viewModel.endDate ?? DateTime.now(),
-                    onDateSelected: (picked) {
-                      viewModel.setEndDate(picked);
-                    },
-                  ),
+                  child: count == 0 && vm.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : count == 0
+                      ? Center(
+                          child: Text(
+                            vm.emptyStateMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: count + 1,
+                          itemBuilder: (_, index) {
+                            if (index >= count) {
+                              return vm.transactionCount <
+                                      vm.transactions.length
+                                  ? const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+                                      child: Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink();
+                            }
+                            final tx = vm.transactionAt(index);
+                            final isExpense =
+                                tx.type == 'Gasto' || tx.type == 'Halin';
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withAlpha(51),
+                                    blurRadius: 2,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            tx.type,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          '${isExpense ? '-₱' : '+₱'}${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isExpense
+                                                ? Colors.red
+                                                : Colors.green,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          tx.description ?? tx.type,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          DateFormat(
+                                            'MMMM d, yyyy',
+                                          ).format(tx.createdAt),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black45,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
-          ),
-
-          // Category chips
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: CategoryChipsWithDots(
-              categories: TransactionCategory.values,
-              selectedCategory: viewModel.selectedCategory,
-              onCategorySelected: viewModel.setSelectedCategory,
-            ),
-          ),
-
-          // Transaction List
-          Expanded(
-            child: viewModel.isLoading && transactions.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : transactions.isEmpty
-                ? Center(
-                    child: Text(
-                      viewModel.emptyStateMessage,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount:
-                        transactions.length + (viewModel.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == transactions.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-
-                      final tx = transactions[index];
-                      final isExpense =
-                          tx.type == 'Gasto' || tx.type == 'Withdraw';
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withAlpha(51),
-                              blurRadius: 2,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      tx.type,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    '₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isExpense
-                                          ? Colors.red
-                                          : Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    tx.type,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  Text(
-                                    DateFormat(
-                                      'MMMM d, yyyy',
-                                    ).format(tx.createdAt),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black45,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 }
 
-// Date picker box widget
+// Date picker box
 class _DatePickerBox extends StatelessWidget {
   final String title;
   final DateTime date;
@@ -280,6 +285,7 @@ class _DatePickerBox extends StatelessWidget {
   }
 }
 
+// Category chips with dot indicator
 class CategoryChipsWithDots extends StatelessWidget {
   final List<TransactionCategory> categories;
   final TransactionCategory selectedCategory;
@@ -303,7 +309,7 @@ class CategoryChipsWithDots extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             itemCount: categories.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
+            itemBuilder: (_, index) {
               final category = categories[index];
               final isSelected = selectedCategory == category;
 
@@ -343,15 +349,11 @@ class CategoryChipsWithDots extends StatelessWidget {
             },
           ),
         ),
-
         const SizedBox(height: 10),
-
-        // Simple dot indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: categories.map((category) {
             final isSelected = selectedCategory == category;
-
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: isSelected ? 8 : 6,
