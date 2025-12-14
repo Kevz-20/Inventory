@@ -29,80 +29,55 @@ class SalesViewModel extends ChangeNotifier {
   ];
 
   SalesViewModel() {
-    debugPrint('⭐ SalesViewModel initialized');
-    // Ensure async initialization runs after construction
     Future.microtask(() => _initRepository());
   }
 
   Future<void> _initRepository() async {
-    debugPrint('⭐ _initRepository() called');
     try {
-      final dbFuture = DBService.instance.database;
-      debugPrint('⭐ DBService.database future created: $dbFuture');
-
-      final db = await dbFuture;
-      debugPrint('⭐ DBService.database resolved: $db');
-
+      final db = await DBService.instance.database;
       _repository = ProductRepository(db);
-      debugPrint('⭐ ProductRepository initialized: $_repository');
-
       await loadProducts();
-      debugPrint('⭐ loadProducts() completed');
-    } catch (e, st) {
-      debugPrint('⭐ Error in _initRepository(): $e');
-      debugPrint('⭐ Stack trace: $st');
-    }
+    } catch (_) {}
   }
 
   Future<void> loadProducts() async {
     if (_repository == null) return;
 
-    debugPrint('⭐ Loading products...');
     isLoading = true;
     notifyListeners();
 
     try {
       products = await _repository!.getProducts();
-      debugPrint('⭐ Products loaded: ${products.length}');
-    } catch (e, st) {
-      debugPrint('⭐ Error loading products: $e');
-      debugPrint('⭐ Stack trace: $st');
-    }
+    } catch (_) {}
 
     for (var p in products) {
       if (p.id != null) {
         productQuantities[p.id!] = 0;
-        debugPrint('⭐ Product initialized: ${p.name} (ID: ${p.id})');
       }
     }
 
     isLoading = false;
     notifyListeners();
-    debugPrint('⭐ Finished loading products');
   }
 
   Future<void> reloadProducts() async {
-    debugPrint('⭐ Reloading products...');
     await loadProducts();
   }
 
   void selectCategory(int index) {
     selectedCategoryIndex = index;
     notifyListeners();
-    debugPrint('⭐ Selected category: ${categories[index]}');
   }
 
   List<ProductModel> get filteredProducts {
     if (selectedCategoryIndex == 0) return products;
-    final filtered = products
+    return products
         .where(
           (p) =>
               p.category.toLowerCase() ==
               categories[selectedCategoryIndex].toLowerCase(),
         )
         .toList();
-    debugPrint('⭐ Filtered products count: ${filtered.length}');
-    return filtered;
   }
 
   void incrementQuantity(ProductModel product) {
@@ -112,9 +87,6 @@ class SalesViewModel extends ChangeNotifier {
       productQuantities[product.id!] = currentQty + 1;
       calculateTotal();
       notifyListeners();
-      debugPrint(
-        '⭐ Incremented ${product.name} to ${productQuantities[product.id!]}',
-      );
     }
   }
 
@@ -125,9 +97,6 @@ class SalesViewModel extends ChangeNotifier {
       productQuantities[product.id!] = current - 1;
       calculateTotal();
       notifyListeners();
-      debugPrint(
-        '⭐ Decremented ${product.name} to ${productQuantities[product.id!]}',
-      );
     }
   }
 
@@ -139,14 +108,16 @@ class SalesViewModel extends ChangeNotifier {
     productQuantities[product.id!] = qty;
     calculateTotal();
     notifyListeners();
-    debugPrint('⭐ Updated ${product.name} quantity to $qty');
   }
 
   int getQuantity(ProductModel product) {
     if (product.id == null) return 0;
-    final qty = productQuantities[product.id!] ?? 0;
-    debugPrint('⭐ Quantity for ${product.name}: $qty');
-    return qty;
+    return productQuantities[product.id!] ?? 0;
+  }
+
+  double getSubtotal(ProductModel product) {
+    final qty = getQuantity(product);
+    return qty * product.sellingPrice;
   }
 
   void calculateTotal() {
@@ -156,11 +127,9 @@ class SalesViewModel extends ChangeNotifier {
       final qty = productQuantities[p.id!] ?? 0;
       total += (p.sellingPrice * qty).toInt();
     }
-    debugPrint('⭐ Total calculated: $total');
   }
 
   Future<void> checkout() async {
-    debugPrint('⭐ Checkout started');
     final purchasedItems = <Map<String, dynamic>>[];
 
     for (var p in products) {
@@ -174,13 +143,11 @@ class SalesViewModel extends ChangeNotifier {
           'total': qty * p.sellingPrice,
         });
         p.quantity -= qty;
-        debugPrint('⭐ Purchased ${p.name}: $qty');
       }
     }
 
     if (_repository != null) {
       await _repository!.savePurchase(purchasedItems);
-      debugPrint('⭐ Purchase saved to repository');
     }
 
     for (var id in productQuantities.keys) {
@@ -189,6 +156,5 @@ class SalesViewModel extends ChangeNotifier {
 
     calculateTotal();
     notifyListeners();
-    debugPrint('⭐ Checkout completed');
   }
 }
