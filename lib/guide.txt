@@ -82,3 +82,10 @@ ViewModel – async → waits for repository to return data, then updates state 
 View/UI – sync → watches ViewModel state; renders when state changes.
 
 This pattern is called asynchronous dependency chaining or simply async/await chaining.
+
+Clean commits:
+feat: new feature ("feat: add login screen with Riverpod view model")
+fix: bug fix ("fix: correct date sorting in transaction history")
+tweak: small change ("tweak: rename variables for clarity in db_service")
+copy: text only ("copy: improve labels in create account form")
+docs: documentation ("docs: add developer guide for MVVM with Riverpod")
