@@ -278,10 +278,24 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             ],
           ),
         ),
-        _quantitySelector(product, vm),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _quantitySelector(product, vm),
+            const SizedBox(height: 6),
+            Text(
+              "Subtotal: ₱${vm.getSubtotal(product)}",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
       ],
     ),
   );
+
   Widget _productImage(ProductModel product) {
     if (product.image == null || product.image!.isEmpty) {
       return Container(
