@@ -144,20 +144,17 @@ class DBService {
       )
     ''');
 
-    // Sale
+    // Sales
     await db.execute('''
-      CREATE TABLE sale (
+      CREATE TABLE sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER,
-        quantity INTEGER,
-        selling_price REAL,
-        sale_type TEXT,
+        account_id INTEGER NOT NULL,
         customer_id INTEGER,
-        account_id INTEGER,
-        created_at TEXT,
-        FOREIGN KEY (product_id) REFERENCES product (id),
-        FOREIGN KEY (customer_id) REFERENCES customer (id),
-        FOREIGN KEY (account_id) REFERENCES account (id)
+        sale_type TEXT NOT NULL,
+        total INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES account(id),
+        FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
 
@@ -239,12 +236,13 @@ class DBService {
     await db.execute('''
       CREATE TABLE sale_item (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER,
-        stock_in_id INTEGER,
-        quantity INTEGER,
-        unit_price REAL,
-        FOREIGN KEY (sale_id) REFERENCES sale (id),
-        FOREIGN KEY (stock_in_id) REFERENCES stock_in (id)
+        sale_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        unit_price INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        subtotal INTEGER NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES sales(id),
+        FOREIGN KEY (product_id) REFERENCES product(id)
       )
     ''');
 
@@ -267,14 +265,12 @@ class DBService {
       CREATE TABLE sales_cash (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
-        sale_id INTEGER,
         product_id INTEGER,
         amount REAL,
         quantity INTEGER,
         date TEXT,
         created_at TEXT,
         FOREIGN KEY (account_id) REFERENCES account (id),
-        FOREIGN KEY (sale_id) REFERENCES sale (id),
         FOREIGN KEY (product_id) REFERENCES product (id)
       )
     ''');

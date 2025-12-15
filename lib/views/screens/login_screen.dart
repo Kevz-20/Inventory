@@ -28,7 +28,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
             Column(
@@ -110,102 +109,65 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Consumer(
-              builder: (context, ref, _) {
-                final pin = ref.watch(loginViewModelProvider).pin;
-
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    4,
-                    (index) => Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: index < pin.length
-                            ? AppColors.primaryLight
-                            : Colors.transparent,
-                        border: Border.all(color: Colors.black54, width: 2),
-                      ),
-                    ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(4, (index) {
+                final pin = viewModel.pin;
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index < pin.length
+                        ? AppColors.primaryLight
+                        : Colors.transparent,
+                    border: Border.all(color: Colors.black54, width: 2),
                   ),
                 );
-              },
+              }),
             ),
             const SizedBox(height: 25),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: 12,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                  ),
-                  itemBuilder: (context, index) {
-                    String label;
-                    if (index < 9) {
-                      label = "${index + 1}";
-                    } else if (index == 9) {
-                      label = "back";
-                    } else if (index == 10) {
-                      label = "0";
-                    } else {
-                      label = "enter";
-                    }
-
-                    IconData? icon;
-                    Color textColor = Colors.black;
-                    if (label == "back") {
-                      icon = Icons.backspace_outlined;
-                    } else if (label == "enter") {
-                      textColor = AppColors.primaryLight;
-                    }
-
-                    return GestureDetector(
-                      onTapDown: (_) => viewModel.setPressed(index, true),
-                      onTapUp: (_) {
-                        viewModel.setPressed(index, false);
-                        viewModel.onKeyTap(context, label, ref);
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Numbers 1-9 grid
+                    GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: 9,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1, // ensures square buttons
+                          ),
+                      itemBuilder: (context, index) {
+                        final label = "${index + 1}";
+                        return _buildKey(label);
                       },
-                      onTapCancel: () => viewModel.setPressed(index, false),
-                      child: AnimatedScale(
-                        scale: viewModel.isPressed(index) ? 0.85 : 1.0,
-                        curve: Curves.easeOut,
-                        duration: const Duration(milliseconds: 120),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 255, 255, 255),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withValues(alpha: 51),
-                                blurRadius: 2,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: icon != null
-                                ? Icon(icon, size: 26, color: Colors.black87)
-                                : Text(
-                                    label,
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w500,
-                                      color: textColor,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 12),
+                    // Zero button centered below
+                    // Bottom row for zero
+                    GridView.count(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1, // square buttons
+                      children: [
+                        Container(), // empty space
+                        _buildKey("0"), // zero button in the center
+                        Container(), // empty space
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -240,6 +202,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKey(String label) {
+    final viewModel = ref.read(loginViewModelProvider);
+
+    return GestureDetector(
+      onTapDown: (_) => viewModel.setPressed(label.hashCode, true),
+      onTapUp: (_) {
+        viewModel.setPressed(label.hashCode, false);
+        viewModel.onKeyTap(context, label, ref);
+      },
+      onTapCancel: () => viewModel.setPressed(label.hashCode, false),
+      child: AnimatedScale(
+        scale: viewModel.isPressed(label.hashCode) ? 0.85 : 1.0,
+        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          width: 60,
+          height: 60, // same size for all buttons
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 51),
+                blurRadius: 2,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+          ),
         ),
       ),
     );

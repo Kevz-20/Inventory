@@ -8,12 +8,12 @@ class ProductRepository {
 
   ProductRepository(this.db) : accountRepo = AccountRepository();
 
+  // ------------------- PRODUCT -------------------
   Future<int> insertProduct(ProductModel product) async {
     final accountId = await accountRepo.getAccountId();
     final data = product.toMap();
     data['account_id'] = accountId;
-    final id = await db.insert('product', data);
-    return id;
+    return await db.insert('product', data);
   }
 
   Future<List<ProductModel>> getProducts() async {
@@ -23,61 +23,114 @@ class ProductRepository {
       where: 'account_id = ?',
       whereArgs: [accountId],
     );
-    final products = result.map((e) => ProductModel.fromMap(e)).toList();
-    return products;
+    return result.map((e) => ProductModel.fromMap(e)).toList();
   }
 
   Future<int> updateProduct(ProductModel product) async {
-    final rows = await db.update(
+    return await db.update(
       'product',
       product.toMap(),
       where: 'id = ?',
       whereArgs: [product.id],
     );
-    return rows;
   }
 
   Future<int> deleteProduct(int id) async {
-    final rows = await db.delete('product', where: 'id = ?', whereArgs: [id]);
-    return rows;
+    return await db.delete('product', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<ProductModel?> getProductById(int id) async {
     final result = await db.query('product', where: 'id = ?', whereArgs: [id]);
-    if (result.isNotEmpty) {
-      return ProductModel.fromMap(result.first);
-    }
+    if (result.isNotEmpty) return ProductModel.fromMap(result.first);
     return null;
   }
 
+  // ------------------- PURCHASE -------------------
   Future<void> savePurchase(List<Map<String, dynamic>> purchasedItems) async {
     final accountId = await accountRepo.getAccountId();
     final batch = db.batch();
+    final now = DateTime.now().toIso8601String();
 
     for (var item in purchasedItems) {
-      final data = {
+      batch.insert('stock_in', {
         'account_id': accountId,
         'product_id': item['productId'],
-        'name': item['name'],
         'quantity': item['quantity'],
-        'price': item['price'],
-        'total': item['total'],
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-      batch.insert('purchase', data);
+        'purchase_price': item['price'],
+        'markup_rate': item['markup'] ?? 0,
+        'image': item['image'],
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      batch.rawUpdate(
+        'UPDATE product SET quantity = quantity + ? WHERE id = ?',
+        [item['quantity'], item['productId']],
+      );
     }
 
     await batch.commit(noResult: true);
   }
 
-  Future<List<Map<String, dynamic>>> getPurchases() async {
+  // ------------------- SALES -------------------
+
+  // Cash checkout
+  Future<void> checkoutCash(List<Map<String, dynamic>> items) async {
     final accountId = await accountRepo.getAccountId();
-    final result = await db.query(
-      'purchase',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      orderBy: 'timestamp DESC',
-    );
-    return result;
+    final batch = db.batch();
+    final now = DateTime.now().toIso8601String();
+
+    for (var item in items) {
+      batch.insert('sales_cash', {
+        'account_id': accountId,
+        'product_id': item['productId'],
+        'amount': item['subtotal'],
+        'quantity': item['quantity'],
+        'date': now,
+        'created_at': now,
+      });
+
+      batch.rawUpdate(
+        'UPDATE product SET quantity = quantity - ? WHERE id = ?',
+        [item['quantity'], item['productId']],
+      );
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  // Credit checkout
+  Future<void> checkoutCredit(
+    List<Map<String, dynamic>> items,
+    int customerId, {
+    DateTime? dueDate,
+  }) async {
+    final accountId = await accountRepo.getAccountId();
+    final batch = db.batch();
+    final now = DateTime.now().toIso8601String();
+    final due =
+        dueDate?.toIso8601String() ??
+        DateTime.now().add(Duration(days: 30)).toIso8601String();
+
+    for (var item in items) {
+      batch.insert('sales_credit', {
+        'account_id': accountId,
+        'product_id': item['productId'],
+        'customer_id': customerId,
+        'amount': item['subtotal'],
+        'quantity': item['quantity'],
+        'status_id': 0, // unpaid
+        'credit_date': now,
+        'due_date': due,
+        'created_at': now,
+      });
+
+      batch.rawUpdate(
+        'UPDATE product SET quantity = quantity - ? WHERE id = ?',
+        [item['quantity'], item['productId']],
+      );
+    }
+
+    await batch.commit(noResult: true);
   }
 }

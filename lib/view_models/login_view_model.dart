@@ -40,7 +40,6 @@ class LoginViewModel extends ChangeNotifier {
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
     mobileNumber = prefs.getString('mobileNumber') ?? '';
-    debugPrint('⭐ [LoginViewModel] loadSavedMobile: $mobileNumber');
     notifyListeners();
   }
 
@@ -48,17 +47,15 @@ class LoginViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('mobileNumber', number);
     mobileNumber = number;
-    debugPrint('⭐ [LoginViewModel] Saved mobileNumber: $mobileNumber');
     notifyListeners();
   }
 
   void onKeyTap(BuildContext context, String label, WidgetRef ref) {
     if (label == 'back') {
       if (pin.isNotEmpty) pin = pin.substring(0, pin.length - 1);
-    } else if (label == 'enter') {
-      if (pin.length == 4) login(context, ref);
     } else {
       if (pin.length < 4) pin += label;
+      if (pin.length == 4) login(context, ref);
     }
     notifyListeners();
   }
@@ -78,7 +75,7 @@ class LoginViewModel extends ChangeNotifier {
 
     final account = await _repository.getAccountByMobileNumber(mobileNumber);
 
-    if (account!.pin == pin) {
+    if (account != null && account.pin == pin) {
       errorMessage = null;
       clearPin();
 
@@ -89,7 +86,7 @@ class LoginViewModel extends ChangeNotifier {
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
-        await Future.delayed(const Duration(seconds: 1));
+        await Future.delayed(const Duration(milliseconds: 500));
         if (context.mounted) {
           GoRouter.of(context).go('/home', extra: 'fromLogin');
         }
@@ -97,6 +94,7 @@ class LoginViewModel extends ChangeNotifier {
     } else {
       errorMessage = 'Invalid mobile number or PIN';
       notifyListeners();
+      clearPin();
       if (context.mounted) {
         _showMessageDialog(context, errorMessage!, success: false);
       }
@@ -135,7 +133,7 @@ class LoginViewModel extends ChangeNotifier {
         return StatefulBuilder(
           builder: (context, setState) => Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 400),
+              constraints: const BoxConstraints(maxWidth: 400),
               child: AlertDialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -150,7 +148,7 @@ class LoginViewModel extends ChangeNotifier {
                   children: [
                     Text(
                       'Enter your new mobile number:',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -247,7 +245,6 @@ class LoginViewModel extends ChangeNotifier {
 
     if (result != null) {
       await saveMobileNumber(result);
-      debugPrint('⭐ [LoginViewModel] Mobile number changed to: $result');
     }
   }
 }
