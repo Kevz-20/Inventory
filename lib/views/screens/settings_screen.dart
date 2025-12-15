@@ -81,21 +81,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _sectionTitle("General Settings"),
               _settingsTile(
                 title: "Profile",
-                iconColor: AppColors.primary,
                 icon: Icons.person,
                 onTap: () => GoRouter.of(context).push('/profile'),
               ),
               _settingsTile(
                 title: "Change PIN",
                 icon: Icons.lock,
-                iconColor: AppColors.primary,
                 onTap: () => GoRouter.of(context).push('/change_pin'),
               ),
               const SizedBox(height: 20),
               _sectionTitle("About"),
               _settingsTile(
                 title: "About App",
-                iconColor: AppColors.primary,
                 icon: Icons.info,
                 onTap: () => GoRouter.of(context).push('/about_app'),
               ),
