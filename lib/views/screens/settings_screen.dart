@@ -85,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => GoRouter.of(context).push('/profile'),
               ),
               _settingsTile(
-                title: "Change PIN / Password",
+                title: "Change PIN",
                 icon: Icons.lock,
                 onTap: () => GoRouter.of(context).push('/change_pin'),
               ),

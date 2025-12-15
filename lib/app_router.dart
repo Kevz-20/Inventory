@@ -1,4 +1,3 @@
-import 'package:dswd_slp/views/screens/record_sales.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
@@ -18,6 +17,7 @@ import 'views/screens/income_statement_screen.dart';
 import 'views/screens/balance_sheet_screen.dart';
 import 'views/screens/capital_management_screen.dart';
 import 'views/screens/utang_screen.dart';
+import 'views/screens/record_sales_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
