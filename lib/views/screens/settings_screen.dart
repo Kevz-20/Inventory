@@ -69,7 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 22, width: 140),
                         const SizedBox(height: 4),
                         const Text(
-                          "Association Name",
+                          "Association",
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
