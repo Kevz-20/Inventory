@@ -287,7 +287,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               "Subtotal: ₱${vm.getSubtotal(product)}",
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+                color: Colors.black87,
               ),
             ),
           ],
