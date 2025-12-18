@@ -103,6 +103,7 @@ class _UtangScreenState extends State<UtangScreen> {
           "Walay utangan",
           style: TextStyle(fontSize: 18, color: Colors.grey),
         ),
+        
       ],
     );
   }

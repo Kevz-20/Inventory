@@ -6,36 +6,35 @@ class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int)? onTap;
 
-  const BottomNavBar({super.key, required this.currentIndex, this.onTap});
+  const BottomNavBar({
+    super.key,
+    required this.currentIndex,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Ensure currentIndex is within valid range
-    final safeIndex = currentIndex.clamp(0, 1);
+    // FIX: 3 items → clamp 0–2
+    final safeIndex = currentIndex.clamp(0, 2);
 
     return BottomNavigationBar(
       currentIndex: safeIndex,
       onTap: (index) {
         if (index == safeIndex) return;
 
-        if (onTap != null) {
-          onTap!(index);
-        }
+        onTap?.call(index);
 
-        // Navigate using GoRouter
-        String path;
         switch (index) {
           case 0:
-            path = '/home';
+            context.go('/home');
             break;
           case 1:
-            path = '/settings';
+            context.go('/history');
             break;
-          default:
-            path = '/home';
+          case 2:
+            context.go('/settings');
+            break;
         }
-
-        context.go(path);
       },
       iconSize: 28,
       selectedFontSize: 14,
@@ -44,8 +43,18 @@ class BottomNavBar extends StatelessWidget {
       selectedItemColor: AppColors.primary,
       unselectedItemColor: Colors.grey[600],
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.history),
+          label: 'History',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.settings),
+          label: 'Settings',
+        ),
       ],
     );
   }

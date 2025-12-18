@@ -107,11 +107,11 @@ final router = GoRouter(
       ),
     ),
     GoRoute(
-      path: '/transaction_history',
+      path: '/history',
       pageBuilder: (context, state) => customPage(
         state,
         const TransactionHistoryScreen(),
-        transition: PageTransitionType.forward,
+        transition: PageTransitionType.none,
       ),
     ),
     GoRoute(

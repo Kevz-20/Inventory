@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/transaction_history_view_model.dart';
-import '../widgets/header.dart';
+import '../widgets/nav_bar.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -46,9 +46,15 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         builder: (_, vm, _) {
           final count = vm.transactionCount;
           return Scaffold(
-            appBar: const AppHeader(
-              title: 'Transaction History',
-              showBackButton: true,
+            appBar: AppBar(
+              backgroundColor: AppColors.primary,
+              title: const Text(
+                'History',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             backgroundColor: AppColors.surface,
             body: Column(
@@ -331,6 +337,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
               ],
             ),
+            bottomNavigationBar: const BottomNavBar(currentIndex: 1),
           );
         },
       ),
