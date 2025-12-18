@@ -345,7 +345,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 }
 
-// Date picker box
 class _DatePickerBox extends StatelessWidget {
   final String title;
   final DateTime date;
@@ -398,23 +397,25 @@ class _DatePickerBox extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
+            // Title and icon in the same row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  DateFormat('MMMM d, y').format(date),
-                  style: const TextStyle(fontSize: 13, color: Colors.black),
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const Icon(Icons.calendar_today, size: 17),
               ],
+            ),
+            const SizedBox(height: 4),
+            // Selected date below the title
+            Text(
+              DateFormat('MMMM d, y').format(date),
+              style: const TextStyle(fontSize: 13, color: Colors.black),
             ),
           ],
         ),
