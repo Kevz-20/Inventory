@@ -191,45 +191,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                Column(
                   children: [
-                    _menuCard(
-                      'Halin',
-                      'lib/assets/record.png',
-                      onTap: () => GoRouter.of(context).push('/record_sales'),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _menuCard(
+                          'Halin',
+                          'lib/assets/record.png',
+                          onTap: () =>
+                              GoRouter.of(context).push('/record_sales'),
+                        ),
+                        _menuCard(
+                          'Utang',
+                          'lib/assets/utang.png',
+                          onTap: () => GoRouter.of(context).push('/utang'),
+                        ),
+                        _menuCard(
+                          'Gasto',
+                          'lib/assets/gasto.png',
+                          onTap: () => GoRouter.of(context).push('/expenses'),
+                        ),
+                        _menuCard(
+                          'Stock In',
+                          'lib/assets/stockin.png',
+                          onTap: () => GoRouter.of(context).push('/stockin'),
+                        ),
+                      ],
                     ),
-                    _menuCard(
-                      'Utang',
-                      'lib/assets/utang.png',
-                      onTap: () => GoRouter.of(context).push('/utang'),
-                    ),
-                    _menuCard(
-                      'Gasto',
-                      'lib/assets/gasto.png',
-                      onTap: () => GoRouter.of(context).push('/expenses'),
-                    ),
-                    _menuCard(
-                      'Stock In',
-                      'lib/assets/stockin.png',
-                      onTap: () => GoRouter.of(context).push('/stockin'),
-                    ),
-                    _menuCard(
-                      'Capital\nManagement',
-                      'lib/assets/cash.png',
-                      onTap: () =>
-                          GoRouter.of(context).push('/capital_management'),
-                    ),
-                    _menuCard(
-                      'History',
-                      'lib/assets/history.png',
-                      onTap: () =>
-                          GoRouter.of(context).push('/transaction_history'),
+                    const SizedBox(height: 12),
+                    // Center the last odd card
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calculate width to match one grid cell width
+                            final width =
+                                (MediaQuery.of(context).size.width - 12 * 3) /
+                                2;
+                            final height =
+                                width / 1.2; // match childAspectRatio 1.2
+                            return SizedBox(
+                              width: width,
+                              height: height,
+                              child: _menuCard(
+                                'Capital\nManagement',
+                                'lib/assets/cash.png',
+                                onTap: () => GoRouter.of(
+                                  context,
+                                ).push('/capital_management'),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -239,24 +260,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                Column(
                   children: [
-                    _menuCard(
-                      'Balance\nSheet',
-                      'lib/assets/balance_sheet.png',
-                      onTap: () => GoRouter.of(context).push('/balance_sheet'),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _menuCard(
+                          'Balance\nSheet',
+                          'lib/assets/balance_sheet.png',
+                          onTap: () =>
+                              GoRouter.of(context).push('/balance_sheet'),
+                        ),
+                        _menuCard(
+                          'Income\nStatement',
+                          'lib/assets/income_statement.png',
+                          onTap: () =>
+                              GoRouter.of(context).push('/income_statement'),
+                        ),
+                      ],
                     ),
-                    _menuCard(
-                      'Income\nStatement',
-                      'lib/assets/income_statement.png',
-                      onTap: () =>
-                          GoRouter.of(context).push('/income_statement'),
+                    const SizedBox(height: 12),
+                    // Center the last card with same aspect ratio as GridView items
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calculate width to match half of the grid width minus spacing
+                            final width =
+                                (MediaQuery.of(context).size.width - 12 * 3) /
+                                2;
+                            final height =
+                                width / 1.2; // match childAspectRatio 1.2
+                            return SizedBox(
+                              width: width,
+                              height: height,
+                              child: _menuCard(
+                                'Cash Flow',
+                                'lib/assets/cashflow.png',
+                                onTap: () => GoRouter.of(context).push(''),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
