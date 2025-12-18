@@ -21,6 +21,7 @@ class LoginViewModel extends ChangeNotifier {
 
   final formKey = GlobalKey<FormState>();
 
+  bool shakePin = false;
   String mobileNumber = '';
   String pin = '';
   String? errorMessage;
@@ -50,12 +51,17 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onKeyTap(BuildContext context, String label, WidgetRef ref) {
+  void onKeyTap(
+    BuildContext context,
+    String label,
+    WidgetRef ref, {
+    VoidCallback? onInvalid,
+  }) {
     if (label == 'back') {
       if (pin.isNotEmpty) pin = pin.substring(0, pin.length - 1);
     } else {
       if (pin.length < 4) pin += label;
-      if (pin.length == 4) login(context, ref);
+      if (pin.length == 4) login(context, ref, onInvalid: onInvalid);
     }
     notifyListeners();
   }
@@ -65,11 +71,16 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(BuildContext context, WidgetRef ref) async {
+  Future<void> login(
+    BuildContext context,
+    WidgetRef ref, {
+    VoidCallback? onInvalid,
+  }) async {
     if (mobileNumber.isEmpty || pin.length != 4) {
       errorMessage = 'Enter valid mobile number and PIN';
       notifyListeners();
       _showMessageDialog(context, errorMessage!, success: false);
+      onInvalid?.call(); // Trigger shake if provided
       return;
     }
 
@@ -77,24 +88,31 @@ class LoginViewModel extends ChangeNotifier {
 
     if (account != null && account.pin == pin) {
       errorMessage = null;
-      clearPin();
+      notifyListeners(); // Show the current PIN (all green dots)
 
       await saveMobileNumber(account.mobileNumber);
-
       ref.read(currentMobileNumberProvider.notifier).state =
           account.mobileNumber;
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
+        // Wait to show green dots before navigating
         await Future.delayed(const Duration(milliseconds: 500));
         if (context.mounted) {
           GoRouter.of(context).go('/home', extra: 'fromLogin');
+          clearPin(); // Clear PIN after navigation
         }
       }
     } else {
       errorMessage = 'Invalid mobile number or PIN';
-      notifyListeners();
-      clearPin();
+      notifyListeners(); // Show full 4 dots first
+
+      // Delay clearing pin and triggering shake
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        clearPin(); // Clear PIN after UI shows last dot
+        onInvalid?.call(); // Trigger shake
+      });
+
       if (context.mounted) {
         _showMessageDialog(context, errorMessage!, success: false);
       }

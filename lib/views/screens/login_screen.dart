@@ -11,13 +11,40 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       ref.read(loginViewModelProvider).loadSavedMobile();
     });
+
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    _shakeAnimation = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: 0.0), weight: 1),
+    ]).animate(_shakeController);
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  void triggerShake() {
+    _shakeController.forward(from: 0);
   }
 
   @override
@@ -109,23 +136,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                final pin = viewModel.pin;
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 18,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: index < pin.length
-                        ? AppColors.primaryLight
-                        : Colors.transparent,
-                    border: Border.all(color: Colors.black54, width: 2),
-                  ),
+            // Shake PIN row
+            AnimatedBuilder(
+              animation: _shakeAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(_shakeAnimation.value, 0),
+                  child: child,
                 );
-              }),
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) {
+                  final pin = viewModel.pin;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: index < pin.length
+                          ? AppColors.primaryLight
+                          : Colors.transparent,
+                      border: Border.all(color: Colors.black54, width: 2),
+                    ),
+                  );
+                }),
+              ),
             ),
             const SizedBox(height: 25),
             Expanded(
@@ -134,7 +171,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Numbers 1-9 grid
                     GridView.builder(
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
@@ -144,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             crossAxisCount: 3,
                             mainAxisSpacing: 12,
                             crossAxisSpacing: 12,
-                            childAspectRatio: 1, // ensures square buttons
+                            childAspectRatio: 1,
                           ),
                       itemBuilder: (context, index) {
                         final label = "${index + 1}";
@@ -152,19 +188,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    // Zero button centered below
-                    // Bottom row for zero
                     GridView.count(
                       physics: const NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
                       crossAxisCount: 3,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: 1, // square buttons
+                      childAspectRatio: 1,
                       children: [
-                        Container(), // empty space
-                        _buildKey("0"), // zero button in the center
-                        Container(), // empty space
+                        Container(),
+                        _buildKey("0"),
+                        Container(),
                       ],
                     ),
                   ],
@@ -214,7 +248,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       onTapDown: (_) => viewModel.setPressed(label.hashCode, true),
       onTapUp: (_) {
         viewModel.setPressed(label.hashCode, false);
-        viewModel.onKeyTap(context, label, ref);
+        viewModel.onKeyTap(context, label, ref, onInvalid: triggerShake);
       },
       onTapCancel: () => viewModel.setPressed(label.hashCode, false),
       child: AnimatedScale(
@@ -223,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         duration: const Duration(milliseconds: 120),
         child: Container(
           width: 60,
-          height: 60, // same size for all buttons
+          height: 60,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
