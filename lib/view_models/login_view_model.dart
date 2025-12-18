@@ -137,7 +137,7 @@ class LoginViewModel extends ChangeNotifier {
           ],
         ),
         backgroundColor: color,
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
