@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
+import 'package:intl/intl.dart';
 import '../../view_models/income_statement_view_model.dart';
 
 class IncomeStatementScreen extends ConsumerStatefulWidget {
@@ -13,6 +14,7 @@ class IncomeStatementScreen extends ConsumerStatefulWidget {
 }
 
 class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
+  static final DateFormat _dateFormat = DateFormat('MMMM d, yyyy');
   DateTime start = DateTime.now();
   DateTime end = DateTime.now();
 
@@ -51,7 +53,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   }
 
   String _format(DateTime date) {
-    return "${date.year}-${date.month}-${date.day}";
+    return _dateFormat.format(date);
   }
 
   @override

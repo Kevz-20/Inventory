@@ -24,7 +24,7 @@ final incomeStatementViewModelProvider =
           );
           return IncomeStatementViewModel(repository);
         },
-        loading: () => IncomeStatementViewModel(null), // handle DB not ready
+        loading: () => IncomeStatementViewModel(null),
         error: (_, _) => throw Exception('Database initialization failed'),
       );
     });
