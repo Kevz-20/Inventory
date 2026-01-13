@@ -19,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void initState() {
     super.initState();
+
     Future.microtask(() {
       ref.read(loginViewModelProvider).loadSavedMobile();
     });
@@ -55,156 +56,171 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(height: 20),
-            Column(
-              children: [
-                Image.asset('lib/assets/logo.png', height: 80),
-                const SizedBox(height: 10),
-                const Text(
-                  "E.M.P.O.W.E.R",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: () => viewModel.changeMobileNumber(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 25,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withValues(alpha: 51),
-                      blurRadius: 2,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
                   children: [
-                    const Text(
-                      "Mobile Number: ",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.textPrimary,
-                      ),
+                    // Logo
+                    Column(
+                      children: [
+                        Image.asset('lib/assets/logo.png', height: 80),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "E.M.P.O.W.E.R",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
                     ),
-                    Flexible(
-                      child: Text(
-                        viewModel.mobileNumber.isNotEmpty
-                            ? viewModel.mobileNumber
-                            : 'Not set',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                    const SizedBox(height: 20),
+                    // Mobile Number
+                    GestureDetector(
+                      onTap: () => viewModel.changeMobileNumber(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 25,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withAlpha(51),
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              "Mobile Number: ",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                viewModel.mobileNumber.isNotEmpty
+                                    ? viewModel.mobileNumber
+                                    : 'Not set',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () =>
+                                  viewModel.changeMobileNumber(context),
+                              child: const Icon(
+                                Icons.swap_horiz,
+                                color: AppColors.textPrimary,
+                                size: 22,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => viewModel.changeMobileNumber(context),
-                      child: const Icon(
-                        Icons.swap_horiz,
+                    const SizedBox(height: 25),
+                    // PIN
+                    const Text(
+                      "PIN",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary,
-                        size: 22,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 25),
-            const Text(
-              "PIN",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Shake PIN row
-            AnimatedBuilder(
-              animation: _shakeAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(_shakeAnimation.value, 0),
-                  child: child,
-                );
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (index) {
-                  final pin = viewModel.pin;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: index < pin.length
-                          ? AppColors.primaryLight
-                          : Colors.transparent,
-                      border: Border.all(color: Colors.black54, width: 2),
+                    const SizedBox(height: 10),
+                    AnimatedBuilder(
+                      animation: _shakeAnimation,
+                      builder: (context, child) {
+                        final pin = viewModel.pin;
+                        return Transform.translate(
+                          offset: Offset(_shakeAnimation.value, 0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(4, (index) {
+                              return Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: index < pin.length
+                                      ? AppColors.primaryLight
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: Colors.black54,
+                                    width: 2,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(height: 25),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      itemCount: 9,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                    const SizedBox(height: 25),
+                    // Keypad
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Column(
+                        children: [
+                          GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            itemCount: 9,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 1,
+                                ),
+                            itemBuilder: (context, index) {
+                              final label = "${index + 1}";
+                              return _buildKey(label);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          GridView.count(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
                             crossAxisCount: 3,
                             mainAxisSpacing: 12,
                             crossAxisSpacing: 12,
                             childAspectRatio: 1,
+                            children: [
+                              Container(),
+                              _buildKey("0"),
+                              Container(),
+                            ],
                           ),
-                      itemBuilder: (context, index) {
-                        final label = "${index + 1}";
-                        return _buildKey(label);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    GridView.count(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                      children: [
-                        Container(),
-                        _buildKey("0"),
-                        Container(),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
+            // Bottom Text Gestures
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
               child: Row(
@@ -243,7 +259,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   Widget _buildKey(String label) {
     final viewModel = ref.read(loginViewModelProvider);
-
     return GestureDetector(
       onTapDown: (_) => viewModel.setPressed(label.hashCode, true),
       onTapUp: (_) {
@@ -263,7 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 51),
+                color: Colors.grey.withAlpha(51),
                 blurRadius: 2,
                 offset: const Offset(0, 2),
               ),

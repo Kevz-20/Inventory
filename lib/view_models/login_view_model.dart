@@ -56,14 +56,22 @@ class LoginViewModel extends ChangeNotifier {
     String label,
     WidgetRef ref, {
     VoidCallback? onInvalid,
-  }) {
+  }) async {
     if (label == 'back') {
-      if (pin.isNotEmpty) pin = pin.substring(0, pin.length - 1);
+      if (pin.isNotEmpty) {
+        pin = pin.substring(0, pin.length - 1);
+        notifyListeners();
+      }
     } else {
-      if (pin.length < 4) pin += label;
-      if (pin.length == 4) login(context, ref, onInvalid: onInvalid);
+      if (pin.length < 4) {
+        pin += label;
+        notifyListeners();
+      }
+
+      if (pin.length == 4) {
+        await login(context, ref, onInvalid: onInvalid);
+      }
     }
-    notifyListeners();
   }
 
   void clearPin() {
@@ -76,19 +84,29 @@ class LoginViewModel extends ChangeNotifier {
     WidgetRef ref, {
     VoidCallback? onInvalid,
   }) async {
-    if (mobileNumber.isEmpty || pin.length != 4) {
-      errorMessage = 'Enter valid mobile number and PIN';
-      notifyListeners();
+    // Check if mobile number is empty
+    if (mobileNumber.isEmpty) {
+      errorMessage = 'Please enter your mobile number';
       _showMessageDialog(context, errorMessage!, success: false);
-      onInvalid?.call(); // Trigger shake if provided
       return;
     }
 
+    // Check if PIN is incomplete
+    if (pin.length != 4) {
+      errorMessage = 'Enter 4-digit PIN';
+      notifyListeners();
+      onInvalid?.call(); // shake the PIN row
+      _showMessageDialog(context, errorMessage!, success: false);
+      return;
+    }
+
+    // Attempt to fetch account
     final account = await _repository.getAccountByMobileNumber(mobileNumber);
 
+    // Successful login
     if (account != null && account.pin == pin) {
       errorMessage = null;
-      notifyListeners(); // Show the current PIN (all green dots)
+      notifyListeners();
 
       await saveMobileNumber(account.mobileNumber);
       ref.read(currentMobileNumberProvider.notifier).state =
@@ -96,23 +114,19 @@ class LoginViewModel extends ChangeNotifier {
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
-        // Wait to show green dots before navigating
         await Future.delayed(const Duration(milliseconds: 500));
         if (context.mounted) {
           GoRouter.of(context).go('/home', extra: 'fromLogin');
           clearPin(); // Clear PIN after navigation
         }
       }
-    } else {
-      errorMessage = 'Invalid mobile number or PIN';
-      notifyListeners(); // Show full 4 dots first
-
-      // Delay clearing pin and triggering shake
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        clearPin(); // Clear PIN after UI shows last dot
-        onInvalid?.call(); // Trigger shake
-      });
-
+    }
+    // Invalid PIN or account not found
+    else {
+      errorMessage = account == null ? 'Account not found' : 'Invalid PIN';
+      clearPin(); // clear PIN immediately
+      notifyListeners(); // rebuild the dots
+      onInvalid?.call(); // shake PIN row
       if (context.mounted) {
         _showMessageDialog(context, errorMessage!, success: false);
       }
