@@ -38,6 +38,7 @@ class DBService {
         pin TEXT NOT NULL,
         security_question_id INTEGER,
         security_answer TEXT
+        profile_image TEXT
       )
     ''');
 

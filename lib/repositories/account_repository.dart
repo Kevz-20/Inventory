@@ -63,4 +63,12 @@ class AccountRepository {
     }
     return null;
   }
+   Future<void> updateAccount(Account updated) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString('mobileNumber', updated.mobileNumber);
+    await prefs.setString('associationName', updated.associationName ?? '');
+    await prefs.setString('securityAnswer', updated.securityAnswer ?? '');
+
+    }
 }

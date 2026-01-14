@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../providers/profile_view_model_provider.dart';
 import '../widgets/header.dart';
+import 'package:dswd_slp/views/screens/edit_profile_screen.dart';
+import 'dart:io';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -46,11 +48,12 @@ class ProfileScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 55,
                   backgroundColor: Colors.grey[300],
-                  child: const Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Colors.white,
-                  ),
+                  backgroundImage: vm.account!.profileImage != null
+                      ? FileImage(File(vm.account!.profileImage!))
+                      : null,
+                  child: vm.account!.profileImage == null
+                      ? const Icon(Icons.person, size: 50, color: Colors.white)
+                      : null,
                 ),
                 const SizedBox(height: 15),
                 Text(
@@ -96,9 +99,15 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () =>
-                      debugPrint('⭐ [ProfileScreen] Edit Profile pressed'),
-                  child: const Text('Edit Profile'),
+                   onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Edit Profile'), // 🔥 REQUIRED
                 ),
               ],
             ),

@@ -16,13 +16,23 @@ class RecordSalesScreen extends ConsumerStatefulWidget {
 
 class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   bool isCash = true;
-  TextEditingController searchController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
   String searchQuery = '';
+
+  final ScrollController _categoryScrollController = ScrollController();
+  int _activeDot = 0;
 
   @override
   void initState() {
     super.initState();
-    // Ensure products load after the first frame
+
+    _categoryScrollController.addListener(() {
+      final offset = _categoryScrollController.offset;
+      setState(() {
+        _activeDot = (offset / 80).floor().clamp(0, 3);
+      });
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(salesViewModelProvider).reloadProducts();
     });
@@ -30,13 +40,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
 
   @override
   void dispose() {
+    _categoryScrollController.dispose();
     searchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.watch(salesViewModelProvider); // triggers SalesViewModel
+    final vm = ref.watch(salesViewModelProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -49,27 +60,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                 : Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _cashUtangSwitch(vm),
                             const SizedBox(height: 16),
-                            _searchBar(vm),
-                            const SizedBox(height: 12),
-                            _categoryChips(vm),
+                            if (isCash) _searchBar(vm),
+                            if (isCash) const SizedBox(height: 12),
+                            if (isCash) _categoryChips(vm),
                           ],
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Expanded(
-                        child: isCash
-                            ? _cashList(vm)
-                            : _utangList(), // scrollable list
-                      ),
+                      Expanded(child: isCash ? _cashList(vm) : _utangList()),
                     ],
                   ),
           ),
@@ -80,20 +84,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _cashUtangSwitch(SalesViewModel vm) => Row(
-    children: [
-      _switchButton("Cash", isCash, () {
-        setState(() => isCash = true);
-        vm.reloadProducts();
-      }),
-      const SizedBox(width: 10),
-      _switchButton("Utang", !isCash, () {
-        setState(() => isCash = false);
-      }),
-    ],
-  );
+        children: [
+          _switchButton('Cash', isCash, () {
+            setState(() => isCash = true);
+            vm.reloadProducts();
+          }),
+          const SizedBox(width: 10),
+          _switchButton('Utang', !isCash, () {
+            setState(() => isCash = false);
+          }),
+        ],
+      );
 
-  Widget _switchButton(String title, bool active, VoidCallback onTap) =>
-      Expanded(
+  Widget _switchButton(String title, bool active, VoidCallback onTap) => Expanded(
         child: GestureDetector(
           onTap: onTap,
           child: Container(
@@ -131,14 +134,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 20),
-          child: Text(
-            'No products found',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          child: Text('No products found', style: TextStyle(fontSize: 16, color: Colors.black54)),
         ),
       );
     }
@@ -146,345 +142,217 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: displayedProducts.length,
-      itemBuilder: (context, index) {
-        final product = displayedProducts[index];
-        return _productCard(product, vm);
-      },
+      itemBuilder: (context, index) => _productCard(displayedProducts[index], vm),
     );
   }
 
   Widget _utangList() => SingleChildScrollView(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _dueDateCard(),
-        const SizedBox(height: 12),
-        _customerInput(),
-        const SizedBox(height: 12),
-        _customerItem("Drake Kan", 900),
-        const SizedBox(height: 8),
-        _customerItem("Kiel Fen", 1000),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _dueDateCard(),
+          const SizedBox(height: 12),
+          _customerInput(),
+          const SizedBox(height: 12),
+          _customerItem('Drake Kan', 900),
+          const SizedBox(height: 8),
+          _customerItem('Kiel Fen', 1000),
+        ]),
+      );
 
   Widget _searchBar(SalesViewModel vm) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withAlpha(51),
-          blurRadius: 2,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: TextField(
-      controller: searchController,
-      onChanged: (value) {
-        setState(() => searchQuery = value);
-      },
-      decoration: const InputDecoration(
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        hintText: "Search products",
-        icon: Icon(Icons.search, size: 22, color: Colors.black),
-        hintStyle: TextStyle(color: Colors.black),
-        contentPadding: EdgeInsets.symmetric(vertical: 14),
-      ),
-    ),
-  );
-
-  Widget _categoryChips(SalesViewModel vm) => SizedBox(
-    height: 50,
-    child: ListView.separated(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(left: 0, right: 8),
-      itemCount: SalesViewModel.categories.length,
-      separatorBuilder: (_, _) => const SizedBox(width: 8),
-      itemBuilder: (context, index) {
-        final selected = index == vm.selectedCategoryIndex;
-        return GestureDetector(
-          onTap: () => vm.selectCategory(index),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.primary : Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withAlpha(51),
-                  blurRadius: 2,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Text(
-              SalesViewModel.categories[index],
-              style: TextStyle(
-                color: selected ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-
-  Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withAlpha(51),
-          blurRadius: 2,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        _productImage(product),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                product.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              Text(
-                "Price: ₱${product.sellingPrice}",
-                style: const TextStyle(color: Colors.black87),
-              ),
-              Text(
-                "Stock: ${product.quantity}",
-                style: const TextStyle(color: Colors.black87),
-              ),
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _quantitySelector(product, vm),
-            const SizedBox(height: 6),
-            Text(
-              "Subtotal: ₱${vm.getSubtotal(product)}",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withAlpha(51), blurRadius: 2, offset: const Offset(0, 2)),
           ],
         ),
-      ],
-    ),
-  );
+        child: TextField(
+          controller: searchController,
+          onChanged: (value) => setState(() => searchQuery = value),
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Search products',
+            icon: Icon(Icons.search, size: 22, color: Colors.black),
+            contentPadding: EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      );
+
+  Widget _categoryChips(SalesViewModel vm) {
+    return Column(children: [
+      SizedBox(
+        height: 40,
+        child: ListView.separated(
+          controller: _categoryScrollController,
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(right: 8),
+          itemCount: SalesViewModel.categories.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final selected = index == vm.selectedCategoryIndex;
+            return GestureDetector(
+              onTap: () => vm.selectCategory(index),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: Colors.grey.withAlpha(51), blurRadius: 2, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Text(
+                  SalesViewModel.categories[index],
+                  style: TextStyle(color: selected ? Colors.white : Colors.black87),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      const SizedBox(height: 12),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          4,
+          (index) => AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            height: 8,
+            width: 8,
+            decoration: BoxDecoration(
+              color: _activeDot == index ? AppColors.primary : Colors.grey[400],
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [
+          BoxShadow(color: Colors.grey.withAlpha(51), blurRadius: 2, offset: const Offset(0, 2)),
+        ]),
+        child: Row(children: [
+          _productImage(product),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Price: ₱${product.sellingPrice}'),
+            Text('Stock: ${product.quantity}'),
+          ])),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            _quantitySelector(product, vm),
+            const SizedBox(height: 6),
+            Text('Subtotal: ₱${vm.getSubtotal(product)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ]),
+        ]),
+      );
 
   Widget _productImage(ProductModel product) {
     if (product.image == null || product.image!.isEmpty) {
       return Container(
         width: 60,
         height: 60,
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(
-          Icons.image_not_supported,
-          size: 30,
-          color: Colors.grey,
-        ),
+        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+        child: const Icon(Icons.image_not_supported, size: 30, color: Colors.grey),
       );
     }
-    return Image.file(
-      File(product.image!),
-      width: 60,
-      height: 60,
-      fit: BoxFit.cover,
-    );
+    return Image.file(File(product.image!), width: 60, height: 60, fit: BoxFit.cover);
   }
 
   Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
-    final controller = TextEditingController(
-      text: vm.getQuantity(product).toString(),
-    );
-
+    final controller = TextEditingController(text: vm.getQuantity(product).toString());
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[400]!),
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              vm.decrementQuantity(product);
+      decoration: BoxDecoration(border: Border.all(color: Colors.grey[400]!), borderRadius: BorderRadius.circular(50)),
+      child: Row(children: [
+        IconButton(onPressed: () {
+          vm.decrementQuantity(product);
+          controller.text = vm.getQuantity(product).toString();
+        }, icon: const Icon(Icons.remove, size: 18)),
+        SizedBox(
+          width: 40,
+          child: TextField(
+            controller: controller,
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            onSubmitted: (value) {
+              final qty = int.tryParse(value) ?? 0;
+              vm.updateQuantity(product, qty);
               controller.text = vm.getQuantity(product).toString();
             },
-            icon: const Icon(Icons.remove, size: 18),
+            decoration: const InputDecoration(border: InputBorder.none, isDense: true),
           ),
-          SizedBox(
-            width: 40,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.black),
-              onSubmitted: (value) {
-                int qty = int.tryParse(value) ?? 0;
-                vm.updateQuantity(product, qty);
-                controller.text = vm.getQuantity(product).toString();
-              },
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              vm.incrementQuantity(product);
-              controller.text = vm.getQuantity(product).toString();
-            },
-            icon: const Icon(Icons.add, size: 18),
-          ),
-        ],
-      ),
+        ),
+        IconButton(onPressed: () {
+          vm.incrementQuantity(product);
+          controller.text = vm.getQuantity(product).toString();
+        }, icon: const Icon(Icons.add, size: 18)),
+      ]),
     );
   }
 
   Widget _dueDateCard() => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: const [
-        Expanded(
-          child: Text(
-            "Due Date: November 30, 2025",
-            style: TextStyle(fontSize: 16),
-          ),
-        ),
-        Icon(Icons.calendar_month, size: 24, color: Colors.grey),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        child: Row(children: const [
+          Expanded(child: Text('Due Date: November 30, 2025', style: TextStyle(fontSize: 16))),
+          Icon(Icons.calendar_month, size: 24, color: Colors.grey),
+        ]),
+      );
 
   Widget _customerInput() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: const [
-        Expanded(child: Text("Customer Name", style: TextStyle(fontSize: 16))),
-        CircleAvatar(
-          radius: 16,
-          backgroundColor: AppColors.primary,
-          child: Icon(Icons.add, size: 18, color: Colors.white),
-        ),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        child: Row(children: const [
+          Expanded(child: Text('Customer Name', style: TextStyle(fontSize: 16))),
+          CircleAvatar(radius: 16, backgroundColor: AppColors.primary, child: Icon(Icons.add, size: 18, color: Colors.white)),
+        ]),
+      );
 
   Widget _customerItem(String name, double limit) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: [
-        Text(
-          name,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const Spacer(),
-        Text("Limit: ₱$limit", style: const TextStyle(color: Colors.grey)),
-      ],
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        child: Row(children: [
+          Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Spacer(),
+          Text('Limit: ₱$limit', style: const TextStyle(color: Colors.grey)),
+        ]),
+      );
 
   Widget _bottomBar(SalesViewModel vm) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      boxShadow: const [
-        BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
-      ],
-    ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: RichText(
-            text: TextSpan(
-              children: [
-                const TextSpan(
-                  text: "Total: ",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.black,
-                  ),
-                ),
-                TextSpan(
-                  text: "₱${vm.total}",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(color: Colors.white, boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
+        ]),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: RichText(
+              text: TextSpan(children: [
+                const TextSpan(text: 'Total: ', style: TextStyle(fontSize: 18, color: Colors.black)),
+                TextSpan(text: '₱${vm.total}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+              ]),
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: Text(
-              isCash ? "Record" : "Continue",
-              style: const TextStyle(fontSize: 16, color: Colors.white),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: Text(isCash ? 'Record' : 'Continue', style: const TextStyle(fontSize: 16, color: Colors.white)),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ]),
+      );
 }

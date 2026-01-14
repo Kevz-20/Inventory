@@ -37,4 +37,16 @@ class ProfileViewModel extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
   }
+  Future<bool> updateProfile(Account updated) async {
+  try {
+    await accountRepository.updateAccount(updated); // API / local save
+    account = updated; // update local data
+    notifyListeners();
+    return true;
+  } catch (e) {
+    error = e.toString();
+    notifyListeners();
+    return false;
+  }
+}
 }
