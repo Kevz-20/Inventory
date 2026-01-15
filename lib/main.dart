@@ -10,8 +10,8 @@ void main() async {
 
   // Force portrait mode only
   await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
   ]);
 
   await DBService.instance.database;

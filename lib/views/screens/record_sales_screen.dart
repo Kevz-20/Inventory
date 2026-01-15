@@ -21,12 +21,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
 
   @override
   void initState() {
-    super.initState();
-    // Ensure products load after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(salesViewModelProvider).reloadProducts();
-    });
-  }
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final vm = ref.read(salesViewModelProvider);
+    vm.resetQuantities();
+    vm.reloadProducts();
+  });
+}
+
 
   @override
   void dispose() {
@@ -320,58 +322,55 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     );
   }
 
-  Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
-    final controller = TextEditingController(
-      text: vm.getQuantity(product).toString(),
-    );
+Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
+  final controller = vm.controllers[product.id!]!;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[400]!),
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {
-              vm.decrementQuantity(product);
-              controller.text = vm.getQuantity(product).toString();
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey[400]!),
+      borderRadius: BorderRadius.circular(50),
+    ),
+    child: Row(
+      children: [
+        IconButton(
+          onPressed: () {
+            vm.decrementQuantity(product);
+            controller.text = vm.getQuantity(product).toString(); // update field
+          },
+          icon: const Icon(Icons.remove, size: 18),
+        ),
+        SizedBox(
+          width: 40,
+          child: TextField(
+            controller: controller,
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(color: Colors.black),
+            onChanged: (value) {
+              int qty = int.tryParse(value) ?? 0;
+              vm.updateQuantity(product, qty); // update VM without overwriting text
             },
-            icon: const Icon(Icons.remove, size: 18),
-          ),
-          SizedBox(
-            width: 40,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.black),
-              onSubmitted: (value) {
-                int qty = int.tryParse(value) ?? 0;
-                vm.updateQuantity(product, qty);
-                controller.text = vm.getQuantity(product).toString();
-              },
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
-              ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 8),
             ),
           ),
-          IconButton(
-            onPressed: () {
-              vm.incrementQuantity(product);
-              controller.text = vm.getQuantity(product).toString();
-            },
-            icon: const Icon(Icons.add, size: 18),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        IconButton(
+          onPressed: () {
+            vm.incrementQuantity(product);
+            controller.text = vm.getQuantity(product).toString();
+          },
+          icon: const Icon(Icons.add, size: 18),
+        ),
+      ],
+    ),
+  );
+}
+
+
 
   Widget _dueDateCard() => Container(
     padding: const EdgeInsets.all(14),

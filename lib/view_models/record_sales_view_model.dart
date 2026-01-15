@@ -16,6 +16,7 @@ class SalesViewModel extends ChangeNotifier {
   int selectedCategoryIndex = 0;
 
   final Map<int, int> productQuantities = {};
+  final Map<int, TextEditingController> controllers = {};
 
   static const List<String> categories = [
     'All',
@@ -40,25 +41,31 @@ class SalesViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
+
   Future<void> loadProducts() async {
-    if (_repository == null) return;
+  if (_repository == null) return;
 
-    isLoading = true;
-    notifyListeners();
+  isLoading = true;
+  notifyListeners();
 
-    try {
-      products = await _repository!.getProducts();
-    } catch (_) {}
+  try {
+    products = await _repository!.getProducts();
+  } catch (_) {}
 
-    for (var p in products) {
-      if (p.id != null) {
-        productQuantities[p.id!] = 0;
-      }
+  // Initialize quantities and controllers
+  for (var p in products) {
+    if (p.id != null) {
+      productQuantities[p.id!] = 0;
+
+      // Initialize controller if it doesn't exist yet
+      controllers[p.id!] ??= TextEditingController(text: '0');
     }
-
-    isLoading = false;
-    notifyListeners();
   }
+
+  isLoading = false;
+  notifyListeners();
+}
+
 
   Future<void> reloadProducts() async {
     await loadProducts();
@@ -101,14 +108,19 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void updateQuantity(ProductModel product, int qty) {
-    if (product.id == null) return;
-    if (qty < 0) qty = 0;
-    if (qty > product.quantity) qty = product.quantity;
+  if (product.id == null) return;
+  if (qty < 0) qty = 0;
+  if (qty > product.quantity) qty = product.quantity;
 
-    productQuantities[product.id!] = qty;
-    calculateTotal();
-    notifyListeners();
-  }
+  productQuantities[product.id!] = qty;
+
+  // Update the controller to reflect the current quantity
+  controllers[product.id!]?.text = qty.toString();
+
+  calculateTotal();
+  notifyListeners();
+}
+
 
   int getQuantity(ProductModel product) {
     if (product.id == null) return 0;
@@ -128,6 +140,16 @@ class SalesViewModel extends ChangeNotifier {
       total += (p.sellingPrice * qty).toInt();
     }
   }
+
+  void resetQuantities() {
+  for (var id in productQuantities.keys) {
+    productQuantities[id] = 0;
+    controllers[id]?.text = '0';
+  }
+  total = 0;
+  notifyListeners();
+}
+
 
   Future<void> checkout() async {
     final purchasedItems = <Map<String, dynamic>>[];
