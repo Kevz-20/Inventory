@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
 import '../widgets/header.dart';
@@ -74,7 +75,9 @@ class ExpensesScreen extends ConsumerWidget {
               controller: vm.amountController,
               showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly], // ✅ numbers only
             ),
+
             const SizedBox(height: 15),
 
             _inputTextField(
@@ -267,50 +270,52 @@ class ExpensesScreen extends ConsumerWidget {
   }
 
   Widget _inputTextField({
-    required Widget? prefix,
-    required String label,
-    required TextEditingController controller,
-    required bool showError,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    final bool isError = showError && controller.text.isEmpty;
+  required Widget? prefix,
+  required String label,
+  required TextEditingController controller,
+  required bool showError,
+  TextInputType keyboardType = TextInputType.text,
+  List<TextInputFormatter>? inputFormatters, // add this
+}) {
+  final bool isError = showError && controller.text.isEmpty;
 
-    return SizedBox(
-      height: 60,
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.bold,
+  return SizedBox(
+    height: 60,
+    child: TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters, // use it here
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontWeight: FontWeight.bold,
+      ),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: prefix,
+        labelText: label,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
         ),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white,
-          prefixIcon: prefix,
-          labelText: label,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 16,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isError ? Colors.red : Colors.grey.shade400,
+            width: 1.2,
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: isError ? Colors.red : Colors.grey.shade400,
-              width: 1.2,
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: isError ? Colors.red : AppColors.primary,
-              width: 1.2,
-            ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isError ? Colors.red : AppColors.primary,
+            width: 1.2,
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ---------------------------
   // Date + Receipt Pickers

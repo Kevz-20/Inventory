@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../models/capital_management_model.dart';
 import '../../providers/capital_management_view_model_provider.dart';
@@ -199,82 +200,95 @@ class _CapitalManagementScreenState
 
   Widget _amountInput(CapitalManagementViewModel vm) {
     return _inputField(
-      controller: _amountController,
-      hint: "0.00",
-      prefix: "₱ ",
-      onSubmitted: (value) async {
-        final amount = double.tryParse(value);
-        if (amount == null || amount <= 0) return;
+    controller: _amountController,
+    hint: "0.00",
+    prefix: "₱ ",
+    numbersOnly: true, // ONLY numbers
+    onSubmitted: (value) async {
+      final amount = double.tryParse(value);
+      if (amount == null || amount <= 0) return;
 
         await vm.addCapital(
-          capitalAmount: amount,
-          cashOnHand: 0,
-          bankCash: 0,
-          remarks: _remarksController.text,
-        );
+        capitalAmount: amount,
+        cashOnHand: 0,
+        bankCash: 0,
+        remarks: _remarksController.text,
+      );
 
-        _amountController.clear();
-        _remarksController.clear();
-      },
-    );
-  }
+         _amountController.clear();
+      _remarksController.clear();
+    },
+  );
+}
 
-  Widget _remarksInput(CapitalManagementViewModel vm) {
-    return _inputField(
-      controller: _remarksController,
-      hint: "Optional note",
-      onSubmitted: (value) async {
-        final amount = double.tryParse(_amountController.text);
-        if (amount == null || amount <= 0) return;
+ Widget _remarksInput(CapitalManagementViewModel vm) {
+  return _inputField(
+    controller: _remarksController,
+    hint: "Optional note",
+    numbersOnly: false, // can input text and numbers
+    onSubmitted: (value) async {
+      final amount = double.tryParse(_amountController.text);
+      if (amount == null || amount <= 0) return;
+
 
         await vm.addCapital(
-          capitalAmount: amount,
-          cashOnHand: 0,
-          bankCash: 0,
-          remarks: _remarksController.text,
-        );
-
+        capitalAmount: amount,
+        cashOnHand: 0,
+        bankCash: 0,
+        remarks: _remarksController.text,
+      );
         _amountController.clear();
-        _remarksController.clear();
-      },
-    );
-  }
+      _remarksController.clear();
+    },
+  );
+}
 
-  Widget _inputField({
-    TextEditingController? controller,
-    String? hint,
-    String? prefix,
-    required Function(String) onSubmitted,
-  }) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(10),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withValues(alpha: 51),
-          blurRadius: 2,
-          offset: const Offset(0, 2),
+ Widget _inputField({
+  TextEditingController? controller,
+  String? hint,
+  String? prefix,
+  required Function(String) onSubmitted,
+  bool numbersOnly = false, // true = only numbers, false = text + numbers
+}) => Container(
+  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(10),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.grey.withAlpha(51),
+        blurRadius: 2,
+        offset: const Offset(0, 2),
         ),
-      ],
-    ),
-    child: TextField(
-      controller: controller,
-      onSubmitted: onSubmitted,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefix: prefix != null
-            ? Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text(
-                  prefix,
-                  style: const TextStyle(fontSize: 14, color: Colors.black87),
-                ),
-              )
-            : null,
-        border: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        enabledBorder: InputBorder.none,
+        ],
+  ),
+  child: TextField(
+    controller: controller,
+    keyboardType: numbersOnly
+        ? const TextInputType.numberWithOptions(decimal: true)
+        : TextInputType.text,
+    inputFormatters: numbersOnly
+        ? [
+            FilteringTextInputFormatter.allow(
+              RegExp(r'^\d*\.?\d{0,2}'), // only numbers with up to 2 decimals
+            ),
+          ]
+        : null,
+    onSubmitted: onSubmitted,
+    decoration: InputDecoration(
+      hintText: hint,
+      prefix: prefix != null
+          ? Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                prefix,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+            )
+          : null,
+      border: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      enabledBorder: InputBorder.none,
       ),
     ),
   );
