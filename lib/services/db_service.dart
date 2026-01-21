@@ -291,7 +291,7 @@ class DBService {
         paid_date TEXT,
         due_date TEXT,
         created_at TEXT,
-        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY  (account_id) REFERENCES account (id),
         FOREIGN KEY (sale_id) REFERENCES sale (id),
         FOREIGN KEY (product_id) REFERENCES product (id),
         FOREIGN KEY (customer_id) REFERENCES customer (id),

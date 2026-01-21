@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/app_colors.dart';
 import '../../providers/profile_view_model_provider.dart';
 import '../widgets/header.dart';
-import 'package:dswd_slp/views/screens/edit_profile_screen.dart';
 import 'dart:io';
 
 class ProfileScreen extends ConsumerWidget {
@@ -99,15 +99,10 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const EditProfileScreen(),
-                      ),
-                    );
+                  onPressed: () {
+                    GoRouter.of(context).push('/edit_profile');
                   },
-                  child: const Text('Edit Profile'), // 🔥 REQUIRED
+                  child: const Text('Edit Profile'),
                 ),
               ],
             ),
