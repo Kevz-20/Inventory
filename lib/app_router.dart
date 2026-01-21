@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
 import 'views/screens/about_app_screen.dart';
+import 'views/screens/cashflow_screen.dart';
 import 'views/screens/change_pin_screen.dart';
 import 'views/screens/login_screen.dart';
 import 'views/screens/home_screen.dart';
@@ -167,6 +168,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const ChangePinScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/cashflow',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const CashFlowScreen(),
         transition: PageTransitionType.forward,
       ),
     ),

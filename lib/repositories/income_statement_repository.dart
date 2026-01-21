@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 import '../services/db_service.dart';
 import '../models/income_statement_model.dart';
 import 'account_repository.dart';
@@ -12,14 +11,14 @@ class IncomeStatementRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final Database db = await DBService.instance.database;
+    final db = await DBService.instance.database;
     final accountId = await accountRepository.getAccountId();
 
     final start = startDate.toIso8601String();
     final end = endDate.toIso8601String();
 
-    double getValue(List<Map<String, Object?>> r) {
-      return (r.first["total"] as num?)?.toDouble() ?? 0;
+    double valueOf(List<Map<String, Object?>> r) {
+      return (r.first['total'] as num?)?.toDouble() ?? 0;
     }
 
     // Sales revenue
@@ -27,22 +26,20 @@ class IncomeStatementRepository {
       '''
       SELECT SUM(si.unit_price * si.quantity) AS total
       FROM sale_item si
-      JOIN sale s ON si.sale_id = s.id
+      JOIN sales s ON si.sale_id = s.id
       WHERE s.account_id = ?
         AND s.created_at BETWEEN ? AND ?
       ''',
       [accountId, start, end],
     );
 
-    final merchandiseSalesResult = salesResult;
-
-    // Kumpra (cost of goods sold)
+    // Cost of goods sold (kumpra)
     final kumpraResult = await db.rawQuery(
       '''
       SELECT SUM(p.purchase_price * si.quantity) AS total
       FROM sale_item si
-      JOIN stock_in p ON si.stock_in_id = p.id
-      JOIN sale s ON si.sale_id = s.id
+      JOIN product p ON si.product_id = p.id
+      JOIN sales s ON si.sale_id = s.id
       WHERE s.account_id = ?
         AND s.created_at BETWEEN ? AND ?
       ''',
@@ -55,7 +52,7 @@ class IncomeStatementRepository {
       SELECT SUM(amount) AS total
       FROM expenses
       WHERE account_id = ?
-        AND description = "Transportation"
+        AND category = 'transportation'
         AND created_at BETWEEN ? AND ?
       ''',
       [accountId, start, end],
@@ -72,11 +69,11 @@ class IncomeStatementRepository {
       [accountId, start, end],
     );
 
-    final sales = getValue(salesResult);
-    final merchandiseSales = getValue(merchandiseSalesResult);
-    final kumpra = getValue(kumpraResult);
-    final transportation = getValue(transportationResult);
-    final totalExpenses = getValue(expenseResult);
+    final sales = valueOf(salesResult);
+    final merchandiseSales = sales;
+    final kumpra = valueOf(kumpraResult);
+    final transportation = valueOf(transportationResult);
+    final totalExpenses = valueOf(expenseResult);
 
     final netIncome = sales - totalExpenses;
 

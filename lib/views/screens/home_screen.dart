@@ -255,7 +255,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     _menuCard(
                       'Cash\nFlow',
                       'lib/assets/cashflow.png',
-                      onTap: () => GoRouter.of(context).push(''),
+                      onTap: () => GoRouter.of(context).push('/cashflow'),
                     ),
                   ],
                 ),
