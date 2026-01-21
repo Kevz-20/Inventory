@@ -41,7 +41,6 @@ class SalesViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
-
   Future<void> loadProducts() async {
   if (_repository == null) return;
 
@@ -52,13 +51,41 @@ class SalesViewModel extends ChangeNotifier {
     products = await _repository!.getProducts();
   } catch (_) {}
 
-  // Initialize quantities and controllers
   for (var p in products) {
     if (p.id != null) {
-      productQuantities[p.id!] = 0;
+      // Initialize quantity map
+      productQuantities[p.id!] ??= 0;
 
-      // Initialize controller if it doesn't exist yet
-      controllers[p.id!] ??= TextEditingController(text: '0');
+      // Initialize controller if not exists
+      if (!controllers.containsKey(p.id!)) {
+        controllers[p.id!] = TextEditingController(text: productQuantities[p.id!]!.toString());
+      }
+
+      // Remove all previous listeners
+      final controller = controllers[p.id!]!;
+      controller.removeListener(() {});
+
+      // Add listener
+      controller.addListener(() {
+        final text = controller.text;
+
+        // When empty, reset to 0
+        if (text.isEmpty) {
+          productQuantities[p.id!] = 0;
+          return;
+        }
+
+        // Parse user input
+        int qty = int.tryParse(text) ?? 0;
+
+        // Clamp to current stock
+        if (qty > p.quantity) qty = p.quantity;
+        if (qty < 0) qty = 0;
+
+        productQuantities[p.id!] = qty;
+        calculateTotal();
+        notifyListeners();
+      });
     }
   }
 
@@ -66,10 +93,7 @@ class SalesViewModel extends ChangeNotifier {
   notifyListeners();
 }
 
-
-  Future<void> reloadProducts() async {
-    await loadProducts();
-  }
+  Future<void> reloadProducts() async => await loadProducts();
 
   void selectCategory(int index) {
     selectedCategoryIndex = index;
@@ -88,39 +112,45 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void incrementQuantity(ProductModel product) {
-    if (product.id == null) return;
-    final currentQty = productQuantities[product.id!] ?? 0;
-    if (currentQty < product.quantity) {
-      productQuantities[product.id!] = currentQty + 1;
-      calculateTotal();
-      notifyListeners();
-    }
+  if (product.id == null) return;
+  final currentQty = productQuantities[product.id!] ?? 0;
+
+  // Allow increment only if stock > 0
+  if (product.quantity > 0 && currentQty < product.quantity) {
+    updateQuantity(product, currentQty + 1);
   }
+}
 
   void decrementQuantity(ProductModel product) {
-    if (product.id == null) return;
-    final current = productQuantities[product.id!] ?? 0;
-    if (current > 0) {
-      productQuantities[product.id!] = current - 1;
-      calculateTotal();
-      notifyListeners();
-    }
+  if (product.id == null) return;
+  final currentQty = productQuantities[product.id!] ?? 0;
+
+  if (currentQty > 0) {
+    updateQuantity(product, currentQty - 1);
   }
+}
 
   void updateQuantity(ProductModel product, int qty) {
   if (product.id == null) return;
-  if (qty < 0) qty = 0;
+
+  // Clamp to stock
   if (qty > product.quantity) qty = product.quantity;
+  if (qty < 0) qty = 0;
 
   productQuantities[product.id!] = qty;
 
-  // Update the controller to reflect the current quantity
-  controllers[product.id!]?.text = qty.toString();
+  // Sync controller text only if different
+  final controller = controllers[product.id!];
+  if (controller != null && controller.text != qty.toString()) {
+    controller.text = qty.toString();
+    controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: controller.text.length),
+    );
+  }
 
   calculateTotal();
   notifyListeners();
 }
-
 
   int getQuantity(ProductModel product) {
     if (product.id == null) return 0;
@@ -141,42 +171,68 @@ class SalesViewModel extends ChangeNotifier {
     }
   }
 
-  void resetQuantities() {
-  for (var id in productQuantities.keys) {
-    productQuantities[id] = 0;
-    controllers[id]?.text = '0';
+  bool get hasSelectedProducts {
+    return productQuantities.values.any((qty) => qty > 0);
   }
-  total = 0;
+
+  void resetQuantities() {
+    for (var p in products) {
+      if (p.id == null) continue;
+      productQuantities[p.id!] = 0;
+
+      if (controllers[p.id!] != null) {
+        controllers[p.id!]!.text = '0';
+      } else {
+        controllers[p.id!] = TextEditingController(text: '0');
+      }
+    }
+    total = 0;
+    notifyListeners();
+  }
+
+  /// ===========================
+  /// Checkout / Save Sale
+  /// ===========================
+ Future<void> checkout({bool isCash = true, int? customerId, DateTime? dueDate}) async {
+  if (_repository == null) return;
+
+  // Collect purchased items
+  final purchasedItems = <Map<String, dynamic>>[];
+
+  for (var p in products) {
+    final qty = productQuantities[p.id!] ?? 0;
+    if (qty > 0) {
+      purchasedItems.add({
+        'productId': p.id,
+        'quantity': qty,
+        'price': p.sellingPrice,
+        'subtotal': qty * p.sellingPrice,
+      });
+    }
+  }
+
+  if (purchasedItems.isEmpty) return;
+
+  if (isCash) {
+    // Use repository method to save cash sale and update stock
+    await _repository!.checkoutCash(purchasedItems);
+  } else {
+    if (customerId == null) return;
+    await _repository!.checkoutCredit(
+      purchasedItems,
+      customerId,
+      dueDate: dueDate,
+    );
+  }
+
+  // ✅ Reload products from DB to update stock in UI
+  await loadProducts();
+
+  // ✅ Reset quantity selectors
+  resetQuantities();
+
+  // ✅ Notify UI
   notifyListeners();
 }
 
-
-  Future<void> checkout() async {
-    final purchasedItems = <Map<String, dynamic>>[];
-
-    for (var p in products) {
-      final qty = productQuantities[p.id!] ?? 0;
-      if (qty > 0) {
-        purchasedItems.add({
-          'productId': p.id,
-          'name': p.name,
-          'quantity': qty,
-          'price': p.sellingPrice,
-          'total': qty * p.sellingPrice,
-        });
-        p.quantity -= qty;
-      }
-    }
-
-    if (_repository != null) {
-      await _repository!.savePurchase(purchasedItems);
-    }
-
-    for (var id in productQuantities.keys) {
-      productQuantities[id] = 0;
-    }
-
-    calculateTotal();
-    notifyListeners();
-  }
 }
