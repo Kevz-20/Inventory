@@ -99,89 +99,85 @@ class ProductRepository {
     await batch.commit(noResult: true);
   }
 
-
-
   // Insert into main sales table and return sale ID
-Future<int> insertSale({
-  required int accountId,
-  int? customerId,
-  required String saleType,
-  required int total,
-  required String createdAt,
-}) async {
-  final data = {
-    'account_id': accountId,
-    'customer_id': customerId,
-    'sale_type': saleType,
-    'total': total,
-    'created_at': createdAt,
-  };
-  return await db.insert('sales', data);
-}
+  Future<int> insertSale({
+    required int accountId,
+    int? customerId,
+    required String saleType,
+    required int total,
+    required String createdAt,
+  }) async {
+    final data = {
+      'account_id': accountId,
+      'customer_id': customerId,
+      'sale_type': saleType,
+      'total': total,
+      'created_at': createdAt,
+    };
+    return await db.insert('sales', data);
+  }
 
-// Insert items into sale_item table
-Future<void> insertSaleItem({
-  required int saleId,
-  required int productId,
-  required int unitPrice,
-  required int quantity,
-  required int subtotal,
-}) async {
-  final data = {
-    'sale_id': saleId,
-    'product_id': productId,
-    'unit_price': unitPrice,
-    'quantity': quantity,
-    'subtotal': subtotal,
-  };
-  await db.insert('sale_item', data);
-}
+  // Insert items into sale_item table
+  Future<void> insertSaleItem({
+    required int saleId,
+    required int productId,
+    required int unitPrice,
+    required int quantity,
+    required int subtotal,
+  }) async {
+    final data = {
+      'sale_id': saleId,
+      'product_id': productId,
+      'unit_price': unitPrice,
+      'quantity': quantity,
+      'subtotal': subtotal,
+    };
+    await db.insert('sale_item', data);
+  }
 
   Future<void> insertSalesCash({
-  required int accountId,
-  required int productId,
-  required int amount,
-  required int quantity,
-  required String date,
-  required String createdAt,
-}) async {
-  await db.insert('sales_cash', {
-    'account_id': accountId,
-    'product_id': productId,
-    'amount': amount,
-    'quantity': quantity,
-    'date': date,
-    'created_at': createdAt,
-  });
-}
+    required int accountId,
+    required int productId,
+    required int amount,
+    required int quantity,
+    required String date,
+    required String createdAt,
+  }) async {
+    await db.insert('sales_cash', {
+      'account_id': accountId,
+      'product_id': productId,
+      'amount': amount,
+      'quantity': quantity,
+      'date': date,
+      'created_at': createdAt,
+    });
+  }
 
-Future<void> insertSalesCredit({
-  required int accountId,
-  required int saleId,
-  required int productId,
-  required int customerId,
-  required int amount,
-  required int quantity,
-  required int statusId,
-  required String creditDate,
-  required String dueDate,
-  required String createdAt,
-}) async {
-  await db.insert('sales_credit', {
-    'account_id': accountId,
-    'sale_id': saleId,
-    'product_id': productId,
-    'customer_id': customerId,
-    'amount': amount,
-    'quantity': quantity,
-    'status_id': statusId,
-    'credit_date': creditDate,
-    'due_date': dueDate,
-    'created_at': createdAt,
-  });
-}
-
-
+  Future<void> insertSalesCredit({
+    required int accountId,
+    required int saleId,
+    required int productId,
+    required int customerId,
+    required int amount,
+    required int quantity,
+    required int statusId,
+    required String creditDate,
+    required String dueDate,
+    required String createdAt,
+  }) async {
+    await db.insert('sales_credit', {
+      'account_id': accountId,
+      'sale_id': saleId,
+      'product_id': productId,
+      'customer_id': customerId,
+      'amount': amount,
+      'quantity': quantity,
+      'status_id': statusId,
+      'credit_date': creditDate,
+      'due_date': dueDate,
+      'created_at': createdAt,
+    });
+  }
 
   // Credit checkout
   Future<void> checkoutCredit(
@@ -218,13 +214,10 @@ Future<void> insertSalesCredit({
     await batch.commit(noResult: true);
   }
 
-    Future<void> updateProductStock(int productId, int quantitySold) async {
+  Future<void> updateProductStock(int productId, int quantitySold) async {
     await db.rawUpdate(
       'UPDATE product SET quantity = quantity - ? WHERE id = ?',
       [quantitySold, productId],
     );
   }
-
 }
-
-
