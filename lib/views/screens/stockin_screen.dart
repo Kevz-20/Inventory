@@ -17,9 +17,7 @@ class StockInScreen extends ConsumerWidget {
     final vm = ref.watch(stockInViewModelProvider);
 
     if (!vm.isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -74,71 +72,71 @@ class StockInScreen extends ConsumerWidget {
                   return const Iterable<String>.empty();
                 }
                 return vm.productNames.where(
-                  (name) => name
-                      .toLowerCase()
-                      .startsWith(value.text.toLowerCase()),
+                  (name) =>
+                      name.toLowerCase().startsWith(value.text.toLowerCase()),
                 );
               },
               fieldViewBuilder:
                   (context, fieldController, focusNode, onSubmit) {
-                vm.autocompleteFieldController = fieldController;
-                final isError =
-                    vm.showValidationErrors && fieldController.text.isEmpty;
+                    vm.autocompleteFieldController = fieldController;
+                    final isError =
+                        vm.showValidationErrors && fieldController.text.isEmpty;
 
-                return SizedBox(
-                  height: 60,
-                  child: TextField(
-                    controller: fieldController,
-                    focusNode: focusNode,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon:
-                          const Icon(Icons.edit, color: AppColors.primary),
-                      labelText: 'Pangalan sa produkto',
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isError
-                              ? Colors.red
-                              : Colors.grey.shade400,
-                          width: 1.2,
+                    return SizedBox(
+                      height: 60,
+                      child: TextField(
+                        controller: fieldController,
+                        focusNode: focusNode,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: isError
-                              ? Colors.red
-                              : AppColors.primary,
-                          width: 1.2,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.white,
+                          prefixIcon: const Icon(
+                            Icons.edit,
+                            color: AppColors.primary,
+                          ),
+                          labelText: 'Pangalan sa produkto',
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isError
+                                  ? Colors.red
+                                  : Colors.grey.shade400,
+                              width: 1.2,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isError ? Colors.red : AppColors.primary,
+                              width: 1.2,
+                            ),
+                          ),
                         ),
+                        onChanged: (text) {
+                          vm.productController.text = text;
+                          vm.productController.selection =
+                              TextSelection.fromPosition(
+                                TextPosition(offset: text.length),
+                              );
+                        },
                       ),
-                    ),
-                    onChanged: (text) {
-                      vm.productController.text = text;
-                      vm.productController.selection =
-                          TextSelection.fromPosition(
-                        TextPosition(offset: text.length),
-                      );
-                    },
-                  ),
-                );
-              },
+                    );
+                  },
               onSelected: (value) {
-                final product =
-                    vm.allProducts.firstWhere((p) => p.name == value);
+                final product = vm.allProducts.firstWhere(
+                  (p) => p.name == value,
+                );
                 vm.selectedProduct = product;
                 vm.productController.text = product.name;
                 vm.setCategory(product.category);
-                vm.purchasePriceController.text =
-                    product.purchasePrice.toString();
-                vm.sellingPriceController.text =
-                    product.sellingPrice.toString();
+                vm.purchasePriceController.text = product.purchasePrice
+                    .toString();
+                vm.sellingPriceController.text = product.sellingPrice
+                    .toString();
                 vm.quantityController.text = product.quantity.toString();
                 vm.productImage = product.image != null
                     ? File(product.image!)
@@ -160,25 +158,22 @@ class StockInScreen extends ConsumerWidget {
             const SizedBox(height: 15),
 
             _inputTextField(
-              prefix:
-                  const Icon(Icons.calculate, color: AppColors.primary),
+              prefix: const Icon(Icons.calculate, color: AppColors.primary),
               label: 'Presyo sa pagbaligya',
               controller: vm.sellingPriceController,
               showError: vm.showValidationErrors,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(
-                  RegExp(r'^\d*\.?\d{0,2}'),
-                ),
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
               ],
             ),
 
             const SizedBox(height: 15),
 
             _inputTextField(
-              prefix:
-                  const Icon(Icons.shopping_cart, color: AppColors.primary),
+              prefix: const Icon(Icons.shopping_cart, color: AppColors.primary),
               label: 'Gidaghanon',
               controller: vm.quantityController,
               showError: vm.showValidationErrors,
@@ -198,8 +193,9 @@ class StockInScreen extends ConsumerWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             minimumSize: const Size(double.infinity, 50),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: vm.isLoading
               ? null
@@ -317,8 +313,8 @@ Widget _inputDropdown({
   final isError = showError && value == null;
 
   return DropdownButtonFormField<String>(
-  initialValue: value, // ✅ use this instead of 'value'
-  isExpanded: true,
+    initialValue: value, // ✅ use this instead of 'value'
+    isExpanded: true,
     decoration: InputDecoration(
       filled: true,
       fillColor: Colors.white,
@@ -332,10 +328,10 @@ Widget _inputDropdown({
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide:
-            BorderSide(color: isError ? Colors.red : AppColors.primary),
+        borderSide: BorderSide(color: isError ? Colors.red : AppColors.primary),
       ),
     ),
+    dropdownColor: Colors.white,
     items: items
         .map((e) => DropdownMenuItem(value: e, child: Text(e)))
         .toList(),
@@ -353,13 +349,17 @@ Widget _messageBox({
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     margin: const EdgeInsets.only(bottom: 20),
-    decoration:
-        BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(12),
+    ),
     child: Row(
       children: [
         Icon(icon, color: iconColor),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: TextStyle(color: iconColor))),
+        Expanded(
+          child: Text(text, style: TextStyle(color: iconColor)),
+        ),
       ],
     ),
   );
@@ -369,8 +369,7 @@ Widget _imagePicker(BuildContext context, StockInViewModel vm) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Upload Image',
-          style: TextStyle(fontWeight: FontWeight.bold)),
+      const Text('Upload Image', style: TextStyle(fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
       GestureDetector(
         onTap: () => _pickProductImage(context, vm),
