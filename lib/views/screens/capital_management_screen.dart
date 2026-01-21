@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
-import '../../models/capital_management_model.dart';
 import '../../providers/capital_management_view_model_provider.dart';
 import '../../view_models/capital_management_view_model.dart';
 import '../widgets/header.dart';
@@ -49,22 +47,20 @@ class _CapitalManagementScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _balanceCard(vm.capitals),
-            const SizedBox(height: 25),
-            Row(
+            Column(
               children: [
-                Expanded(
-                  child: _smallCard(
-                    "Cash on Hand",
-                    vm.capitals.fold<double>(0, (p, e) => p + e.cashOnHand),
+                const SizedBox(height: 15),
+                _miniBalanceCard(
+                  title: "Cash on Hand",
+                  value: vm.capitals.fold<double>(
+                    0,
+                    (p, e) => p + e.cashOnHand,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _smallCard(
-                    "Capital",
-                    vm.capitals.fold<double>(0, (p, e) => p + e.capital),
-                  ),
+                const SizedBox(height: 15),
+                _miniBalanceCard(
+                  title: "Capital",
+                  value: vm.capitals.fold<double>(0, (p, e) => p + e.capital),
                 ),
               ],
             ),
@@ -115,12 +111,7 @@ class _CapitalManagementScreenState
     );
   }
 
-  Widget _balanceCard(List<CapitalManagementModel> capitals) {
-    final totalBalance = capitals.fold<double>(
-      0.0,
-      (sum, c) => sum + c.cashOnHand + c.bankCash,
-    );
-
+  Widget _miniBalanceCard({required String title, required double value}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -138,50 +129,16 @@ class _CapitalManagementScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Total Balance",
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          ),
+          Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
           const SizedBox(height: 6),
           Text(
-            "₱${totalBalance.toStringAsFixed(2)}",
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Updated • ${DateFormat('yMMMd').format(DateTime.now())}",
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            "₱${value.toStringAsFixed(2)}",
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
         ],
       ),
     );
   }
-
-  Widget _smallCard(String label, double value) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withValues(alpha: 51),
-          blurRadius: 2,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
-        const SizedBox(height: 8),
-        Text(
-          "₱${value.toStringAsFixed(2)}",
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-      ],
-    ),
-  );
 
   Widget _sectionTitle(String title) => Padding(
     padding: const EdgeInsets.only(bottom: 8.0),
