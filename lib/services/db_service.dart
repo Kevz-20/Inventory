@@ -159,6 +159,7 @@ class DBService {
       )
     ''');
 
+
     // Transaction History (Universal Ledger)
     await db.execute('''
       CREATE TABLE transaction_history (
@@ -249,6 +250,7 @@ class DBService {
 
     // Bank transaction
     await db.execute('''
+
       CREATE TABLE bank_transaction (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
@@ -420,6 +422,7 @@ class DBService {
       await db.insert('category_choices', {'name': c});
     }
   }
+  
 
   // Close database safely
   Future<void> close() async {

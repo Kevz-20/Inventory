@@ -20,23 +20,18 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   String searchQuery = '';
 
   final ScrollController _categoryScrollController = ScrollController();
-  int _activeDot = 0;
+  final int _activeDot = 0;
 
   @override
   void initState() {
-    super.initState();
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final vm = ref.read(salesViewModelProvider);
+    vm.resetQuantities();
+    vm.reloadProducts();
+  });
+}
 
-    _categoryScrollController.addListener(() {
-      final offset = _categoryScrollController.offset;
-      setState(() {
-        _activeDot = (offset / 80).floor().clamp(0, 3);
-      });
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(salesViewModelProvider).reloadProducts();
-    });
-  }
 
   @override
   void dispose() {
@@ -84,17 +79,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _cashUtangSwitch(SalesViewModel vm) => Row(
-        children: [
-          _switchButton('Cash', isCash, () {
-            setState(() => isCash = true);
-            vm.reloadProducts();
-          }),
-          const SizedBox(width: 10),
-          _switchButton('Utang', !isCash, () {
-            setState(() => isCash = false);
-          }),
-        ],
-      );
+  children: [
+    _switchButton("Cash", isCash, () {
+      setState(() => isCash = true);
+      vm.resetQuantities();  // <-- reset quantities here
+      vm.reloadProducts();
+    }),
+    const SizedBox(width: 10),
+    _switchButton("Utang", !isCash, () {
+      setState(() => isCash = false);
+      vm.resetQuantities();  // <-- also reset here
+    }),
+  ],
+);
 
   Widget _switchButton(String title, bool active, VoidCallback onTap) => Expanded(
         child: GestureDetector(
@@ -267,37 +264,187 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     return Image.file(File(product.image!), width: 60, height: 60, fit: BoxFit.cover);
   }
 
-  Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
-    final controller = TextEditingController(text: vm.getQuantity(product).toString());
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey[400]!), borderRadius: BorderRadius.circular(50)),
-      child: Row(children: [
-        IconButton(onPressed: () {
-          vm.decrementQuantity(product);
-          controller.text = vm.getQuantity(product).toString();
-        }, icon: const Icon(Icons.remove, size: 18)),
+Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
+  final controller = vm.controllers[product.id!]!;
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey[400]!),
+      borderRadius: BorderRadius.circular(50),
+    ),
+    child: Row(
+      children: [
+        IconButton(
+          onPressed: () {
+            vm.decrementQuantity(product);
+          },
+          icon: const Icon(Icons.remove, size: 18),
+        ),
         SizedBox(
           width: 40,
-          child: TextField(
-            controller: controller,
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            onSubmitted: (value) {
-              final qty = int.tryParse(value) ?? 0;
-              vm.updateQuantity(product, qty);
-              controller.text = vm.getQuantity(product).toString();
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, child) {
+              return TextField(
+                controller: controller,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.black),
+                onChanged: (value) {
+                  int qty = int.tryParse(value) ?? 0;
+                  vm.updateQuantity(product, qty);
+                },
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                ),
+              );
             },
-            decoration: const InputDecoration(border: InputBorder.none, isDense: true),
           ),
         ),
-        IconButton(onPressed: () {
-          vm.incrementQuantity(product);
-          controller.text = vm.getQuantity(product).toString();
-        }, icon: const Icon(Icons.add, size: 18)),
-      ]),
-    );
-  }
+        IconButton(
+          onPressed: () {
+            vm.incrementQuantity(product);
+          },
+          icon: const Icon(Icons.add, size: 18),
+        ),
+      ],
+    ),
+  );
+}
+
+
+
+
+
+
+// ADDING SHOW SUMMARY FOR ALL PRODUCTS #kevin 01-20-26
+void _showSummary(BuildContext context, SalesViewModel vm) {
+  final selectedProducts = vm.products.where((p) {
+    final id = p.id;
+    if (id == null) return false;
+    return (vm.productQuantities[id] ?? 0) > 0;
+  }).toList();
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) {
+      return SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8, // 80% of screen height
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Sale Summary',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                // Expanded list of selected products
+                Expanded(
+                  child: selectedProducts.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No products selected',
+                            style: TextStyle(fontSize: 16, color: Colors.black54),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: selectedProducts.length,
+                          itemBuilder: (_, index) {
+                            final product = selectedProducts[index];
+                            final qty = vm.getQuantity(product);
+                            final subtotal = vm.getSubtotal(product);
+
+                            return ListTile(
+                              title: Text(product.name),
+                              subtitle: Text('₱${product.sellingPrice} × $qty'),
+                              trailing: Text(
+                                '₱${subtotal.toStringAsFixed(2)}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'TOTAL',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '₱${vm.total}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Cancel & Confirm buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close the summary modal
+
+                          if (isCash) {
+                            // Handle cash sale
+                            vm.checkout();        // Save the sale
+                            vm.resetQuantities(); // Reset quantities
+
+                            // Show success message
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Sale successfully recorded!'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: AppColors.success, // <-- use your success color here
+                              ),
+                            );
+                          } else {
+                            // Handle utang flow (if needed)
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary, // <-- Confirm button color
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text('Confirm'),
+                      ),
+                    ),
+
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 
   Widget _dueDateCard() => Container(
         padding: const EdgeInsets.all(14),
@@ -329,30 +476,65 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       );
 
   Widget _bottomBar(SalesViewModel vm) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(color: Colors.white, boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
-        ]),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: RichText(
-              text: TextSpan(children: [
-                const TextSpan(text: 'Total: ', style: TextStyle(fontSize: 18, color: Colors.black)),
-                TextSpan(text: '₱${vm.total}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
-              ]),
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    boxShadow: const [
+      BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
+    ],
+  ),
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Align(
+        alignment: Alignment.centerRight,
+        child: RichText(
+          text: TextSpan(
+            children: [
+              const TextSpan(
+                text: "Total: ",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),
+              ),
+              TextSpan(
+                text: "₱${vm.total}",
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton(
+          onPressed: vm.hasSelectedProducts
+              ? () => _showSummary(context, vm)
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: Text(isCash ? 'Record' : 'Continue', style: const TextStyle(fontSize: 16, color: Colors.white)),
-            ),
+          child: Text(
+            isCash ? "Record" : "Continue",
+            style: const TextStyle(fontSize: 16, color: Colors.white),
           ),
-        ]),
-      );
+        ),
+      ),
+    ],
+  ),
+);
+
+
 }
