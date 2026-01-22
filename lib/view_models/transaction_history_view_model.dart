@@ -9,6 +9,8 @@ class TransactionItem {
   final double? amount;
   final DateTime createdAt;
   final String? paymentType;
+  final String? productName;
+  final int? quantity;
 
   TransactionItem({
     required this.type,
@@ -16,6 +18,8 @@ class TransactionItem {
     this.amount,
     required this.createdAt,
     this.paymentType,
+    this.productName,
+    this.quantity,
   });
 
   factory TransactionItem.fromMap(
@@ -26,7 +30,6 @@ class TransactionItem {
     double value;
     String? paymentType;
 
-    // Determine type and paymentType
     if (isCapital) {
       value = (map['capital'] as num?)?.toDouble() ?? 0.0;
       if (value > 0) paymentType = 'Deposit';
@@ -44,6 +47,8 @@ class TransactionItem {
       amount: value,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       paymentType: paymentType,
+      productName: map['product_name'],
+      quantity: (map['quantity'] as num?)?.toInt(),
     );
   }
 }

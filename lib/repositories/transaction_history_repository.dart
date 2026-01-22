@@ -18,19 +18,39 @@ class TransactionHistoryRepository {
     );
 
     // Get sales cash
-    final salesCash = await db.query(
-      'sales_cash',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      orderBy: 'created_at DESC',
+    final salesCash = await db.rawQuery(
+      '''
+        SELECT 
+          sc.id,
+          sc.account_id,
+          sc.amount,
+          sc.quantity,
+          sc.created_at,
+          p.name AS product_name
+        FROM sales_cash sc
+        JOIN product p ON p.id = sc.product_id
+        WHERE sc.account_id = ?
+        ORDER BY sc.created_at DESC
+      ''',
+      [accountId],
     );
 
     // Get sales credit
-    final salesCredit = await db.query(
-      'sales_credit',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      orderBy: 'created_at DESC',
+    final salesCredit = await db.rawQuery(
+      '''
+        SELECT 
+          sc.id,
+          sc.account_id,
+          sc.amount,
+          sc.quantity,
+          sc.created_at,
+          p.name AS product_name
+        FROM sales_credit sc
+        JOIN product p ON p.id = sc.product_id
+        WHERE sc.account_id = ?
+        ORDER BY sc.created_at DESC
+      ''',
+      [accountId],
     );
 
     // Get capital management

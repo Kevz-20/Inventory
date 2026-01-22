@@ -156,13 +156,15 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // Top row: Halin + Product name and amount
+                                          // Top row: Halin + Product + Qty + Amount
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
                                               Flexible(
-                                                child: Row(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       'Halin',
@@ -172,20 +174,26 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                         fontSize: 14,
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                    Flexible(
-                                                      child: Text(
-                                                        tx.description ??
-                                                            'Product',
-                                                        style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          fontSize: 14,
-                                                        ),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      tx.productName ??
+                                                          'Product',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        fontSize: 14,
                                                       ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
+                                                    if (tx.quantity != null)
+                                                      Text(
+                                                        'Qty: ${tx.quantity}',
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          color: Colors.black54,
+                                                        ),
+                                                      ),
                                                   ],
                                                 ),
                                               ),
@@ -199,7 +207,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                             ],
                                           ),
                                           const SizedBox(height: 6),
-                                          // Payment type (Cash/Utang) and date
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
@@ -208,7 +215,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                 tx.paymentType ?? '',
                                                 style: const TextStyle(
                                                   fontSize: 13,
-                                                  color: Colors.black87,
                                                 ),
                                               ),
                                               Text(
