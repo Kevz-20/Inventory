@@ -149,8 +149,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-
-                                // Halin card layout
                                 child: isHalin
                                     ? Column(
                                         mainAxisSize: MainAxisSize.min,
@@ -168,7 +166,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
-                                                    // Halin badge
                                                     Container(
                                                       padding:
                                                           const EdgeInsets.symmetric(
@@ -177,9 +174,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                           ),
                                                       decoration: BoxDecoration(
                                                         color: Colors.green
-                                                            .withValues(
-                                                              alpha: 0.1,
-                                                            ),
+                                                            .withAlpha(25),
                                                         borderRadius:
                                                             BorderRadius.circular(
                                                               6,
@@ -196,8 +191,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                       ),
                                                     ),
                                                     const SizedBox(height: 4),
-
-                                                    // Product name
                                                     Text(
                                                       tx.productName ??
                                                           'Product',
@@ -213,8 +206,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                   ],
                                                 ),
                                               ),
-
-                                              // Amount
                                               Text(
                                                 '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
                                                 style: const TextStyle(
@@ -225,10 +216,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                               ),
                                             ],
                                           ),
-
                                           const SizedBox(height: 6),
-
-                                          // Quantity (left) + Date (right)
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
@@ -254,27 +242,68 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                           ),
                                         ],
                                       )
-                                    // Expenses (Gasto) card layout
                                     : isExpense
                                     ? Column(
+                                        mainAxisSize: MainAxisSize.min,
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // Top row: type and amount
                                           Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                tx.type, // Gasto
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14,
+                                              Expanded(
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Gasto badge
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 3,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.red
+                                                            .withAlpha(25),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Gasto',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.red,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      tx.description ??
+                                                          'Expense',
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                               Text(
                                                 '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
                                                 style: const TextStyle(
+                                                  fontSize: 16,
                                                   fontWeight: FontWeight.bold,
                                                   color: Colors.red,
                                                 ),
@@ -282,17 +311,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                             ],
                                           ),
                                           const SizedBox(height: 6),
-                                          // Bottom row: description as category and date
+                                          // Bottom row with description left, date right
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                tx.description ??
-                                                    '', // Show category text
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.black87,
+                                              Expanded(
+                                                child: Text(
+                                                  '', // no additional text here
                                                 ),
                                               ),
                                               Text(
@@ -300,7 +326,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                   'MMMM d, yyyy',
                                                 ).format(tx.createdAt),
                                                 style: const TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 15,
                                                   color: Colors.black45,
                                                 ),
                                               ),
@@ -308,7 +334,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                           ),
                                         ],
                                       )
-                                    // Default layout for other types
                                     : Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -327,24 +352,24 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                 ),
                                               ),
                                               Text(
-                                                '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                                '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  color: Colors.green,
+                                                  color: Colors.red,
                                                 ),
                                               ),
                                             ],
                                           ),
                                           const SizedBox(height: 6),
                                           Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                tx.description ?? tx.type,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.black87,
+                                              Expanded(
+                                                child: Text(
+                                                  tx.description ?? 'Expense',
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.black87,
+                                                  ),
                                                 ),
                                               ),
                                               Text(
@@ -352,7 +377,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                   'MMMM d, yyyy',
                                                 ).format(tx.createdAt),
                                                 style: const TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 14,
                                                   color: Colors.black45,
                                                 ),
                                               ),
