@@ -72,6 +72,28 @@ class ProductRepository {
     await batch.commit(noResult: true);
   }
 
+  
+  Future<List<Map<String, dynamic>>> getCustomers({bool shared = false}) async {
+  try {
+    if (shared) {
+      // Fetch all customers from all accounts
+      return await db.query('customers');
+    } else {
+      // Fetch only customers for current account
+      final accountId = await AccountRepository().getAccountId();
+      return await db.query(
+        'customers',
+        where: 'account_id = ?',
+        whereArgs: [accountId],
+      );
+    }
+  } catch (e) {
+    print('Failed to fetch customers: $e');
+    return [];
+  }
+}
+
+
   // ------------------- SALES -------------------
 
   // Cash checkout
