@@ -63,12 +63,27 @@ class AccountRepository {
     }
     return null;
   }
-   Future<void> updateAccount(Account updated) async {
+
+  Future<void> updateAccount(Account updated) async {
+    final db = await dbService.database;
+
+    // Correct SQLite update
+    await db.update(
+      'account',
+      updated.toMap(),
+      where: 'id = ?',
+      whereArgs: [updated.id],
+    );
+
+    // Optional: save mobile number to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setString('mobileNumber', updated.mobileNumber);
-    await prefs.setString('associationName', updated.associationName ?? '');
-    await prefs.setString('securityAnswer', updated.securityAnswer ?? '');
 
+    if (updated.associationName != null) {
+      await prefs.setString('associationName', updated.associationName!);
     }
+    if (updated.securityAnswer != null) {
+      await prefs.setString('securityAnswer', updated.securityAnswer!);
+    }
+  }
 }

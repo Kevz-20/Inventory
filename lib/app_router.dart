@@ -1,4 +1,3 @@
-import 'package:dswd_slp/views/screens/edit_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
@@ -177,14 +176,6 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const CashFlowScreen(),
-        transition: PageTransitionType.forward,
-      ),
-    ),
-    GoRoute(
-      path: '/edit_profile',
-      pageBuilder: (context, state) => customPage(
-        state,
-        const EditProfileScreen(),
         transition: PageTransitionType.forward,
       ),
     ),

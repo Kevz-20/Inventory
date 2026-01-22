@@ -37,7 +37,7 @@ class DBService {
         association_name TEXT,
         pin TEXT NOT NULL,
         security_question_id INTEGER,
-        security_answer TEXT
+        security_answer TEXT,
         profile_image TEXT
       )
     ''');
@@ -158,7 +158,6 @@ class DBService {
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
-
 
     // Transaction History (Universal Ledger)
     await db.execute('''
@@ -422,7 +421,6 @@ class DBService {
       await db.insert('category_choices', {'name': c});
     }
   }
-  
 
   // Close database safely
   Future<void> close() async {
