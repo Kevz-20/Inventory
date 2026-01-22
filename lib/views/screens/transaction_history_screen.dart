@@ -153,76 +153,100 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                 // Halin card layout
                                 child: isHalin
                                     ? Column(
+                                        mainAxisSize: MainAxisSize.min,
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          // Top row: Halin + Product + Qty + Amount
                                           Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Flexible(
+                                              Expanded(
                                                 child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
-                                                    Text(
-                                                      'Halin',
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        fontSize: 14,
+                                                    // Halin badge
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 3,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.green
+                                                            .withValues(
+                                                              alpha: 0.1,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Halin',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.green,
+                                                        ),
                                                       ),
                                                     ),
-                                                    const SizedBox(height: 2),
+                                                    const SizedBox(height: 4),
+
+                                                    // Product name
                                                     Text(
                                                       tx.productName ??
                                                           'Product',
                                                       style: const TextStyle(
+                                                        fontSize: 16,
                                                         fontWeight:
-                                                            FontWeight.w500,
-                                                        fontSize: 14,
+                                                            FontWeight.w600,
                                                       ),
+                                                      maxLines: 1,
                                                       overflow:
                                                           TextOverflow.ellipsis,
                                                     ),
-                                                    if (tx.quantity != null)
-                                                      Text(
-                                                        'Qty: ${tx.quantity}',
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color: Colors.black54,
-                                                        ),
-                                                      ),
                                                   ],
                                                 ),
                                               ),
+
+                                              // Amount
                                               Text(
                                                 '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
                                                 style: const TextStyle(
+                                                  fontSize: 16,
                                                   fontWeight: FontWeight.bold,
                                                   color: Colors.green,
                                                 ),
                                               ),
                                             ],
                                           ),
+
                                           const SizedBox(height: 6),
+
+                                          // Quantity (left) + Date (right)
                                           Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                tx.paymentType ?? '',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
+                                              if (tx.quantity != null)
+                                                Text(
+                                                  'Qty: ${tx.quantity}',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Colors.black54,
+                                                  ),
                                                 ),
-                                              ),
                                               Text(
                                                 DateFormat(
                                                   'MMMM d, yyyy',
                                                 ).format(tx.createdAt),
                                                 style: const TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 15,
                                                   color: Colors.black45,
                                                 ),
                                               ),
@@ -410,7 +434,7 @@ class _DatePickerBox extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: AppColors.textPrimary,
                   ),
                 ),
@@ -421,7 +445,7 @@ class _DatePickerBox extends StatelessWidget {
             // Selected date below the title
             Text(
               DateFormat('MMMM d, y').format(date),
-              style: const TextStyle(fontSize: 13, color: Colors.black),
+              style: const TextStyle(fontSize: 15, color: Colors.black),
             ),
           ],
         ),
@@ -484,7 +508,7 @@ class CategoryChipsWithDots extends StatelessWidget {
                   child: Text(
                     category.displayName,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: isSelected ? Colors.white : Colors.black87,
                     ),
