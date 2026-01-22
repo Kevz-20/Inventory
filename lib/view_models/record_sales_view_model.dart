@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/product_model.dart';
 import '../repositories/product_repository.dart';
+import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
 
 final salesViewModelProvider = ChangeNotifierProvider<SalesViewModel>((ref) {
@@ -9,14 +10,19 @@ final salesViewModelProvider = ChangeNotifierProvider<SalesViewModel>((ref) {
 });
 
 class SalesViewModel extends ChangeNotifier {
-  ProductRepository? _repository;
+  ProductRepository? _productRepository;
+  CustomerRepository? _customerRepository;
+  Map<String, dynamic>? selectedCustomer; 
+
   List<ProductModel> products = [];
+  List<Map<String, dynamic>> customers = []; // Customer list
   bool isLoading = false;
-  int total = 0;
+  double total = 0.0; // changed from int to double
   int selectedCategoryIndex = 0;
 
   final Map<int, int> productQuantities = {};
   final Map<int, TextEditingController> controllers = {};
+  final Map<int, VoidCallback> _controllerListeners = {};
 
   static const List<String> categories = [
     'All',
@@ -33,68 +39,86 @@ class SalesViewModel extends ChangeNotifier {
     Future.microtask(() => _initRepository());
   }
 
+  /// Initialize repositories and load data
   Future<void> _initRepository() async {
     try {
       final db = await DBService.instance.database;
-      _repository = ProductRepository(db);
+      _productRepository = ProductRepository(db);
+      _customerRepository = CustomerRepository(db); // <-- correct repository
       await loadProducts();
-    } catch (_) {}
-  }
-
-  Future<void> loadProducts() async {
-  if (_repository == null) return;
-
-  isLoading = true;
-  notifyListeners();
-
-  try {
-    products = await _repository!.getProducts();
-  } catch (_) {}
-
-  for (var p in products) {
-    if (p.id != null) {
-      // Initialize quantity map
-      productQuantities[p.id!] ??= 0;
-
-      // Initialize controller if not exists
-      if (!controllers.containsKey(p.id!)) {
-        controllers[p.id!] = TextEditingController(text: productQuantities[p.id!]!.toString());
-      }
-
-      // Remove all previous listeners
-      final controller = controllers[p.id!]!;
-      controller.removeListener(() {});
-
-      // Add listener
-      controller.addListener(() {
-        final text = controller.text;
-
-        // When empty, reset to 0
-        if (text.isEmpty) {
-          productQuantities[p.id!] = 0;
-          return;
-        }
-
-        // Parse user input
-        int qty = int.tryParse(text) ?? 0;
-
-        // Clamp to current stock
-        if (qty > p.quantity) qty = p.quantity;
-        if (qty < 0) qty = 0;
-
-        productQuantities[p.id!] = qty;
-        calculateTotal();
-        notifyListeners();
-      });
+      await loadCustomers(); // load customers
+    } catch (e) {
+      print('Error initializing repositories: $e');
     }
   }
 
-  isLoading = false;
-  notifyListeners();
-}
+  /// Load products from DB
+  Future<void> loadProducts() async {
+    if (_productRepository == null) return;
 
-  Future<void> reloadProducts() async => await loadProducts();
+    isLoading = true;
+    notifyListeners();
 
+    try {
+      products = await _productRepository!.getProducts();
+    } catch (e) {
+      print('Error loading products: $e');
+      products = [];
+    }
+
+    // Initialize quantity controllers
+    for (var p in products) {
+      if (p.id != null) {
+        productQuantities[p.id!] ??= 0;
+
+        if (!controllers.containsKey(p.id!)) {
+          controllers[p.id!] = TextEditingController(
+            text: productQuantities[p.id!]!.toString(),
+          );
+        }
+
+        final controller = controllers[p.id!]!;
+
+        if (_controllerListeners.containsKey(p.id!)) {
+          controller.removeListener(_controllerListeners[p.id!]!);
+        }
+
+        _controllerListeners[p.id!] = () {
+          final text = controller.text;
+          if (text.isEmpty) {
+            productQuantities[p.id!] = 0;
+          } else {
+            int qty = int.tryParse(text) ?? 0;
+            qty = qty.clamp(0, p.quantity);
+            productQuantities[p.id!] = qty;
+          }
+          calculateTotal();
+        };
+
+        controller.addListener(_controllerListeners[p.id!]!);
+      }
+    }
+
+    isLoading = false;
+    notifyListeners();
+  }
+
+  /// Load customers from DB
+  Future<void> loadCustomers({bool allAccounts = true}) async {
+    if (_customerRepository == null) return;
+
+    try {
+      customers = await _customerRepository!.getCustomers(allAccounts: allAccounts);
+      print('Loaded customers: $customers'); // Debug
+    } catch (e) {
+      print('Error loading customers: $e');
+      customers = [];
+    }
+
+    notifyListeners(); // rebuild UI
+  }
+
+  /// Category filter
   void selectCategory(int index) {
     selectedCategoryIndex = index;
     notifyListeners();
@@ -111,46 +135,46 @@ class SalesViewModel extends ChangeNotifier {
         .toList();
   }
 
+  /// Quantity operations
   void incrementQuantity(ProductModel product) {
-  if (product.id == null) return;
-  final currentQty = productQuantities[product.id!] ?? 0;
-
-  // Allow increment only if stock > 0
-  if (product.quantity > 0 && currentQty < product.quantity) {
-    updateQuantity(product, currentQty + 1);
+    if (product.id == null) return;
+    final currentQty = productQuantities[product.id!] ?? 0;
+    if (product.quantity > 0 && currentQty < product.quantity) {
+      updateQuantity(product, currentQty + 1);
+    }
   }
-}
 
   void decrementQuantity(ProductModel product) {
-  if (product.id == null) return;
-  final currentQty = productQuantities[product.id!] ?? 0;
-
-  if (currentQty > 0) {
-    updateQuantity(product, currentQty - 1);
+    if (product.id == null) return;
+    final currentQty = productQuantities[product.id!] ?? 0;
+    if (currentQty > 0) {
+      updateQuantity(product, currentQty - 1);
+    }
   }
-}
 
   void updateQuantity(ProductModel product, int qty) {
-  if (product.id == null) return;
+    if (product.id == null) return;
+    qty = qty.clamp(0, product.quantity);
+    productQuantities[product.id!] = qty;
 
-  // Clamp to stock
-  if (qty > product.quantity) qty = product.quantity;
-  if (qty < 0) qty = 0;
+    final controller = controllers[product.id!];
+    if (controller != null && controller.text != qty.toString()) {
+      if (_controllerListeners.containsKey(product.id!)) {
+        controller.removeListener(_controllerListeners[product.id!]!);
+      }
 
-  productQuantities[product.id!] = qty;
+      controller.text = qty.toString();
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
 
-  // Sync controller text only if different
-  final controller = controllers[product.id!];
-  if (controller != null && controller.text != qty.toString()) {
-    controller.text = qty.toString();
-    controller.selection = TextSelection.fromPosition(
-      TextPosition(offset: controller.text.length),
-    );
+      if (_controllerListeners.containsKey(product.id!)) {
+        controller.addListener(_controllerListeners[product.id!]!);
+      }
+    }
+
+    calculateTotal();
   }
-
-  calculateTotal();
-  notifyListeners();
-}
 
   int getQuantity(ProductModel product) {
     if (product.id == null) return 0;
@@ -163,12 +187,12 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void calculateTotal() {
-    total = 0;
+    total = 0.0;
     for (var p in products) {
       if (p.id == null) continue;
-      final qty = productQuantities[p.id!] ?? 0;
-      total += (p.sellingPrice * qty).toInt();
+      total += p.sellingPrice * (productQuantities[p.id!] ?? 0);
     }
+    notifyListeners();
   }
 
   bool get hasSelectedProducts {
@@ -179,60 +203,57 @@ class SalesViewModel extends ChangeNotifier {
     for (var p in products) {
       if (p.id == null) continue;
       productQuantities[p.id!] = 0;
-
-      if (controllers[p.id!] != null) {
-        controllers[p.id!]!.text = '0';
-      } else {
-        controllers[p.id!] = TextEditingController(text: '0');
-      }
+      controllers[p.id!]?.text = '0';
     }
-    total = 0;
+    total = 0.0;
     notifyListeners();
   }
 
   /// ===========================
   /// Checkout / Save Sale
   /// ===========================
- Future<void> checkout({bool isCash = true, int? customerId, DateTime? dueDate}) async {
-  if (_repository == null) return;
+  Future<void> checkout({
+    bool isCash = true,
+    int? customerId,
+    DateTime? dueDate,
+  }) async {
+    if (_productRepository == null) return;
 
-  // Collect purchased items
-  final purchasedItems = <Map<String, dynamic>>[];
+    final purchasedItems = <Map<String, dynamic>>[];
 
-  for (var p in products) {
-    final qty = productQuantities[p.id!] ?? 0;
-    if (qty > 0) {
-      purchasedItems.add({
-        'productId': p.id,
-        'quantity': qty,
-        'price': p.sellingPrice,
-        'subtotal': qty * p.sellingPrice,
-      });
+    for (var p in products) {
+      final qty = productQuantities[p.id!] ?? 0;
+      if (qty > 0) {
+        purchasedItems.add({
+          'productId': p.id,
+          'quantity': qty,
+          'price': p.sellingPrice,
+          'subtotal': qty * p.sellingPrice,
+        });
+      }
     }
+
+    if (purchasedItems.isEmpty) return;
+
+    try {
+      if (isCash) {
+        await _productRepository!.checkoutCash(purchasedItems);
+      } else {
+        if (customerId == null || dueDate == null) {
+          throw Exception('Customer and due date required for utang.');
+        }
+        await _productRepository!.checkoutCredit(
+          purchasedItems,
+          customerId,
+          dueDate: dueDate,
+        );
+      }
+    } catch (e) {
+      print('Checkout failed: $e');
+      rethrow;
+    }
+
+    await loadProducts();
+    resetQuantities();
   }
-
-  if (purchasedItems.isEmpty) return;
-
-  if (isCash) {
-    // Use repository method to save cash sale and update stock
-    await _repository!.checkoutCash(purchasedItems);
-  } else {
-    if (customerId == null) return;
-    await _repository!.checkoutCredit(
-      purchasedItems,
-      customerId,
-      dueDate: dueDate,
-    );
-  }
-
-  // ✅ Reload products from DB to update stock in UI
-  await loadProducts();
-
-  // ✅ Reset quantity selectors
-  resetQuantities();
-
-  // ✅ Notify UI
-  notifyListeners();
-}
-
 }

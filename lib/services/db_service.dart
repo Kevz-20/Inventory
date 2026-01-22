@@ -15,17 +15,26 @@ class DBService {
 
   // Initialize database file
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-      onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON'); // enable Foreign Key
-      },
-    );
-  }
+  final dbPath = await getDatabasesPath();
+  final path = join(dbPath, filePath);
+  return await openDatabase(
+    path,
+    version: 2, // Incremented from 1 -> 2
+    onCreate: _createDB,
+    onUpgrade: (db, oldVersion, newVersion) async {
+      if (oldVersion < 2) {
+        // Add missing columns to customer table
+        await db.execute('ALTER TABLE customer ADD COLUMN account_id INTEGER;');
+        await db.execute('ALTER TABLE customer ADD COLUMN municipality TEXT;');
+        await db.execute('ALTER TABLE customer ADD COLUMN barangay TEXT;');
+        await db.execute('ALTER TABLE customer ADD COLUMN landmark TEXT;');
+      }
+    },
+    onConfigure: (db) async {
+      await db.execute('PRAGMA foreign_keys = ON');
+    },
+  );
+}
 
   // Create all tables
   Future<void> _createDB(Database db, int version) async {
@@ -104,12 +113,18 @@ class DBService {
     await db.execute('''
       CREATE TABLE customer (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT,
+        account_id INTEGER NOT NULL,
+
+        first_name TEXT NOT NULL,
         middle_name TEXT,
         last_name TEXT,
-        address TEXT,
-        phone_number INTEGER,
-        credit_limit REAL
+        phone_number TEXT NOT NULL,
+        municipality TEXT,
+        barangay TEXT,
+        landmark TEXT,
+        credit_limit REAL,
+
+        FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');
 
