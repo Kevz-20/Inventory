@@ -33,7 +33,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
 
   @override
   void dispose() {
-    _categoryScrollController.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -288,7 +287,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.only(left: 0, right: 8),
         itemCount: SalesViewModel.categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final selected = index == vm.selectedCategoryIndex;
           return GestureDetector(
@@ -577,6 +576,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                               dueDate = null; // Reset due date
 
                               // Show success message
+                              // ignore: use_build_context_synchronously
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: const Text(
@@ -587,6 +587,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                                 ),
                               );
                             } catch (e) {
+                              // ignore: use_build_context_synchronously
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Checkout failed: $e'),

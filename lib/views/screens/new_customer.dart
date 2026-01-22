@@ -4,23 +4,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/new_customer_view_model.dart';
 
-class NewCustomerPage extends ConsumerStatefulWidget {
+class NewCustomerPage extends ConsumerWidget {
   const NewCustomerPage({super.key});
 
   @override
-  ConsumerState<NewCustomerPage> createState() => _NewCustomerPageState();
-}
-
-class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
-  bool _isSaving = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final vmNotifier = ref.read(newCustomerViewModelProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(newCustomerViewModelProvider);
+    final vmNotifier = ref.read(newCustomerViewModelProvider);
+
+    // Show snackbar safely when snackbarMessage changes
+    if (vm.snackbarMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(vm.snackbarMessage!)));
+        // Reset message after showing
+        vmNotifier.snackbarMessage = null;
+      });
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add New Customer')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text('Add New Customer'),
+        backgroundColor: AppColors.primary,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -48,51 +56,29 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: (_isSaving || vm.isLoading)
+                onPressed: vm.isLoading
                     ? null
                     : () async {
-                        setState(() => _isSaving = true);
-
-                        final result = await vmNotifier.saveCustomer();
-
-                        if (!mounted) return; // check before using context
-
-                        // Show SnackBar safely
-                        final messenger = ScaffoldMessenger.maybeOf(context);
-                        if (messenger != null) {
-                          if (result == true) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Customer added successfully!'),
-                              ),
-                            );
-                            Navigator.of(context).pop(true);
-                          } else if (result == false) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to add customer!'),
-                              ),
-                            );
-                          } else if (result is String) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(result)),
-                            );
-                          }
+                        final success = await vmNotifier.saveCustomer();
+                        if (success) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (Navigator.of(context).mounted) {
+                              Navigator.of(context).pop(true);
+                            }
+                          });
                         }
-
-                        setState(() => _isSaving = false);
                       },
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  backgroundColor: Colors.blue,
                 ),
-                child: (_isSaving || vm.isLoading)
+                child: vm.isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         'Save Customer',
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
               ),
             ),
@@ -117,6 +103,10 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
           fillColor: Colors.white,
           filled: true,
         ),

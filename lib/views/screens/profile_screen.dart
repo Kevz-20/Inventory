@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/app_colors.dart';
 import '../../models/account_model.dart';
 import '../../providers/profile_view_model_provider.dart';
+import '../widgets/header.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -49,13 +50,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
+      appBar: const AppHeader(title: "Profile", showBackButton: true),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.error != null

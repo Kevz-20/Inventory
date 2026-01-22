@@ -12,6 +12,7 @@ class NewCustomerViewModel extends ChangeNotifier {
   CustomerRepository? _repo;
 
   bool isLoading = false;
+  String? snackbarMessage;
 
   final firstNameController = TextEditingController();
   final middleNameController = TextEditingController();
@@ -39,44 +40,35 @@ class NewCustomerViewModel extends ChangeNotifier {
         regex.hasMatch(contact);
   }
 
-  /// Save customer and notify UI
-  Future<void> saveCustomer(BuildContext context) async {
-    // Check if repository is ready
+  void _setSnackbar(String message) {
+    snackbarMessage = message;
+    notifyListeners();
+  }
+
+  Future<bool> saveCustomer() async {
     if (_repo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Database not ready, try again later')),
-      );
-      return;
+      _setSnackbar('Database not ready, try again later');
+      return false;
     }
 
     final contact = contactController.text.trim();
-    final regex = RegExp(r'^09\d{9}$'); // Must start with 09 and 11 digits
+    final regex = RegExp(r'^09\d{9}$');
 
-    // Validate fields with user feedback
     if (firstNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('First Name is required')));
-      return;
+      _setSnackbar('First Name is required');
+      return false;
     }
 
     if (lastNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Last Name is required')));
-      return;
+      _setSnackbar('Last Name is required');
+      return false;
     }
 
     if (!regex.hasMatch(contact)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Contact number must start with 09 and be 11 digits'),
-        ),
-      );
-      return;
+      _setSnackbar('Contact number must start with 09 and be 11 digits');
+      return false;
     }
 
-    // Show loading
     isLoading = true;
     notifyListeners();
 
@@ -93,7 +85,6 @@ class NewCustomerViewModel extends ChangeNotifier {
     try {
       await _repo!.insertCustomer(customer);
 
-      // Clear fields after successful save
       firstNameController.clear();
       middleNameController.clear();
       lastNameController.clear();
@@ -105,23 +96,14 @@ class NewCustomerViewModel extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
 
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Customer added successfully!')),
-      );
-
-      // ✅ New: Pop page and return true to indicate a new customer was added
-      // ignore: use_build_context_synchronously
-      Navigator.of(context).pop(true);
+      _setSnackbar('Customer added successfully!');
+      return true;
     } catch (e) {
       debugPrint('Error saving customer: $e');
       isLoading = false;
+      _setSnackbar('Failed to add customer!');
       notifyListeners();
-
-      ScaffoldMessenger.of(
-        // ignore: use_build_context_synchronously
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to add customer!')));
+      return false;
     }
   }
 
