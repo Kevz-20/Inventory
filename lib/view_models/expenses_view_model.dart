@@ -2,20 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+
 import '../models/expense_model.dart';
 import '../repositories/expense_repository.dart';
+import '../repositories/capital_management_repository.dart';
+import '../providers/database_provider.dart';
 
-final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
-  ref,
-) {
+final expensesViewModelProvider =
+    ChangeNotifierProvider<ExpensesViewModel>((ref) {
   final repoFuture = ref.watch(expenseRepositoryProvider.future);
-  return ExpensesViewModel(expenseRepositoryFuture: repoFuture);
+  final dbFuture = ref.watch(databaseProvider.future);
+  return ExpensesViewModel(
+    expenseRepositoryFuture: repoFuture,
+    databaseFuture: dbFuture,
+  );
 });
 
 class ExpensesViewModel extends ChangeNotifier {
   final Future<ExpenseRepository> expenseRepositoryFuture;
+  final Future databaseFuture;
 
-  ExpensesViewModel({required this.expenseRepositoryFuture});
+  ExpensesViewModel({
+    required this.expenseRepositoryFuture,
+    required this.databaseFuture,
+  });
 
   DateTime selectedDate = DateTime.now();
   final amountController = TextEditingController();
@@ -38,9 +48,8 @@ class ExpensesViewModel extends ChangeNotifier {
     "Uban pa",
   ];
 
-  String get formattedDate {
-    return DateFormat('MMMM d, y').format(selectedDate);
-  }
+  String get formattedDate =>
+      DateFormat('MMMM d, y').format(selectedDate);
 
   void setCategory(String? value) {
     selectedCategory = value;
@@ -55,7 +64,6 @@ class ExpensesViewModel extends ChangeNotifier {
   Future<void> pickReceipt(ImageSource source) async {
     final picker = ImagePicker();
     final img = await picker.pickImage(source: source);
-
     if (img != null) {
       receiptImage = img;
       notifyListeners();
@@ -79,6 +87,7 @@ class ExpensesViewModel extends ChangeNotifier {
     return true;
   }
 
+  // 🔥 MAIN SAVE LOGIC
   Future<bool> save() async {
     triggerValidation();
 
@@ -94,44 +103,39 @@ class ExpensesViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final repo = await expenseRepositoryFuture;
+      final expenseRepo = await expenseRepositoryFuture;
+      final db = await databaseFuture;
+      final capitalRepo = CapitalManagementRepository(db);
 
+      final accountId =
+          await expenseRepo.accountRepository.getAccountId();
+
+      final amount = double.parse(amountController.text);
+
+      // 1️⃣ Deduct cash first
+      await capitalRepo.deductCash(
+        accountId: accountId,
+        amount: amount,
+      );
+
+      // 2️⃣ Save expense
       final expense = ExpenseModel(
-        accountId: await repo.accountRepository.getAccountId(),
-        amount: double.parse(amountController.text),
+        accountId: accountId,
+        amount: amount,
         category: selectedCategory!,
         description: descriptionController.text,
         receipt: receiptImage?.path,
         createdAt: selectedDate.toIso8601String(),
       );
 
-      debugPrint("debug - Saving Expense (before insert): ${expense.toMap()}");
+      await expenseRepo.addExpense(expense);
 
-      final newId = await repo.addExpense(
-        expense,
-      ); // SQLite returns generated id
-
-      final savedExpense = ExpenseModel(
-        id: newId,
-        accountId: expense.accountId,
-        amount: expense.amount,
-        category: expense.category,
-        description: expense.description,
-        receipt: expense.receipt,
-        createdAt: expense.createdAt,
-      );
-
-      debugPrint(
-        "debug - Expense saved successfully: ${savedExpense.toMap()}",
-      ); // after saving
-
-      successMessage = "Expense saved.";
+      successMessage = "Expense saved successfully.";
+      resetForm();
       isLoading = false;
       notifyListeners();
-      resetForm();
       return true;
     } catch (e) {
-      debugPrint("debug - Failed to save expense: $e");
       errorMessage = e.toString();
       isLoading = false;
       notifyListeners();
@@ -146,7 +150,6 @@ class ExpensesViewModel extends ChangeNotifier {
     receiptImage = null;
     selectedDate = DateTime.now();
     showValidationErrors = false;
-    notifyListeners();
   }
 
   @override
