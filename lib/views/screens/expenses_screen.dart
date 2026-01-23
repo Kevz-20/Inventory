@@ -3,9 +3,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
 import '../widgets/header.dart';
+
+/// -----------------------------
+/// Custom TextInputFormatter for thousands separator
+/// -----------------------------
+class ThousandsFormatter extends TextInputFormatter {
+  final NumberFormat _formatter = NumberFormat("#,###");
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Remove any non-digit characters
+    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (newText.isEmpty) return newValue.copyWith(text: '');
+
+    // Format with commas
+    String formatted = _formatter.format(int.parse(newText));
+
+    // Calculate cursor position
+    int selectionIndex =
+        formatted.length - (newText.length - newValue.selection.end);
+    if (selectionIndex < 0) selectionIndex = 0;
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+    );
+  }
+}
 
 class ExpensesScreen extends ConsumerWidget {
   const ExpensesScreen({super.key});
@@ -57,6 +86,9 @@ class ExpensesScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 15),
 
+            // -----------------------------
+            // Presyo field with automatic commas
+            // -----------------------------
             _inputTextField(
               prefix: const SizedBox(
                 width: 48,
@@ -75,7 +107,7 @@ class ExpensesScreen extends ConsumerWidget {
               controller: vm.amountController,
               showError: vm.showValidationErrors,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly], // ✅ numbers only
+              inputFormatters: [ThousandsFormatter()],
             ),
 
             const SizedBox(height: 15),
@@ -106,6 +138,11 @@ class ExpensesScreen extends ConsumerWidget {
               ? null
               : () async {
                   vm.triggerValidation();
+                  // Remove commas before parsing
+                  if (vm.amountController.text.isNotEmpty) {
+                    vm.amountController.text =
+                        vm.amountController.text.replaceAll(',', '');
+                  }
                   await vm.save();
                 },
           child: vm.isLoading
@@ -270,56 +307,52 @@ class ExpensesScreen extends ConsumerWidget {
   }
 
   Widget _inputTextField({
-  required Widget? prefix,
-  required String label,
-  required TextEditingController controller,
-  required bool showError,
-  TextInputType keyboardType = TextInputType.text,
-  List<TextInputFormatter>? inputFormatters, // add this
-}) {
-  final bool isError = showError && controller.text.isEmpty;
+    required Widget? prefix,
+    required String label,
+    required TextEditingController controller,
+    required bool showError,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    final bool isError = showError && controller.text.isEmpty;
 
-  return SizedBox(
-    height: 60,
-    child: TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters, // use it here
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontWeight: FontWeight.bold,
-      ),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        prefixIcon: prefix,
-        labelText: label,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 16,
+    return SizedBox(
+      height: 60,
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isError ? Colors.red : Colors.grey.shade400,
-            width: 1.2,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: prefix,
+          labelText: label,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : Colors.grey.shade400,
+              width: 1.2,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : AppColors.primary,
+              width: 1.2,
+            ),
           ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isError ? Colors.red : AppColors.primary,
-            width: 1.2,
-          ),
-        ),
       ),
-    ),
-  );
-}
-
-  // ---------------------------
-  // Date + Receipt Pickers
-  // ---------------------------
+    );
+  }
 
   Future<void> _pickDate(BuildContext context, ExpensesViewModel vm) async {
     final picked = await showDatePicker(
@@ -344,9 +377,7 @@ class ExpensesScreen extends ConsumerWidget {
   }
 
   Future<void> _pickReceiptImage(
-    BuildContext context,
-    ExpensesViewModel vm,
-  ) async {
+      BuildContext context, ExpensesViewModel vm) async {
     showDialog(
       context: context,
       builder: (_) => Dialog(

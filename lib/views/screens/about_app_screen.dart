@@ -30,7 +30,7 @@ class AboutAppScreen extends StatelessWidget {
                 "Created by the students of CTU Ginatilan:\n"
                 "Project Manager: Director GLicerio Baguia\n"
                 "Team Members: Kevin Mejares, Al Duane Mirasol, Jay Suizo, "
-                "Jessel Cardeinte, Mariel, Aiza, Shen, Ashleyy, Lhory\n\n"
+                "Jessel Cardeinte, Mariel, Aiza, Shen, Ashleyy, Lhory  ❤️ Velchez \n \n\n"
                 "Thank you for using the DSWD POS System!",
                 style: TextStyle(
                   fontSize: 16,
