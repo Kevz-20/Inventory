@@ -41,16 +41,18 @@ class ExpensesViewModel extends ChangeNotifier {
   String? errorMessage;
 
   final List<String> categories = [
-    "Pagkaon",
+    "Kumpra / Stock in",
     "Tubig / Kuryente",
     "Transportasyon",
     "Mga Bayronon",
     "Uban pa",
   ];
 
-  String get formattedDate =>
-      DateFormat('MMMM d, y').format(selectedDate);
+  String get formattedDate => DateFormat('MMMM d, y').format(selectedDate);
 
+  // ------------------------
+  // SETTERS
+  // ------------------------
   void setCategory(String? value) {
     selectedCategory = value;
     notifyListeners();
@@ -87,13 +89,35 @@ class ExpensesViewModel extends ChangeNotifier {
     return true;
   }
 
-  // 🔥 MAIN SAVE LOGIC
+  // ------------------------
+  // MESSAGE HANDLER
+  // ------------------------
+  void _showMessage(String msg, {bool isError = false, int durationSeconds = 2}) {
+    if (isError) {
+      errorMessage = msg;
+    } else {
+      successMessage = msg;
+    }
+    notifyListeners();
+
+    Future.delayed(Duration(seconds: durationSeconds), () {
+      if (isError) {
+        errorMessage = null;
+      } else {
+        successMessage = null;
+      }
+      notifyListeners();
+    });
+  }
+
+  // ------------------------
+  // MAIN SAVE FUNCTION
+  // ------------------------
   Future<bool> save() async {
     triggerValidation();
 
     if (!validate()) {
-      errorMessage = "Please fill out all fields.";
-      notifyListeners();
+      _showMessage("Please fill out all fields", isError: true);
       return false;
     }
 
@@ -107,18 +131,13 @@ class ExpensesViewModel extends ChangeNotifier {
       final db = await databaseFuture;
       final capitalRepo = CapitalManagementRepository(db);
 
-      final accountId =
-          await expenseRepo.accountRepository.getAccountId();
-
+      final accountId = await expenseRepo.accountRepository.getAccountId();
       final amount = double.parse(amountController.text);
 
-      // 1️⃣ Deduct cash first
-      await capitalRepo.deductCash(
-        accountId: accountId,
-        amount: amount,
-      );
+      // Deduct cash first
+      await capitalRepo.deductCash(accountId: accountId, amount: amount);
 
-      // 2️⃣ Save expense
+      // Save expense
       final expense = ExpenseModel(
         accountId: accountId,
         amount: amount,
@@ -130,19 +149,28 @@ class ExpensesViewModel extends ChangeNotifier {
 
       await expenseRepo.addExpense(expense);
 
-      successMessage = "Expense saved successfully.";
+      _showMessage("Expense saved successfully");
       resetForm();
+
       isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      errorMessage = e.toString();
+      if (e.toString().contains('Insufficient cash')) {
+        _showMessage('Insufficient cash on hand', isError: true);
+      } else {
+        _showMessage('Something went wrong. Please try again.', isError: true);
+      }
+
       isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
+  // ------------------------
+  // RESET FORM
+  // ------------------------
   void resetForm() {
     amountController.clear();
     descriptionController.clear();
@@ -150,6 +178,7 @@ class ExpensesViewModel extends ChangeNotifier {
     receiptImage = null;
     selectedDate = DateTime.now();
     showValidationErrors = false;
+    notifyListeners();
   }
 
   @override

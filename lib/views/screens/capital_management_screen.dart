@@ -65,7 +65,7 @@ Widget build(BuildContext context) {
           const SizedBox(height: 10),
           const Text(
             "Enter a valid amount (greater than 0).",
-            style: TextStyle(fontSize: 13, color: Colors.redAccent),
+            style: TextStyle(fontSize: 13, color: Color.fromARGB(255, 21, 21, 21)),
           ),
           const SizedBox(height: 15),
           _remarksInput(),

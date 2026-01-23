@@ -5,6 +5,7 @@ import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
 import '../../app_router.dart'; // import for routeObserver
+import 'package:intl/intl.dart'; // make sure this is imported at the top
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -136,7 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   children: [
                     Text(
                       homeState.isMoneyVisible
-                          ? 'PHP ${homeState.cashOnHand.toStringAsFixed(2)}'
+                          ? 'PHP ${NumberFormat.currency(
+                                locale: 'en_PH',
+                                symbol: '',
+                                decimalDigits: 2,
+                              ).format(homeState.cashOnHand)}'
                           : 'PHP ****',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
@@ -158,6 +163,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     ),
                   ],
                 ),
+
+
                 const SizedBox(height: 8),
                 Text(
                   'Mobile Number: ${homeState.mobileNumber ?? "Not set"}',
@@ -268,4 +275,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
       bottomNavigationBar: BottomNavBar(currentIndex: homeState.selectedIndex),
     );
   }
+ 
 }
