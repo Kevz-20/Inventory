@@ -5,6 +5,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../providers/capital_management_view_model_provider.dart';
 import '../widgets/header.dart';
+import 'package:intl/intl.dart';
+
+/// -----------------------------
+/// Custom TextInputFormatter for thousands separator
+/// -----------------------------
+class ThousandsFormatter extends TextInputFormatter {
+  final NumberFormat _formatter = NumberFormat("#,###");
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Remove any non-digit characters
+    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (newText.isEmpty) return newValue.copyWith(text: '');
+
+    // Format with commas
+    String formatted = _formatter.format(int.parse(newText));
+
+    // Calculate cursor position
+    int selectionIndex =
+        formatted.length - (newText.length - newValue.selection.end);
+    if (selectionIndex < 0) selectionIndex = 0;
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+    );
+  }
+}
 
 class CapitalManagementScreen extends ConsumerStatefulWidget {
   const CapitalManagementScreen({super.key});
@@ -31,7 +62,6 @@ class _CapitalManagementScreenState
   Widget build(BuildContext context) {
     final vm = ref.watch(capitalManagementViewModelProvider);
 
-    // No need to check for null anymore
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(
@@ -44,21 +74,18 @@ class _CapitalManagementScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 15),
-
             // Cash on Hand
             _miniBalanceCard(
               title: "Cash on Hand",
               value: vm.capitals.fold(0, (sum, e) => sum + e.cashOnHand),
             ),
             const SizedBox(height: 15),
-
             // Capital
             _miniBalanceCard(
               title: "Capital",
               value: vm.capitals.fold(0, (sum, e) => sum + e.capital),
             ),
             const SizedBox(height: 30),
-
             _sectionTitle('Add New Capital'),
             const SizedBox(height: 6),
             _amountInput(),
@@ -73,14 +100,18 @@ class _CapitalManagementScreenState
             const SizedBox(height: 15),
             _remarksInput(),
             const SizedBox(height: 20),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: vm.isLoading
                     ? null
                     : () async {
-                        final amount = double.tryParse(_amountController.text);
+                        // Remove commas before parsing
+                        final amountText = _amountController.text.replaceAll(
+                          ',',
+                          '',
+                        );
+                        final amount = double.tryParse(amountText);
                         if (amount == null || amount <= 0) return;
 
                         await vm.addCapital(
@@ -160,6 +191,7 @@ class _CapitalManagementScreenState
       hint: "0.00",
       prefix: "₱ ",
       numbersOnly: true,
+      formatter: ThousandsFormatter(), // ✅ add formatter
     );
   }
 
@@ -176,6 +208,7 @@ class _CapitalManagementScreenState
     String? hint,
     String? prefix,
     bool numbersOnly = false,
+    TextInputFormatter? formatter,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -186,10 +219,13 @@ class _CapitalManagementScreenState
       child: TextField(
         controller: controller,
         keyboardType: numbersOnly
-            ? const TextInputType.numberWithOptions(decimal: true)
+            ? const TextInputType.numberWithOptions(decimal: false)
             : TextInputType.text,
         inputFormatters: numbersOnly
-            ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))]
+            ? [
+                FilteringTextInputFormatter.digitsOnly,
+                if (formatter != null) formatter,
+              ]
             : null,
         decoration: InputDecoration(
           hintText: hint,
