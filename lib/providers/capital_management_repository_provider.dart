@@ -4,6 +4,6 @@ import 'database_provider.dart';
 
 final capitalManagementRepositoryProvider =
     FutureProvider<CapitalManagementRepository>((ref) async {
-      final database = await ref.watch(databaseProvider.future);
-      return CapitalManagementRepository(database);
-    });
+       final database = await ref.watch(databaseProvider.future);
+  return CapitalManagementRepository(database);
+});
