@@ -134,6 +134,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             final isHalin = tx.type == 'Halin';
                             final isExpense = tx.type == 'Gasto';
 
+                            // unified container for all card types
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
@@ -149,242 +150,116 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-                                child: isHalin
-                                    ? Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Expanded(
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 3,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green
-                                                            .withAlpha(25),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: const Text(
-                                                        'Halin',
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: Colors.green,
+                                              // Badge
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: isHalin
+                                                      ? Colors.green.withAlpha(
+                                                          25,
+                                                        )
+                                                      : isExpense
+                                                      ? Colors.red.withAlpha(25)
+                                                      : Colors.blue.withAlpha(
+                                                          25,
                                                         ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      tx.productName ??
-                                                          'Product',
-                                                      style: const TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
                                                 ),
-                                              ),
-                                              Text(
-                                                '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.green,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              if (tx.quantity != null)
-                                                Text(
-                                                  'Qty: ${tx.quantity}',
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    color: Colors.black54,
-                                                  ),
-                                                ),
-                                              Text(
-                                                DateFormat(
-                                                  'MMMM d, yyyy',
-                                                ).format(tx.createdAt),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.black45,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      )
-                                    : isExpense
-                                    ? Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    // Gasto badge
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 3,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.red
-                                                            .withAlpha(25),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: const Text(
-                                                        'Gasto',
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: Colors.red,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      tx.description ??
-                                                          'Expense',
-                                                      style: const TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Text(
-                                                '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          // Bottom row with description left, date right
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
                                                 child: Text(
-                                                  '', // no additional text here
-                                                ),
-                                              ),
-                                              Text(
-                                                DateFormat(
-                                                  'MMMM d, yyyy',
-                                                ).format(tx.createdAt),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.black45,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      )
-                                    : Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Flexible(
-                                                child: Text(
-                                                  tx.type,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w600,
+                                                  isHalin
+                                                      ? 'Halin'
+                                                      : isExpense
+                                                      ? 'Gasto'
+                                                      : tx.type,
+                                                  style: TextStyle(
                                                     fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: isHalin
+                                                        ? Colors.green
+                                                        : isExpense
+                                                        ? Colors.red
+                                                        : Colors.blue,
                                                   ),
                                                 ),
                                               ),
+                                              const SizedBox(height: 4),
                                               Text(
-                                                '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                                isHalin
+                                                    ? tx.productName ??
+                                                          'Product'
+                                                    : tx.description ??
+                                                          'Transaction',
                                                 style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.red,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 6),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  tx.description ?? 'Expense',
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                              ),
-                                              Text(
-                                                DateFormat(
-                                                  'MMMM d, yyyy',
-                                                ).format(tx.createdAt),
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.black45,
-                                                ),
-                                              ),
-                                            ],
+                                        ),
+                                        Text(
+                                          isHalin
+                                              ? '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}'
+                                              : '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: isHalin
+                                                ? Colors.green
+                                                : Colors.red,
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        if (isHalin && tx.quantity != null)
+                                          Text(
+                                            'Qty: ${tx.quantity}',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              color: Colors.black54,
+                                            ),
+                                          )
+                                        else
+                                          const SizedBox(),
+                                        Text(
+                                          DateFormat(
+                                            'MMMM d, yyyy',
+                                          ).format(tx.createdAt),
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.black45,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -452,7 +327,6 @@ class _DatePickerBox extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title and icon in the same row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -467,7 +341,6 @@ class _DatePickerBox extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            // Selected date below the title
             Text(
               DateFormat('MMMM d, y').format(date),
               style: const TextStyle(fontSize: 15, color: Colors.black),
@@ -479,7 +352,6 @@ class _DatePickerBox extends StatelessWidget {
   }
 }
 
-// Category chips with dot indicator
 class CategoryChipsWithDots extends StatelessWidget {
   final List<TransactionCategory> categories;
   final TransactionCategory selectedCategory;

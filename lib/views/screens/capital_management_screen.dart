@@ -27,101 +27,100 @@ class _CapitalManagementScreenState
     });
   }
 
- @override
-Widget build(BuildContext context) {
-  final vm = ref.watch(capitalManagementViewModelProvider);
+  @override
+  Widget build(BuildContext context) {
+    final vm = ref.watch(capitalManagementViewModelProvider);
 
-  // No need to check for null anymore
-  return Scaffold(
-    backgroundColor: AppColors.surface,
-    appBar: const AppHeader(
-      title: 'Capital Management',
-      showBackButton: true,
-    ),
-    body: SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 15),
-
-          // Cash on Hand
-          _miniBalanceCard(
-            title: "Cash on Hand",
-            value: vm.capitals.fold(0, (sum, e) => sum + e.cashOnHand),
-          ),
-          const SizedBox(height: 15),
-
-          // Capital
-          _miniBalanceCard(
-            title: "Capital",
-            value: vm.capitals.fold(0, (sum, e) => sum + e.capital),
-          ),
-          const SizedBox(height: 30),
-
-          _sectionTitle('Add New Capital'),
-          const SizedBox(height: 6),
-          _amountInput(),
-          const SizedBox(height: 10),
-          const Text(
-            "Enter a valid amount (greater than 0).",
-            style: TextStyle(fontSize: 13, color: Color.fromARGB(255, 21, 21, 21)),
-          ),
-          const SizedBox(height: 15),
-          _remarksInput(),
-          const SizedBox(height: 20),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: vm.isLoading
-                  ? null
-                  : () async {
-                      final amount =
-                          double.tryParse(_amountController.text);
-                      if (amount == null || amount <= 0) return;
-
-                      await vm.addCapital(
-                        capitalAmount: amount,
-                        remarks: _remarksController.text,
-                      );
-
-                      _amountController.clear();
-                      _remarksController.clear();
-                    },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: vm.isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text(
-                      "Add Capital",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-          ),
-        ],
+    // No need to check for null anymore
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: const AppHeader(
+        title: 'Capital Management',
+        showBackButton: true,
       ),
-    ),
-  );
-}
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 15),
 
+            // Cash on Hand
+            _miniBalanceCard(
+              title: "Cash on Hand",
+              value: vm.capitals.fold(0, (sum, e) => sum + e.cashOnHand),
+            ),
+            const SizedBox(height: 15),
+
+            // Capital
+            _miniBalanceCard(
+              title: "Capital",
+              value: vm.capitals.fold(0, (sum, e) => sum + e.capital),
+            ),
+            const SizedBox(height: 30),
+
+            _sectionTitle('Add New Capital'),
+            const SizedBox(height: 6),
+            _amountInput(),
+            const SizedBox(height: 10),
+            const Text(
+              "Enter a valid amount (greater than 0).",
+              style: TextStyle(
+                fontSize: 13,
+                color: Color.fromARGB(255, 21, 21, 21),
+              ),
+            ),
+            const SizedBox(height: 15),
+            _remarksInput(),
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: vm.isLoading
+                    ? null
+                    : () async {
+                        final amount = double.tryParse(_amountController.text);
+                        if (amount == null || amount <= 0) return;
+
+                        await vm.addCapital(
+                          capitalAmount: amount,
+                          remarks: _remarksController.text,
+                        );
+
+                        _amountController.clear();
+                        _remarksController.clear();
+                      },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: vm.isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        "Add Capital",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   /// ================= UI Helpers =================
 
-  Widget _miniBalanceCard({
-    required String title,
-    required double value,
-  }) {
+  Widget _miniBalanceCard({required String title, required double value}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -151,9 +150,9 @@ Widget build(BuildContext context) {
   }
 
   Widget _sectionTitle(String title) => Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      );
+    title,
+    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  );
 
   Widget _amountInput() {
     return _inputField(
@@ -190,9 +189,7 @@ Widget build(BuildContext context) {
             ? const TextInputType.numberWithOptions(decimal: true)
             : TextInputType.text,
         inputFormatters: numbersOnly
-            ? [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              ]
+            ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))]
             : null,
         decoration: InputDecoration(
           hintText: hint,
