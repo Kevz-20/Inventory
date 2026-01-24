@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../providers/capital_management_view_model_provider.dart';
 import '../../providers/capital_management_repository_provider.dart';
@@ -19,6 +19,12 @@ class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
+
+  final NumberFormat _currencyFormatter = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱',
+    decimalDigits: 2,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +150,7 @@ class _CapitalManagementScreenState
           Text(title, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(height: 6),
           Text(
-            "₱${value.toStringAsFixed(2)}",
+            _currencyFormatter.format(value),
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
         ],
