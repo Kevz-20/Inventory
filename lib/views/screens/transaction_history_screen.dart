@@ -17,6 +17,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   late final TransactionHistoryViewModel viewModel;
   final ScrollController _scrollController = ScrollController();
 
+  final NumberFormat _currencyFormatter = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱',
+    decimalDigits: 2,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -220,8 +226,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                         ),
                                         Text(
                                           isHalin
-                                              ? '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}'
-                                              : '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                              ? '+${_currencyFormatter.format(tx.amount ?? 0)}'
+                                              : '-${_currencyFormatter.format(tx.amount ?? 0)}',
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
