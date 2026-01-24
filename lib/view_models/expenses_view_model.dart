@@ -8,8 +8,9 @@ import '../repositories/expense_repository.dart';
 import '../repositories/capital_management_repository.dart';
 import '../providers/database_provider.dart';
 
-final expensesViewModelProvider =
-    ChangeNotifierProvider<ExpensesViewModel>((ref) {
+final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
+  ref,
+) {
   final repoFuture = ref.watch(expenseRepositoryProvider.future);
   final dbFuture = ref.watch(databaseProvider.future);
   return ExpensesViewModel(
@@ -41,7 +42,7 @@ class ExpensesViewModel extends ChangeNotifier {
   String? errorMessage;
 
   final List<String> categories = [
-    "Kumpra / Stock in",
+    "Kumpra",
     "Tubig / Kuryente",
     "Transportasyon",
     "Mga Bayronon",
@@ -92,7 +93,11 @@ class ExpensesViewModel extends ChangeNotifier {
   // ------------------------
   // MESSAGE HANDLER
   // ------------------------
-  void _showMessage(String msg, {bool isError = false, int durationSeconds = 2}) {
+  void _showMessage(
+    String msg, {
+    bool isError = false,
+    int durationSeconds = 2,
+  }) {
     if (isError) {
       errorMessage = msg;
     } else {

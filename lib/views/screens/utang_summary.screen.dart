@@ -34,9 +34,9 @@ class UtangSummaryPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 14,
-                      offset: const Offset(0, 8),
+                      color: Colors.grey.withAlpha(51),
+                      blurRadius: 2,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
