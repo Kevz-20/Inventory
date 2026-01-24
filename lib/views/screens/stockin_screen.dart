@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../../core/app_colors.dart';
 import '../../view_models/stock_in_view_model.dart';
 import '../widgets/header.dart';
@@ -57,31 +56,39 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               onChanged: vm.setCategory,
             ),
             const SizedBox(height: 15),
-
             _autocompleteProduct(vm),
             const SizedBox(height: 15),
 
+            // Purchase Price
             _inputNumberField(
               label: 'Presyo sa pagpalit',
               controller: vm.purchasePriceController,
               showError: vm.showValidationErrors,
-              prefix: '₱ ',
+              icon: Icons.currency_rupee, // Use any currency-like icon
+              isPeso: true, // ✅ show peso
             ),
+
             const SizedBox(height: 15),
 
+            // Selling Price
             _inputNumberField(
               label: 'Presyo sa pagbaligya',
               controller: vm.sellingPriceController,
               showError: vm.showValidationErrors,
-              prefix: '₱ ',
+              icon: Icons.currency_rupee,
+              isPeso: true,
             ),
+
             const SizedBox(height: 15),
 
+            // Quantity
             _inputNumberField(
               label: 'Gidaghanon',
               controller: vm.quantityController,
               showError: vm.showValidationErrors,
+              icon: Icons.format_list_numbered, // always show icon
             ),
+
             const SizedBox(height: 15),
 
             _imagePicker(vm),
@@ -113,7 +120,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ----------------- Helper Widgets -----------------
-
   Widget _messageBox({
     required Color color,
     required IconData icon,
@@ -225,7 +231,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       fieldViewBuilder: (context, fieldController, focusNode, onSubmit) {
         vm.autocompleteFieldController = fieldController;
         final isError = vm.showValidationErrors && fieldController.text.isEmpty;
-
         return SizedBox(
           height: 60,
           child: TextField(
@@ -267,9 +272,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         vm.selectedProduct = product;
         vm.productController.text = product.name;
         vm.setCategory(product.category);
-        vm.purchasePriceController.text = _formatNumber(product.purchasePrice);
-        vm.sellingPriceController.text = _formatNumber(product.sellingPrice);
-        vm.quantityController.text = _formatNumber(product.quantity);
+        vm.purchasePriceController.text = product.purchasePrice.toString();
+        vm.sellingPriceController.text = product.sellingPrice.toString();
+        vm.quantityController.text = product.quantity.toString();
         vm.productImage = product.image != null ? File(product.image!) : null;
       },
     );
@@ -279,7 +284,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     required String label,
     required TextEditingController controller,
     required bool showError,
-    String? prefix,
+    IconData? icon,
+    bool isPeso = false, // new flag for peso
   }) {
     return SizedBox(
       height: 60,
@@ -297,7 +303,21 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
-          prefixText: prefix,
+          prefixIcon: isPeso
+              ? Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    '₱',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              : icon != null
+              ? Icon(icon, color: AppColors.primary)
+              : null,
           labelText: label,
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -356,26 +376,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       ],
     );
   }
-
-  // ----------------- Utilities -----------------
-  String _formatNumber(dynamic value) {
-    if (value == null || value.toString().isEmpty) return '';
-    final digits = value.toString().replaceAll(RegExp(r'[^\d]'), '');
-    if (digits.isEmpty) return '';
-    final chars = digits.split('').reversed.toList();
-    final chunks = <String>[];
-    for (var i = 0; i < chars.length; i += 3) {
-      chunks.add(chars.skip(i).take(3).join());
-    }
-    return chunks
-        .map((e) => e.split('').reversed.join())
-        .toList()
-        .reversed
-        .join(',');
-  }
 }
 
-// ----------------- Thousands Separator Input Formatter -----------------
+// ----------------- Thousands Separator Formatter -----------------
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -389,14 +392,32 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     for (var i = 0; i < chars.length; i += 3) {
       chunks.add(chars.skip(i).take(3).join());
     }
-    final formatted = chunks
+    final formattedNumber = chunks
         .map((e) => e.split('').reversed.join())
         .toList()
         .reversed
         .join(',');
     return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      text: formattedNumber,
+      selection: TextSelection.collapsed(offset: formattedNumber.length),
     );
   }
+}
+
+// ----------------- Number Formatter -----------------
+String _formatNumber(dynamic value) {
+  if (value == null || value.toString().isEmpty) return '';
+  final digits = value.toString().replaceAll(RegExp(r'[^\d]'), '');
+  if (digits.isEmpty) return '';
+  final chars = digits.split('').reversed.toList();
+  final chunks = <String>[];
+  for (var i = 0; i < chars.length; i += 3) {
+    chunks.add(chars.skip(i).take(3).join());
+  }
+  final formattedNumber = chunks
+      .map((e) => e.split('').reversed.join())
+      .toList()
+      .reversed
+      .join(',');
+  return formattedNumber;
 }
