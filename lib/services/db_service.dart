@@ -19,7 +19,7 @@ class DBService {
   final path = join(dbPath, filePath);
   return await openDatabase(
     path,
-    version: 2, // Incremented from 1 -> 2
+    version: 3, // Incremented from 1 -> 2
     onCreate: _createDB,
     onUpgrade: (db, oldVersion, newVersion) async {
       if (oldVersion < 2) {
@@ -195,7 +195,7 @@ class DBService {
 
         FOREIGN KEY (account_id) REFERENCES account(id),
         FOREIGN KEY (product_id) REFERENCES product(id),
-        FOREIGN KEY (sale_id) REFERENCES sale(id),
+        FOREIGN KEY (sale_id) REFERENCES sales(id),
         FOREIGN KEY (expense_id) REFERENCES expenses(id),
         FOREIGN KEY (capital_transaction_id) REFERENCES capital_transaction(id)
       )
@@ -307,8 +307,8 @@ class DBService {
         paid_date TEXT,
         due_date TEXT,
         created_at TEXT,
-        FOREIGN KEY  (account_id) REFERENCES account (id),
-        FOREIGN KEY (sale_id) REFERENCES sale (id),
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (sale_id) REFERENCES sales (id),
         FOREIGN KEY (product_id) REFERENCES product (id),
         FOREIGN KEY (customer_id) REFERENCES customer (id),
         FOREIGN KEY (status_id) REFERENCES credit_status (id)

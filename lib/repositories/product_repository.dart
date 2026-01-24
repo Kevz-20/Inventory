@@ -72,51 +72,83 @@ class ProductRepository {
     await batch.commit(noResult: true);
   }
 
+  Future<void> updateProductStock(int productId, int quantitySold) async {
+  await db.rawUpdate(
+    'UPDATE product SET quantity = quantity - ? WHERE id = ?',
+    [quantitySold, productId],
+  );
+}
+
+  
   Future<List<Map<String, dynamic>>> getCustomers({bool shared = false}) async {
-    try {
-      if (shared) {
-        // Fetch all customers from all accounts
-        return await db.query('customers');
-      } else {
-        // Fetch only customers for current account
-        final accountId = await AccountRepository().getAccountId();
-        return await db.query(
-          'customers',
-          where: 'account_id = ?',
-          whereArgs: [accountId],
-        );
-      }
-    } catch (e) {
-      return [];
+  try {
+    if (shared) {
+      return await db.query('customer'); // ✅ correct table
+    } else {
+      final accountId = await AccountRepository().getAccountId();
+      return await db.query(
+        'customer', // ✅ correct table
+        where: 'account_id = ?',
+        whereArgs: [accountId],
+      );
     }
+  } catch (e) {
+    print('Failed to fetch customers: $e');
+    return [];
   }
+}
+
 
   // ------------------- SALES -------------------
 
   // Cash checkout
   Future<void> checkoutCash(List<Map<String, dynamic>> items) async {
-    final accountId = await accountRepo.getAccountId();
-    final batch = db.batch();
-    final now = DateTime.now().toIso8601String();
+  final accountId = await accountRepo.getAccountId();
+  final now = DateTime.now().toIso8601String();
 
-    for (var item in items) {
-      batch.insert('sales_cash', {
-        'account_id': accountId,
-        'product_id': item['productId'],
-        'amount': item['subtotal'],
-        'quantity': item['quantity'],
-        'date': now,
-        'created_at': now,
-      });
+  // Calculate total safely converting num -> int
+  final total = items.fold<int>(
+    0,
+    (sum, item) => sum + (item['subtotal'] as num).toInt(),
+  );
 
-      batch.rawUpdate(
-        'UPDATE product SET quantity = quantity - ? WHERE id = ?',
-        [item['quantity'], item['productId']],
-      );
-    }
+  // Insert main sale record
+  final saleId = await insertSale(
+    accountId: accountId,
+    saleType: 'cash',
+    total: total,
+    createdAt: now,
+  );
 
-    await batch.commit(noResult: true);
+  // Insert each sale item + sales_cash + update stock
+  for (var item in items) {
+    final productId = item['productId'];
+    final subtotal = (item['subtotal'] as num).toInt();
+    final unitPrice = (item['price'] as num).toInt();
+    final quantity = (item['quantity'] as num).toInt();
+
+    await insertSaleItem(
+      saleId: saleId,
+      productId: productId,
+      unitPrice: unitPrice,
+      quantity: quantity,
+      subtotal: subtotal,
+    );
+
+    await insertSalesCash(
+      accountId: accountId,
+      productId: productId,
+      amount: subtotal,
+      quantity: quantity,
+      date: now,
+      createdAt: now,
+    );
+
+    await updateProductStock(productId, quantity);
   }
+}
+
+
 
   // Insert into main sales table and return sale ID
   Future<int> insertSale({
@@ -200,43 +232,97 @@ class ProductRepository {
 
   // Credit checkout
   Future<void> checkoutCredit(
-    List<Map<String, dynamic>> items,
-    int customerId, {
-    DateTime? dueDate,
-  }) async {
-    final accountId = await accountRepo.getAccountId();
-    final batch = db.batch();
-    final now = DateTime.now().toIso8601String();
-    final due =
-        dueDate?.toIso8601String() ??
-        DateTime.now().add(Duration(days: 30)).toIso8601String();
+  List<Map<String, dynamic>> items,
+  int customerId, {
+  DateTime? dueDate,
+}) async {
+  final accountId = await accountRepo.getAccountId();
+  final now = DateTime.now().toIso8601String();
+  final due = dueDate?.toIso8601String() ??
+      DateTime.now().add(const Duration(days: 30)).toIso8601String();
 
+  await db.transaction((txn) async {
+    // 1️⃣ Verify customer exists for this account
+    final customerExists = await txn.query(
+      'customer',
+      where: 'id = ? AND account_id = ?',
+      whereArgs: [customerId, accountId],
+    );
+    if (customerExists.isEmpty) {
+      throw Exception('Customer does not exist for this account');
+    }
+
+    // 2️⃣ Get status_id for unpaid credit
+    final statusResult = await txn.query(
+      'credit_status',
+      where: 'code = ?',
+      whereArgs: [0], // unpaid
+    );
+    if (statusResult.isEmpty) {
+      throw Exception('Credit status "unpaid" not found in database');
+    }
+    final statusId = statusResult.first['id'] as int;
+
+    // 3️⃣ Insert main sale record
+    final saleId = await txn.insert('sales', {
+      'account_id': accountId,
+      'customer_id': customerId,
+      'sale_type': 'credit',
+      'total': items.fold<int>(
+          0, (sum, item) => sum + (item['subtotal'] as num).toInt()),
+      'created_at': now,
+    });
+
+    // 4️⃣ Insert each sale item + sales_credit + update stock
     for (var item in items) {
-      batch.insert('sales_credit', {
+      final productId = item['productId'];
+
+      // Check product exists for this account
+      final productExists = await txn.query(
+        'product',
+        where: 'id = ? AND account_id = ?',
+        whereArgs: [productId, accountId],
+      );
+      if (productExists.isEmpty) {
+        throw Exception('Product $productId does not exist for this account');
+      }
+
+      final subtotal = (item['subtotal'] as num).toInt();
+      final unitPrice = (item['price'] as num).toInt();
+      final quantity = (item['quantity'] as num).toInt();
+
+      // Insert into sale_item
+      await txn.insert('sale_item', {
+        'sale_id': saleId,
+        'product_id': productId,
+        'unit_price': unitPrice,
+        'quantity': quantity,
+        'subtotal': subtotal,
+      });
+
+      // Insert into sales_credit
+      await txn.insert('sales_credit', {
         'account_id': accountId,
-        'product_id': item['productId'],
+        'sale_id': saleId,
+        'product_id': productId,
         'customer_id': customerId,
-        'amount': item['subtotal'],
-        'quantity': item['quantity'],
-        'status_id': 0, // unpaid
+        'amount': subtotal,
+        'quantity': quantity,
+        'status_id': statusId,
         'credit_date': now,
         'due_date': due,
         'created_at': now,
       });
 
-      batch.rawUpdate(
+      // Update product stock
+      await txn.rawUpdate(
         'UPDATE product SET quantity = quantity - ? WHERE id = ?',
-        [item['quantity'], item['productId']],
+        [quantity, productId],
       );
     }
+  });
+}
 
-    await batch.commit(noResult: true);
-  }
 
-  Future<void> updateProductStock(int productId, int quantitySold) async {
-    await db.rawUpdate(
-      'UPDATE product SET quantity = quantity - ? WHERE id = ?',
-      [quantitySold, productId],
-    );
-  }
+
 }
