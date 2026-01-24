@@ -112,15 +112,59 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildRow('Sales', income.sales),
-                        _buildRow('Merchandise Sales', income.merchandiseSales),
-                        _buildRow('Total Sales', income.sales),
-                        _buildRow('Expenses', income.totalExpenses),
-                        _buildRow('Kumpra', income.kumpra),
-                        _buildRow('Transportation', income.transportation),
-                        _buildRow('Total Expenses', income.totalExpenses),
-                        _buildRow('Net Income', income.netIncome, bold: true),
+                        const Text(
+                          'Sales',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _leaderRow(
+                          'Merchandise Sales',
+                          income.merchandiseSales,
+                          indent: true,
+                        ),
+                        _leaderRow(
+                          'TOTAL SALES',
+                          income.sales,
+                          bold: true,
+                          indent: true,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Expenses',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _leaderRow('Kompra', income.kompra, indent: true),
+                        _leaderRow(
+                          'Kuryente / Tubig',
+                          income.electricity,
+                          indent: true,
+                        ),
+                        _leaderRow(
+                          'Transportation',
+                          income.transportation,
+                          indent: true,
+                        ),
+                        _leaderRow(
+                          'Mga Bayronon',
+                          income.rentPayment,
+                          indent: true,
+                        ),
+                        _leaderRow(
+                          'Uban Pa',
+                          income.miscExpenses,
+                          indent: true,
+                        ),
+                        const Divider(height: 24),
+                        _leaderRow('NET INCOME', income.netIncome, bold: true),
                       ],
                     ),
                   ),
@@ -144,7 +188,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
 
               await vm.exportPdf();
             },
-
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFED1C24),
               shape: RoundedRectangleBorder(
@@ -167,27 +210,46 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     );
   }
 
-  Widget _buildRow(String title, double value, {bool bold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-            color: Colors.black87,
+  Widget _leaderRow(
+    String title,
+    double value, {
+    bool bold = false,
+    bool indent = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(left: indent ? 16 : 0, top: 6, bottom: 6),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+            ),
           ),
-        ),
-        Text(
-          value.toStringAsFixed(2),
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: bold ? FontWeight.w700 : FontWeight.bold,
-            color: Colors.black54,
+          const SizedBox(width: 8),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (_, constraints) {
+                final dotCount = (constraints.maxWidth / 6).floor();
+                return Text(
+                  '.' * dotCount,
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  style: const TextStyle(color: Colors.black26),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(value),
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -207,7 +269,7 @@ class _DateBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 51),
+            color: Colors.grey.withAlpha(51),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

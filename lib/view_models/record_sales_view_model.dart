@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/capital_management_model.dart';
 import '../models/product_model.dart';
 import '../repositories/product_repository.dart';
 import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
+import '../repositories/capital_management_repository.dart';
 
 final salesViewModelProvider = ChangeNotifierProvider<SalesViewModel>((ref) {
   return SalesViewModel();
 });
 
 class SalesViewModel extends ChangeNotifier {
+  CapitalManagementRepository? _capitalRepository;
   ProductRepository? _productRepository;
   CustomerRepository? _customerRepository;
   Map<String, dynamic>? selectedCustomer;
@@ -44,6 +47,7 @@ class SalesViewModel extends ChangeNotifier {
       final db = await DBService.instance.database;
       _productRepository = ProductRepository(db);
       _customerRepository = CustomerRepository(db);
+      _capitalRepository = CapitalManagementRepository(db);
       await loadProducts();
       await loadCustomers();
     } catch (_) {}
@@ -225,7 +229,36 @@ class SalesViewModel extends ChangeNotifier {
 
     try {
       if (isCash) {
+        // 1️⃣ Record sale in product repository
         await _productRepository!.checkoutCash(purchasedItems);
+
+        // 2️⃣ Add total cash to Cash on Hand
+        if (_capitalRepository != null) {
+          // Calculate total from purchased items
+          double totalCash = purchasedItems.fold<double>(
+            0.0,
+            (sum, item) => sum + (item['subtotal'] as double),
+          );
+
+          // Get latest capital record
+          final capitals = await _capitalRepository!.getCapitalByAccount();
+          if (capitals.isNotEmpty) {
+            final latest = capitals.last;
+            final updatedCash = latest.cashOnHand + totalCash;
+
+            final updatedModel = CapitalManagementModel(
+              id: latest.id,
+              accountId: latest.accountId,
+              capital: latest.capital, // keep original capital
+              cashOnHand: updatedCash, // ✅ increment cash on hand
+              bankCash: latest.bankCash,
+              remarks: 'Cash sale added',
+              createdAt: DateTime.now(),
+            );
+
+            await _capitalRepository!.updateCapital(updatedModel);
+          }
+        }
       } else {
         if (customerId == null || dueDate == null) {
           throw Exception('Customer and due date required for utang.');
