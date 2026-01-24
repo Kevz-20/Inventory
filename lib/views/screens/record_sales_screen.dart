@@ -23,6 +23,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   String searchQuery = '';
   DateTime? dueDate;
 
+  ScrollController _categoryScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +38,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   @override
   void dispose() {
     searchController.dispose();
+    _categoryScrollController.dispose();
     super.dispose();
   }
 
@@ -59,63 +62,63 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                           vertical: 10,
                         ),
                         child: Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    _cashUtangSwitch(vm),
-    
-    // ===== Show selected customer + due date if in Utang mode =====
-    if (!isCash && vm.selectedCustomer != null)
-      Padding(
-        padding: const EdgeInsets.only(top: 8.0, left: 0, right: 0),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withAlpha(51),
-                blurRadius: 2,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Customer: ${vm.selectedCustomer!['first_name']} ${vm.selectedCustomer!['last_name']}',
-                style: const TextStyle(
-                  fontSize: 16, 
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                style: const TextStyle(
-                  fontSize: 14, 
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _cashUtangSwitch(vm),
 
-    const SizedBox(height: 16),
-    _searchBar(vm),
-    const SizedBox(height: 12),
-    _categoryChips(vm),
-  ],
-),
+                            if (!isCash && vm.selectedCustomer != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withAlpha(51),
+                                        blurRadius: 2,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Customer: ${vm.selectedCustomer!['first_name']} ${vm.selectedCustomer!['last_name']}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            const SizedBox(height: 16),
+                            _searchBar(vm),
+                            const SizedBox(height: 12),
+                            _categoryChips(vm),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: isCash || isProductMode
-                            ? _productList(vm) // show products
-                            : _utangList(),  // show customers
+                            ? _productList(vm)
+                            : _utangList(),
                       ),
                     ],
                   ),
@@ -126,38 +129,28 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     );
   }
 
-  // ===============================
-  // Helper widgets
-  // ===============================
   Widget _cashUtangSwitch(SalesViewModel vm) => Row(
-      children: [
-        _switchButton("Cash", isCash, () {
-          setState(() {
-            isCash = true;
-            isProductMode = false;
-
-            // RESET utang info when switching to Cash
-            vm.selectedCustomer = null;
-            dueDate = null;
-          });
-          vm.resetQuantities();
-          vm.loadProducts();
-        }),
-        const SizedBox(width: 10),
-        _switchButton("Utang", !isCash, () {
-          setState(() {
-            isCash = false;
-            isProductMode = false;
-
-            // Optional: keep previous customer & dueDate when switching to Utang?
-            // If you want to reset every time Utang is tapped, uncomment below:
-            // vm.selectedCustomer = null;
-            // dueDate = null;
-          });
-          vm.resetQuantities();
-        }),
-      ],
-    );
+    children: [
+      _switchButton("Cash", isCash, () {
+        setState(() {
+          isCash = true;
+          isProductMode = false;
+          vm.selectedCustomer = null;
+          dueDate = null;
+        });
+        vm.resetQuantities();
+        vm.loadProducts();
+      }),
+      const SizedBox(width: 10),
+      _switchButton("Utang", !isCash, () {
+        setState(() {
+          isCash = false;
+          isProductMode = false;
+        });
+        vm.resetQuantities();
+      }),
+    ],
+  );
 
   Widget _switchButton(String title, bool active, VoidCallback onTap) =>
       Expanded(
@@ -189,10 +182,234 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         ),
       );
 
+  Widget _searchBar(SalesViewModel vm) {
+    if (isCash || (!isCash && isProductMode)) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha(51),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextField(
+          controller: searchController,
+          onChanged: (value) {
+            setState(() => searchQuery = value);
+          },
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            hintText: "Search products",
+            icon: Icon(Icons.search, size: 22, color: Colors.black),
+            hintStyle: TextStyle(color: Colors.black),
+          ),
+        ),
+      );
+    } else {
+      return Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withAlpha(51),
+                    blurRadius: 2,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: searchController,
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                    isProductMode = false;
+                  });
+                },
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: "Search customer",
+                  icon: Icon(Icons.person, size: 22, color: Colors.black),
+                  hintStyle: TextStyle(color: Colors.black),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NewCustomerPage()),
+              );
+
+              if (result == true) {
+                final vm = ref.read(salesViewModelProvider);
+                await vm.loadCustomers();
+                setState(() {
+                  searchController.clear();
+                  searchQuery = '';
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _categoryChips(SalesViewModel vm) {
+    if (!isCash) return const SizedBox.shrink();
+
+    const arrowWidth = 30.0; // arrow container width
+    const arrowIconSize = 24.0; // bigger arrows
+    const chipHeight = 40.0; //bigger chip height for easier tap
+    const chipFontSize = 15.0; //bigger text for readability
+
+    return SizedBox(
+      height: chipHeight,
+      child: Stack(
+        children: [
+          // Horizontal category list
+          ListView.separated(
+            controller: _categoryScrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: arrowWidth),
+            itemCount: SalesViewModel.categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final selected = index == vm.selectedCategoryIndex;
+              return GestureDetector(
+                onTap: () => vm.selectCategory(index),
+                child: Container(
+                  height: chipHeight,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  alignment: Alignment.center, // center text vertically
+                  decoration: BoxDecoration(
+                    color: selected ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withAlpha(51),
+                        blurRadius: 2,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    SalesViewModel.categories[index],
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                      fontSize: chipFontSize,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Left arrow
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: () {
+                _categoryScrollController.animateTo(
+                  (_categoryScrollController.offset - 100).clamp(
+                    0.0,
+                    _categoryScrollController.position.maxScrollExtent,
+                  ),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              },
+              child: Container(
+                width: arrowWidth,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      AppColors.surface,
+                      AppColors.surface.withOpacity(0),
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios,
+                  size: arrowIconSize,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+
+          // Right arrow
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onTap: () {
+                _categoryScrollController.animateTo(
+                  (_categoryScrollController.offset + 100).clamp(
+                    0.0,
+                    _categoryScrollController.position.maxScrollExtent,
+                  ),
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              },
+              child: Container(
+                width: arrowWidth,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: [
+                      AppColors.surface,
+                      AppColors.surface.withOpacity(0),
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: arrowIconSize,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _productList(SalesViewModel vm) {
     final displayedProducts = vm.filteredProducts
-        .where((p) =>
-            p.name.toLowerCase().contains(searchQuery.toLowerCase()))
+        .where((p) => p.name.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
 
     if (displayedProducts.isEmpty) {
@@ -215,283 +432,63 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     );
   }
 
-  Widget _utangList() {
-    final vm = ref.watch(salesViewModelProvider);
-
-  if (!isProductMode) {
-    // Step 1: show customer search + due date
-    final filteredCustomers = vm.customers.where((customer) {
-      final name = '${customer['first_name']} ${customer['last_name']}';
-      return name.toLowerCase().contains(searchQuery.toLowerCase());
-    }).toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _dueDateCard(),
-          const SizedBox(height: 12),
-          _customerInput(),
-          const SizedBox(height: 12),
-          if (filteredCustomers.isNotEmpty)
-            ...filteredCustomers.map((customer) {
-              return Column(
-                children: [
-                  _customerItem(customer),
-                  const SizedBox(height: 8),
-                ],
-              );
-            }).toList()
-          else
-            const Text(
-              "No customers found",
-              style: TextStyle(color: Colors.black54),
-            ),
-        ],
-      ),
-    );
-  } else {
-    // Step 2: Customer selected → show products like Cash but stay in Utang
-    return Column(
+  Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
+    margin: const EdgeInsets.symmetric(vertical: 4),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withAlpha(51),
+          blurRadius: 2,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Row(
       children: [
-        // Selected customer + due date
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Colors.white,
+        _productImage(product),
+        const SizedBox(width: 12),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
+                product.name,
                 style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-              const SizedBox(height: 4),
               Text(
-                'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                style: const TextStyle(fontSize: 14, color: Colors.black54),
+                "Price: ₱${product.sellingPrice}",
+                style: const TextStyle(color: Colors.black87),
+              ),
+              Text(
+                "Stock: ${product.quantity}",
+                style: const TextStyle(color: Colors.black87),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        // Product search and category chips
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              _searchBar(vm),
-              const SizedBox(height: 12),
-              _categoryChips(vm),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Product list
-        Expanded(child: _productList(vm)),
-      ],
-    );
-  }
-}
-
-
-  Widget _searchBar(SalesViewModel vm) {
-  if (isCash || (!isCash && isProductMode)) {
-    // show product search
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(51),
-            blurRadius: 2,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: searchController,
-        onChanged: (value) {
-          setState(() => searchQuery = value);
-        },
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          hintText: "Search products",
-          icon: Icon(Icons.search, size: 22, color: Colors.black),
-          hintStyle: TextStyle(color: Colors.black),
-        ),
-      ),
-    );
-  } else {
-    // show customer search + add button
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withAlpha(51),
-                  blurRadius: 2,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: searchController,
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                  isProductMode = false; // reset product mode when searching
-                });
-              },
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: "Search customer",
-                icon: Icon(Icons.person, size: 22, color: Colors.black),
-                hintStyle: TextStyle(color: Colors.black),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        GestureDetector(
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NewCustomerPage()),
-            );
-
-            if (result == true) {
-              final vm = ref.read(salesViewModelProvider);
-              await vm.loadCustomers();
-              setState(() {
-                searchController.clear();
-                searchQuery = '';
-              });
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-  Widget _categoryChips(SalesViewModel vm) {
-    if (!isCash) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: 50,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(left: 0, right: 8),
-        itemCount: SalesViewModel.categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final selected = index == vm.selectedCategoryIndex;
-          return GestureDetector(
-            onTap: () => vm.selectCategory(index),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withAlpha(51),
-                    blurRadius: 2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                SalesViewModel.categories[index],
-                style: TextStyle(
-                  color: selected ? Colors.white : Colors.black87,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha(51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _productImage(product),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Text(
-                    "Price: ₱${product.sellingPrice}",
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                  Text(
-                    "Stock: ${product.quantity}",
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                ],
+            _quantitySelector(product, vm),
+            const SizedBox(height: 6),
+            Text(
+              "Subtotal: ₱${vm.getSubtotal(product)}",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _quantitySelector(product, vm),
-                const SizedBox(height: 6),
-                Text(
-                  "Subtotal: ₱${vm.getSubtotal(product)}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
             ),
           ],
         ),
-      );
+      ],
+    ),
+  );
 
   Widget _productImage(ProductModel product) {
     if (product.image == null || product.image!.isEmpty) {
@@ -529,9 +526,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () {
-              vm.decrementQuantity(product);
-            },
+            onPressed: () => vm.decrementQuantity(product),
             icon: const Icon(Icons.remove, size: 18),
           ),
           SizedBox(
@@ -554,9 +549,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             ),
           ),
           IconButton(
-            onPressed: () {
-              vm.incrementQuantity(product);
-            },
+            onPressed: () => vm.incrementQuantity(product),
             icon: const Icon(Icons.add, size: 18),
           ),
         ],
@@ -564,175 +557,82 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     );
   }
 
-  // ===============================
-  // Show summary (INSIDE class)
-  // ===============================
-  void _showSummary(BuildContext context, SalesViewModel vm) {
-    final selectedProducts = vm.products.where((p) {
-      final id = p.id;
-      if (id == null) return false;
-      return (vm.productQuantities[id] ?? 0) > 0;
-    }).toList();
+  Widget _utangList() {
+    final vm = ref.watch(salesViewModelProvider);
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text(
-                    'Sale Summary',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: selectedProducts.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No products selected',
-                              style:
-                                  TextStyle(fontSize: 16, color: Colors.black54),
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: selectedProducts.length,
-                            itemBuilder: (_, index) {
-                              final product = selectedProducts[index];
-                              final qty = vm.getQuantity(product);
-                              final subtotal = vm.getSubtotal(product);
+    if (!isProductMode) {
+      final filteredCustomers = vm.customers.where((customer) {
+        final name = '${customer['first_name']} ${customer['last_name']}';
+        return name.toLowerCase().contains(searchQuery.toLowerCase());
+      }).toList();
 
-                              return ListTile(
-                                title: Text(product.name),
-                                subtitle: Text('₱${product.sellingPrice} × $qty'),
-                                trailing: Text(
-                                  '₱${subtotal.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'TOTAL',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '₱${vm.total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final selectedCustomer = vm.selectedCustomer;
-
-                            if (!isCash &&
-                                (selectedCustomer == null || dueDate == null)) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Please select a customer and due date for utang.'),
-                                  duration: Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
-
-                            if (!isCash && selectedProducts.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Please select at least one product for utang.'),
-                                  duration: Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
-
-                            Navigator.pop(context);
-
-                            try {
-                              if (isCash) {
-                                await vm.checkout();
-                              } else {
-                                await vm.checkout(
-                                  isCash: false,
-                                  customerId: selectedCustomer!['id'],
-                                  dueDate: dueDate!,
-                                );
-                              }
-
-                              vm.resetQuantities();
-                              vm.selectedCustomer = null;
-                              dueDate = null;
-                              isProductMode = false;
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                      const Text('Sale successfully recorded!'),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Checkout failed: $e'),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text('Confirm'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+      return SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _dueDateCard(),
+            const SizedBox(height: 12),
+            _customerInput(),
+            const SizedBox(height: 12),
+            if (filteredCustomers.isNotEmpty)
+              ...filteredCustomers.map(
+                (customer) => Column(
+                  children: [
+                    _customerItem(customer),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              )
+            else
+              const Text(
+                "No customers found",
+                style: TextStyle(color: Colors.black54),
               ),
+          ],
+        ),
+      );
+    } else {
+      return Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                _searchBar(vm),
+                const SizedBox(height: 12),
+                _categoryChips(vm),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: _productList(vm)),
+        ],
+      );
+    }
   }
 
   Widget _dueDateCard() {
@@ -747,9 +647,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         );
 
         if (pickedDate != null) {
-          setState(() {
-            dueDate = pickedDate;
-          });
+          setState(() => dueDate = pickedDate);
         }
       },
       child: Container(
@@ -801,79 +699,249 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _customerItem(Map<String, dynamic> customer) {
-  final vm = ref.read(salesViewModelProvider);
+    final vm = ref.read(salesViewModelProvider);
 
-  return GestureDetector(
-    onTap: () {
-      if (dueDate == null) {
-        // Show snackbar and prevent switching to products
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a due date before proceeding.'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.red,
+    return GestureDetector(
+      onTap: () {
+        if (dueDate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a due date before proceeding.'),
+              duration: Duration(seconds: 2),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        setState(() {
+          vm.selectedCustomer = customer;
+          isProductMode = true;
+          searchController.clear();
+          searchQuery = '';
+        });
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          "${customer['first_name']} ${customer['last_name']}",
+          style: const TextStyle(fontSize: 16),
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomBar(SalesViewModel vm) {
+    final bool canCheckout = vm.hasSelectedProducts;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: canCheckout ? () => _showSummary(context, vm) : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: canCheckout
+                    ? AppColors.primary
+                    : Colors.grey.shade400,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: canCheckout ? 2 : 0,
+              ),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text("Checkout", style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSummary(BuildContext context, SalesViewModel vm) {
+    final selectedProducts = vm.products.where((p) {
+      final id = p.id;
+      if (id == null) return false;
+      return (vm.productQuantities[id] ?? 0) > 0;
+    }).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text(
+                    'Sale Summary',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: selectedProducts.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No products selected',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: selectedProducts.length,
+                            itemBuilder: (_, index) {
+                              final product = selectedProducts[index];
+                              final qty = vm.getQuantity(product);
+                              final subtotal = vm.getSubtotal(product);
+
+                              return ListTile(
+                                title: Text(product.name),
+                                subtitle: Text(
+                                  '₱${product.sellingPrice} × $qty',
+                                ),
+                                trailing: Text(
+                                  '₱${subtotal.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'TOTAL',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '₱${vm.total.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final selectedCustomer = vm.selectedCustomer;
+
+                            if (!isCash &&
+                                (selectedCustomer == null || dueDate == null)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please select a customer and due date for utang.',
+                                  ),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (!isCash && selectedProducts.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please select at least one product for utang.',
+                                  ),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.pop(context);
+
+                            try {
+                              if (isCash) {
+                                await vm.checkout();
+                              } else {
+                                await vm.checkout(
+                                  isCash: false,
+                                  customerId: selectedCustomer!['id'],
+                                  dueDate: dueDate!,
+                                );
+                              }
+
+                              vm.resetQuantities();
+                              vm.selectedCustomer = null;
+                              dueDate = null;
+                              isProductMode = false;
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Sale successfully recorded!',
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Checkout failed: $e'),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text('Confirm'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
-        return;
-      }
-
-      setState(() {
-        vm.selectedCustomer = customer;
-        isProductMode = true;
-        searchController.clear();
-        searchQuery = '';
-      });
-    },
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        "${customer['first_name']} ${customer['last_name']}",
-        style: const TextStyle(fontSize: 16),
-      ),
-    ),
-  );
-}
-
-
- Widget _bottomBar(SalesViewModel vm) {
-  final bool canCheckout = vm.hasSelectedProducts;
-
-  return Container(
-    padding: const EdgeInsets.all(16),
-    color: Colors.white,
-    child: Row(
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: canCheckout
-                ? () => _showSummary(context, vm)
-                : null, // 🔒 disabled when no products selected
-            style: ElevatedButton.styleFrom(
-              backgroundColor: canCheckout
-                  ? AppColors.primary
-                  : Colors.grey.shade400,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: canCheckout ? 2 : 0,
-            ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              child: Text(
-                "Checkout",
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
+      },
+    );
+  }
 }
