@@ -15,6 +15,34 @@ class CapitalManagementScreen extends ConsumerStatefulWidget {
       _CapitalManagementScreenState();
 }
 
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  final NumberFormat formatter = NumberFormat('#,##0.##');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    final rawText = newValue.text.replaceAll(',', '');
+
+    final value = double.tryParse(rawText);
+    if (value == null) {
+      return oldValue;
+    }
+
+    final formatted = formatter.format(value);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
   final TextEditingController _amountController = TextEditingController();
@@ -82,7 +110,7 @@ class _CapitalManagementScreenState
                         ? null
                         : () async {
                             final amount = double.tryParse(
-                              _amountController.text,
+                              _amountController.text.replaceAll(',', ''),
                             );
                             if (amount == null || amount <= 0) return;
 
@@ -194,7 +222,10 @@ class _CapitalManagementScreenState
             ? const TextInputType.numberWithOptions(decimal: true)
             : TextInputType.text,
         inputFormatters: numbersOnly
-            ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))]
+            ? [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                ThousandsSeparatorInputFormatter(),
+              ]
             : null,
         decoration: InputDecoration(
           hintText: hint,
