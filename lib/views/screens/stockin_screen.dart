@@ -354,7 +354,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Upload Image',
+          'Product Image',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
