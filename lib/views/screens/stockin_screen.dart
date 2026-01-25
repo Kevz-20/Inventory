@@ -91,7 +91,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
             const SizedBox(height: 15),
 
-            _imagePicker(vm),
+            _imagePicker(vm, context),
           ],
         ),
       ),
@@ -403,7 +403,52 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
-  Widget _imagePicker(StockInViewModel vm) {
+  Widget _imagePicker(StockInViewModel vm, BuildContext context) {
+    Future<void> pickImage() async {
+      showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(
+                    Icons.photo_library,
+                    size: 30,
+                    color: AppColors.primary,
+                  ),
+                  label: const Text("Gallery", style: TextStyle(fontSize: 18)),
+                  onPressed: () {
+                    vm.pickImage(ImageSource.gallery);
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  icon: const Icon(
+                    Icons.camera_alt,
+                    size: 30,
+                    color: AppColors.primary,
+                  ),
+                  label: const Text("Camera", style: TextStyle(fontSize: 18)),
+                  onPressed: () {
+                    vm.pickImage(ImageSource.camera);
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -413,7 +458,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () => vm.pickImage(ImageSource.gallery),
+          onTap: pickImage,
           child: Container(
             height: 150,
             width: double.infinity,
@@ -422,15 +467,17 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade400),
             ),
-            clipBehavior: Clip.hardEdge, // ensures rounded corners
+            clipBehavior: Clip.hardEdge,
             child: vm.productImage != null
                 ? Image.file(
                     vm.productImage!,
-                    fit: BoxFit.contain, // keeps aspect ratio
+                    fit: BoxFit.contain,
                     width: double.infinity,
                     height: 150,
                   )
-                : const Icon(Icons.camera_alt, size: 50, color: Colors.grey),
+                : const Center(
+                    child: Icon(Icons.camera_alt, size: 50, color: Colors.grey),
+                  ),
           ),
         ),
       ],
