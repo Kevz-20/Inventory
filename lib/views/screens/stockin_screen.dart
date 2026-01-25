@@ -86,7 +86,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               label: 'Gidaghanon',
               controller: vm.quantityController,
               showError: vm.showValidationErrors,
-              icon: Icons.format_list_numbered, // always show icon
+              icon: Icons.shopping_cart,
             ),
 
             const SizedBox(height: 15),
@@ -157,10 +157,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             initialDate: vm.selectedDate,
             firstDate: DateTime(2020),
             lastDate: DateTime(2100),
+            builder: (context, child) => Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: ColorScheme.light(
+                  primary: AppColors.primary, // header & selected day
+                  onPrimary: Colors.white, // selected day text
+                  onSurface: AppColors.textPrimary, // unselected day text
+                ),
+              ),
+              child: child!,
+            ),
           );
           if (picked != null) vm.pickDate(picked);
         },
         controller: TextEditingController(text: vm.formattedDate),
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+        ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
@@ -214,7 +228,18 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       ),
       dropdownColor: Colors.white,
       items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text(
+                e,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
     );
@@ -228,16 +253,54 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           (name) => name.toLowerCase().startsWith(value.text.toLowerCase()),
         );
       },
+
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options.elementAt(index);
+                  return InkWell(
+                    onTap: () => onSelected(option),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 20,
+                      ),
+                      child: Text(
+                        option,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+
       fieldViewBuilder: (context, fieldController, focusNode, onSubmit) {
-        vm.autocompleteFieldController = fieldController;
-        final isError = vm.showValidationErrors && fieldController.text.isEmpty;
         return SizedBox(
           height: 60,
           child: TextField(
             controller: fieldController,
             focusNode: focusNode,
             style: const TextStyle(
-              color: AppColors.textPrimary,
+              color: Colors.black,
               fontWeight: FontWeight.bold,
             ),
             decoration: InputDecoration(
@@ -247,26 +310,17 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               labelText: 'Pangalan sa produkto',
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isError ? Colors.red : Colors.grey.shade400,
-                ),
+                borderSide: BorderSide(color: Colors.grey.shade400),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: isError ? Colors.red : AppColors.primary,
-                ),
+                borderSide: const BorderSide(color: AppColors.primary),
               ),
             ),
-            onChanged: (text) {
-              vm.productController.text = text;
-              vm.productController.selection = TextSelection.fromPosition(
-                TextPosition(offset: text.length),
-              );
-            },
           ),
         );
       },
+
       onSelected: (value) {
         final product = vm.allProducts.firstWhere((p) => p.name == value);
         vm.selectedProduct = product;
@@ -368,8 +422,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade400),
             ),
+            clipBehavior: Clip.hardEdge, // ensures rounded corners
             child: vm.productImage != null
-                ? Image.file(vm.productImage!, fit: BoxFit.cover)
+                ? Image.file(
+                    vm.productImage!,
+                    fit: BoxFit.contain, // keeps aspect ratio
+                    width: double.infinity,
+                    height: 150,
+                  )
                 : const Icon(Icons.camera_alt, size: 50, color: Colors.grey),
           ),
         ),
