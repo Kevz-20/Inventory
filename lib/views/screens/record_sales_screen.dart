@@ -294,7 +294,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: arrowWidth),
             itemCount: SalesViewModel.categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final selected = index == vm.selectedCategoryIndex;
               return GestureDetector(
@@ -350,10 +350,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
-                    colors: [
-                      AppColors.surface,
-                      AppColors.surface.withOpacity(0),
-                    ],
+                    colors: [AppColors.surface, AppColors.surface],
                   ),
                 ),
                 child: const Icon(
@@ -388,10 +385,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.centerRight,
                     end: Alignment.centerLeft,
-                    colors: [
-                      AppColors.surface,
-                      AppColors.surface.withOpacity(0),
-                    ],
+                    colors: [AppColors.surface, AppColors.surface],
                   ),
                 ),
                 child: const Icon(
