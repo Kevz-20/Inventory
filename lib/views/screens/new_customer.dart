@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/new_customer_view_model.dart';
+import '../widgets/header.dart';
 
 class NewCustomerPage extends ConsumerWidget {
   const NewCustomerPage({super.key});
@@ -25,10 +26,7 @@ class NewCustomerPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        title: const Text('Add New Customer'),
-        backgroundColor: AppColors.primary,
-      ),
+      appBar: const AppHeader(title: 'Add New Customer', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -1,12 +1,11 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
-import 'new_customer.dart';
 
 class RecordSalesScreen extends ConsumerStatefulWidget {
   const RecordSalesScreen({super.key});
@@ -247,10 +246,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NewCustomerPage()),
-              );
+              final result = await context.push<bool>('/new_customer');
 
               if (result == true) {
                 final vm = ref.read(salesViewModelProvider);

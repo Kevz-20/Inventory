@@ -9,6 +9,7 @@ import 'views/screens/home_screen.dart';
 import 'views/screens/create_account_screen.dart';
 import 'views/screens/forgot_pin_screen.dart';
 import 'views/screens/expenses_screen.dart';
+import 'views/screens/new_customer.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/settings_screen.dart';
 import 'views/screens/stockin_screen.dart';
@@ -176,6 +177,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const CashFlowScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/new_customer',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const NewCustomerPage(),
         transition: PageTransitionType.forward,
       ),
     ),
