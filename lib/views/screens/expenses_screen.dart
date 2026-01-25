@@ -16,7 +16,9 @@ class ThousandsFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     // Remove any non-digit characters
     String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (newText.isEmpty) return newValue.copyWith(text: '');
@@ -96,9 +98,9 @@ class ExpensesScreen extends ConsumerWidget {
                   child: Text(
                     '₱',
                     style: TextStyle(
-                      fontSize: 20,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20, // ✅ replicate StockInScreen
+                      color: AppColors.primary, // ✅ replicate StockInScreen
+                      fontWeight: FontWeight.bold, // ✅ replicate StockInScreen
                     ),
                   ),
                 ),
@@ -140,8 +142,8 @@ class ExpensesScreen extends ConsumerWidget {
                   vm.triggerValidation();
                   // Remove commas before parsing
                   if (vm.amountController.text.isNotEmpty) {
-                    vm.amountController.text =
-                        vm.amountController.text.replaceAll(',', '');
+                    vm.amountController.text = vm.amountController.text
+                        .replaceAll(',', '');
                   }
                   await vm.save();
                 },
@@ -300,7 +302,18 @@ class ExpensesScreen extends ConsumerWidget {
         ),
       ),
       items: items
-          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text(
+                e,
+                style: const TextStyle(
+                  color: Colors.black, // ✅ replicate StockInScreen
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
     );
@@ -323,8 +336,8 @@ class ExpensesScreen extends ConsumerWidget {
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontWeight: FontWeight.bold,
+          color: Colors.black, // ✅ replicate StockInScreen
+          fontWeight: FontWeight.bold, // ✅ replicate StockInScreen
         ),
         decoration: InputDecoration(
           filled: true,
@@ -377,7 +390,9 @@ class ExpensesScreen extends ConsumerWidget {
   }
 
   Future<void> _pickReceiptImage(
-      BuildContext context, ExpensesViewModel vm) async {
+    BuildContext context,
+    ExpensesViewModel vm,
+  ) async {
     showDialog(
       context: context,
       builder: (_) => Dialog(
