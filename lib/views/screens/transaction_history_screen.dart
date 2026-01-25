@@ -17,6 +17,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   late final TransactionHistoryViewModel viewModel;
   final ScrollController _scrollController = ScrollController();
 
+  final NumberFormat _currencyFormatter = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱',
+    decimalDigits: 2,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +51,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       child: Consumer<TransactionHistoryViewModel>(
         builder: (_, vm, _) {
           final count = vm.transactionCount;
+
           return Scaffold(
             appBar: AppBar(
               backgroundColor: AppColors.primary,
@@ -82,6 +89,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ],
                   ),
                 ),
+
                 // Category chips
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -94,6 +102,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     },
                   ),
                 ),
+
                 // Transaction list
                 Expanded(
                   child: count == 0 && vm.isLoading
@@ -133,6 +142,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
                             final isHalin = tx.type == 'Halin';
                             final isExpense = tx.type == 'Gasto';
+                            final isCapital = tx.type == 'Capital';
 
                             // unified container for all card types
                             return Container(
@@ -165,6 +175,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               // Badge
+                                              // Badge
                                               Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(
@@ -189,7 +200,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                                       ? 'Halin'
                                                       : isExpense
                                                       ? 'Gasto'
-                                                      : tx.type,
+                                                      : 'Capital',
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w600,
@@ -203,7 +214,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                isHalin
+                                                isHalin || isCapital
                                                     ? tx.productName ??
                                                           'Product'
                                                     : tx.description ??
@@ -218,15 +229,21 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                             ],
                                           ),
                                         ),
+                                        // Amount
+                                        // Amount
                                         Text(
                                           isHalin
-                                              ? '+₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}'
-                                              : '-₱${tx.amount?.toStringAsFixed(2) ?? '0.00'}',
+                                              ? '+${_currencyFormatter.format(tx.amount ?? 0)}'
+                                              : isCapital
+                                              ? '+${_currencyFormatter.format(tx.amount ?? 0)}'
+                                              : '-${_currencyFormatter.format(tx.amount ?? 0)}',
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             color: isHalin
                                                 ? Colors.green
+                                                : isCapital
+                                                ? Colors.blue
                                                 : Colors.red,
                                           ),
                                         ),
@@ -237,7 +254,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        if (isHalin && tx.quantity != null)
+                                        if ((isHalin || isCapital) &&
+                                            tx.quantity != null)
                                           Text(
                                             'Qty: ${tx.quantity}',
                                             style: const TextStyle(
@@ -275,6 +293,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 }
 
+// ---------------- Date Picker Box ----------------
 class _DatePickerBox extends StatelessWidget {
   final String title;
   final DateTime date;
@@ -352,6 +371,7 @@ class _DatePickerBox extends StatelessWidget {
   }
 }
 
+// ---------------- Category Chips ----------------
 class CategoryChipsWithDots extends StatelessWidget {
   final List<TransactionCategory> categories;
   final TransactionCategory selectedCategory;
