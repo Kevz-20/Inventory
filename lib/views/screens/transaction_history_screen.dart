@@ -234,8 +234,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                         Text(
                                           isHalin
                                               ? '+${_currencyFormatter.format(tx.amount ?? 0)}'
-                                              : isCapital
-                                              ? '+${_currencyFormatter.format(tx.amount ?? 0)}'
                                               : '-${_currencyFormatter.format(tx.amount ?? 0)}',
                                           style: TextStyle(
                                             fontSize: 16,

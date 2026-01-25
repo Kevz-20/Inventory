@@ -3,127 +3,76 @@ import '../models/capital_management_model.dart';
 import '../repositories/capital_management_repository.dart';
 
 class CapitalManagementViewModel extends ChangeNotifier {
-  final CapitalManagementRepository capitalRepository;
+  final CapitalManagementRepository? repository;
 
-  CapitalManagementViewModel(this.capitalRepository);
+  CapitalManagementViewModel({required this.repository}) {
+    if (repository != null) {
+      loadCapitals();
+    }
+  }
 
-  List<CapitalManagementModel> capitals = [];
-  double totalBalance = 0.0;
   bool isLoading = false;
   String? error;
 
-  void _setLoading(bool value) {
-    isLoading = value;
+  List<CapitalManagementModel> capitals = [];
+
+  /// Load all capital records
+  Future<void> loadCapitals() async {
+    if (repository == null) return;
+
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      capitals = await repository!.getAllCapital();
+    } catch (e) {
+      error = e.toString();
+      capitals = [];
+    }
+
+    isLoading = false;
     notifyListeners();
   }
 
-  // Load all capital records
-  Future<void> loadCapitals() async {
-    _setLoading(true);
-    error = null;
-    debugPrint("loadCapitals: Start loading capitals");
-
-    try {
-      capitals = await capitalRepository.getCapitalByAccount();
-      debugPrint("loadCapitals: Loaded ${capitals.length} capitals");
-      for (var c in capitals) {
-        debugPrint(
-          "Capital ID: ${c.id}, Cash: ${c.cashOnHand}, Capital: ${c.capital}, BankCash: ${c.bankCash}, Remarks: ${c.remarks}",
-        );
-      }
-    } catch (e) {
-      capitals = [];
-      error = e.toString();
-      debugPrint("loadCapitals: Error - $error");
-    }
-
-    _setLoading(false);
-    debugPrint("loadCapitals: Finished loading capitals");
-  }
-
-  // Load total balance by summing cashOnHand + bankCash
-  Future<void> loadTotalBalance() async {
-    _setLoading(true);
-    error = null;
-
-    try {
-      totalBalance = capitals.fold<double>(
-        0.0,
-        (sum, c) => sum + c.capital + c.cashOnHand + c.bankCash,
-      );
-    } catch (e) {
-      totalBalance = 0.0;
-      error = e.toString();
-    }
-
-    _setLoading(false);
-  }
-
-  // Add new capital
+  /// Add new capital
   Future<void> addCapital({
     required double capitalAmount,
-    double cashOnHand = 0,
-    double bankCash = 0,
-    String remarks = '',
+    String? remarks,
   }) async {
-    _setLoading(true);
+    if (repository == null) return;
+
+    isLoading = true;
     error = null;
+    notifyListeners();
 
     try {
       final model = CapitalManagementModel(
-        accountId: 0, // adjust if you support multiple accounts
+        accountId: 0, // adjust if multi-account
         capital: capitalAmount,
-        cashOnHand: capitalAmount, // ✅ SAME AMOUNT AS CAPITAL
+        cashOnHand: capitalAmount,
         bankCash: 0,
-        remarks: remarks,
+        remarks: remarks ?? '',
       );
 
-      await capitalRepository.insertCapital(model);
+      await repository!.insertCapital(model);
+
       await loadCapitals();
-      await loadTotalBalance();
     } catch (e) {
       error = e.toString();
     }
 
-    _setLoading(false);
+    isLoading = false;
+    notifyListeners();
   }
 
-  // Update capital
-  Future<void> updateCapital(CapitalManagementModel model) async {
-    _setLoading(true);
-    error = null;
+  double get totalCapital => capitals.fold(0, (sum, e) => sum + e.capital);
 
-    try {
-      await capitalRepository.updateCapital(model);
-      await loadCapitals();
-      await loadTotalBalance();
-    } catch (e) {
-      error = e.toString();
-    }
+  double get totalCashOnHand =>
+      capitals.fold(0, (sum, e) => sum + e.cashOnHand);
 
-    _setLoading(false);
-  }
-
-  // Delete capital
-  Future<void> deleteCapital(int id) async {
-    _setLoading(true);
-    error = null;
-
-    try {
-      await capitalRepository.deleteCapital(id);
-      await loadCapitals();
-      await loadTotalBalance();
-    } catch (e) {
-      error = e.toString();
-    }
-
-    _setLoading(false);
-  }
-
-  // Reset state
   void reset() {
     capitals = [];
-    totalBalance = 0.0;
     isLoading = false;
     error = null;
     notifyListeners();

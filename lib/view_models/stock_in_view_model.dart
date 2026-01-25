@@ -140,8 +140,10 @@ class StockInViewModel extends ChangeNotifier {
       id: selectedProduct?.id,
       name: productController.text,
       category: selectedCategory!,
-      sellingPrice: double.tryParse(sellingPriceController.text) ?? 0,
-      purchasePrice: double.tryParse(purchasePriceController.text) ?? 0,
+      sellingPrice: double.tryParse(
+        sellingPriceController.text.replaceAll(',', '')) ?? 0,
+      purchasePrice: double.tryParse(
+        purchasePriceController.text.replaceAll(',', '')) ?? 0,
       quantity: int.tryParse(quantityController.text) ?? 0,
       image: productImage?.path,
       createdAt: selectedProduct?.createdAt ?? DateTime.now(),

@@ -1,41 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../providers/capital_management_view_model_provider.dart';
+import '../../providers/capital_management_repository_provider.dart';
 import '../widgets/header.dart';
-import 'package:intl/intl.dart';
-
-/// -----------------------------
-/// Custom TextInputFormatter for thousands separator
-/// -----------------------------
-class ThousandsFormatter extends TextInputFormatter {
-  final NumberFormat _formatter = NumberFormat("#,###");
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    // Remove any non-digit characters
-    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (newText.isEmpty) return newValue.copyWith(text: '');
-
-    // Format with commas
-    String formatted = _formatter.format(int.parse(newText));
-
-    // Calculate cursor position
-    int selectionIndex =
-        formatted.length - (newText.length - newValue.selection.end);
-    if (selectionIndex < 0) selectionIndex = 0;
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: selectionIndex),
-    );
-  }
-}
 
 class CapitalManagementScreen extends ConsumerStatefulWidget {
   const CapitalManagementScreen({super.key});
@@ -45,107 +15,143 @@ class CapitalManagementScreen extends ConsumerStatefulWidget {
       _CapitalManagementScreenState();
 }
 
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  final NumberFormat formatter = NumberFormat('#,##0.##');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    final rawText = newValue.text.replaceAll(',', '');
+
+    final value = double.tryParse(rawText);
+    if (value == null) {
+      return oldValue;
+    }
+
+    final formatted = formatter.format(value);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(capitalManagementViewModelProvider).loadCapitals();
-    });
-  }
+  final NumberFormat _currencyFormatter = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱',
+    decimalDigits: 2,
+  );
 
   @override
   Widget build(BuildContext context) {
-    final vm = ref.watch(capitalManagementViewModelProvider);
+    final repoAsync = ref.watch(capitalManagementRepositoryProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(
-        title: 'Capital Management',
-        showBackButton: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 15),
-            // Cash on Hand
-            _miniBalanceCard(
-              title: "Cash on Hand",
-              value: vm.capitals.fold(0, (sum, e) => sum + e.cashOnHand),
-            ),
-            const SizedBox(height: 15),
-            // Capital
-            _miniBalanceCard(
-              title: "Capital",
-              value: vm.capitals.fold(0, (sum, e) => sum + e.capital),
-            ),
-            const SizedBox(height: 30),
-            _sectionTitle('Add New Capital'),
-            const SizedBox(height: 6),
-            _amountInput(),
-            const SizedBox(height: 10),
-            const Text(
-              "Enter a valid amount (greater than 0).",
-              style: TextStyle(
-                fontSize: 13,
-                color: Color.fromARGB(255, 21, 21, 21),
-              ),
-            ),
-            const SizedBox(height: 15),
-            _remarksInput(),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: vm.isLoading
-                    ? null
-                    : () async {
-                        // Remove commas before parsing
-                        final amountText = _amountController.text.replaceAll(
-                          ',',
-                          '',
-                        );
-                        final amount = double.tryParse(amountText);
-                        if (amount == null || amount <= 0) return;
+    return repoAsync.when(
+      data: (_) {
+        // Now repository is ready, watch the ViewModel
+        final vm = ref.watch(capitalManagementViewModelProvider);
 
-                        await vm.addCapital(
-                          capitalAmount: amount,
-                          remarks: _remarksController.text,
-                        );
+        final totalCashOnHand = vm.capitals.fold<double>(
+          0,
+          (sum, e) => sum + e.cashOnHand,
+        );
 
-                        _amountController.clear();
-                        _remarksController.clear();
-                      },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        final totalCapital = vm.capitals.fold<double>(
+          0,
+          (sum, e) => sum + e.capital,
+        );
+
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          appBar: const AppHeader(
+            title: 'Capital Management',
+            showBackButton: true,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 15),
+
+                _miniBalanceCard(title: "Cash on Hand", value: totalCashOnHand),
+                const SizedBox(height: 15),
+                _miniBalanceCard(title: "Capital", value: totalCapital),
+                const SizedBox(height: 30),
+
+                _sectionTitle('Add New Capital'),
+                const SizedBox(height: 6),
+                _amountInput(),
+                const SizedBox(height: 10),
+                const Text(
+                  "Enter a valid amount (greater than 0).",
+                  style: TextStyle(fontSize: 13, color: Colors.redAccent),
+                ),
+                const SizedBox(height: 15),
+                _remarksInput(),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: vm.isLoading
+                        ? null
+                        : () async {
+                            final amount = double.tryParse(
+                              _amountController.text.replaceAll(',', ''),
+                            );
+                            if (amount == null || amount <= 0) return;
+
+                            await vm.addCapital(
+                              capitalAmount: amount,
+                              remarks: _remarksController.text,
+                            );
+
+                            _amountController.clear();
+                            _remarksController.clear();
+                          },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: vm.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            "Add Capital",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
-                child: vm.isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text(
-                        "Add Capital",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, st) =>
+          Scaffold(body: Center(child: Text('Error loading repository: $err'))),
     );
   }
 
@@ -172,7 +178,7 @@ class _CapitalManagementScreenState
           Text(title, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(height: 6),
           Text(
-            "₱${value.toStringAsFixed(2)}",
+            _currencyFormatter.format(value),
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
         ],
@@ -191,16 +197,11 @@ class _CapitalManagementScreenState
       hint: "0.00",
       prefix: "₱ ",
       numbersOnly: true,
-      formatter: ThousandsFormatter(), // ✅ add formatter
     );
   }
 
   Widget _remarksInput() {
-    return _inputField(
-      controller: _remarksController,
-      hint: "Optional note",
-      numbersOnly: false,
-    );
+    return _inputField(controller: _remarksController, hint: "Optional note");
   }
 
   Widget _inputField({
@@ -208,7 +209,6 @@ class _CapitalManagementScreenState
     String? hint,
     String? prefix,
     bool numbersOnly = false,
-    TextInputFormatter? formatter,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -219,12 +219,12 @@ class _CapitalManagementScreenState
       child: TextField(
         controller: controller,
         keyboardType: numbersOnly
-            ? const TextInputType.numberWithOptions(decimal: false)
+            ? const TextInputType.numberWithOptions(decimal: true)
             : TextInputType.text,
         inputFormatters: numbersOnly
             ? [
-                FilteringTextInputFormatter.digitsOnly,
-                if (formatter != null) formatter,
+                FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
+                ThousandsSeparatorInputFormatter(),
               ]
             : null,
         decoration: InputDecoration(
