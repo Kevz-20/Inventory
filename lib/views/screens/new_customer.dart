@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/new_customer_view_model.dart';
 import '../widgets/header.dart';
+import '../../models/region7_psgc_model.dart';
 
 class NewCustomerPage extends ConsumerWidget {
   const NewCustomerPage({super.key});
@@ -13,13 +14,12 @@ class NewCustomerPage extends ConsumerWidget {
     final vm = ref.watch(newCustomerViewModelProvider);
     final vmNotifier = ref.read(newCustomerViewModelProvider);
 
-    // Show snackbar safely when snackbarMessage changes
+    // Show snackbar safely
     if (vm.snackbarMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(vm.snackbarMessage!)));
-        // Reset message after showing
         vmNotifier.snackbarMessage = null;
       });
     }
@@ -46,8 +46,8 @@ class NewCustomerPage extends ConsumerWidget {
                 LengthLimitingTextInputFormatter(11),
               ],
             ),
-            _buildTextField('Municipality', vmNotifier.municipalityController),
-            _buildTextField('Barangay', vmNotifier.barangayController),
+            _buildCityDropdown(vm, vmNotifier),
+            _buildBarangayDropdown(vm, vmNotifier),
             _buildTextField('Landmark / Street', vmNotifier.landmarkController),
             const SizedBox(height: 24),
             SizedBox(
@@ -117,6 +117,68 @@ class NewCustomerPage extends ConsumerWidget {
           disabledBorder: border,
           errorBorder: border,
           focusedErrorBorder: border,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCityDropdown(
+    NewCustomerViewModel vm,
+    NewCustomerViewModel notifier,
+  ) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.grey),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<CityModel>(
+        initialValue: vm.selectedCity,
+        items: vm.cities
+            .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+            .toList(),
+        onChanged: (CityModel? c) {
+          if (c != null) notifier.selectCity(c);
+        },
+        decoration: InputDecoration(
+          labelText: 'Municipality',
+          filled: true,
+          fillColor: Colors.white,
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBarangayDropdown(
+    NewCustomerViewModel vm,
+    NewCustomerViewModel notifier,
+  ) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.grey),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<BarangayModel>(
+        initialValue: vm.selectedBarangay,
+        items: vm.barangays
+            .map((b) => DropdownMenuItem(value: b, child: Text(b.name)))
+            .toList(),
+        onChanged: (BarangayModel? b) {
+          if (b != null) notifier.selectBarangay(b);
+        },
+        decoration: InputDecoration(
+          labelText: 'Barangay',
+          filled: true,
+          fillColor: Colors.white,
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border,
         ),
       ),
     );

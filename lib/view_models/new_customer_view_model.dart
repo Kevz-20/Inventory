@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/region7_psgc.dart';
+import '../models/region7_psgc_model.dart';
 import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
 
@@ -22,15 +24,54 @@ class NewCustomerViewModel extends ChangeNotifier {
   final barangayController = TextEditingController();
   final landmarkController = TextEditingController();
 
+  // Region 7
+  RegionModel? selectedRegion;
+  CityModel? selectedCity;
+  BarangayModel? selectedBarangay;
+
+  List<CityModel> cities = [];
+  List<BarangayModel> barangays = [];
+
   NewCustomerViewModel() {
     _initRepository();
+    _loadRegion7();
   }
 
+  /// Initialize database repository
   Future<void> _initRepository() async {
     final db = await DBService.instance.database;
     _repo = CustomerRepository(db);
   }
 
+  /// Load Region VII data and flatten cities
+  void _loadRegion7() {
+    final region = RegionModel.fromList(region7Data);
+    selectedRegion = region;
+
+    // Flatten all cities from all provinces in the region
+    cities = region.provinces.expand((p) => p.cities).toList();
+
+    notifyListeners();
+  }
+
+  /// Select a city (municipality) and load its barangays
+  void selectCity(CityModel city) {
+    selectedCity = city;
+    barangays = city.barangays;
+    selectedBarangay = null;
+    municipalityController.text = city.name;
+    barangayController.text = '';
+    notifyListeners();
+  }
+
+  /// Select a barangay
+  void selectBarangay(BarangayModel barangay) {
+    selectedBarangay = barangay;
+    barangayController.text = barangay.name;
+    notifyListeners();
+  }
+
+  /// Validate customer form
   bool validateForm() {
     final contact = contactController.text.trim();
     final regex = RegExp(r'^09\d{9}$');
@@ -40,11 +81,13 @@ class NewCustomerViewModel extends ChangeNotifier {
         regex.hasMatch(contact);
   }
 
+  /// Set snackbar message
   void _setSnackbar(String message) {
     snackbarMessage = message;
     notifyListeners();
   }
 
+  /// Save customer to database
   Future<bool> saveCustomer() async {
     if (_repo == null) {
       _setSnackbar('Database not ready, try again later');
@@ -85,6 +128,7 @@ class NewCustomerViewModel extends ChangeNotifier {
     try {
       await _repo!.insertCustomer(customer);
 
+      // Clear fields
       firstNameController.clear();
       middleNameController.clear();
       lastNameController.clear();
@@ -92,6 +136,9 @@ class NewCustomerViewModel extends ChangeNotifier {
       municipalityController.clear();
       barangayController.clear();
       landmarkController.clear();
+      selectedCity = null;
+      selectedBarangay = null;
+      barangays = [];
 
       isLoading = false;
       notifyListeners();
