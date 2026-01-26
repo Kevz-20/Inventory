@@ -92,6 +92,11 @@ class NewCustomerPage extends ConsumerWidget {
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
   }) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.grey),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextField(
@@ -100,13 +105,18 @@ class NewCustomerPage extends ConsumerWidget {
         inputFormatters: inputFormatters,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 14,
           ),
-          fillColor: Colors.white,
-          filled: true,
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border,
+          disabledBorder: border,
+          errorBorder: border,
+          focusedErrorBorder: border,
         ),
       ),
     );
