@@ -24,7 +24,9 @@ class StockInViewModel extends ChangeNotifier {
   List<ProductModel> allProducts = [];
   ProductModel? selectedProduct;
 
+  /// 🔹 used by autocomplete
   TextEditingController? autocompleteFieldController;
+
   final TextEditingController productController = TextEditingController();
   final purchasePriceController = TextEditingController();
   final sellingPriceController = TextEditingController();
@@ -78,6 +80,7 @@ class StockInViewModel extends ChangeNotifier {
     purchasePriceController.dispose();
     sellingPriceController.dispose();
     quantityController.dispose();
+    autocompleteFieldController?.dispose();
     super.dispose();
   }
 
@@ -106,6 +109,13 @@ class StockInViewModel extends ChangeNotifier {
   String get formattedDate =>
       '${months[selectedDate.month - 1]} ${selectedDate.day}, ${selectedDate.year}';
 
+  /// ✅ THIS FIXES YOUR ERROR
+  String get effectiveProductName {
+    final autoText = autocompleteFieldController?.text.trim() ?? '';
+    final manualText = productController.text.trim();
+    return autoText.isNotEmpty ? autoText : manualText;
+  }
+
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
@@ -118,52 +128,44 @@ class StockInViewModel extends ChangeNotifier {
   Future<void> saveProduct() async {
     debugPrint('saveProduct() called');
 
-    debugPrint('--- USER INPUT VALUES ---');
-    debugPrint('Product name: ${productController.text}');
-    debugPrint('Category: $selectedCategory');
-    debugPrint('Selling price (raw): ${sellingPriceController.text}');
-    debugPrint('Purchase price (raw): ${purchasePriceController.text}');
-    debugPrint('Quantity (raw): ${quantityController.text}');
-    debugPrint('Image path: ${productImage?.path}');
-    debugPrint('--------------------------');
+    if (!isInitialized) return;
 
-    if (!isInitialized) {
-      debugPrint('Not initialized. Exiting.');
+    final productName = effectiveProductName;
+
+    if (productName.isEmpty || selectedCategory == null) {
+      errorMessage = 'Please fill all required fields';
+      safeNotifyListeners();
       return;
     }
+    final sellingPrice =
+        double.tryParse(sellingPriceController.text.replaceAll(',', '')) ?? 0;
+    final purchasePrice =
+        double.tryParse(purchasePriceController.text.replaceAll(',', '')) ?? 0;
 
-    if (productController.text.isEmpty || selectedCategory == null) {
-      debugPrint('Validation failed: empty product or category');
-      errorMessage = 'Please fill all required fields';
+    if (sellingPrice < purchasePrice) {
+      errorMessage = 'Selling price cannot be lower than purchase price.';
       safeNotifyListeners();
       return;
     }
 
     setLoading(true);
-    debugPrint('Loading started');
 
     ProductModel? existingProduct;
     for (var p in allProducts) {
-      if (p.name.toLowerCase() == productController.text.toLowerCase()) {
+      if (p.name.toLowerCase() == productName.toLowerCase()) {
         existingProduct = p;
-        debugPrint('Existing product found: ${p.id}');
         break;
       }
     }
 
     selectedProduct ??= existingProduct;
-    debugPrint('Selected product ID: ${selectedProduct?.id}');
 
     final sellingPriceText = sellingPriceController.text.replaceAll(',', '');
     final purchasePriceText = purchasePriceController.text.replaceAll(',', '');
 
-    debugPrint('Selling price raw: $sellingPriceText');
-    debugPrint('Purchase price raw: $purchasePriceText');
-    debugPrint('Quantity raw: ${quantityController.text}');
-
     final stock = ProductModel(
       id: selectedProduct?.id,
-      name: productController.text,
+      name: productName,
       category: selectedCategory!,
       sellingPrice: double.tryParse(sellingPriceText) ?? 0,
       purchasePrice: double.tryParse(purchasePriceText) ?? 0,
@@ -173,34 +175,23 @@ class StockInViewModel extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
 
-    debugPrint('Product model created: ${stock.toString()}');
-
     try {
       if (selectedProduct != null) {
-        debugPrint('Updating product...');
         await _repository.updateProduct(stock);
         successMessage = 'Product updated successfully';
       } else {
-        debugPrint('Adding new product...');
         await _repository.addProduct(stock);
         successMessage = 'Product saved successfully';
       }
 
       await loadProductNames();
-      debugPrint('Product names reloaded');
-
       clearFields();
       selectedProduct = null;
-      debugPrint('Fields cleared');
-    } catch (e, stack) {
-      debugPrint('Save failed: $e');
-      debugPrint(stack.toString());
-      errorMessage = 'Failed to save product: ${e.toString()}';
+    } catch (e) {
+      errorMessage = 'Failed to save product: $e';
     } finally {
       setLoading(false);
-      safeNotifyListeners();
       autoClearMessages();
-      debugPrint('saveProduct() finished');
     }
   }
 
@@ -209,59 +200,18 @@ class StockInViewModel extends ChangeNotifier {
     return await _repository.getProducts();
   }
 
-  Future<void> updateStock(ProductModel stock) async {
-    try {
-      await _repository.updateProduct(stock);
-      safeNotifyListeners();
-    } catch (_) {
-      errorMessage = 'Failed to update product';
-    }
-  }
-
   Future<void> deleteStock(int id) async {
     try {
       await _repository.deleteProduct(id);
-      safeNotifyListeners();
+      await loadProductNames();
     } catch (_) {
       errorMessage = 'Failed to delete product';
     }
   }
 
-  Future<bool> handleBackPressed(BuildContext context) async {
-    if (!hasUnsavedData) return true;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Discard changes?'),
-        content: const Text(
-          'Unsaved product information. Do you want to discard or cancel?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false;
-  }
-
   Future<void> loadProductNames() async {
     allProducts = await _repository.loadAllProducts();
     productNames = allProducts.map((p) => p.name).toList();
-
-    debugPrint('All products:');
-    for (var name in productNames) {
-      debugPrint(name);
-    }
-
     safeNotifyListeners();
   }
 
@@ -289,12 +239,12 @@ class StockInViewModel extends ChangeNotifier {
     purchasePriceController.clear();
     sellingPriceController.clear();
     quantityController.clear();
+    autocompleteFieldController?.clear();
     selectedCategory = null;
     productImage = null;
     selectedProduct = null;
     errorMessage = null;
     showValidationErrors = false;
-    autocompleteFieldController?.clear();
     safeNotifyListeners();
   }
 }

@@ -294,6 +294,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       },
 
       fieldViewBuilder: (context, fieldController, focusNode, onSubmit) {
+        // 🔥 CONNECT Autocomplete to ViewModel controller
+        fieldController.text = vm.productController.text;
+
+        fieldController.addListener(() {
+          if (vm.productController.text != fieldController.text) {
+            vm.productController.text = fieldController.text;
+          }
+        });
+
         return SizedBox(
           height: 60,
           child: TextField(

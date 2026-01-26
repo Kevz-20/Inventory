@@ -135,6 +135,7 @@ class NewCustomerPage extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: DropdownButtonFormField<CityModel>(
         initialValue: vm.selectedCity,
+        dropdownColor: Colors.white,
         items: vm.cities
             .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
             .toList(),
@@ -166,6 +167,7 @@ class NewCustomerPage extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: DropdownButtonFormField<BarangayModel>(
         initialValue: vm.selectedBarangay,
+        dropdownColor: Colors.white,
         items: vm.barangays
             .map((b) => DropdownMenuItem(value: b, child: Text(b.name)))
             .toList(),
