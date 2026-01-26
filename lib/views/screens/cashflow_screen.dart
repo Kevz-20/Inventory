@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../view_models/cashflow_view_model.dart';
 import '../../core/app_colors.dart';
+import '../widgets/header.dart';
 
 class CashFlowScreen extends ConsumerWidget {
   const CashFlowScreen({super.key});
@@ -14,17 +15,7 @@ class CashFlowScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface, // Match Home screen
-      appBar: AppBar(
-        title: const Text(
-          'Cash Flow',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-        elevation: 1,
-      ),
+      appBar: const AppHeader(title: 'Cash Flow', showBackButton: true),
       body: Column(
         children: [
           _header(),
@@ -42,7 +33,9 @@ class CashFlowScreen extends ConsumerWidget {
                       final r = records[i];
                       return Container(
                         margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
@@ -63,7 +56,9 @@ class CashFlowScreen extends ConsumerWidget {
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 16),
+                              vertical: 14,
+                              horizontal: 16,
+                            ),
                             child: Row(
                               children: [
                                 _cell(r.formattedDate, flex: 2),
@@ -147,7 +142,8 @@ class _HeaderCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       flex: flex,
-      child: FittedBox( // Prevents wrapping
+      child: FittedBox(
+        // Prevents wrapping
         fit: BoxFit.scaleDown,
         alignment: Alignment.center,
         child: Text(
