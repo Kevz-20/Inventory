@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
+import 'package:intl/intl.dart';
 
 class RecordSalesScreen extends ConsumerStatefulWidget {
   const RecordSalesScreen({super.key});
@@ -13,6 +14,12 @@ class RecordSalesScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<RecordSalesScreen> createState() => _RecordSalesScreenState();
 }
+
+final currencyFormatter = NumberFormat.currency(
+  locale: 'en_PH', // Philippine locale
+  symbol: '₱', // Peso symbol
+  decimalDigits: 2, // show 2 decimal places
+);
 
 class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   bool isCash = true;
@@ -274,8 +281,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash) return const SizedBox.shrink();
 
-    const arrowWidth = 30.0; // arrow container width
-    const arrowIconSize = 24.0; // bigger arrows
+    const arrowWidth = 20.0; // arrow container width
+    const arrowIconSize = 15.0; // bigger arrows
     const chipHeight = 40.0; //bigger chip height for easier tap
     const chipFontSize = 15.0; //bigger text for readability
 
@@ -452,9 +459,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                 ),
               ),
               Text(
-                "Price: ₱${product.sellingPrice}",
+                "Price: ${currencyFormatter.format(product.sellingPrice)}",
                 style: const TextStyle(color: Colors.black87),
               ),
+
               Text(
                 "Stock: ${product.quantity}",
                 style: const TextStyle(color: Colors.black87),
@@ -468,7 +476,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             _quantitySelector(product, vm),
             const SizedBox(height: 6),
             Text(
-              "Subtotal: ₱${vm.getSubtotal(product)}",
+              "Subtotal: ${currencyFormatter.format(vm.getSubtotal(product))}",
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
@@ -626,6 +634,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _dueDateCard() {
+    final isSelected = dueDate != null;
+
     return GestureDetector(
       onTap: () async {
         final now = DateTime.now();
@@ -641,22 +651,52 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromARGB(255, 5, 5, 5).withAlpha(40),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Expanded(
-              child: Text(
-                dueDate != null
-                    ? "Due Date: ${dueDate!.month}/${dueDate!.day}/${dueDate!.year}"
-                    : "Select Due Date",
-                style: const TextStyle(fontSize: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    // ignore: deprecated_member_use
+                    ? AppColors.primary.withOpacity(0.1)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.calendar_month_rounded,
+                color: isSelected ? AppColors.primary : Colors.black54,
               ),
             ),
-            const Icon(Icons.calendar_today, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isSelected
+                    ? "Due Date: ${dueDate!.month}/${dueDate!.day}/${dueDate!.year}"
+                    : "Select Due Date",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.black : Colors.black54,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right),
           ],
         ),
       ),
@@ -696,8 +736,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         if (dueDate == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please select a due date before proceeding.'),
-              duration: Duration(seconds: 2),
+              content: Text('Please select a due date first.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -713,14 +752,32 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
         ),
-        child: Text(
-          "${customer['first_name']} ${customer['last_name']}",
-          style: const TextStyle(fontSize: 16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              // ignore: deprecated_member_use
+              backgroundColor: AppColors.primary.withOpacity(0.15),
+              child: const Icon(Icons.person, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "${customer['first_name']} ${customer['last_name']}",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
         ),
       ),
     );
@@ -780,7 +837,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                 children: [
                   const Text(
                     'Sale Summary',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
@@ -790,6 +847,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                               'No products selected',
                               style: TextStyle(
                                 fontSize: 16,
+                                fontWeight: FontWeight.w500,
                                 color: Colors.black54,
                               ),
                             ),
@@ -802,21 +860,38 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                               final subtotal = vm.getSubtotal(product);
 
                               return ListTile(
-                                title: Text(product.name),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  product.name,
+                                  style: const TextStyle(
+                                    fontWeight:
+                                        FontWeight.bold, // 🔥 BOLD PRODUCT
+                                    fontSize: 17,
+                                  ),
+                                ),
                                 subtitle: Text(
                                   '₱${product.sellingPrice} × $qty',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black54,
+                                  ),
                                 ),
                                 trailing: Text(
-                                  '₱${subtotal.toStringAsFixed(2)}',
+                                  currencyFormatter.format(subtotal),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 15,
                                   ),
                                 ),
                               );
                             },
                           ),
                   ),
-                  const Divider(),
+                  const Divider(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -824,13 +899,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                         'TOTAL',
                         style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
                         ),
                       ),
                       Text(
-                        '₱${vm.total.toStringAsFixed(2)}',
+                        currencyFormatter.format(vm.total),
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -842,7 +918,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -923,7 +1002,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Text('Confirm'),
+                          child: const Text(
+                            'Confirm',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
                     ],
