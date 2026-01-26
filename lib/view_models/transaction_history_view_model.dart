@@ -1,259 +1,259 @@
-import 'package:flutter/material.dart';
-import '../models/transaction_history_model.dart';
-import '../repositories/transaction_history_repository.dart';
+  import 'package:flutter/material.dart';
+  import '../models/transaction_history_model.dart';
+  import '../repositories/transaction_history_repository.dart';
 
-// Represents a single transaction
-class TransactionItem {
-  final String type;
-  final String? description;
-  final double? amount;
-  final DateTime createdAt;
-  final String? paymentType;
-  final String? productName;
-  final int? quantity;
+  // Represents a single transaction
+  class TransactionItem {
+    final String type;
+    final String? description;
+    final double? amount;
+    final DateTime createdAt;
+    final String? paymentType;
+    final String? productName;
+    final int? quantity;
 
-  TransactionItem({
-    required this.type,
-    this.description,
-    this.amount,
-    required this.createdAt,
-    this.paymentType,
-    this.productName,
-    this.quantity,
-  });
+    TransactionItem({
+      required this.type,
+      this.description,
+      this.amount,
+      required this.createdAt,
+      this.paymentType,
+      this.productName,
+      this.quantity,
+    });
 
-  factory TransactionItem.fromMap(
-    Map<String, dynamic> map, {
-    String fallbackType = '',
-    bool isCapital = false,
-  }) {
-    double value;
-    String? paymentType;
+    factory TransactionItem.fromMap(
+      Map<String, dynamic> map, {
+      String fallbackType = '',
+      bool isCapital = false,
+    }) {
+      double value;
+      String? paymentType;
 
-    if (isCapital) {
-      value = (map['capital'] as num?)?.toDouble() ?? 0.0;
-      if (value > 0) paymentType = 'Deposit';
-    } else if (map.containsKey('bank_cash')) {
-      value = (map['bank_cash'] as num?)?.toDouble() ?? 0.0;
-      if (value > 0) paymentType = 'Withdraw';
-    } else {
-      value = (map['amount'] as num?)?.toDouble() ?? 0.0;
-      paymentType = map['payment_type'];
+      if (isCapital) {
+        value = (map['capital'] as num?)?.toDouble() ?? 0.0;
+        if (value > 0) paymentType = 'Deposit';
+      } else if (map.containsKey('bank_cash')) {
+        value = (map['bank_cash'] as num?)?.toDouble() ?? 0.0;
+        if (value > 0) paymentType = 'Withdraw';
+      } else {
+        value = (map['amount'] as num?)?.toDouble() ?? 0.0;
+        paymentType = map['payment_type'];
+      }
+
+      return TransactionItem(
+        type: map['type'] ?? fallbackType,
+        description: map['description'] ?? map['remarks'],
+        amount: value,
+        createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+        paymentType: paymentType,
+        productName: map['product_name'],
+        quantity: (map['quantity'] as num?)?.toInt(),
+      );
     }
+  }
 
-    return TransactionItem(
-      type: map['type'] ?? fallbackType,
-      description: map['description'] ?? map['remarks'],
-      amount: value,
-      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-      paymentType: paymentType,
-      productName: map['product_name'],
-      quantity: (map['quantity'] as num?)?.toInt(),
+  // Categories of transactions
+  enum TransactionCategory { all, expenses, sales, capitalManagement }
+
+  // Display name for each category
+  extension TransactionCategoryExtension on TransactionCategory {
+    String get displayName {
+      switch (this) {
+        case TransactionCategory.all:
+          return 'Tanan';
+        case TransactionCategory.expenses:
+          return 'Gasto';
+        case TransactionCategory.sales:
+          return 'Halin';
+        case TransactionCategory.capitalManagement:
+          return 'Capital';
+      }
+    }
+  }
+
+  // ViewModel to manage transaction history, filtering, and pagination
+  class TransactionHistoryViewModel extends ChangeNotifier {
+    final TransactionHistoryRepository _repository =
+        TransactionHistoryRepository();
+
+    late final TransactionHistoryModel _fullHistory;
+    TransactionHistoryModel _filteredHistory = TransactionHistoryModel(
+      expenses: [],
+      salesCash: [],
+      salesCredit: [],
+      capitalManagement: [],
     );
-  }
-}
 
-// Categories of transactions
-enum TransactionCategory { all, expenses, sales, capitalManagement }
+    bool _isLoading = false;
+    String? _error;
+    TransactionCategory selectedCategory = TransactionCategory.all;
+    DateTime? _startDate;
+    DateTime? _endDate;
 
-// Display name for each category
-extension TransactionCategoryExtension on TransactionCategory {
-  String get displayName {
-    switch (this) {
-      case TransactionCategory.all:
-        return 'Tanan';
-      case TransactionCategory.expenses:
-        return 'Gasto';
-      case TransactionCategory.sales:
-        return 'Halin';
-      case TransactionCategory.capitalManagement:
-        return 'Capital';
-    }
-  }
-}
+    // Pagination
+    static const int pageSize = 20;
+    int _currentPage = 0;
 
-// ViewModel to manage transaction history, filtering, and pagination
-class TransactionHistoryViewModel extends ChangeNotifier {
-  final TransactionHistoryRepository _repository =
-      TransactionHistoryRepository();
+    // Cache transactions per category
+    final Map<TransactionCategory, List<TransactionItem>> _cache = {};
 
-  late final TransactionHistoryModel _fullHistory;
-  TransactionHistoryModel _filteredHistory = TransactionHistoryModel(
-    expenses: [],
-    salesCash: [],
-    salesCredit: [],
-    capitalManagement: [],
-  );
+    // Getters
+    bool get isLoading => _isLoading;
+    String? get error => _error;
+    DateTime? get startDate => _startDate;
+    DateTime? get endDate => _endDate;
 
-  bool _isLoading = false;
-  String? _error;
-  TransactionCategory selectedCategory = TransactionCategory.all;
-  DateTime? _startDate;
-  DateTime? _endDate;
-
-  // Pagination
-  static const int pageSize = 20;
-  int _currentPage = 0;
-
-  // Cache transactions per category
-  final Map<TransactionCategory, List<TransactionItem>> _cache = {};
-
-  // Getters
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  DateTime? get startDate => _startDate;
-  DateTime? get endDate => _endDate;
-
-  // Empty state message depending on selected category
-  String get emptyStateMessage {
-    switch (selectedCategory) {
-      case TransactionCategory.expenses:
-        return 'No expense transactions yet';
-      case TransactionCategory.sales:
-        return 'No sales transactions yet';
-      case TransactionCategory.capitalManagement:
-        return 'No capital transactions yet';
-      case TransactionCategory.all:
-        return 'No transactions found';
-    }
-  }
-
-  // Transactions for the current page
-  List<TransactionItem> get pagedTransactions {
-    final allItems = transactions.toList();
-    final start = _currentPage * pageSize;
-    if (start >= allItems.length) return [];
-    final end = (start + pageSize) > allItems.length
-        ? allItems.length
-        : start + pageSize;
-    return allItems.sublist(start, end);
-  }
-
-  // Total transactions on current page
-  int get transactionCount => pagedTransactions.length;
-
-  // Get transaction at index
-  TransactionItem transactionAt(int index) => pagedTransactions[index];
-
-  // Compute all filtered transactions with caching
-  Iterable<TransactionItem> get transactions {
-    if (_cache.containsKey(selectedCategory)) return _cache[selectedCategory]!;
-
-    Iterable<TransactionItem> items() sync* {
-      for (var map in _filteredHistory.expenses) {
-        yield TransactionItem.fromMap(map, fallbackType: 'Gasto');
-      }
-      for (var map in _filteredHistory.salesCash) {
-        yield TransactionItem.fromMap(map, fallbackType: 'Halin');
-      }
-      for (var map in _filteredHistory.salesCredit) {
-        yield TransactionItem.fromMap(map, fallbackType: 'Halin');
-      }
-      for (var map in _filteredHistory.capitalManagement) {
-        yield TransactionItem.fromMap(
-          map,
-          fallbackType: 'Capital',
-          isCapital: true,
-        );
+    // Empty state message depending on selected category
+    String get emptyStateMessage {
+      switch (selectedCategory) {
+        case TransactionCategory.expenses:
+          return 'No expense transactions yet';
+        case TransactionCategory.sales:
+          return 'No sales transactions yet';
+        case TransactionCategory.capitalManagement:
+          return 'No capital transactions yet';
+        case TransactionCategory.all:
+          return 'No transactions found';
       }
     }
 
-    Iterable<TransactionItem> result;
-    if (selectedCategory != TransactionCategory.all) {
-      final type = selectedCategory == TransactionCategory.expenses
-          ? 'Gasto'
-          : selectedCategory == TransactionCategory.sales
-          ? 'Halin'
-          : 'Capital';
-      result = items().where((tx) => tx.type == type);
-    } else {
-      result = items().toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // Transactions for the current page
+    List<TransactionItem> get pagedTransactions {
+      final allItems = transactions.toList();
+      final start = _currentPage * pageSize;
+      if (start >= allItems.length) return [];
+      final end = (start + pageSize) > allItems.length
+          ? allItems.length
+          : start + pageSize;
+      return allItems.sublist(start, end);
     }
 
-    _cache[selectedCategory] = result.toList();
-    return result;
-  }
+    // Total transactions on current page
+    int get transactionCount => pagedTransactions.length;
 
-  TransactionHistoryViewModel() {
-    _loadFullHistory();
-  }
+    // Get transaction at index
+    TransactionItem transactionAt(int index) => pagedTransactions[index];
 
-  // Load full history from repository
-  Future<void> _loadFullHistory() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    // Compute all filtered transactions with caching
+    Iterable<TransactionItem> get transactions {
+      if (_cache.containsKey(selectedCategory)) return _cache[selectedCategory]!;
 
-    try {
-      _fullHistory = await _repository.loadHistory();
+      Iterable<TransactionItem> items() sync* {
+        for (var map in _filteredHistory.expenses) {
+          yield TransactionItem.fromMap(map, fallbackType: 'Gasto');
+        }
+        for (var map in _filteredHistory.salesCash) {
+          yield TransactionItem.fromMap(map, fallbackType: 'Halin');
+        }
+        for (var map in _filteredHistory.salesCredit) {
+          yield TransactionItem.fromMap(map, fallbackType: 'Halin');
+        }
+        for (var map in _filteredHistory.capitalManagement) {
+          yield TransactionItem.fromMap(
+            map,
+            fallbackType: 'Capital',
+            isCapital: true,
+          );
+        }
+      }
+
+      Iterable<TransactionItem> result;
+      if (selectedCategory != TransactionCategory.all) {
+        final type = selectedCategory == TransactionCategory.expenses
+            ? 'Gasto'
+            : selectedCategory == TransactionCategory.sales
+            ? 'Halin'
+            : 'Capital';
+        result = items().where((tx) => tx.type == type);
+      } else {
+        result = items().toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+
+      _cache[selectedCategory] = result.toList();
+      return result;
+    }
+
+    TransactionHistoryViewModel() {
+      _loadFullHistory();
+    }
+
+    // Load full history from repository
+    Future<void> _loadFullHistory() async {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      try {
+        _fullHistory = await _repository.loadHistory();
+        _applyFilters();
+      } catch (e) {
+        _error = e.toString();
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    // Apply date filters and reset cache & pagination
+    void _applyFilters() {
+      _filteredHistory = TransactionHistoryModel(
+        expenses: _filterByDate(_fullHistory.expenses),
+        salesCash: _filterByDate(_fullHistory.salesCash),
+        salesCredit: _filterByDate(_fullHistory.salesCredit),
+        capitalManagement: _filterByDate(_fullHistory.capitalManagement),
+      );
+      _cache.clear();
+      _currentPage = 0;
+    }
+
+    // Filter list of transactions by start and end date
+    List<Map<String, dynamic>> _filterByDate(List<Map<String, dynamic>> data) {
+      if (_startDate == null && _endDate == null) return data;
+
+      return data.where((item) {
+        final createdAt = DateTime.tryParse(item['created_at'] ?? '');
+        if (createdAt == null) return false;
+        if (_startDate != null && createdAt.isBefore(_startDate!)) return false;
+        if (_endDate != null && createdAt.isAfter(_endDate!)) return false;
+        return true;
+      }).toList();
+    }
+
+    // Set category and re-filter
+    void setSelectedCategory(TransactionCategory category) {
+      selectedCategory = category;
       _applyFilters();
-    } catch (e) {
-      _error = e.toString();
+      notifyListeners();
     }
 
-    _isLoading = false;
-    notifyListeners();
-  }
+    // Set start date and re-filter
+    void setStartDate(DateTime? date) {
+      _startDate = date;
+      _applyFilters();
+      notifyListeners();
+    }
 
-  // Apply date filters and reset cache & pagination
-  void _applyFilters() {
-    _filteredHistory = TransactionHistoryModel(
-      expenses: _filterByDate(_fullHistory.expenses),
-      salesCash: _filterByDate(_fullHistory.salesCash),
-      salesCredit: _filterByDate(_fullHistory.salesCredit),
-      capitalManagement: _filterByDate(_fullHistory.capitalManagement),
-    );
-    _cache.clear();
-    _currentPage = 0;
-  }
+    // Set end date and re-filter
+    void setEndDate(DateTime? date) {
+      _endDate = date;
+      _applyFilters();
+      notifyListeners();
+    }
 
-  // Filter list of transactions by start and end date
-  List<Map<String, dynamic>> _filterByDate(List<Map<String, dynamic>> data) {
-    if (_startDate == null && _endDate == null) return data;
+    // Load next page for pagination
+    void loadNextPage() {
+      final totalPages = (transactions.length / pageSize).ceil();
+      if (_currentPage + 1 < totalPages) {
+        _currentPage++;
+        notifyListeners();
+      }
+    }
 
-    return data.where((item) {
-      final createdAt = DateTime.tryParse(item['created_at'] ?? '');
-      if (createdAt == null) return false;
-      if (_startDate != null && createdAt.isBefore(_startDate!)) return false;
-      if (_endDate != null && createdAt.isAfter(_endDate!)) return false;
-      return true;
-    }).toList();
-  }
-
-  // Set category and re-filter
-  void setSelectedCategory(TransactionCategory category) {
-    selectedCategory = category;
-    _applyFilters();
-    notifyListeners();
-  }
-
-  // Set start date and re-filter
-  void setStartDate(DateTime? date) {
-    _startDate = date;
-    _applyFilters();
-    notifyListeners();
-  }
-
-  // Set end date and re-filter
-  void setEndDate(DateTime? date) {
-    _endDate = date;
-    _applyFilters();
-    notifyListeners();
-  }
-
-  // Load next page for pagination
-  void loadNextPage() {
-    final totalPages = (transactions.length / pageSize).ceil();
-    if (_currentPage + 1 < totalPages) {
-      _currentPage++;
+    // Reset pagination to first page
+    void resetPagination() {
+      _currentPage = 0;
       notifyListeners();
     }
   }
-
-  // Reset pagination to first page
-  void resetPagination() {
-    _currentPage = 0;
-    notifyListeners();
-  }
-}
