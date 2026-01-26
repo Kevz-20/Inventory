@@ -24,6 +24,14 @@ class NewCustomerPage extends ConsumerWidget {
       });
     }
 
+    // ✅ Sort municipalities alphabetically
+    final sortedCities = List<CityModel>.from(vm.cities)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    // ✅ Sort barangays alphabetically
+    final sortedBarangays = List<BarangayModel>.from(vm.barangays)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Add New Customer', showBackButton: true),
@@ -46,8 +54,8 @@ class NewCustomerPage extends ConsumerWidget {
                 LengthLimitingTextInputFormatter(11),
               ],
             ),
-            _buildCityDropdown(vm, vmNotifier),
-            _buildBarangayDropdown(vm, vmNotifier),
+            _buildCityDropdown(vm, vmNotifier, sortedCities),
+            _buildBarangayDropdown(vm, vmNotifier, sortedBarangays),
             _buildTextField('Landmark / Street', vmNotifier.landmarkController),
             const SizedBox(height: 24),
             SizedBox(
@@ -125,6 +133,7 @@ class NewCustomerPage extends ConsumerWidget {
   Widget _buildCityDropdown(
     NewCustomerViewModel vm,
     NewCustomerViewModel notifier,
+    List<CityModel> sortedCities,
   ) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -136,7 +145,7 @@ class NewCustomerPage extends ConsumerWidget {
       child: DropdownButtonFormField<CityModel>(
         initialValue: vm.selectedCity,
         dropdownColor: Colors.white,
-        items: vm.cities
+        items: sortedCities
             .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
             .toList(),
         onChanged: (CityModel? c) {
@@ -157,6 +166,7 @@ class NewCustomerPage extends ConsumerWidget {
   Widget _buildBarangayDropdown(
     NewCustomerViewModel vm,
     NewCustomerViewModel notifier,
+    List<BarangayModel> sortedBarangays,
   ) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -168,7 +178,7 @@ class NewCustomerPage extends ConsumerWidget {
       child: DropdownButtonFormField<BarangayModel>(
         initialValue: vm.selectedBarangay,
         dropdownColor: Colors.white,
-        items: vm.barangays
+        items: sortedBarangays
             .map((b) => DropdownMenuItem(value: b, child: Text(b.name)))
             .toList(),
         onChanged: (BarangayModel? b) {
