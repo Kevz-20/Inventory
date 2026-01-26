@@ -33,10 +33,10 @@ class UtangCustomer {
   });
 
   String get fullName => [
-        firstName,
-        middleName,
-        lastName,
-      ].where((e) => e != null && e.isNotEmpty).join(' ');
+    firstName,
+    middleName,
+    lastName,
+  ].where((e) => e != null && e.isNotEmpty).join(' ');
 
   // Compute remaining days
   int get remainingDays {
@@ -121,12 +121,6 @@ class _UtangScreenState extends State<UtangScreen> {
       ownerPayables = payables;
       applyOwnerFilter(selectedFilter); // apply default filter
     });
-
-    // Debug print
-    for (var p in payables) {
-      print(
-          '${p.name} • ${p.amount} • Installment: ${p.isInstallment} • Paid: ${p.isPaid} • Due: ${p.dueDate}');
-    }
   }
 
   // ============================================================
@@ -141,16 +135,17 @@ class _UtangScreenState extends State<UtangScreen> {
         break;
       case 1: // Overdue
         filteredOwnerPayables = ownerPayables
-            .where((p) =>
-                !p.isPaid &&
-                p.dueDate != null &&
-                DateTime.tryParse(p.dueDate!) != null &&
-                DateTime.parse(p.dueDate!).isBefore(DateTime.now()))
+            .where(
+              (p) =>
+                  !p.isPaid &&
+                  p.dueDate != null &&
+                  DateTime.tryParse(p.dueDate!) != null &&
+                  DateTime.parse(p.dueDate!).isBefore(DateTime.now()),
+            )
             .toList();
         break;
       case 2: // Nabayran (Paid)
-        filteredOwnerPayables =
-            ownerPayables.where((p) => p.isPaid).toList();
+        filteredOwnerPayables = ownerPayables.where((p) => p.isPaid).toList();
         break;
       default:
         filteredOwnerPayables = List.from(ownerPayables);
@@ -476,11 +471,14 @@ class _UtangScreenState extends State<UtangScreen> {
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 6),
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
                           child: Card(
                             elevation: 1,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
@@ -544,7 +542,9 @@ class _UtangScreenState extends State<UtangScreen> {
                                   const SizedBox(width: 12),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: statusColor(item.status),
                                       borderRadius: BorderRadius.circular(12),
