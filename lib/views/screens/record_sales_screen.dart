@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -19,19 +21,37 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   bool isCash = true;
   bool isProductMode = false;
 
-  TextEditingController searchController = TextEditingController();
+  bool _showLeftArrow = false;
+  bool _showRightArrow = false;
+
+  final ScrollController _categoryScrollController = ScrollController();
+  final TextEditingController searchController = TextEditingController();
   String searchQuery = '';
   DateTime? dueDate;
 
-  ScrollController _categoryScrollController = ScrollController();
+  void _updateArrowVisibility() {
+    if (!_categoryScrollController.hasClients) return;
+    final position = _categoryScrollController.position;
+
+    setState(() {
+      _showLeftArrow = position.pixels > 0;
+      _showRightArrow = position.pixels < position.maxScrollExtent;
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+
+    _categoryScrollController.addListener(_updateArrowVisibility);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = ref.read(salesViewModelProvider);
       vm.resetQuantities();
       vm.loadProducts();
+
+      // Initial arrow check
+      _updateArrowVisibility();
     });
   }
 
@@ -128,6 +148,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       ),
     );
   }
+
+  // ---------------------------- Helper Widgets ----------------------------
 
   Widget _cashUtangSwitch(SalesViewModel vm) => Row(
     children: [
@@ -275,26 +297,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     }
   }
 
+  // ------------------------- CATEGORY CHIPS WITH ARROWS -------------------------
+
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash) return const SizedBox.shrink();
 
-    const arrowWidth = 30.0; // arrow container width
-    const arrowIconSize = 24.0; // bigger arrows
-    const chipHeight = 40.0; //bigger chip height for easier tap
-    const chipFontSize = 15.0; //bigger text for readability
+    const arrowWidth = 30.0;
+    const arrowIconSize = 24.0;
+    const chipHeight = 40.0;
+    const chipFontSize = 15.0;
 
     return SizedBox(
       height: chipHeight,
       child: Stack(
         children: [
-          // Horizontal category list
           ListView.separated(
             controller: _categoryScrollController,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: arrowWidth),
             itemCount: SalesViewModel.categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final selected = index == vm.selectedCategoryIndex;
               return GestureDetector(
@@ -302,7 +325,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                 child: Container(
                   height: chipHeight,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.center, // center text vertically
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: selected ? AppColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -328,80 +351,82 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           ),
 
           // Left arrow
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: () {
-                _categoryScrollController.animateTo(
-                  (_categoryScrollController.offset - 100).clamp(
-                    0.0,
-                    _categoryScrollController.position.maxScrollExtent,
+          if (_showLeftArrow)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: () {
+                  _categoryScrollController.animateTo(
+                    (_categoryScrollController.offset - 100).clamp(
+                      0.0,
+                      _categoryScrollController.position.maxScrollExtent,
+                    ),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                },
+                child: Container(
+                  width: arrowWidth,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        AppColors.surface,
+                        AppColors.surface.withOpacity(0),
+                      ],
+                    ),
                   ),
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              },
-              child: Container(
-                width: arrowWidth,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      AppColors.surface,
-                      AppColors.surface.withOpacity(0),
-                    ],
+                  child: const Icon(
+                    Icons.arrow_back_ios,
+                    size: arrowIconSize,
+                    color: Colors.black,
                   ),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios,
-                  size: arrowIconSize,
-                  color: Colors.black,
                 ),
               ),
             ),
-          ),
 
           // Right arrow
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            child: GestureDetector(
-              onTap: () {
-                _categoryScrollController.animateTo(
-                  (_categoryScrollController.offset + 100).clamp(
-                    0.0,
-                    _categoryScrollController.position.maxScrollExtent,
+          if (_showRightArrow)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: GestureDetector(
+                onTap: () {
+                  _categoryScrollController.animateTo(
+                    (_categoryScrollController.offset + 100).clamp(
+                      0.0,
+                      _categoryScrollController.position.maxScrollExtent,
+                    ),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                },
+                child: Container(
+                  width: arrowWidth,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                      colors: [
+                        AppColors.surface,
+                        AppColors.surface.withOpacity(0),
+                      ],
+                    ),
                   ),
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              },
-              child: Container(
-                width: arrowWidth,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerRight,
-                    end: Alignment.centerLeft,
-                    colors: [
-                      AppColors.surface,
-                      AppColors.surface.withOpacity(0),
-                    ],
+                  child: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: arrowIconSize,
+                    color: Colors.black,
                   ),
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: arrowIconSize,
-                  color: Colors.black,
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
