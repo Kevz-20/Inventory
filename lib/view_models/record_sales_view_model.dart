@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/capital_management_model.dart';
 import '../models/product_model.dart';
+import '../providers/capital_management_view_model_provider.dart';
 import '../repositories/product_repository.dart';
 import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
 import '../repositories/capital_management_repository.dart';
 
-final salesViewModelProvider = ChangeNotifierProvider<SalesViewModel>((ref) {
-  return SalesViewModel();
-});
-
+/// Updated SalesViewModel with proper callback to update CapitalManagementViewModel
 class SalesViewModel extends ChangeNotifier {
+  final void Function()? onCashUpdated; // 🔹 callback to notify CapitalManagement
+
   CapitalManagementRepository? _capitalRepository;
   ProductRepository? _productRepository;
   CustomerRepository? _customerRepository;
@@ -38,7 +38,7 @@ class SalesViewModel extends ChangeNotifier {
     'Uban Pa',
   ];
 
-  SalesViewModel() {
+  SalesViewModel({this.onCashUpdated}) {
     Future.microtask(() => _initRepository());
   }
 
@@ -204,6 +204,7 @@ class SalesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 🔹 Checkout method with callback to refresh CapitalManagementViewModel
   Future<void> checkout({
     bool isCash = true,
     int? customerId,
@@ -229,18 +230,16 @@ class SalesViewModel extends ChangeNotifier {
 
     try {
       if (isCash) {
-        // 1️⃣ Record sale in product repository
+        // Record cash sale
         await _productRepository!.checkoutCash(purchasedItems);
 
-        // 2️⃣ Add total cash to Cash on Hand
+        // Update cash on hand in CapitalManagement
         if (_capitalRepository != null) {
-          // Calculate total from purchased items
           double totalCash = purchasedItems.fold<double>(
             0.0,
             (sum, item) => sum + (item['subtotal'] as double),
           );
 
-          // Get latest capital record
           final capitals = await _capitalRepository!.getCapitalByAccount();
           if (capitals.isNotEmpty) {
             final latest = capitals.last;
@@ -249,14 +248,17 @@ class SalesViewModel extends ChangeNotifier {
             final updatedModel = CapitalManagementModel(
               id: latest.id,
               accountId: latest.accountId,
-              capital: latest.capital, // keep original capital
-              cashOnHand: updatedCash, // ✅ increment cash on hand
+              capital: latest.capital,
+              cashOnHand: updatedCash,
               bankCash: latest.bankCash,
               remarks: 'Cash sale added',
               createdAt: DateTime.now(),
             );
 
             await _capitalRepository!.updateCapital(updatedModel);
+
+            // 🔹 Call the callback to refresh the CapitalManagementViewModel
+            if (onCashUpdated != null) onCashUpdated!();
           }
         }
       } else {
@@ -277,3 +279,14 @@ class SalesViewModel extends ChangeNotifier {
     resetQuantities();
   }
 }
+
+/// 🔹 Updated provider passing callback
+final salesViewModelProvider =
+    ChangeNotifierProvider<SalesViewModel>((ref) {
+  return SalesViewModel(
+    onCashUpdated: () {
+      // This will reload the CapitalManagementViewModel when cash is updated
+      ref.read(capitalManagementViewModelProvider).loadCapitals();
+    },
+  );
+});
