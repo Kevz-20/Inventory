@@ -33,11 +33,10 @@ class IncomeStatementRepository {
       return (r.first['total'] as num?)?.toDouble() ?? 0;
     }
 
-    // --------------------------
+
     // CATEGORY MAP FOR EXPENSES
-    // --------------------------
     final categoryMap = {
-      'kompra': ['Kumpra / Stock in'],
+      'kompra': ['Kumpra'], 
       'electricity': ['Tubig / Kuryente'],
       'transportation': ['Transportasyon'],
       'rent': ['Mga Bayronon'],
@@ -78,18 +77,7 @@ class IncomeStatementRepository {
     // ----------------------
     // COST OF GOODS SOLD (KOMPRA)
     // ----------------------
-    final kompraResult = await db.rawQuery(
-      '''
-      SELECT SUM(p.purchase_price * si.quantity) AS total
-      FROM sale_item si
-      JOIN product p ON si.product_id = p.id
-      JOIN sales s ON si.sale_id = s.id
-      WHERE s.account_id = ? AND s.created_at BETWEEN ? AND ?
-      ''',
-      [accountId, startStr, endStr],
-    );
-
-    final kompra = valueOf(kompraResult);
+    final kompra = await fetchExpenseByCategory('kompra');
 
     // ----------------------
     // OTHER EXPENSES

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // ✅ import intl for formatting
 import '../../core/app_colors.dart';
+import '../../models/payable_model.dart';
+import '../../repositories/payable_repository.dart';
 import '../widgets/header.dart';
 import '../../services/db_service.dart';
+import 'add_utang_screen.dart';
 import 'utang_summary.screen.dart';
 
 // ============================================================
@@ -29,10 +33,10 @@ class UtangCustomer {
   });
 
   String get fullName => [
-    firstName,
-    middleName,
-    lastName,
-  ].where((e) => e != null && e.isNotEmpty).join(' ');
+        firstName,
+        middleName,
+        lastName,
+      ].where((e) => e != null && e.isNotEmpty).join(' ');
 
   // Compute remaining days
   int get remainingDays {
@@ -70,14 +74,22 @@ class _UtangScreenState extends State<UtangScreen> {
   int selectedFilter = 0;
   List<UtangCustomer> utangan = [];
 
+  // ====== Owner Payables ======
+  List<Payable> ownerPayables = []; // all payables
+  List<Payable> filteredOwnerPayables = []; // filtered payables
+
+  // ✅ Number format for thousands separator
+  final currencyFormat = NumberFormat("#,##0.00", "en_PH");
+
   @override
   void initState() {
     super.initState();
     fetchUtangan();
+    fetchOwnerPayables(); // ✅ fetch owner payables
   }
 
   // ============================================================
-  // FETCH ALL UTANG (no account filter)
+  // FETCH ALL CUSTOMER UTANG
   // ============================================================
   Future<void> fetchUtangan() async {
     final db = await DBService.instance.database;
@@ -87,7 +99,7 @@ class _UtangScreenState extends State<UtangScreen> {
             c.municipality,
             c.phone_number,
             SUM(sc.amount) as total_amount,
-            MIN(sc.due_date) as due_date -- ✅ nearest due date
+            MIN(sc.due_date) as due_date
       FROM sales_credit sc
       INNER JOIN customer c ON c.id = sc.customer_id
       GROUP BY c.id
@@ -97,6 +109,53 @@ class _UtangScreenState extends State<UtangScreen> {
     setState(() {
       utangan = result.map((e) => UtangCustomer.fromMap(e)).toList();
     });
+  }
+
+  // ============================================================
+  // FETCH OWNER PAYABLES FROM DB
+  // ============================================================
+  Future<void> fetchOwnerPayables() async {
+    final payables = await PayableRepository().getAllPayables();
+
+    setState(() {
+      ownerPayables = payables;
+      applyOwnerFilter(selectedFilter); // apply default filter
+    });
+
+    // Debug print
+    for (var p in payables) {
+      print(
+          '${p.name} • ${p.amount} • Installment: ${p.isInstallment} • Paid: ${p.isPaid} • Due: ${p.dueDate}');
+    }
+  }
+
+  // ============================================================
+  // APPLY FILTER FUNCTION
+  // ============================================================
+  void applyOwnerFilter(int filterIndex) {
+    selectedFilter = filterIndex;
+
+    switch (filterIndex) {
+      case 0: // Tanan
+        filteredOwnerPayables = List.from(ownerPayables);
+        break;
+      case 1: // Overdue
+        filteredOwnerPayables = ownerPayables
+            .where((p) =>
+                !p.isPaid &&
+                p.dueDate != null &&
+                DateTime.tryParse(p.dueDate!) != null &&
+                DateTime.parse(p.dueDate!).isBefore(DateTime.now()))
+            .toList();
+        break;
+      case 2: // Nabayran (Paid)
+        filteredOwnerPayables =
+            ownerPayables.where((p) => p.isPaid).toList();
+        break;
+      default:
+        filteredOwnerPayables = List.from(ownerPayables);
+    }
+    setState(() {});
   }
 
   // ============================================================
@@ -114,24 +173,71 @@ class _UtangScreenState extends State<UtangScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Container(
+              height: 60,
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(40),
               ),
-              child: Row(
+              child: Stack(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => selectedTab = 0),
-                      child: toggleButton("Customer Utang", selectedTab == 0),
+                  // Sliding green background
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    left: selectedTab == 0
+                        ? 0
+                        : MediaQuery.of(context).size.width / 2 - 30,
+                    right: selectedTab == 0
+                        ? MediaQuery.of(context).size.width / 2 - 30
+                        : 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0C4B3E),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => selectedTab = 1),
-                      child: toggleButton("Owner Utang", selectedTab == 1),
-                    ),
+                  // Toggle texts
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => selectedTab = 0),
+                          child: Center(
+                            child: Text(
+                              "Customer Utang",
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: selectedTab == 0
+                                    ? Colors.white
+                                    : Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => selectedTab = 1),
+                          child: Center(
+                            child: Text(
+                              "Owner Utang",
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: selectedTab == 1
+                                    ? Colors.white
+                                    : Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -140,9 +246,16 @@ class _UtangScreenState extends State<UtangScreen> {
           const SizedBox(height: 15),
           // Page content
           Expanded(
-            child: IndexedStack(
-              index: selectedTab,
-              children: [customerPage(), ownerPage()],
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                final offsetAnimation = Tween<Offset>(
+                  begin: Offset(selectedTab == 0 ? 1 : -1, 0),
+                  end: Offset.zero,
+                ).animate(animation);
+                return SlideTransition(position: offsetAnimation, child: child);
+              },
+              child: selectedTab == 0 ? customerPage() : ownerPage(),
             ),
           ),
         ],
@@ -195,7 +308,6 @@ class _UtangScreenState extends State<UtangScreen> {
                     final item = utangan[index];
                     return GestureDetector(
                       onTap: () {
-                        // Navigate to summary page
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -214,7 +326,6 @@ class _UtangScreenState extends State<UtangScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Name + Remaining Credit
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -228,8 +339,9 @@ class _UtangScreenState extends State<UtangScreen> {
                                       ),
                                     ),
                                   ),
+                                  // ✅ formatted amount
                                   Text(
-                                    "₱${item.totalAmount.toStringAsFixed(2)}",
+                                    "₱${currencyFormat.format(item.totalAmount)}",
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -238,7 +350,6 @@ class _UtangScreenState extends State<UtangScreen> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              // Municipality
                               if (item.municipality != null &&
                                   item.municipality!.isNotEmpty)
                                 Text(
@@ -249,7 +360,6 @@ class _UtangScreenState extends State<UtangScreen> {
                                   ),
                                 ),
                               const SizedBox(height: 2),
-                              // Phone number + Remaining Days
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -304,57 +414,194 @@ class _UtangScreenState extends State<UtangScreen> {
   // OWNER UTANG PAGE
   // ============================================================
   Widget ownerPage() {
-    return Column(
+    Color statusColor(String status) {
+      switch (status) {
+        case 'Overdue':
+          return Colors.red.shade100;
+        case 'Due Soon':
+          return Colors.orange.shade100;
+        case 'Paid':
+          return Colors.green.shade100;
+        default:
+          return Colors.grey.shade200;
+      }
+    }
+
+    Color statusTextColor(String status) {
+      switch (status) {
+        case 'Overdue':
+          return Colors.red.shade800;
+        case 'Due Soon':
+          return Colors.orange.shade800;
+        case 'Paid':
+          return Colors.green.shade800;
+        default:
+          return Colors.grey.shade800;
+      }
+    }
+
+    return Stack(
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: smallCard("Overdue", "₱0.00 (0)", true)),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: smallCard("Due this Week", "₱0.00 (0)", false),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    filterButton(0, "Tanan"),
-                    const SizedBox(width: 12),
-                    filterButton(1, "Overdue"),
-                    const SizedBox(width: 12),
-                    filterButton(2, "Nabayran"),
-                  ],
-                ),
-                const SizedBox(height: 80),
-                const Text(
-                  "Walay bayranan",
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                const SizedBox(height: 120),
-              ],
+        Column(
+          children: [
+            const SizedBox(height: 20),
+            // FILTER BUTTONS
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  filterButton(0, "Tanan"),
+                  filterButton(1, "Overdue"),
+                  filterButton(2, "Nabayran"),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 15),
+
+            // LIST OF OWNER UTANG
+            Expanded(
+              child: filteredOwnerPayables.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "Walay bayranan",
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: filteredOwnerPayables.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredOwnerPayables[index];
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          child: Card(
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // ITEM NAME
+                                        Text(
+                                          item.item,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 6),
+
+                                        // ✅ formatted amount
+                                        Text(
+                                          "₱${currencyFormat.format(item.amount)}",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 4),
+
+                                        // DUE DATE
+                                        Text(
+                                          "Due: ${item.dueDate ?? '-'}",
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 4),
+
+                                        // INSTALLMENT TYPE
+                                        Text(
+                                          item.isInstallment
+                                              ? "Installment"
+                                              : "Non-installment",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: item.isInstallment
+                                                ? Colors.orange.shade800
+                                                : Colors.blue.shade800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: statusColor(item.status),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      item.status,
+                                      style: TextStyle(
+                                        color: statusTextColor(item.status),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 100),
+          ],
         ),
-        Container(
-          margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-          height: 55,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0C4B3E),
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: const Center(
-            child: Text(
-              "Pagdugang og Bayronon",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
+        // ADD BUTTON
+        Positioned(
+          bottom: 20,
+          left: 20,
+          right: 20,
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddUtangPage()),
+                );
+
+                if (result == true) {
+                  fetchOwnerPayables(); // 🔥 reload owner utang
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+              child: const Text(
+                "Pagdugang og Bayronon",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -364,72 +611,29 @@ class _UtangScreenState extends State<UtangScreen> {
   }
 
   // ============================================================
-  // REUSABLE WIDGETS
+  // FILTER BUTTON OVERRIDE
   // ============================================================
-  Widget toggleButton(String text, bool active) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: active ? const Color(0xFF0C4B3E) : Colors.white,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: active ? Colors.white : Colors.black,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget smallCard(String title, String value, bool red) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, color: Color(0xff444444)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              color: red ? Colors.red : Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget filterButton(int index, String text) {
     bool active = selectedFilter == index;
-
-    return GestureDetector(
-      onTap: () => setState(() => selectedFilter = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 23, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF0C4B3E) : Colors.white,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: active ? Colors.white : Colors.black,
-            fontSize: 15,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => applyOwnerFilter(index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            text,
+            style: TextStyle(
+              color: active ? Colors.white : Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
