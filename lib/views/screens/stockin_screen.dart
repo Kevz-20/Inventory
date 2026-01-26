@@ -460,7 +460,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         GestureDetector(
           onTap: pickImage,
           child: Container(
-            height: 150,
+            height: 300,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.white,
