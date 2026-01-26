@@ -19,21 +19,24 @@ class ThousandsFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // Remove any non-digit characters
-    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (newText.isEmpty) return newValue.copyWith(text: '');
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
 
-    // Format with commas
-    String formatted = _formatter.format(int.parse(newText));
+    final formatted = _formatter.format(int.parse(digits));
 
-    // Calculate cursor position
-    int selectionIndex =
-        formatted.length - (newText.length - newValue.selection.end);
-    if (selectionIndex < 0) selectionIndex = 0;
+    final diff = formatted.length - digits.length;
+    int cursor = newValue.selection.end + diff;
+
+    cursor = cursor.clamp(0, formatted.length);
 
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: selectionIndex),
+      selection: TextSelection.collapsed(offset: cursor),
     );
   }
 }
