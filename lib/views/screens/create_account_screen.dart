@@ -7,11 +7,20 @@ import '../../view_models/login_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 
-class CreateAccountScreen extends ConsumerWidget {
+class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CreateAccountScreen> createState() =>
+      _CreateAccountScreenState();
+}
+
+class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
+  bool pinVisible = false;
+  bool confirmPinVisible = false;
+
+  @override
+  Widget build(BuildContext context) {
     final vm = ref.watch(createAccountProvider);
     final vmNotifier = ref.read(createAccountProvider.notifier);
 
@@ -81,13 +90,32 @@ class CreateAccountScreen extends ConsumerWidget {
                     child: buildTextField(
                       controller: vm.pinController,
                       hint: "Enter 4-digit PIN",
-                      obscureText: true,
+                      obscureText: !pinVisible,
                       maxLength: 4,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       keyboardType: TextInputType.number,
                       errorText: vm.pinError,
                       onChanged: (_) =>
                           vmNotifier.clearFieldError(vm.pinController),
+                      suffixIcon: InkWell(
+                        onTap: () {
+                          setState(() {
+                            pinVisible = !pinVisible;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(
+                            8.0,
+                          ), // reduces icon size
+                          child: Icon(
+                            pinVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            size: 20, // smaller size
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -95,18 +123,36 @@ class CreateAccountScreen extends ConsumerWidget {
                     child: buildTextField(
                       controller: vm.confirmPinController,
                       hint: "Re-enter PIN",
-                      obscureText: true,
+                      obscureText: !confirmPinVisible,
                       maxLength: 4,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       keyboardType: TextInputType.number,
                       errorText: vm.confirmPinError,
                       onChanged: (_) =>
                           vmNotifier.clearFieldError(vm.confirmPinController),
+                      suffixIcon: InkWell(
+                        onTap: () {
+                          setState(() {
+                            confirmPinVisible = !confirmPinVisible;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Icon(
+                            confirmPinVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 15),
+
               // Security Question
               buildLabel("Security Question (for PIN reset)"),
               DropdownButtonFormField<String>(
@@ -188,19 +234,15 @@ class CreateAccountScreen extends ConsumerWidget {
                           if (success) {
                             if (!context.mounted) return;
 
-                            // Delay for 3 seconds
                             await Future.delayed(const Duration(seconds: 3));
 
-                            // Clear all fields
                             vm.clearFields();
 
-                            // Update mobile number on login screen
                             final loginVM = ref.read(loginViewModelProvider);
                             await loginVM.loadSavedMobile();
 
                             if (!context.mounted) return;
 
-                            // Navigate to login screen
                             context.go('/login');
                           }
                         }
@@ -240,6 +282,7 @@ class CreateAccountScreen extends ConsumerWidget {
     TextInputType? keyboardType,
     String? errorText,
     Function(String)? onChanged,
+    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
@@ -275,6 +318,7 @@ class CreateAccountScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: AppColors.error, width: 2),
         ),
+        suffixIcon: suffixIcon,
       ),
     );
   }
