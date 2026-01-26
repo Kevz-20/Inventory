@@ -100,10 +100,18 @@ class _CapitalManagementScreenState
 
                 const SizedBox(height: 16),
 
-                _miniBalanceCard(title: "Cash on Hand", value: totalCashOnHand),
+                _miniBalanceCard(
+                  title: "Cash on Hand",
+                  value: totalCashOnHand,
+                  icon: Icons.money,
+                ),
                 const SizedBox(height: 15),
 
-                _miniBalanceCard(title: "Capital", value: totalCapital),
+                _miniBalanceCard(
+                  title: "Capital",
+                  value: totalCapital,
+                  icon: Icons.account_balance,
+                ),
                 const SizedBox(height: 30),
 
                 _addCapitalCard(totalCapital, enteredAmount),
@@ -165,7 +173,11 @@ class _CapitalManagementScreenState
 
   /// ================= UI HELPERS =================
 
-  Widget _miniBalanceCard({required String title, required double value}) {
+  Widget _miniBalanceCard({
+    required String title,
+    required double value,
+    IconData? icon, // optional prefix icon
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -183,7 +195,15 @@ class _CapitalManagementScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: Colors.grey[600])),
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 20, color: Colors.grey[700]),
+                const SizedBox(width: 6),
+              ],
+              Text(title, style: TextStyle(color: Colors.grey[600])),
+            ],
+          ),
           const SizedBox(height: 6),
           Text(
             _currencyFormatter.format(value),
