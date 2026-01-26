@@ -1,33 +1,39 @@
-enum CashflowType { income, expense }
+import 'package:intl/intl.dart';
 
 class CashflowRecord {
   final int? id;
-  final String description;
-  final double amount;
-  final CashflowType type;
   final DateTime date;
+  final String item;
+  final double cashIn;
+  final double cashOut;
 
   CashflowRecord({
     this.id,
-    required this.description,
-    required this.amount,
-    required this.type,
     required this.date,
+    required this.item,
+    required this.cashIn,
+    required this.cashOut,
   });
 
-  Map<String, dynamic> toMap() => {
-    'id': id,
-    'description': description,
-    'amount': amount,
-    'type': type.index,
-    'date': date.toIso8601String(),
-  };
+  String get formattedDate => DateFormat('yyyy-MM-dd').format(date);
 
-  factory CashflowRecord.fromMap(Map<String, dynamic> map) => CashflowRecord(
-    id: map['id'],
-    description: map['description'],
-    amount: map['amount'],
-    type: CashflowType.values[map['type']],
-    date: DateTime.parse(map['date']),
-  );
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'item': item,
+      'cash_in': cashIn,
+      'cash_out': cashOut,
+    };
+  }
+
+  factory CashflowRecord.fromMap(Map<String, dynamic> map) {
+    return CashflowRecord(
+      id: map['id'],
+      date: DateTime.parse(map['date']),
+      item: map['item'],
+      cashIn: map['cash_in'],
+      cashOut: map['cash_out'],
+    );
+  }
 }
