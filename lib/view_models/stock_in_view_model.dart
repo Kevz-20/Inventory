@@ -116,59 +116,91 @@ class StockInViewModel extends ChangeNotifier {
   }
 
   Future<void> saveProduct() async {
-    if (!isInitialized) return;
+    debugPrint('saveProduct() called');
+
+    debugPrint('--- USER INPUT VALUES ---');
+    debugPrint('Product name: ${productController.text}');
+    debugPrint('Category: $selectedCategory');
+    debugPrint('Selling price (raw): ${sellingPriceController.text}');
+    debugPrint('Purchase price (raw): ${purchasePriceController.text}');
+    debugPrint('Quantity (raw): ${quantityController.text}');
+    debugPrint('Image path: ${productImage?.path}');
+    debugPrint('--------------------------');
+
+    if (!isInitialized) {
+      debugPrint('Not initialized. Exiting.');
+      return;
+    }
 
     if (productController.text.isEmpty || selectedCategory == null) {
+      debugPrint('Validation failed: empty product or category');
       errorMessage = 'Please fill all required fields';
       safeNotifyListeners();
       return;
     }
 
     setLoading(true);
+    debugPrint('Loading started');
 
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productController.text.toLowerCase()) {
         existingProduct = p;
+        debugPrint('Existing product found: ${p.id}');
         break;
       }
     }
 
     selectedProduct ??= existingProduct;
+    debugPrint('Selected product ID: ${selectedProduct?.id}');
+
+    final sellingPriceText = sellingPriceController.text.replaceAll(',', '');
+    final purchasePriceText = purchasePriceController.text.replaceAll(',', '');
+
+    debugPrint('Selling price raw: $sellingPriceText');
+    debugPrint('Purchase price raw: $purchasePriceText');
+    debugPrint('Quantity raw: ${quantityController.text}');
 
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productController.text,
       category: selectedCategory!,
-      sellingPrice:
-          double.tryParse(sellingPriceController.text.replaceAll(',', '')) ?? 0,
-      purchasePrice:
-          double.tryParse(purchasePriceController.text.replaceAll(',', '')) ??
-          0,
-      quantity: int.tryParse(quantityController.text) ?? 0,
+      sellingPrice: double.tryParse(sellingPriceText) ?? 0,
+      purchasePrice: double.tryParse(purchasePriceText) ?? 0,
+      quantity: int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0,
       image: productImage?.path,
       createdAt: selectedProduct?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
+    debugPrint('Product model created: ${stock.toString()}');
+
     try {
       if (selectedProduct != null) {
+        debugPrint('Updating product...');
         await _repository.updateProduct(stock);
         successMessage = 'Product updated successfully';
       } else {
+        debugPrint('Adding new product...');
         await _repository.addProduct(stock);
         successMessage = 'Product saved successfully';
       }
 
       await loadProductNames();
+      debugPrint('Product names reloaded');
+
       clearFields();
       selectedProduct = null;
-    } catch (e) {
+      debugPrint('Fields cleared');
+    } catch (e, stack) {
+      debugPrint('Save failed: $e');
+      debugPrint(stack.toString());
       errorMessage = 'Failed to save product: ${e.toString()}';
     } finally {
       setLoading(false);
       safeNotifyListeners();
       autoClearMessages();
+      debugPrint('saveProduct() finished');
     }
   }
 
