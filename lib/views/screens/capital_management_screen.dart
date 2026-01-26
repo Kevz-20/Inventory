@@ -90,8 +90,6 @@ class _CapitalManagementScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
-
                 /// LAST ADDED DATE
                 Text(
                   lastAddedDate == null
@@ -274,33 +272,33 @@ class _CapitalManagementScreenState
         FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
         ThousandsSeparatorInputFormatter(),
       ],
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+      ),
       decoration: InputDecoration(
         hintText: '0.00',
-
-        /// 👇 ALWAYS-VISIBLE PESO SIGN
         prefixIcon: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             '₱',
-            style: TextStyle(
-              fontSize: 16,
+            style: const TextStyle(
+              fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Colors.black,
             ),
           ),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-
-        /// 👇 ALWAYS-VISIBLE BORDER
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.green, width: 1),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.green, width: 1),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
         ),
-
         contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       ),
     );
@@ -327,28 +325,22 @@ class _CapitalManagementScreenState
               ThousandsSeparatorInputFormatter(),
             ]
           : null,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+      ),
       decoration: InputDecoration(
         hintText: hint,
         prefixText: prefix,
-
-        /// 👇 ALWAYS VISIBLE OUTLINE
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(
-            color: Colors.green, // same green
-            width: 1,
-          ),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
         ),
-
-        /// 👇 SAME BORDER WHEN FOCUSED
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(
-            color: Colors.green, // same green
-            width: 1,
-          ),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
         ),
-
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 14,
