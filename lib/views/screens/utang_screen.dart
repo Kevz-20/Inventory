@@ -205,7 +205,7 @@ class _UtangScreenState extends State<UtangScreen> {
                             child: Text(
                               "Customer Utang",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 color: selectedTab == 0
                                     ? Colors.white
                                     : Colors.black,
@@ -222,7 +222,7 @@ class _UtangScreenState extends State<UtangScreen> {
                             child: Text(
                               "Owner Utang",
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 color: selectedTab == 1
                                     ? Colors.white
                                     : Colors.black,
