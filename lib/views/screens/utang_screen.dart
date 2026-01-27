@@ -17,6 +17,7 @@ class UtangCustomer {
   final String? middleName;
   final String? lastName;
   final String? municipality;
+  final String? barangay; // 🔥 NEW
   final String? phoneNumber;
   final double totalAmount;
   final String? dueDate; // NEW
@@ -27,6 +28,7 @@ class UtangCustomer {
     this.middleName,
     this.lastName,
     this.municipality,
+    this.barangay, // 🔥 NEW
     this.phoneNumber,
     required this.totalAmount,
     this.dueDate,
@@ -52,6 +54,8 @@ class UtangCustomer {
       firstName: map['first_name'],
       middleName: map['middle_name'],
       lastName: map['last_name'],
+      municipality: map['municipality'],
+      barangay: map['barangay'],
       phoneNumber: map['phone_number'],
       totalAmount: map['total_amount']?.toDouble() ?? 0.0,
       dueDate: map['due_date'], // NEW
@@ -97,6 +101,7 @@ class _UtangScreenState extends State<UtangScreen> {
     final result = await db.rawQuery('''
       SELECT c.id, c.first_name, c.middle_name, c.last_name,
             c.municipality,
+            c.barangay,  
             c.phone_number,
             SUM(sc.amount) as total_amount,
             MIN(sc.due_date) as due_date
@@ -349,6 +354,16 @@ class _UtangScreenState extends State<UtangScreen> {
                                   item.municipality!.isNotEmpty)
                                 Text(
                                   item.municipality!,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              const SizedBox(height: 2),
+                              if (item.barangay != null &&
+                                  item.barangay!.isNotEmpty) // ✅ NEW
+                                Text(
+                                  "Barangay ${item.barangay!}",
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey,
