@@ -15,29 +15,6 @@ class CapitalManagementScreen extends ConsumerStatefulWidget {
       _CapitalManagementScreenState();
 }
 
-class ThousandsSeparatorInputFormatter extends TextInputFormatter {
-  final NumberFormat formatter = NumberFormat('#,##0.##');
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) return newValue;
-
-    final rawText = newValue.text.replaceAll(',', '');
-    final value = double.tryParse(rawText);
-    if (value == null) return oldValue;
-
-    final formatted = formatter.format(value);
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
   final TextEditingController _amountController = TextEditingController();
@@ -59,25 +36,20 @@ class _CapitalManagementScreenState
       data: (_) {
         final vm = ref.watch(capitalManagementViewModelProvider);
 
-        final totalCashOnHand = vm.capitals.fold<double>(
-          0,
+        final totalCashOnHand = vm.capitals.fold(
+          0.0,
           (sum, e) => sum + e.cashOnHand,
         );
 
-        final totalCapital = vm.capitals.fold<double>(
-          0,
-          (sum, e) => sum + e.capital,
-        );
+        final totalCapital = vm.capitals.fold(0.0, (sum, e) => sum + e.capital);
 
-        /// 🔴 CHANGE `createdAt` IF YOUR FIELD NAME IS DIFFERENT
         final DateTime? lastAddedDate = vm.capitals.isNotEmpty
             ? vm.capitals
-                  .map((e) => e.createdAt) // <--- CHANGE HERE IF NEEDED
+                  .map((e) => e.createdAt)
                   .reduce((a, b) => a.isAfter(b) ? a : b)
             : null;
 
-        final enteredAmount =
-            double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0;
+        final enteredAmount = double.tryParse(_amountController.text) ?? 0;
 
         return Scaffold(
           backgroundColor: AppColors.surface,
@@ -90,7 +62,6 @@ class _CapitalManagementScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// LAST ADDED DATE
                 Text(
                   lastAddedDate == null
                       ? 'Last capital added: —'
@@ -105,6 +76,7 @@ class _CapitalManagementScreenState
                   value: totalCashOnHand,
                   icon: Icons.money,
                 ),
+
                 const SizedBox(height: 15),
 
                 _miniBalanceCard(
@@ -112,53 +84,48 @@ class _CapitalManagementScreenState
                   value: totalCapital,
                   icon: Icons.account_balance,
                 ),
+
                 const SizedBox(height: 30),
 
-                _addCapitalCard(totalCapital, enteredAmount),
+                _addCapitalCard(),
+
                 const SizedBox(height: 24),
 
-                Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: vm.isLoading || enteredAmount <= 0
-                            ? null
-                            : () async {
-                                await vm.addCapital(
-                                  capitalAmount: enteredAmount,
-                                  remarks: _remarksController.text,
-                                );
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: vm.isLoading || enteredAmount <= 0
+                        ? null
+                        : () async {
+                            await vm.addCapital(
+                              capitalAmount: enteredAmount,
+                              remarks: _remarksController.text,
+                            );
 
-                                _amountController.clear();
-                                _remarksController.clear();
-                                setState(() {});
-                              },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: vm.isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                "Add Capital",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                            _amountController.clear();
+                            _remarksController.clear();
+                            setState(() {});
+                          },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                  ],
+                    child: vm.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            "Add Capital",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
                 ),
               ],
             ),
@@ -167,7 +134,7 @@ class _CapitalManagementScreenState
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, st) => Scaffold(body: Center(child: Text('Error: $err'))),
+      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 
@@ -176,7 +143,7 @@ class _CapitalManagementScreenState
   Widget _miniBalanceCard({
     required String title,
     required double value,
-    IconData? icon, // optional prefix icon
+    IconData? icon,
   }) {
     return Container(
       width: double.infinity,
@@ -214,7 +181,7 @@ class _CapitalManagementScreenState
     );
   }
 
-  Widget _addCapitalCard(double currentCapital, double enteredAmount) {
+  Widget _addCapitalCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -239,8 +206,9 @@ class _CapitalManagementScreenState
 
           const SizedBox(height: 16),
 
-          _amountInput(controller: _amountController),
+          _amountInput(),
           const SizedBox(height: 6),
+
           Text(
             'Enter the amount you want to add',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -250,120 +218,67 @@ class _CapitalManagementScreenState
 
           Row(
             children: [
-              _quickAmountChip('₱500'),
+              _quickAmountChip('500'),
               const SizedBox(width: 8),
-              _quickAmountChip('₱1,000'),
+              _quickAmountChip('1000'),
               const SizedBox(width: 8),
-              _quickAmountChip('₱5,000'),
+              _quickAmountChip('5000'),
             ],
           ),
 
           const SizedBox(height: 16),
 
           _remarksInput(),
-          const SizedBox(height: 16),
-
-          const SizedBox(height: 4),
         ],
       ),
     );
   }
 
-  Widget _quickAmountChip(String label) {
+  Widget _quickAmountChip(String value) {
     return OutlinedButton(
       onPressed: () {
-        final value = label.replaceAll('₱', '').replaceAll(',', '');
         _amountController.text = value;
         setState(() {});
       },
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-      child: Text(label),
+      child: Text('₱${NumberFormat('#,##0').format(int.parse(value))}'),
     );
   }
 
-  Widget _amountInput({required TextEditingController controller}) {
+  Widget _amountInput() {
     return TextField(
-      controller: controller,
+      controller: _amountController,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-        ThousandsSeparatorInputFormatter(),
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
       ],
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: Colors.black,
-      ),
+      onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         hintText: '0.00',
-        prefixIcon: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            '₱',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        prefixText: '₱ ',
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       ),
     );
   }
 
   Widget _remarksInput() {
-    return _inputField(controller: _remarksController, hint: "Optional note");
-  }
-
-  Widget _inputField({
-    required TextEditingController controller,
-    String? hint,
-    String? prefix,
-    bool numbersOnly = false,
-  }) {
     return TextField(
-      controller: controller,
-      keyboardType: numbersOnly
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : TextInputType.text,
-      inputFormatters: numbersOnly
-          ? [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d,\.]')),
-              ThousandsSeparatorInputFormatter(),
-            ]
-          : null,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: Colors.black,
-      ),
+      controller: _remarksController,
       decoration: InputDecoration(
-        hintText: hint,
-        prefixText: prefix,
+        hintText: 'Optional note',
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 14,
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
       ),
     );
