@@ -554,178 +554,156 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       ),
     );
   }
+ Widget _utangList() {
+  final vm = ref.watch(salesViewModelProvider);
 
-  Widget _utangList() {
-    final vm = ref.watch(salesViewModelProvider);
+  if (!isProductMode) {
+    final filteredCustomers = vm.customers.where((customer) {
+      final name = '${customer['first_name']} ${customer['last_name']}';
+      return name.toLowerCase().contains(searchQuery.toLowerCase());
+    }).toList();
 
-    if (!isProductMode) {
-      final filteredCustomers = vm.customers.where((customer) {
-        final name = '${customer['first_name']} ${customer['last_name']}';
-        return name.toLowerCase().contains(searchQuery.toLowerCase());
-      }).toList();
-
-      return SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _dueDateCard(),
-            const SizedBox(height: 12),
-            _customerInput(),
-            const SizedBox(height: 12),
-            if (filteredCustomers.isNotEmpty)
-              ...filteredCustomers.map(
-                (customer) => Column(
-                  children: [
-                    _customerItem(customer),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              )
-            else
-              const Text(
-                "No customers found",
-                style: TextStyle(color: Colors.black54),
-              ),
-          ],
+    return SingleChildScrollView(
+  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10), // 👈 very small bottom only
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      _dueDateCard(),
+      const SizedBox(height: 4), // 👈 reduced from 12
+      if (filteredCustomers.isNotEmpty)
+        ...filteredCustomers.map(
+          (customer) => _customerItem(customer), // 👈 removed extra Column + SizedBox
+        )
+      else
+        const Center(
+          child: Text(
+            "No customers found",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+          ),
         ),
-      );
-    } else {
-      return Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                _searchBar(vm),
-                const SizedBox(height: 12),
-                _categoryChips(vm),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: _productList(vm)),
-        ],
-      );
-    }
-  }
-
-  Widget _dueDateCard() {
-    final isSelected = dueDate != null;
-
-    return GestureDetector(
-      onTap: () async {
-        final now = DateTime.now();
-        final pickedDate = await showDatePicker(
-          context: context,
-          initialDate: dueDate ?? now,
-          firstDate: now,
-          lastDate: DateTime(now.year + 5),
-        );
-
-        if (pickedDate != null) {
-          setState(() => dueDate = pickedDate);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+    ],
+  ),
+);
+  } else {
+    // Product selection after customer is picked
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color.fromARGB(255, 5, 5, 5).withAlpha(40),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withOpacity(0.1)
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.calendar_month_rounded,
-                color: isSelected ? AppColors.primary : Colors.black54,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                isSelected
-                    ? "Due Date: ${dueDate!.month}/${dueDate!.day}/${dueDate!.year}"
-                    : "Select Due Date",
-                style: TextStyle(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.black : Colors.black54,
                 ),
               ),
-            ),
-            const Icon(Icons.chevron_right),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              _searchBar(vm),
+              const SizedBox(height: 12),
+              _categoryChips(vm),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(child: _productList(vm)),
+      ],
     );
   }
+}
+  Widget _dueDateCard() {
+  final isSelected = dueDate != null;
 
-  Widget _customerInput() {
-    final vm = ref.watch(salesViewModelProvider);
-    final selected = vm.selectedCustomer;
+  return GestureDetector(
+    onTap: () async {
+      final now = DateTime.now();
+      final pickedDate = await showDatePicker(
+        context: context,
+        initialDate: dueDate ?? now,
+        firstDate: now,
+        lastDate: DateTime(now.year + 5),
+      );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      if (pickedDate != null) {
+        setState(() => dueDate = pickedDate);
+      }
+    },
+    child: Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14), // slightly tighter
+        border: Border.all(
+          color: isSelected ? AppColors.primary : Colors.grey.shade300,
+          width: 1, // thinner = cleaner
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.25), // green glow
+                  blurRadius: 6,
+                  spreadRadius: 1, // 👈 glow outside, not spacing
+                  offset: Offset.zero, // 👈 no downward gap
+                ),
+              ]
+            : [],
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              selected != null
-                  ? "${selected['first_name']} ${selected['last_name']}"
-                  : "Customer Name",
-              style: const TextStyle(fontSize: 16),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withOpacity(0.12)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.calendar_month_rounded,
+              size: 20,
+              color: isSelected ? AppColors.primary : Colors.black54,
             ),
           ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isSelected
+                  ? "Due Date: ${dueDate!.month}/${dueDate!.day}/${dueDate!.year}"
+                  : "Select Due Date",
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.black : Colors.black54,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 20),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _customerItem(Map<String, dynamic> customer) {
     final vm = ref.read(salesViewModelProvider);
