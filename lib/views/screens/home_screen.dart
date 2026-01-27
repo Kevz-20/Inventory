@@ -137,11 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   children: [
                     Text(
                       homeState.isMoneyVisible
-                          ? 'PHP ${NumberFormat.currency(
-                                locale: 'en_PH',
-                                symbol: '',
-                                decimalDigits: 2,
-                              ).format(homeState.cashOnHand)}'
+                          ? 'PHP ${NumberFormat.currency(locale: 'en_PH', symbol: '', decimalDigits: 2).format(homeState.cashOnHand)}'
                           : 'PHP ****',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
@@ -163,7 +159,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     ),
                   ],
                 ),
-
 
                 const SizedBox(height: 8),
                 Text(
@@ -275,5 +270,4 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
       bottomNavigationBar: BottomNavBar(currentIndex: homeState.selectedIndex),
     );
   }
- 
 }
