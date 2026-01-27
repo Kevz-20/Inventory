@@ -232,9 +232,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                         // Amount
                                         // Amount
                                         Text(
-                                          isHalin
-                                              ? '+${_currencyFormatter.format(tx.amount ?? 0)}'
-                                              : '-${_currencyFormatter.format(tx.amount ?? 0)}',
+                                          isCapital
+                                              ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                                              : isExpense
+                                              ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                                              : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}', // Halin
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
