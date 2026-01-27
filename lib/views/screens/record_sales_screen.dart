@@ -306,131 +306,99 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash) return const SizedBox.shrink();
 
-    const arrowWidth = 20.0;
-    const arrowIconSize = 20.0;
+    const arrowWidth = 10.0;
     const chipHeight = 40.0;
     const chipFontSize = 15.0;
 
     return SizedBox(
       height: chipHeight,
-      child: Stack(
+      child: Row(
         children: [
-          ListView.separated(
-            controller: _categoryScrollController,
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: arrowWidth),
-            itemCount: SalesViewModel.categories.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final selected = index == vm.selectedCategoryIndex;
-              return GestureDetector(
-                onTap: () => vm.selectCategory(index),
-                child: Container(
-                  height: chipHeight,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: selected ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withAlpha(51),
-                        blurRadius: 2,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    SalesViewModel.categories[index],
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w500,
-                      fontSize: chipFontSize,
-                    ),
-                  ),
-                ),
-              );
-            },
+          // Left arrow
+          SizedBox(
+            width: arrowWidth,
+            child: _showLeftArrow
+                ? IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 20,
+                    icon: const Icon(Icons.arrow_back_ios),
+                    onPressed: () {
+                      _categoryScrollController.animateTo(
+                        (_categoryScrollController.offset - 120).clamp(
+                          0.0,
+                          _categoryScrollController.position.maxScrollExtent,
+                        ),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                  )
+                : const SizedBox.shrink(),
           ),
 
-          // Left arrow
-          if (_showLeftArrow)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onTap: () {
-                  _categoryScrollController.animateTo(
-                    (_categoryScrollController.offset - 100).clamp(
-                      0.0,
-                      _categoryScrollController.position.maxScrollExtent,
-                    ),
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                  );
-                },
-                child: Container(
-                  width: arrowWidth,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        AppColors.surface,
-                        AppColors.surface.withOpacity(0),
+          // Categories
+          Expanded(
+            child: ListView.separated(
+              controller: _categoryScrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: SalesViewModel.categories.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final selected = index == vm.selectedCategoryIndex;
+
+                return GestureDetector(
+                  onTap: () => vm.selectCategory(index),
+                  child: Container(
+                    height: chipHeight,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withAlpha(51),
+                          blurRadius: 2,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
+                    child: Text(
+                      SalesViewModel.categories[index],
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                        fontSize: chipFontSize,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.arrow_back_ios,
-                    size: arrowIconSize,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
+                );
+              },
             ),
+          ),
 
           // Right arrow
-          if (_showRightArrow)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onTap: () {
-                  _categoryScrollController.animateTo(
-                    (_categoryScrollController.offset + 100).clamp(
-                      0.0,
-                      _categoryScrollController.position.maxScrollExtent,
-                    ),
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                  );
-                },
-                child: Container(
-                  width: arrowWidth,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                      colors: [
-                        AppColors.surface,
-                        AppColors.surface.withOpacity(0),
-                      ],
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: arrowIconSize,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ),
+          SizedBox(
+            width: arrowWidth,
+            child: _showRightArrow
+                ? IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 20,
+                    icon: const Icon(Icons.arrow_forward_ios),
+                    onPressed: () {
+                      _categoryScrollController.animateTo(
+                        (_categoryScrollController.offset + 120).clamp(
+                          0.0,
+                          _categoryScrollController.position.maxScrollExtent,
+                        ),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
