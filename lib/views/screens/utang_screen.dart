@@ -471,6 +471,7 @@ class _UtangScreenState extends State<UtangScreen> {
                             vertical: 6,
                           ),
                           child: Card(
+                            color: Colors.white,
                             elevation: 1,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
