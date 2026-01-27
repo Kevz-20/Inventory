@@ -306,8 +306,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash) return const SizedBox.shrink();
 
-    const arrowWidth = 30.0;
-    const arrowIconSize = 24.0;
+    const arrowWidth = 20.0;
+    const arrowIconSize = 20.0;
     const chipHeight = 40.0;
     const chipFontSize = 15.0;
 
