@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart'; // ✅ import intl for formatting
 import '../../core/app_colors.dart';
 import '../../models/payable_model.dart';
@@ -6,7 +7,6 @@ import '../../repositories/payable_repository.dart';
 import '../widgets/header.dart';
 import '../../services/db_service.dart';
 import 'add_utang_screen.dart';
-import 'utang_summary.screen.dart';
 
 // ============================================================
 // MODEL
@@ -302,15 +302,11 @@ class _UtangScreenState extends State<UtangScreen> {
                   itemBuilder: (context, index) {
                     final item = utangan[index];
                     return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => UtangSummaryPage(customer: item),
-                          ),
-                        );
-                      },
+                      onTap: () => GoRouter.of(
+                        context,
+                      ).push('/utang_summary', extra: item),
                       child: Card(
+                        color: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),

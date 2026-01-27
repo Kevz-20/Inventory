@@ -20,6 +20,7 @@ import 'views/screens/balance_sheet_screen.dart';
 import 'views/screens/capital_management_screen.dart';
 import 'views/screens/utang_screen.dart';
 import 'views/screens/record_sales_screen.dart';
+import 'views/screens/utang_summary.screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
@@ -187,6 +188,18 @@ final router = GoRouter(
         const NewCustomerPage(),
         transition: PageTransitionType.forward,
       ),
+    ),
+    GoRoute(
+      path: '/utang_summary',
+      pageBuilder: (context, state) {
+        final customer = state.extra as UtangCustomer;
+
+        return customPage(
+          state,
+          UtangSummaryPage(customer: customer),
+          transition: PageTransitionType.forward,
+        );
+      },
     ),
   ],
 );

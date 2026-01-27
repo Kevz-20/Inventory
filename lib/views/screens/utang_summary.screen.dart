@@ -2,7 +2,8 @@
 
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
-import '../screens/utang_screen.dart'; // UtangCustomer model
+import '../screens/utang_screen.dart';
+import '../widgets/header.dart'; // UtangCustomer model
 
 class UtangSummaryPage extends StatelessWidget {
   final UtangCustomer customer;
@@ -13,11 +14,8 @@ class UtangSummaryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        title: Text(customer.fullName),
-        backgroundColor: const Color(0xFF0C4B3E),
-        elevation: 0,
-      ),
+      appBar: AppHeader(title: customer.fullName, showBackButton: true),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
