@@ -145,19 +145,25 @@ Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
   final isExpense = tx.type == 'Gasto';
   final isCapital = tx.type == 'Capital';
 
+  Color typeColor = isHalin
+      ? Colors.green
+      : isExpense
+          ? Colors.red
+          : Colors.blue;
+
   return Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(12),
+    margin: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
-        color: Colors.grey.withOpacity(0.3),
+        color: typeColor.withOpacity(0.3),
         width: 1,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.grey.withAlpha(30),
+          color: Colors.grey.withAlpha(25),
           blurRadius: 2,
           offset: const Offset(0, 2),
         ),
@@ -167,70 +173,68 @@ Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Top Row: badge + note/title + button (Gasto) + amount
+        // Top row: type + amount
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Left: Badge + Note / Title
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Type badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isHalin
-                          ? Colors.green.withAlpha(25)
-                          : isExpense
-                              ? Colors.red.withAlpha(25)
-                              : Colors.blue.withAlpha(25),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      isHalin
-                          ? 'Halin'
-                          : isExpense
-                              ? 'Gasto'
-                              : 'Capital',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isHalin
-                            ? Colors.green
-                            : isExpense
-                                ? Colors.red
-                                : Colors.blue,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Note / Title text
-                  Text(
-                    isCapital || isExpense
-                        ? 'Note: ${tx.description ?? ""}'
-                        : (tx.productName ?? 'Product'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+            Text(
+              isHalin
+                  ? 'Halin'
+                  : isExpense
+                      ? 'Gasto'
+                      : 'Capital',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: typeColor,
               ),
             ),
+            const Spacer(),
+            Text(
+              isCapital
+                  ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                  : isExpense
+                      ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                      : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: typeColor,
+              ),
+            ),
+          ],
+        ),
 
-            const SizedBox(width: 6),
+        const SizedBox(height: 4),
 
-            // If Gasto, show small View Receipt button inline
+        // Second row: Note + View Receipt (Gasto)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                (isCapital || isExpense)
+                    ? 'Note: ${tx.description ?? ''}'
+                    : (tx.productName ?? 'Product'),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
             if (isExpense && tx.receiptImagePath != null)
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade50,
+                  foregroundColor: Colors.green,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero, // make button compact
+                  minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    side: BorderSide(color: Colors.green.shade200),
+                  ),
                 ),
                 onPressed: () {
                   showDialog(
@@ -247,56 +251,43 @@ Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
                 },
                 child: const Text(
                   'View Receipt',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 11),
                 ),
               ),
-
-            const SizedBox(width: 6),
-
-            // Amount
-            Text(
-              isCapital
-                  ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                  : isExpense
-                      ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                      : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isHalin
-                    ? Colors.green
-                    : isCapital
-                        ? Colors.blue
-                        : Colors.red,
-              ),
-            ),
           ],
         ),
 
-        const SizedBox(height: 6),
+        const SizedBox(height: 2),
 
-        // Bottom row: quantity + time for Halin only
-        if (!isCapital) // Capital time is now aligned in top row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if ((isHalin || isCapital) && tx.quantity != null)
-                Text(
-                  'Qty: ${tx.quantity}',
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                )
-              else
-                const SizedBox(),
-              Text(
-                DateFormat('hh:mm a').format(tx.createdAt),
-                style: const TextStyle(fontSize: 12, color: Colors.black45),
-              ),
-            ],
-          ),
+        // Third row: category / qty + time
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (isHalin || isCapital)
+              tx.quantity != null
+                  ? Text(
+                      'Qty: ${tx.quantity}',
+                      style: const TextStyle(fontSize: 11, color: Colors.black54),
+                    )
+                  : const SizedBox()
+            else if (isExpense)
+              tx.category != null
+                  ? Text(
+                      'Category: ${tx.category}',
+                      style: const TextStyle(fontSize: 11, color: Colors.black54),
+                    )
+                  : const SizedBox(),
+            Text(
+              DateFormat('hh:mm a').format(tx.createdAt),
+              style: const TextStyle(fontSize: 11, color: Colors.black45),
+            ),
+          ],
+        ),
       ],
     ),
   );
 }
+
   // Build a section (grouped by date)
   Widget _buildSection(TransactionSection section) {
     return Column(
