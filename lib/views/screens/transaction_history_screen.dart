@@ -140,153 +140,159 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   // ------------------------
   // Build single transaction card
   // ------------------------
-Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
-  final isHalin = tx.type == 'Halin';
-  final isExpense = tx.type == 'Gasto';
-  final isCapital = tx.type == 'Capital';
+  Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
+    final isHalin = tx.type == 'Halin';
+    final isExpense = tx.type == 'Gasto';
+    final isCapital = tx.type == 'Capital';
 
-  Color typeColor = isHalin
-      ? Colors.green
-      : isExpense
-          ? Colors.red
-          : Colors.blue;
+    Color typeColor = isHalin
+        ? Colors.green
+        : isExpense
+        ? Colors.red
+        : Colors.blue;
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 6),
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: typeColor.withOpacity(0.3),
-        width: 1,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: typeColor.withOpacity(0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(25),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withAlpha(25),
-          blurRadius: 2,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Top row: type + amount
-        Row(
-          children: [
-            Text(
-              isHalin
-                  ? 'Halin'
-                  : isExpense
-                      ? 'Gasto'
-                      : 'Capital',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: typeColor,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              isCapital
-                  ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                  : isExpense
-                      ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                      : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: typeColor,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 4),
-
-        // Second row: Note + View Receipt (Gasto)
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                (isCapital || isExpense)
-                    ? 'Note: ${tx.description ?? ''}'
-                    : (tx.productName ?? 'Product'),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top row: type + amount
+          Row(
+            children: [
+              Text(
+                isHalin
+                    ? 'Halin'
+                    : isExpense
+                    ? 'Gasto'
+                    : 'Capital',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: typeColor,
                 ),
               ),
-            ),
-            if (isExpense && tx.receiptImagePath != null)
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade50,
-                  foregroundColor: Colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    side: BorderSide(color: Colors.green.shade200),
+              const Spacer(),
+              Text(
+                isCapital
+                    ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                    : isExpense
+                    ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                    : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: typeColor,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          // Second row: Note + View Receipt (Gasto)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  (isCapital || isExpense)
+                      ? 'Note: ${tx.description ?? ''}'
+                      : (tx.productName ?? 'Product'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
                   ),
                 ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => Dialog(
-                      child: InteractiveViewer(
-                        child: Image.file(
-                          File(tx.receiptImagePath!),
-                          fit: BoxFit.contain,
+              ),
+              if (isExpense && tx.receiptImagePath != null)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade50,
+                    foregroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      side: BorderSide(color: Colors.green.shade200),
+                    ),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: InteractiveViewer(
+                          child: Image.file(
+                            File(tx.receiptImagePath!),
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'View Receipt',
-                  style: TextStyle(fontSize: 11),
+                    );
+                  },
+                  child: const Text(
+                    'View Receipt',
+                    style: TextStyle(fontSize: 11),
+                  ),
                 ),
+            ],
+          ),
+
+          const SizedBox(height: 2),
+
+          // Third row: category / qty + time
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (isHalin || isCapital)
+                tx.quantity != null
+                    ? Text(
+                        'Qty: ${tx.quantity}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
+                        ),
+                      )
+                    : const SizedBox()
+              else if (isExpense)
+                tx.category != null
+                    ? Text(
+                        'Category: ${tx.category}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
+                        ),
+                      )
+                    : const SizedBox(),
+              Text(
+                DateFormat('hh:mm a').format(tx.createdAt),
+                style: const TextStyle(fontSize: 11, color: Colors.black45),
               ),
-          ],
-        ),
-
-        const SizedBox(height: 2),
-
-        // Third row: category / qty + time
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            if (isHalin || isCapital)
-              tx.quantity != null
-                  ? Text(
-                      'Qty: ${tx.quantity}',
-                      style: const TextStyle(fontSize: 11, color: Colors.black54),
-                    )
-                  : const SizedBox()
-            else if (isExpense)
-              tx.category != null
-                  ? Text(
-                      'Category: ${tx.category}',
-                      style: const TextStyle(fontSize: 11, color: Colors.black54),
-                    )
-                  : const SizedBox(),
-            Text(
-              DateFormat('hh:mm a').format(tx.createdAt),
-              style: const TextStyle(fontSize: 11, color: Colors.black45),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   // Build a section (grouped by date)
   Widget _buildSection(TransactionSection section) {
