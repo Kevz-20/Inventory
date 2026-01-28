@@ -116,6 +116,10 @@ class StockInViewModel extends ChangeNotifier {
     return autoText.isNotEmpty ? autoText : manualText;
   }
 
+  String? get selectedUnitType => null;
+
+  void Function(String? p1)? get setUnitType => null;
+
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);

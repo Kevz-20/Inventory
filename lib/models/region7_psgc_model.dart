@@ -2,6 +2,8 @@ class BarangayModel {
   final String name;
   final String code;
 
+  var cityCode;
+
   BarangayModel({required this.name, required this.code});
 
   factory BarangayModel.fromList(List<dynamic> data) {
