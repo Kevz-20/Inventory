@@ -192,7 +192,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
                     : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: typeColor,
                 ),
@@ -212,7 +212,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       ? 'Note: ${tx.description ?? ''}'
                       : (tx.productName ?? 'Product'),
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.black87,
                   ),
@@ -250,7 +250,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   },
                   child: const Text(
                     'View Receipt',
-                    style: TextStyle(fontSize: 11),
+                    style: TextStyle(fontSize: 13),
                   ),
                 ),
             ],
@@ -267,7 +267,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ? Text(
                         'Qty: ${tx.quantity}',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 13,
                           color: Colors.black54,
                         ),
                       )
@@ -277,14 +277,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ? Text(
                         'Category: ${tx.category}',
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 14,
                           color: Colors.black54,
                         ),
                       )
                     : const SizedBox(),
               Text(
                 DateFormat('hh:mm a').format(tx.createdAt),
-                style: const TextStyle(fontSize: 11, color: Colors.black45),
+                style: const TextStyle(fontSize: 13, color: Colors.black45),
               ),
             ],
           ),
