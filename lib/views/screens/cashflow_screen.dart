@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:auto_size_text/auto_size_text.dart'; // ✅ Add this package
 import '../../models/cashflow_model.dart';
 import '../../view_models/cashflow_view_model.dart';
 import '../../core/app_colors.dart';
@@ -207,11 +208,11 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   }) {
     return Expanded(
       flex: flex,
-      child: Text(
+      child: AutoSizeText(
         text,
         textAlign: align,
         maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        minFontSize: 10,
         style: TextStyle(
           color: color ?? Colors.black87,
           fontWeight: bold ? FontWeight.bold : FontWeight.normal,
