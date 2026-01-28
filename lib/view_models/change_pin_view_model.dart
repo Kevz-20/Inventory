@@ -1,78 +1,69 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
-import '../models/change_pin_model.dart';
 import '../repositories/change_pin_repository.dart';
-import '../services/db_service.dart';
 
 class ChangePinViewModel extends ChangeNotifier {
+  final ChangePinRepository _repo = ChangePinRepository();
+
   final oldPinController = TextEditingController();
   final newPinController = TextEditingController();
-  final confirmPinController = TextEditingController();
-  final mobileController = TextEditingController(); // for first-time users
+  final mobileController = TextEditingController();
+  final answerController = TextEditingController();
 
-  late ChangePinRepository repository;
-  int? accountId;
-  bool loading = true;
-  String? errorMessage;
-  bool needMobileInput = false;
+  bool isLoading = false;
 
-  ChangePinViewModel() {
-    _init();
+  // toggle visibility
+  bool showOldPin = false;
+  bool showNewPin = false;
+
+  void toggleOldPin() {
+    showOldPin = !showOldPin;
+    notifyListeners();
   }
 
-  Future<void> _init() async {
-    try {
-      final db = await DBService.instance.database;
-      repository = ChangePinRepository(db);
+  void toggleNewPin() {
+    showNewPin = !showNewPin;
+    notifyListeners();
+  }
 
-      accountId = await repository.getAccountId();
-      if (accountId == null) {
-        needMobileInput = true; // user must enter mobile
-      }
+  Future<void> changePin(BuildContext context) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repo.changePin(
+        mobile: mobileController.text,
+        answer: answerController.text,
+        oldPin: oldPinController.text,
+        newPin: newPinController.text,
+      );
+
+      // Clear all inputs after success
+      oldPinController.clear();
+      newPinController.clear();
+      mobileController.clear();
+      answerController.clear();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN changed successfully!')),
+      );
     } catch (e) {
-      errorMessage = e.toString();
-      debugPrint("ChangePinViewModel init error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     } finally {
-      loading = false;
+      isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<String?> saveMobileAndLoadAccount() async {
-    final mobile = mobileController.text.trim();
-    if (mobile.length < 10) return "Enter a valid mobile number";
-
-    try {
-      await repository.saveMobileNumber(mobile);
-      accountId = await repository.getAccountId();
-      if (accountId == null) return "Account not found for this mobile number";
-      needMobileInput = false;
-      notifyListeners();
-      return null;
-    } catch (e) {
-      return "Error saving mobile: $e";
-    }
-  }
-
-  Future<String?> submit() async {
-    if (accountId == null) return "Account ID missing";
-
-    final model = ChangePinModel(
-      oldPin: oldPinController.text.trim(),
-      newPin: newPinController.text.trim(),
-      confirmPin: confirmPinController.text.trim(),
-    );
-
-    if (!model.isValid()) return "All PINs must be 4 digits.";
-    if (!model.doPinsMatch()) return "New PIN and confirm PIN must match.";
-    if (!model.isNewPinDifferent()) {
-      return "New PIN must be different from old PIN.";
-    }
-
-    final success = await repository.changePin(
-      accountId!,
-      model.oldPin,
-      model.newPin,
-    );
-    return success ? null : "Old PIN is incorrect.";
+  @override
+  void dispose() {
+    oldPinController.dispose();
+    newPinController.dispose();
+    mobileController.dispose();
+    answerController.dispose();
+    super.dispose();
   }
 }
