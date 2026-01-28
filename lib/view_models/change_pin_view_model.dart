@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../repositories/change_pin_repository.dart';
 
@@ -46,11 +47,14 @@ class ChangePinViewModel extends ChangeNotifier {
       answerController.clear();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN changed successfully!')),
+        const SnackBar(
+          content: Text('PIN changed successfully!'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
       );
     } finally {
       isLoading = false;
