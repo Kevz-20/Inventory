@@ -54,7 +54,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     setState(() {
       remainingBalance = total - down;
-      monthlyPayment = months > 0 ? remainingBalance / months : remainingBalance;
+      monthlyPayment = months > 0
+          ? remainingBalance / months
+          : remainingBalance;
     });
   }
 
@@ -65,6 +67,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     final db = await DBService.instance.database;
 
     if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill item and total cost")),
       );
@@ -79,7 +82,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
         final total =
             double.tryParse(totalCostController.text.replaceAll(',', '')) ?? 0;
         final down =
-            double.tryParse(downpaymentController.text.replaceAll(',', '')) ?? 0;
+            double.tryParse(downpaymentController.text.replaceAll(',', '')) ??
+            0;
         final months = int.tryParse(durationController.text) ?? 1;
         final remaining = total - down;
         final monthly = months > 0 ? remaining / months : remaining;
@@ -97,8 +101,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'item': itemController.text,
           'original_amount': total,
           'remaining_amount': remaining,
-          'due_date': DateFormat('yyyy-MM-dd')
-              .format(firstDueDate.add(Duration(days: 30 * months))),
+          'due_date': DateFormat(
+            'yyyy-MM-dd',
+          ).format(firstDueDate.add(Duration(days: 30 * months))),
           'note': notesController.text,
           'is_paid': 0,
           'has_plan': 1,
@@ -154,6 +159,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       // ==============================
       // SUCCESS MESSAGE & CLEAR FIELDS
       // ==============================
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Bayronon saved successfully")),
       );
@@ -174,13 +180,16 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
       // Go back to Owner Utang page
       Future.delayed(const Duration(milliseconds: 500), () {
+        // ignore: use_build_context_synchronously
         Navigator.pop(context, true);
       });
     } catch (e) {
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to save: $e")),
-      );
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to save: $e")));
     }
   }
 
@@ -208,7 +217,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: selectedTab == 0 ? AppColors.primary : Colors.white,
+                        color: selectedTab == 0
+                            ? AppColors.primary
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
@@ -230,7 +241,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: selectedTab == 1 ? AppColors.primary : Colors.white,
+                        color: selectedTab == 1
+                            ? AppColors.primary
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
@@ -315,7 +328,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
         labelStyle: const TextStyle(color: Colors.grey),
         prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -335,7 +351,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
         const SizedBox(height: 16),
         // Cost Details Card
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 2,
           color: Colors.white,
           child: Padding(
@@ -343,7 +361,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Cost Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  "Cost Details",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 buildTextField(
                   "Total Cost",
@@ -383,11 +404,21 @@ class _AddUtangPageState extends State<AddUtangPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("Remaining Balance", style: TextStyle(fontSize: 14, color: Colors.grey)),
+                            const Text(
+                              "Remaining Balance",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               "₱${currencyFormat.format(remainingBalance)}",
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
                             ),
                           ],
                         ),
@@ -404,11 +435,21 @@ class _AddUtangPageState extends State<AddUtangPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("Monthly Payment", style: TextStyle(fontSize: 14, color: Colors.grey)),
+                            const Text(
+                              "Monthly Payment",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               "₱${currencyFormat.format(monthlyPayment)}",
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
                             ),
                           ],
                         ),
@@ -423,7 +464,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
         const SizedBox(height: 16),
         // Schedule & Notes Card
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 2,
           color: Colors.white,
           child: Padding(
@@ -431,7 +474,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Schedule & Notes", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  "Schedule & Notes",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 buildTextField(
                   "Start Date",
@@ -447,7 +493,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     );
                     if (date != null) {
                       setState(() {
-                        startDateController.text = DateFormat('yyyy-MM-dd').format(date);
+                        startDateController.text = DateFormat(
+                          'yyyy-MM-dd',
+                        ).format(date);
                       });
                     }
                   },
@@ -481,7 +529,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
         ),
         const SizedBox(height: 16),
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 2,
           color: Colors.white,
           child: Padding(
@@ -489,7 +539,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Payment Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  "Payment Details",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 const SizedBox(height: 12),
                 buildTextField(
                   "Total Cost",
@@ -519,7 +572,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     );
                     if (date != null) {
                       setState(() {
-                        datePaidController.text = DateFormat('yyyy-MM-dd').format(date);
+                        datePaidController.text = DateFormat(
+                          'yyyy-MM-dd',
+                        ).format(date);
                       });
                     }
                   },
@@ -530,7 +585,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
         ),
         const SizedBox(height: 16),
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 2,
           color: Colors.white,
           child: Padding(
@@ -556,7 +613,9 @@ class ThousandsFormatter extends TextInputFormatter {
 
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     String text = newValue.text.replaceAll(',', '');
     if (text.isEmpty) return newValue;
 
