@@ -23,6 +23,10 @@ class NewCustomerViewModel extends ChangeNotifier {
   final municipalityController = TextEditingController();
   final barangayController = TextEditingController();
   final landmarkController = TextEditingController();
+  TextEditingController cityController = TextEditingController();
+  
+
+
 
   // Region 7
   RegionModel? selectedRegion;

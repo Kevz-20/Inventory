@@ -6,11 +6,20 @@ import '../../view_models/new_customer_view_model.dart';
 import '../widgets/header.dart';
 import '../../models/region7_psgc_model.dart';
 
-class NewCustomerPage extends ConsumerWidget {
+class NewCustomerPage extends ConsumerStatefulWidget {
   const NewCustomerPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NewCustomerPage> createState() => _NewCustomerPageState();
+}
+
+class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
+  List<String> filteredCities = [];
+  List<String> filteredBarangays = [];
+  List<BarangayModel> currentBarangays = [];
+
+  @override
+  Widget build(BuildContext context) {
     final vm = ref.watch(newCustomerViewModelProvider);
     final vmNotifier = ref.read(newCustomerViewModelProvider);
 
@@ -24,11 +33,11 @@ class NewCustomerPage extends ConsumerWidget {
       });
     }
 
-    // ✅ Sort municipalities alphabetically
+    // Sort cities alphabetically
     final sortedCities = List<CityModel>.from(vm.cities)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    // ✅ Sort barangays alphabetically
+    // Sort barangays alphabetically
     final sortedBarangays = List<BarangayModel>.from(vm.barangays)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
@@ -54,8 +63,46 @@ class NewCustomerPage extends ConsumerWidget {
                 LengthLimitingTextInputFormatter(11),
               ],
             ),
-            _buildCityDropdown(vm, vmNotifier, sortedCities),
-            _buildBarangayDropdown(vm, vmNotifier, sortedBarangays),
+
+            /// Municipality autocomplete
+            _buildSearchField(
+              label: 'Municipality',
+              controller: vm.cityController,
+              items: sortedCities.map((c) => c.name).toList(),
+              filteredItems: filteredCities,
+              onChangedFiltered: (list) =>
+                  setState(() => filteredCities = list),
+              onItemSelected: (value) {
+                final selected = vm.cities.firstWhere((c) => c.name == value);
+                vmNotifier.selectCity(selected);
+
+                // Update current Barangays based on selected Municipality
+                setState(() {
+                  currentBarangays = sortedBarangays
+                      .where((b) => b.cityCode == selected.code)
+                      .toList();
+                  filteredBarangays = [];
+                  vm.barangayController.clear();
+                });
+              },
+            ),
+
+            /// Barangay autocomplete (independent)
+            _buildSearchField(
+              label: 'Barangay',
+              controller: vm.barangayController,
+              items: sortedBarangays.map((b) => b.name).toList(),
+              filteredItems: filteredBarangays,
+              onChangedFiltered: (list) =>
+                  setState(() => filteredBarangays = list),
+              onItemSelected: (value) {
+                final selected = sortedBarangays.firstWhere(
+                  (b) => b.name == value,
+                );
+                vmNotifier.selectBarangay(selected);
+              },
+            ),
+
             _buildTextField('Landmark / Street', vmNotifier.landmarkController),
             const SizedBox(height: 24),
             SizedBox(
@@ -66,12 +113,8 @@ class NewCustomerPage extends ConsumerWidget {
                     ? null
                     : () async {
                         final success = await vmNotifier.saveCustomer();
-                        if (success) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (Navigator.of(context).mounted) {
-                              Navigator.of(context).pop(true);
-                            }
-                          });
+                        if (success && Navigator.of(context).mounted) {
+                          Navigator.of(context).pop(true);
                         }
                       },
                 style: ElevatedButton.styleFrom(
@@ -122,19 +165,20 @@ class NewCustomerPage extends ConsumerWidget {
           border: border,
           enabledBorder: border,
           focusedBorder: border,
-          disabledBorder: border,
-          errorBorder: border,
-          focusedErrorBorder: border,
         ),
       ),
     );
   }
 
-  Widget _buildCityDropdown(
-    NewCustomerViewModel vm,
-    NewCustomerViewModel notifier,
-    List<CityModel> sortedCities,
-  ) {
+  /// Google-style autocomplete field
+  Widget _buildSearchField({
+    required String label,
+    required TextEditingController controller,
+    required List<String> items,
+    required List<String> filteredItems,
+    required Function(List<String>) onChangedFiltered,
+    required Function(String) onItemSelected,
+  }) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: const BorderSide(color: Colors.grey),
@@ -142,56 +186,56 @@ class NewCustomerPage extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: DropdownButtonFormField<CityModel>(
-        initialValue: vm.selectedCity,
-        dropdownColor: Colors.white,
-        items: sortedCities
-            .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
-            .toList(),
-        onChanged: (CityModel? c) {
-          if (c != null) notifier.selectCity(c);
-        },
-        decoration: InputDecoration(
-          labelText: 'Municipality',
-          filled: true,
-          fillColor: Colors.white,
-          border: border,
-          enabledBorder: border,
-          focusedBorder: border,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBarangayDropdown(
-    NewCustomerViewModel vm,
-    NewCustomerViewModel notifier,
-    List<BarangayModel> sortedBarangays,
-  ) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.grey),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: DropdownButtonFormField<BarangayModel>(
-        initialValue: vm.selectedBarangay,
-        dropdownColor: Colors.white,
-        items: sortedBarangays
-            .map((b) => DropdownMenuItem(value: b, child: Text(b.name)))
-            .toList(),
-        onChanged: (BarangayModel? b) {
-          if (b != null) notifier.selectBarangay(b);
-        },
-        decoration: InputDecoration(
-          labelText: 'Barangay',
-          filled: true,
-          fillColor: Colors.white,
-          border: border,
-          enabledBorder: border,
-          focusedBorder: border,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: label,
+              filled: true,
+              fillColor: Colors.white,
+              border: border,
+              enabledBorder: border,
+              focusedBorder: border,
+            ),
+            onChanged: (value) {
+              final matches = items
+                  .where(
+                    (item) =>
+                        item.toLowerCase().startsWith(value.toLowerCase()),
+                  )
+                  .toList();
+              onChangedFiltered(matches);
+            },
+          ),
+          if (controller.text.isNotEmpty && filteredItems.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                children: filteredItems
+                    .map(
+                      (item) => ListTile(
+                        title: Text(item),
+                        onTap: () {
+                          controller.text = item;
+                          onItemSelected(item);
+                          onChangedFiltered([]);
+                          FocusScope.of(context).unfocus();
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+        ],
       ),
     );
   }
