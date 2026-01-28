@@ -1,59 +1,55 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
+import '../services/db_service.dart';
 
 class ChangePinRepository {
-  final Database db;
+  final DBService _db = DBService.instance;
 
-  ChangePinRepository(this.db);
-
-  Future<int?> getAccountId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final mobile = prefs.getString('mobileNumber');
-
-    if (mobile == null) {
-      return null; // no mobile saved
-    }
+  Future<Map<String, dynamic>> getAccountByMobile(String mobile) async {
+    final db = await _db.database;
 
     final result = await db.query(
       'account',
-      columns: ['id'],
       where: 'mobile_number = ?',
-      whereArgs: [mobile],
+      whereArgs: [mobile.trim()],
       limit: 1,
     );
 
     if (result.isEmpty) {
-      return null; // account not found
+      throw Exception('Account not found');
     }
 
-    return result.first['id'] as int;
+    return result.first;
   }
 
-  Future<bool> changePin(int id, String oldPin, String newPin) async {
-    final result = await db.query(
-      'account',
-      columns: ['pin'],
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
+  Future<void> changePin({
+    required String mobile,
+    required String answer,
+    required String oldPin,
+    required String newPin,
+  }) async {
+    final db = await _db.database;
+    final account = await getAccountByMobile(mobile);
 
-    if (result.isEmpty || result.first['pin'] != oldPin) {
-      return false;
+    final storedAnswer = (account['security_answer'] ?? '').toString().trim();
+    final storedPin = (account['pin'] ?? '').toString().trim();
+
+    if (storedAnswer.toLowerCase() != answer.trim().toLowerCase()) {
+      throw Exception('Incorrect security answer');
+    }
+
+    if (storedPin != oldPin.trim()) {
+      throw Exception('Old PIN is incorrect');
+    }
+
+    if (oldPin.trim() == newPin.trim()) {
+      throw Exception('New PIN must be different');
     }
 
     await db.update(
       'account',
-      {'pin': newPin},
+      {'pin': newPin.trim()},
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [account['id']],
     );
-
-    return true;
-  }
-
-  Future<void> saveMobileNumber(String mobile) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('mobileNumber', mobile);
   }
 }
+ 
