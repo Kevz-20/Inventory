@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../widgets/header.dart';
+
 final changePinProvider = ChangeNotifierProvider((ref) => ChangePinViewModel());
 
 class ChangePinScreen extends ConsumerStatefulWidget {
@@ -41,75 +43,64 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
     VoidCallback? toggleVisibility,
     int maxLength = 50,
     bool onlyNumbers = false,
+    bool showError = false,
   }) {
-    return AnimatedBuilder(
-      animation: _glowController,
-      builder: (context, child) {
-        final glow = 0.4 + 0.6 * _glowController.value; // neon glow intensity
+    final bool isError = showError && controller.text.isEmpty;
 
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(glow),
-                blurRadius: 12 * glow,
-                spreadRadius: 1,
-              ),
-            ],
+    return SizedBox(
+      height: 60,
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText, // ✅ source of truth
+        maxLength: maxLength,
+        keyboardType: onlyNumbers ? TextInputType.number : TextInputType.text,
+        inputFormatters: onlyNumbers
+            ? [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(maxLength),
+              ]
+            : [LengthLimitingTextInputFormatter(maxLength)],
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+        ),
+        decoration: InputDecoration(
+          counterText: '',
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          suffixIcon: toggleVisibility == null
+              ? null
+              : IconButton(
+                  icon: Icon(
+                    obscureText
+                        ? Icons
+                              .visibility_off // 🔒 hidden first
+                        : Icons.visibility, // 👁 shown
+                    color: Colors.grey.shade600,
+                  ),
+                  onPressed: toggleVisibility,
+                ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
           ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            maxLength: maxLength,
-            style: const TextStyle(color: Colors.black),
-            keyboardType: onlyNumbers
-                ? TextInputType.number
-                : TextInputType.text,
-            inputFormatters: onlyNumbers
-                ? [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(maxLength),
-                  ]
-                : [LengthLimitingTextInputFormatter(maxLength)],
-            decoration: InputDecoration(
-              counterText: '',
-              labelText: label,
-              labelStyle: const TextStyle(color: Colors.black54),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.95),
-              suffixIcon: toggleVisibility == null
-                  ? null
-                  : IconButton(
-                      icon: Icon(
-                        obscureText ? Icons.visibility : Icons.visibility_off,
-                        color: const Color.fromARGB(255, 21, 65, 22),
-                      ),
-                      onPressed: toggleVisibility,
-                    ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.black.withOpacity(glow), // neon black
-                  width: 2,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: const Color.fromARGB(
-                    255,
-                    15,
-                    50,
-                    33,
-                  ).withOpacity(0.8), // neon focus
-                  width: 2.5,
-                ),
-              ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : Colors.grey.shade400,
+              width: 1.2,
             ),
           ),
-        );
-      },
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isError ? Colors.red : AppColors.primary,
+              width: 1.2,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -119,12 +110,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Change PIN', style: TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      appBar: const AppHeader(title: "Change PIN", showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
