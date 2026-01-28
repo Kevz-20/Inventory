@@ -832,6 +832,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -927,9 +928,18 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
                           child: const Text(
                             'Cancel',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -1004,9 +1014,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
                             backgroundColor: AppColors.primary,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                           child: const Text(
