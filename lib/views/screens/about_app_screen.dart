@@ -31,12 +31,13 @@ class _AboutAppScreenState extends State<AboutAppScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    _colorAnimation = ColorTween(
-      begin: Colors.green,
-      end: Colors.greenAccent,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+    _colorAnimation = ColorTween(begin: Colors.black, end: Colors.black)
+        .animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeInOut,
+          ),
+        );
   }
 
   @override
@@ -62,10 +63,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
 
         return Scaffold(
           backgroundColor: Colors.white,
-          appBar: const AppHeader(
-            title: 'About App',
-            showBackButton: true,
-          ),
+          appBar: const AppHeader(title: 'About App', showBackButton: true),
           body: Container(
             decoration: BoxDecoration(gradient: gradient),
             child: Padding(
@@ -91,7 +89,9 @@ class _AboutAppScreenState extends State<AboutAppScreen>
                               shadows: [
                                 Shadow(
                                   blurRadius: 12,
-                                  color: _colorAnimation.value!.withOpacity(0.7),
+                                  color: _colorAnimation.value!.withOpacity(
+                                    0.7,
+                                  ),
                                   offset: const Offset(0, 0),
                                 ),
                               ],
@@ -107,10 +107,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          width: 2,
-                          color: Colors.green,
-                        ),
+                        border: Border.all(width: 2, color: Colors.green),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.green.withOpacity(0.3),
