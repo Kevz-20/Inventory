@@ -1,4 +1,5 @@
   import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
   import '../models/transaction_history_model.dart';
   import '../repositories/transaction_history_repository.dart';
 
@@ -26,7 +27,8 @@
       Map<String, dynamic> map, {
       String fallbackType = '',
       bool isCapital = false,
-    }) {
+    })
+     {
       double value;
       String? paymentType;
 
@@ -52,6 +54,15 @@
       );
     }
   }
+      class TransactionSection {
+      final String title;
+      final List<TransactionItem> items;
+
+      TransactionSection({
+        required this.title,
+        required this.items,
+      });
+    }
 
   // Categories of transactions
   enum TransactionCategory { all, expenses, sales, capitalManagement }
@@ -220,6 +231,36 @@
         return true;
       }).toList();
     }
+    
+    List<TransactionSection> get sections {
+  final Map<String, List<TransactionItem>> grouped = {};
+
+  for (final tx in transactions) {
+    final dateKey = DateFormat('yyyy-MM-dd').format(tx.createdAt);
+    grouped.putIfAbsent(dateKey, () => []).add(tx);
+  }
+
+  final now = DateTime.now();
+
+  return grouped.entries.map((entry) {
+    final date = DateTime.parse(entry.key);
+
+    final title = DateUtils.isSameDay(date, now)
+        ? 'Today'
+        : DateFormat('MMMM d, yyyy').format(date);
+
+    return TransactionSection(
+      title: title,
+      items: entry.value,
+    );
+  }).toList()
+    ..sort((a, b) {
+      final da = a.items.first.createdAt;
+      final db = b.items.first.createdAt;
+      return db.compareTo(da);
+    });
+}
+
 
     // Set category and re-filter
     void setSelectedCategory(TransactionCategory category) {
