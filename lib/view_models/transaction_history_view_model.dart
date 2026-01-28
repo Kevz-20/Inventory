@@ -7,13 +7,14 @@ import '../repositories/transaction_history_repository.dart';
 // Represents a single transaction
 class TransactionItem {
   final String type;
-  final String? description; // used for Capital note or general description
+  final String? description;
   final double? amount;
   final DateTime createdAt;
   final String? paymentType;
   final String? productName;
   final int? quantity;
-  final String? receiptImagePath; // new field for Gasto receipt images
+  final String? receiptImagePath;
+  final String? category; // <-- add this
 
   TransactionItem({
     required this.type,
@@ -23,47 +24,47 @@ class TransactionItem {
     this.paymentType,
     this.productName,
     this.quantity,
-    this.receiptImagePath, // added
+    this.receiptImagePath,
+    this.category, // <-- add this
   });
 
-        factory TransactionItem.fromMap(
-        Map<String, dynamic> map, {
-        String fallbackType = '',
-        bool isCapital = false,
-      }) {
-        double value;
-        String? paymentType;
+  factory TransactionItem.fromMap(
+    Map<String, dynamic> map, {
+    String fallbackType = '',
+    bool isCapital = false,
+  }) {
+    double value;
+    String? paymentType;
 
-        // -------------------- fetch receipt path --------------------
-        // Your Gasto receipts are saved as `receipt` in ExpenseModel
-        String? receiptImagePath = map['receipt'] ?? map['receipt_image_path'] ?? map['resibo'] ?? map['image_path'];
+    String? receiptImagePath = map['receipt'] ??
+        map['receipt_image_path'] ??
+        map['resibo'] ??
+        map['image_path'];
 
-        if (isCapital) {
-          value = (map['capital'] as num?)?.toDouble() ?? 0.0;
-          if (value > 0) paymentType = 'Deposit';
-        } else if (map.containsKey('bank_cash')) {
-          value = (map['bank_cash'] as num?)?.toDouble() ?? 0.0;
-          if (value > 0) paymentType = 'Withdraw';
-        } else {
-          value = (map['amount'] as num?)?.toDouble() ?? 0.0;
-          paymentType = map['payment_type'];
-        }
+    if (isCapital) {
+      value = (map['capital'] as num?)?.toDouble() ?? 0.0;
+      if (value > 0) paymentType = 'Deposit';
+    } else if (map.containsKey('bank_cash')) {
+      value = (map['bank_cash'] as num?)?.toDouble() ?? 0.0;
+      if (value > 0) paymentType = 'Withdraw';
+    } else {
+      value = (map['amount'] as num?)?.toDouble() ?? 0.0;
+      paymentType = map['payment_type'];
+    }
 
-        return TransactionItem(
-          type: map['type'] ?? fallbackType,
-          description: map['description'] ?? map['remarks'], // for Capital note
-          amount: value,
-          createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
-          paymentType: paymentType,
-          productName: map['product_name'],
-          quantity: (map['quantity'] as num?)?.toInt(),
-          receiptImagePath: receiptImagePath, // assign receipt path here
-        );
-      }
-
+    return TransactionItem(
+      type: map['type'] ?? fallbackType,
+      description: map['description'] ?? map['remarks'],
+      amount: value,
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      paymentType: paymentType,
+      productName: map['product_name'],
+      quantity: (map['quantity'] as num?)?.toInt(),
+      receiptImagePath: receiptImagePath,
+      category: map['category'], // <-- assign category here
+    );
+  }
 }
-
-
 // Transaction section (grouped by date)
 class TransactionSection {
   final String title;
