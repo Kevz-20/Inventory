@@ -113,7 +113,9 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                     ? null
                     : () async {
                         final success = await vmNotifier.saveCustomer();
+                        // ignore: use_build_context_synchronously
                         if (success && Navigator.of(context).mounted) {
+                          // ignore: use_build_context_synchronously
                           Navigator.of(context).pop(true);
                         }
                       },

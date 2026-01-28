@@ -2,6 +2,7 @@ class BarangayModel {
   final String name;
   final String code;
 
+  // ignore: strict_top_level_inference, prefer_typing_uninitialized_variables
   var cityCode;
 
   BarangayModel({required this.name, required this.code});
