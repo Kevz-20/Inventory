@@ -529,20 +529,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           ),
           SizedBox(
             width: 40,
-            child: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: controller,
-              builder: (context, value, child) {
-                return TextField(
-                  controller: controller,
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.black),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 8),
-                  ),
-                );
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.black),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 8),
+              ),
+              onChanged: (text) {
+                int qty = int.tryParse(text) ?? 0;
+                qty = qty.clamp(0, product.quantity); // clamp to stock
+                if (controller.text != qty.toString()) {
+                  controller.text = qty.toString();
+                  controller.selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.text.length),
+                  );
+                }
+                vm.productQuantities[product.id!] = qty;
+                vm.calculateTotal();
               },
             ),
           ),
