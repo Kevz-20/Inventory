@@ -19,7 +19,7 @@ class DBService {
   final path = join(dbPath, filePath);
   return await openDatabase(
     path,
-    version: 3, // Incremented from 1 -> 2
+    version: 4, 
     onCreate: _createDB,
     onUpgrade: (db, oldVersion, newVersion) async {
       if (oldVersion < 2) {
@@ -29,7 +29,24 @@ class DBService {
         await db.execute('ALTER TABLE customer ADD COLUMN barangay TEXT;');
         await db.execute('ALTER TABLE customer ADD COLUMN landmark TEXT;');
       }
+
+      if (oldVersion < 4) {
+        // Create owner_installments table for existing users
+        await db.execute('''
+          CREATE TABLE owner_installments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL,
+            item TEXT NOT NULL,
+            downpayment REAL NOT NULL,
+            total_amount REAL,
+            installment_months INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (account_id) REFERENCES account(id)
+          )
+        ''');
+      }
     },
+
     onConfigure: (db) async {
       await db.execute('PRAGMA foreign_keys = ON');
     },
@@ -379,6 +396,19 @@ class DBService {
         receipt TEXT,
         created_at TEXT,
         FOREIGN KEY (account_id) REFERENCES account (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE owner_installments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        item TEXT NOT NULL,          -- e.g., "Freezer"
+        downpayment REAL NOT NULL,   -- DP amount
+        total_amount REAL,           -- full installment price
+        installment_months INTEGER,  -- optional
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');
 

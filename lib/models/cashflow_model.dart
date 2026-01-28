@@ -6,6 +6,7 @@ class CashflowRecord {
   final String item;
   final double cashIn;
   final double cashOut;
+  final double balance; // ✅ balance per row
 
   CashflowRecord({
     this.id,
@@ -13,6 +14,7 @@ class CashflowRecord {
     required this.item,
     required this.cashIn,
     required this.cashOut,
+    required this.balance, // required
   });
 
   String get formattedDate => DateFormat('yyyy-MM-dd').format(date);
@@ -24,6 +26,7 @@ class CashflowRecord {
       'item': item,
       'cash_in': cashIn,
       'cash_out': cashOut,
+      'balance': balance,
     };
   }
 
@@ -34,6 +37,7 @@ class CashflowRecord {
       item: map['item'],
       cashIn: map['cash_in'],
       cashOut: map['cash_out'],
+      balance: map['balance'],
     );
   }
 }
