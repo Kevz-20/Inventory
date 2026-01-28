@@ -1,3 +1,7 @@
+// ignore_for_file: unnecessary_to_list_in_spreads
+
+import 'dart:io' show File;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +20,6 @@ class TransactionHistoryScreen extends StatefulWidget {
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   late final TransactionHistoryViewModel viewModel;
   final ScrollController _scrollController = ScrollController();
-
   final NumberFormat _currencyFormatter = NumberFormat.currency(
     locale: 'en_PH',
     symbol: '₱',
@@ -33,7 +36,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    viewModel.dispose();
     super.dispose();
   }
 
@@ -50,7 +52,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       value: viewModel,
       child: Consumer<TransactionHistoryViewModel>(
         builder: (_, vm, _) {
-          final count = vm.transactionCount;
+          final sections = vm.sections;
 
           return Scaffold(
             appBar: AppBar(
@@ -96,207 +98,36 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   child: CategoryChipsWithDots(
                     categories: TransactionCategory.values,
                     selectedCategory: vm.selectedCategory,
-                    onCategorySelected: (cat) {
-                      vm.setSelectedCategory(cat);
-                      vm.resetPagination();
-                    },
+                    onCategorySelected: (cat) => vm.setSelectedCategory(cat),
                   ),
                 ),
 
                 // Transaction list
                 Expanded(
-                  child: count == 0 && vm.isLoading
+                  child: vm.isLoading && sections.isEmpty
                       ? const Center(child: CircularProgressIndicator())
-                      : count == 0
-                          ? Center(
-                              child: Text(
-                                vm.emptyStateMessage,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.all(16),
-                              itemCount: count + 1,
-                              itemBuilder: (_, index) {
-                                if (index >= count) {
-                                  return vm.transactionCount < vm.transactions.length
-                                      ? const Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 16),
-                                          child: Center(
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                        )
-                                      : const SizedBox.shrink();
-                                }
-
-                                final tx = vm.transactionAt(index);
-
-                                final isHalin = tx.type == 'Halin';
-                                final isExpense = tx.type == 'Gasto';
-                                final isCapital = tx.type == 'Capital';
-
-                                // ------------------ Date Header ------------------
-                                String dateLabel;
-                                final now = DateTime.now();
-                                if (tx.createdAt.year == now.year &&
-                                    tx.createdAt.month == now.month &&
-                                    tx.createdAt.day == now.day) {
-                                  dateLabel = 'Today';
-                                } else {
-                                  dateLabel = DateFormat('MMMM d, yyyy').format(tx.createdAt);
-                                }
-
-                                bool showDateHeader = true;
-                                if (index > 0) {
-                                  final prevTx = vm.transactionAt(index - 1);
-                                  showDateHeader = !(prevTx.createdAt.year == tx.createdAt.year &&
-                                      prevTx.createdAt.month == tx.createdAt.month &&
-                                      prevTx.createdAt.day == tx.createdAt.day);
-                                }
-
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (showDateHeader)
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        child: Text(
-                                          dateLabel,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    Container(
-                                      margin: const EdgeInsets.only(bottom: 12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.grey.withAlpha(51),
-                                            blurRadius: 2,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
-                                                    children: [
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                            horizontal: 8, vertical: 3),
-                                                        decoration: BoxDecoration(
-                                                          color: isHalin
-                                                              ? Colors.green.withAlpha(25)
-                                                              : isExpense
-                                                                  ? Colors.red.withAlpha(25)
-                                                                  : Colors.blue.withAlpha(25),
-                                                          borderRadius:
-                                                              BorderRadius.circular(6),
-                                                        ),
-                                                        child: Text(
-                                                          isHalin
-                                                              ? 'Halin'
-                                                              : isExpense
-                                                                  ? 'Gasto'
-                                                                  : 'Capital',
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: isHalin
-                                                                ? Colors.green
-                                                                : isExpense
-                                                                    ? Colors.red
-                                                                    : Colors.blue,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        isHalin || isCapital
-                                                            ? tx.productName ?? 'Product'
-                                                            : tx.description ?? 'Transaction',
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.w600,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Text(
-                                                  isCapital
-                                                      ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                                                      : isExpense
-                                                          ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                                                          : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isHalin
-                                                        ? Colors.green
-                                                        : isCapital
-                                                            ? Colors.blue
-                                                            : Colors.red,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                if ((isHalin || isCapital) && tx.quantity != null)
-                                                  Text(
-                                                    'Qty: ${tx.quantity}',
-                                                    style: const TextStyle(
-                                                      fontSize: 15,
-                                                      color: Colors.black54,
-                                                    ),
-                                                  )
-                                                else
-                                                  const SizedBox(),
-                                                Text(
-                                                  DateFormat('h:mm a').format(tx.createdAt),
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    color: Colors.black45,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                      : sections.isEmpty
+                      ? Center(
+                          child: Text(
+                            vm.emptyStateMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w500,
                             ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: sections.length,
+                          itemBuilder: (_, sectionIndex) {
+                            final section = sections[sectionIndex];
+                            return _buildSection(section);
+                          },
+                        ),
                 ),
-
               ],
             ),
             bottomNavigationBar: const BottomNavBar(currentIndex: 1),
@@ -305,13 +136,213 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       ),
     );
   }
+
+  Widget _buildSection(TransactionSection section) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Section title
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          section.title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+
+      // Transactions in section
+      ...section.items.map((tx) => _buildTransactionCard(tx, context)).toList(),
+    ],
+  );
+}
+
+
+ 
+Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
+  final isHalin = tx.type == 'Halin';
+  final isExpense = tx.type == 'Gasto';
+  final isCapital = tx.type == 'Capital';
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withAlpha(51),
+          blurRadius: 2,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Type badge + description + amount
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ------------------ Type Badge ------------------
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isHalin
+                            ? Colors.green.withAlpha(25)
+                            : isExpense
+                                ? Colors.red.withAlpha(25)
+                                : Colors.blue.withAlpha(25),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isHalin
+                            ? 'Halin'
+                            : isExpense
+                                ? 'Gasto'
+                                : 'Capital',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isHalin
+                              ? Colors.green
+                              : isExpense
+                                  ? Colors.red
+                                  : Colors.blue,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // ------------------ Product / Description ------------------
+                    Text(
+                      isHalin || isCapital
+                          ? tx.productName ?? 'Product'
+                          : tx.description ?? 'Transaction',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+
+                    // ------------------ Capital Note ------------------
+                    if (isCapital && tx.description != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          tx.description!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+
+                    // ------------------ Gasto Receipt Image ------------------
+                    if (isExpense && tx.receiptImagePath != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => Scaffold(
+                                  backgroundColor: Colors.black,
+                                  appBar: AppBar(
+                                    backgroundColor: Colors.black,
+                                    elevation: 0,
+                                  ),
+                                  body: Center(
+                                    child: InteractiveViewer(
+                                      child: Image.file(
+                                        File(tx.receiptImagePath!),
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Image.file(
+                            File(tx.receiptImagePath!),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // ------------------ Amount ------------------
+              Text(
+                isCapital
+                    ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                    : isExpense
+                        ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                        : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isHalin
+                      ? Colors.green
+                      : isCapital
+                          ? Colors.blue
+                          : Colors.red,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // ------------------ Quantity + Time ------------------
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if ((isHalin || isCapital) && tx.quantity != null)
+                Text(
+                  'Qty: ${tx.quantity}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                  ),
+                )
+              else
+                const SizedBox(),
+              Text(
+                DateFormat('hh:mm a').format(tx.createdAt),
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.black45,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 }
 
 // ---------------- Date Picker Box ----------------
 class _DatePickerBox extends StatelessWidget {
   final String title;
   final DateTime date;
-  final ValueChanged<DateTime> onDateSelected;
+  final ValueChanged<DateTime?> onDateSelected;
 
   const _DatePickerBox({
     required this.title,
