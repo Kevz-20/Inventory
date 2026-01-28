@@ -155,9 +155,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: typeColor.withOpacity(0.3), width: 1),
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.white, // removed card background
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withAlpha(25),
