@@ -25,9 +25,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
   final TextEditingController downpaymentController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
-  final TextEditingController startDateController =
-      TextEditingController(); // <-- Added
-
+  final TextEditingController startDateController = TextEditingController();
   final TextEditingController paymentMethodController = TextEditingController();
   final TextEditingController datePaidController = TextEditingController();
 
@@ -41,7 +39,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     downpaymentController.dispose();
     durationController.dispose();
     notesController.dispose();
-    startDateController.dispose(); // <-- Added
+    startDateController.dispose();
     paymentMethodController.dispose();
     datePaidController.dispose();
     super.dispose();
@@ -56,9 +54,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     setState(() {
       remainingBalance = total - down;
-      monthlyPayment = months > 0
-          ? remainingBalance / months
-          : remainingBalance;
+      monthlyPayment = months > 0 ? remainingBalance / months : remainingBalance;
     });
   }
 
@@ -69,100 +65,123 @@ class _AddUtangPageState extends State<AddUtangPage> {
     final db = await DBService.instance.database;
 
     if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill item and total cost")),
       );
       return;
     }
 
-    if (selectedTab == 0) {
-      // Installment
-      final total =
-          double.tryParse(totalCostController.text.replaceAll(',', '')) ?? 0;
-      final down =
-          double.tryParse(downpaymentController.text.replaceAll(',', '')) ?? 0;
-      final months = int.tryParse(durationController.text) ?? 1;
-      final remaining = total - down;
-      final monthly = months > 0 ? remaining / months : remaining;
+    try {
+      if (selectedTab == 0) {
+        // ==============================
+        // INSTALLMENT
+        // ==============================
+        final total =
+            double.tryParse(totalCostController.text.replaceAll(',', '')) ?? 0;
+        final down =
+            double.tryParse(downpaymentController.text.replaceAll(',', '')) ?? 0;
+        final months = int.tryParse(durationController.text) ?? 1;
+        final remaining = total - down;
+        final monthly = months > 0 ? remaining / months : remaining;
 
-      await db.insert('payable', {
-        'account_id': 1,
-        'supplier_name': 'Owner',
-        'item': itemController.text,
-        'original_amount': total,
-        'remaining_amount': remaining,
-        'due_date': DateFormat(
-          'yyyy-MM-dd',
-        ).format(DateTime.now().add(Duration(days: 30 * months))),
-        'note': notesController.text,
-        'is_paid': 0,
-        'has_plan': 1,
-        'plan_months': months,
-        'plan_monthly': monthly,
-        'first_due_date': DateFormat(
-          'yyyy-MM-dd',
-        ).format(DateTime.now().add(const Duration(days: 30))),
-        'next_due_date': DateFormat(
-          'yyyy-MM-dd',
-        ).format(DateTime.now().add(const Duration(days: 30))),
-        'is_asset': 0,
-        'asset_category': null,
-        'create_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
+        final firstDueDate = startDateController.text.isNotEmpty
+            ? DateTime.tryParse(startDateController.text) ?? DateTime.now()
+            : DateTime.now();
+
+        final nextDueDate = firstDueDate.add(const Duration(days: 30));
+
+        // Insert into payable table
+        await db.insert('payable', {
+          'account_id': 1,
+          'supplier_name': 'Owner',
+          'item': itemController.text,
+          'original_amount': total,
+          'remaining_amount': remaining,
+          'due_date': DateFormat('yyyy-MM-dd')
+              .format(firstDueDate.add(Duration(days: 30 * months))),
+          'note': notesController.text,
+          'is_paid': 0,
+          'has_plan': 1,
+          'plan_months': months,
+          'plan_monthly': monthly,
+          'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
+          'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
+          'is_asset': 0,
+          'asset_category': null,
+          'create_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        // Insert downpayment into owner_installments if > 0
+        if (down > 0) {
+          await db.insert('owner_installments', {
+            'account_id': 1,
+            'item': itemController.text,
+            'downpayment': down,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      } else {
+        // ==============================
+        // NON-INSTALLMENT
+        // ==============================
+        final total =
+            double.tryParse(totalCostController.text.replaceAll(',', '')) ?? 0;
+
+        await db.insert('payable', {
+          'account_id': 1,
+          'supplier_name': 'Owner',
+          'item': itemController.text,
+          'original_amount': total,
+          'remaining_amount': total,
+          'due_date': datePaidController.text.isNotEmpty
+              ? datePaidController.text
+              : DateFormat('yyyy-MM-dd').format(DateTime.now()),
+          'note': notesController.text,
+          'is_paid': 1,
+          'has_plan': 0,
+          'plan_months': null,
+          'plan_monthly': null,
+          'first_due_date': null,
+          'next_due_date': null,
+          'is_asset': 0,
+          'asset_category': null,
+          'create_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      // ==============================
+      // SUCCESS MESSAGE & CLEAR FIELDS
+      // ==============================
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bayronon saved successfully")),
+      );
+
+      itemController.clear();
+      totalCostController.clear();
+      downpaymentController.clear();
+      durationController.clear();
+      notesController.clear();
+      startDateController.clear();
+      paymentMethodController.clear();
+      datePaidController.clear();
+
+      setState(() {
+        remainingBalance = 0.0;
+        monthlyPayment = 0.0;
       });
-    } else {
-      // Non-Installment
-      final total =
-          double.tryParse(totalCostController.text.replaceAll(',', '')) ?? 0;
-      await db.insert('payable', {
-        'account_id': 1,
-        'supplier_name': 'Owner',
-        'item': itemController.text,
-        'original_amount': total,
-        'remaining_amount': total,
-        'due_date': datePaidController.text.isNotEmpty
-            ? datePaidController.text
-            : DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        'note': notesController.text,
-        'is_paid': 1,
-        'has_plan': 0,
-        'plan_months': null,
-        'plan_monthly': null,
-        'first_due_date': null,
-        'next_due_date': null,
-        'is_asset': 0,
-        'asset_category': null,
-        'create_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
+
+      // Go back to Owner Utang page
+      Future.delayed(const Duration(milliseconds: 500), () {
+        Navigator.pop(context, true);
       });
+    } catch (e) {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save: $e")),
+      );
     }
-
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Bayronon saved successfully")),
-    );
-
-    // Clear fields
-    itemController.clear();
-    totalCostController.clear();
-    downpaymentController.clear();
-    durationController.clear();
-    notesController.clear();
-    startDateController.clear(); // <-- Added
-    paymentMethodController.clear();
-    datePaidController.clear();
-
-    setState(() {
-      remainingBalance = 0.0;
-      monthlyPayment = 0.0;
-    });
-
-    // Go back to Owner Utang page
-    Future.delayed(const Duration(milliseconds: 500), () {
-      // ignore: use_build_context_synchronously
-      Navigator.pop(context, true);
-    });
   }
 
   @override
@@ -189,9 +208,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: selectedTab == 0
-                            ? AppColors.primary
-                            : Colors.white,
+                        color: selectedTab == 0 ? AppColors.primary : Colors.white,
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
@@ -213,9 +230,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: selectedTab == 1
-                            ? AppColors.primary
-                            : Colors.white,
+                        color: selectedTab == 1 ? AppColors.primary : Colors.white,
                         borderRadius: BorderRadius.circular(25),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
@@ -276,6 +291,36 @@ class _AddUtangPageState extends State<AddUtangPage> {
   }
 
   // ==============================
+  // TEXT FIELD BUILDER
+  // ==============================
+  Widget buildTextField(
+    String label,
+    TextEditingController? controller, {
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    ValueChanged<String>? onChanged,
+    IconData? icon,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      readOnly: readOnly,
+      onTap: onTap,
+      onChanged: onChanged,
+      inputFormatters: inputFormatters,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  // ==============================
   // INSTALLMENT FORM
   // ==============================
   Widget buildInstallmentForm() {
@@ -288,22 +333,17 @@ class _AddUtangPageState extends State<AddUtangPage> {
           icon: Icons.description,
         ),
         const SizedBox(height: 16),
-
+        // Cost Details Card
         Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 2,
           color: Colors.white,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Cost Details",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                const Text("Cost Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 buildTextField(
                   "Total Cost",
@@ -331,7 +371,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
                   onChanged: (_) => calculateInstallment(),
                 ),
                 const SizedBox(height: 12),
-
                 Row(
                   children: [
                     Expanded(
@@ -344,21 +383,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Remaining Balance",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            const Text("Remaining Balance", style: TextStyle(fontSize: 14, color: Colors.grey)),
                             const SizedBox(height: 4),
                             Text(
                               "₱${currencyFormat.format(remainingBalance)}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
                             ),
                           ],
                         ),
@@ -375,21 +404,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Monthly Payment",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
+                            const Text("Monthly Payment", style: TextStyle(fontSize: 14, color: Colors.grey)),
                             const SizedBox(height: 4),
                             Text(
                               "₱${currencyFormat.format(monthlyPayment)}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
                             ),
                           ],
                         ),
@@ -402,26 +421,21 @@ class _AddUtangPageState extends State<AddUtangPage> {
           ),
         ),
         const SizedBox(height: 16),
-
+        // Schedule & Notes Card
         Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 2,
           color: Colors.white,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Schedule & Notes",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                const Text("Schedule & Notes", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 buildTextField(
                   "Start Date",
-                  startDateController, // <-- Updated
+                  startDateController,
                   readOnly: true,
                   icon: Icons.date_range,
                   onTap: () async {
@@ -433,9 +447,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     );
                     if (date != null) {
                       setState(() {
-                        startDateController.text = DateFormat(
-                          'yyyy-MM-dd',
-                        ).format(date);
+                        startDateController.text = DateFormat('yyyy-MM-dd').format(date);
                       });
                     }
                   },
@@ -468,11 +480,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
           icon: Icons.description,
         ),
         const SizedBox(height: 16),
-
         Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 2,
           color: Colors.white,
           child: Padding(
@@ -480,10 +489,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Payment Details",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+                const Text("Payment Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 buildTextField(
                   "Total Cost",
@@ -513,9 +519,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     );
                     if (date != null) {
                       setState(() {
-                        datePaidController.text = date.toIso8601String().split(
-                          'T',
-                        )[0];
+                        datePaidController.text = DateFormat('yyyy-MM-dd').format(date);
                       });
                     }
                   },
@@ -526,9 +530,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
         ),
         const SizedBox(height: 16),
         Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 2,
           color: Colors.white,
           child: Padding(
@@ -544,52 +546,17 @@ class _AddUtangPageState extends State<AddUtangPage> {
       ],
     );
   }
-
-  // ==============================
-  // TEXT FIELD BUILDER
-  // ==============================
-  Widget buildTextField(
-    String label,
-    TextEditingController? controller, {
-    TextInputType keyboardType = TextInputType.text,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    ValueChanged<String>? onChanged,
-    IconData? icon,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      onTap: onTap,
-      onChanged: onChanged,
-      inputFormatters: inputFormatters,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-    );
-  }
 }
 
 // ==============================
-// THOUSANDS FORMATTER
+// THOUSANDS FORMATTER (TOP LEVEL)
 // ==============================
 class ThousandsFormatter extends TextInputFormatter {
-  final formatter = NumberFormat('#,###');
+  final NumberFormat formatter = NumberFormat('#,###');
 
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
+      TextEditingValue oldValue, TextEditingValue newValue) {
     String text = newValue.text.replaceAll(',', '');
     if (text.isEmpty) return newValue;
 
