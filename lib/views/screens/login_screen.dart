@@ -1,7 +1,7 @@
 import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../view_models/login_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -79,6 +79,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ],
                     ),
                     const SizedBox(height: 20),
+
                     // Mobile Number
                     GestureDetector(
                       onTap: () => viewModel.changeMobileNumber(context),
@@ -122,20 +123,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () =>
-                                  viewModel.changeMobileNumber(context),
-                              child: const Icon(
-                                Icons.swap_horiz,
-                                color: AppColors.textPrimary,
-                                size: 22,
-                              ),
+                            const Icon(
+                              Icons.swap_horiz,
+                              color: AppColors.textPrimary,
+                              size: 22,
                             ),
                           ],
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 25),
+
                     // PIN
                     const Text(
                       "PIN",
@@ -146,6 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ),
                     ),
                     const SizedBox(height: 10),
+
                     AnimatedBuilder(
                       animation: _shakeAnimation,
                       builder: (context, child) {
@@ -177,7 +177,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         );
                       },
                     ),
+
                     const SizedBox(height: 25),
+
                     // Keypad
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -200,6 +202,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             },
                           ),
                           const SizedBox(height: 12),
+
+                          // LAST ROW (0 + BACKSPACE)
                           GridView.count(
                             physics: const NeverScrollableScrollPhysics(),
                             shrinkWrap: true,
@@ -209,8 +213,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             childAspectRatio: 1,
                             children: [
                               Container(),
+
                               _buildKey("0"),
-                              Container(),
+
+                              viewModel.pin.isNotEmpty
+                                  ? _buildBackspaceKey()
+                                  : Container(),
                             ],
                           ),
                         ],
@@ -220,7 +228,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 ),
               ),
             ),
-            // Bottom Text Gestures
+
+            // Bottom links
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
               child: Row(
@@ -257,6 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
+  // NUMBER KEY (unchanged)
   Widget _buildKey(String label) {
     final viewModel = ref.read(loginViewModelProvider);
     return GestureDetector(
@@ -294,6 +304,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // BACKSPACE KEY (same style as numbers)
+  Widget _buildBackspaceKey() {
+    final viewModel = ref.read(loginViewModelProvider);
+
+    return GestureDetector(
+      onTapDown: (_) => viewModel.setPressed(-1, true),
+      onTapUp: (_) {
+        viewModel.setPressed(-1, false);
+        viewModel.onKeyTap(context, 'back', ref, onInvalid: triggerShake);
+      },
+      onTapCancel: () => viewModel.setPressed(-1, false),
+      child: AnimatedScale(
+        scale: viewModel.isPressed(-1) ? 0.85 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withAlpha(51),
+                blurRadius: 2,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Center(child: Icon(Icons.backspace_outlined, size: 26)),
         ),
       ),
     );
