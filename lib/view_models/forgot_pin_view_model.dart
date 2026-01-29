@@ -4,11 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../repositories/forgot_pin_repository.dart';
 import '../services/db_service.dart';
 import '../models/forgot_pin_model.dart';
+final forgotPinViewModelProvider =
+    ChangeNotifierProvider.autoDispose<ForgotPinViewModel>((ref) {
+  final vm = ForgotPinViewModel(ForgotPinRepositoryWrapper());
 
-final forgotPinViewModelProvider = ChangeNotifierProvider<ForgotPinViewModel>((
-  ref,
-) {
-  return ForgotPinViewModel(ForgotPinRepositoryWrapper());
+  ref.onDispose(vm.disposeVM);
+
+  return vm;
 });
 
 class ForgotPinRepositoryWrapper {
@@ -141,7 +143,7 @@ class ForgotPinViewModel extends ChangeNotifier {
 
     return result.isNotEmpty
         ? result.first['question'] as String
-        : "Question not found";
+        : "Security Question";
   }
 
   void clear() {
