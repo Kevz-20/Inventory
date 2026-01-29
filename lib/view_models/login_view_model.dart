@@ -108,9 +108,10 @@ class LoginViewModel extends ChangeNotifier {
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
         await Future.delayed(const Duration(milliseconds: 500));
-        // ignore: use_build_context_synchronously
-        GoRouter.of(context).go('/home');
-        clearPin();
+        if (context.mounted) {
+          GoRouter.of(context).go('/home', extra: 'fromLogin');
+          clearPin(); // Clear PIN after navigation
+        }
       }
     } else {
       clearPin();
