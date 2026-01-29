@@ -84,7 +84,11 @@ class LoginViewModel extends ChangeNotifier {
     VoidCallback? onInvalid,
   }) async {
     if (mobileNumber.isEmpty) {
-      _showMessageDialog(context, 'Please enter your mobile number', success: false);
+      _showMessageDialog(
+        context,
+        'Please enter your mobile number',
+        success: false,
+      );
       return;
     }
 
@@ -98,7 +102,8 @@ class LoginViewModel extends ChangeNotifier {
 
     if (account != null && account.pin == pin) {
       await saveMobileNumber(account.mobileNumber);
-      ref.read(currentMobileNumberProvider.notifier).state = account.mobileNumber;
+      ref.read(currentMobileNumberProvider.notifier).state =
+          account.mobileNumber;
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
@@ -111,21 +116,34 @@ class LoginViewModel extends ChangeNotifier {
       clearPin();
       onInvalid?.call();
       // ignore: use_build_context_synchronously
-      _showMessageDialog(context, account == null ? 'Account not found' : 'Invalid PIN', success: false);
+      _showMessageDialog(
+        // ignore: use_build_context_synchronously
+        context,
+        account == null ? 'Account not found' : 'Invalid PIN',
+        success: false,
+      );
     }
   }
 
-  void _showMessageDialog(BuildContext context, String message, {required bool success}) {
+  void _showMessageDialog(
+    BuildContext context,
+    String message, {
+    required bool success,
+  }) {
+    final color = success ? Colors.green : Colors.red;
+    final icon = success ? Icons.check_circle_outline : Icons.error_outline;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: success ? Colors.green : Colors.red,
         content: Row(
           children: [
-            Icon(success ? Icons.check_circle : Icons.error, color: Colors.white),
+            Icon(icon, color: Colors.white),
             const SizedBox(width: 10),
-            Text(message),
+            Expanded(child: Text(message)),
           ],
         ),
+        backgroundColor: color,
+        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -143,7 +161,10 @@ class LoginViewModel extends ChangeNotifier {
           decoration: const InputDecoration(hintText: "09XXXXXXXXX"),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
             onPressed: () {
               final number = controller.text.trim();
