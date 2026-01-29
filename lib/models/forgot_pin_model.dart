@@ -22,10 +22,11 @@ class ForgotPinModel {
 
   factory ForgotPinModel.fromMap(Map<String, dynamic> map) {
     return ForgotPinModel(
-      mobileNumber: map['mobile_number'],
-      securityQuestionId: map['security_question_id'],
-      securityAnswer: map['security_answer'],
-      pin: map['pin'] ?? '',
+      mobileNumber: map['mobile_number']?.toString() ?? '',
+      securityQuestionId:
+          (map['security_question_id'] as num?)?.toInt() ?? 0,
+      securityAnswer: map['security_answer']?.toString() ?? '',
+      pin: map['pin']?.toString() ?? '',
     );
   }
 }

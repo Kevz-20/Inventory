@@ -1,8 +1,9 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../view_models/forgot_pin_view_model.dart';
-import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 
 class ForgotPinScreen extends ConsumerStatefulWidget {
@@ -13,20 +14,61 @@ class ForgotPinScreen extends ConsumerStatefulWidget {
 }
 
 class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
-  late ForgotPinViewModel vm;
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize the view model
-    vm = ref.read(forgotPinViewModelProvider);
-  }
-
-  @override
-  void dispose() {
-    // Dispose controllers inside the view model
-    vm.disposeVM();
-    super.dispose();
+  Widget _futuristicField({
+    required TextEditingController controller,
+    required String hint,
+    IconData? icon,
+    int? maxLength,
+    bool obscure = false,
+    TextInputType? keyboardType,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.withOpacity(0.1),
+            Colors.green.withOpacity(0.05),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.greenAccent.withOpacity(0.3),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Colors.green.withOpacity(0.2),
+            blurRadius: 20,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        maxLength: maxLength,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          counterText: "",
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.black45),
+          prefixIcon: icon != null ? Icon(icon, color: Colors.green) : null,
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.95),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide(color: Colors.green.withOpacity(0.5), width: 1.5),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide(color: Colors.greenAccent.withOpacity(0.8), width: 2),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -34,10 +76,10 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
     final vmState = ref.watch(forgotPinViewModelProvider);
 
     ref.listen<ForgotPinViewModel>(forgotPinViewModelProvider, (_, state) {
-      if (vmState.errorMessage != null) {
+      if (state.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(vmState.errorMessage!),
+            content: Text(state.errorMessage!),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -45,25 +87,30 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: "Nakalimot sa PIN?", showBackButton: true),
+      backgroundColor: Colors.white, // entire background white
+      appBar: const AppHeader(title: 'Forgot PIN', showBackButton: true),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+          padding: const EdgeInsets.all(20),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 30),
               Container(
                 padding: const EdgeInsets.all(24),
-                margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white, // card still white
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.green.withOpacity(0.5), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 51),
-                      blurRadius: 2,
-                      offset: const Offset(0, 2),
+                      color: Colors.greenAccent.withOpacity(0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.1),
+                      blurRadius: 40,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
@@ -71,146 +118,62 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "I-Recover Imuha PIN",
+                      "Recover Your PIN",
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2C2C2C),
+                        letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      "Enter your registered 11-digit mobile number to recover your PIN.",
-                      style: TextStyle(fontSize: 15, color: Colors.black54),
+                      "Enter your registered mobile number",
+                      style: TextStyle(color: Colors.black54),
                     ),
-                    const SizedBox(height: 25),
-                    const Text(
-                      "Mobile Number",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
+                    const SizedBox(height: 30),
+                    _futuristicField(
                       controller: vmState.mobileController,
+                      hint: "09XXXXXXXXX",
                       maxLength: 11,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        counterText: "",
-                        hintText: "09XXXXXXXXX",
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 20,
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF9F9F9),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: Colors.grey,
-                            width: 1.2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(
-                            color: AppColors.primaryLight,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
+                      icon: Icons.phone_android,
                     ),
-                    const SizedBox(height: 25),
-
                     if (vmState.account != null) ...[
-                      const Text(
-                        "New PIN",
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.black87,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
+                      _futuristicField(
                         controller: vmState.newPinController,
-                        obscureText: true,
+                        hint: "New PIN",
                         maxLength: 4,
+                        obscure: true,
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: "Enter new PIN",
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                            horizontal: 20,
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF9F9F9),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Colors.grey,
-                              width: 1.2,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.primaryLight,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
+                        icon: Icons.lock_outline,
                       ),
-
-                      if (vmState.account != null)
-                        FutureBuilder<String>(
-                          future: vmState.securityQuestion,
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) return const SizedBox();
-                            return Text(
+                      FutureBuilder<String>(
+                        future: vmState.securityQuestion,
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const SizedBox();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Text(
                               snapshot.data!,
                               style: const TextStyle(
-                                fontSize: 15,
                                 color: Colors.black87,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
-                            );
-                          },
-                        ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: vmState.answerController,
-                        decoration: InputDecoration(
-                          hintText: "Your answer",
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                            horizontal: 20,
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF9F9F9),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Colors.grey,
-                              width: 1.2,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: AppColors.primaryLight,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 25),
+                      _futuristicField(
+                        controller: vmState.answerController,
+                        hint: "Your Answer",
+                        icon: Icons.help_outline,
+                      ),
                     ],
-
+                    const SizedBox(height: 35),
                     SizedBox(
                       width: double.infinity,
+                      height: 54,
                       child: ElevatedButton(
                         onPressed: vmState.isLoading
                             ? null
@@ -219,45 +182,25 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                                   await vmState.fetchAccount();
                                 } else if (vmState.validateAnswer()) {
                                   final success = await vmState.updatePin();
-                                  if (success) {
-                                    if (!context.mounted) return;
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "PIN updated successfully",
-                                        ),
-                                        backgroundColor: AppColors.primaryLight,
-                                      ),
-                                    );
-
-                                    await Future.delayed(
-                                      const Duration(seconds: 3),
-                                    );
-
-                                    if (!context.mounted) return;
+                                  if (success && context.mounted) {
                                     context.go('/login');
                                   }
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: const Color.fromARGB(255, 86, 137, 87),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                          elevation: 6,
                         ),
                         child: vmState.isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : Text(
-                                vmState.account == null ? "Submit" : "Submit",
-                                style: const TextStyle(
-                                  fontSize: 18,
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
+                                "CONTINUE",
+                                style: TextStyle(
+                                  color: Color.fromARGB(255, 11, 11, 11),
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
                       ),
