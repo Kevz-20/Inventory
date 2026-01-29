@@ -135,6 +135,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white, // set dialog background to white
         title: const Text("Add Payment"),
         content: TextField(
           controller: paymentController,
@@ -163,7 +164,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                 'paid_at': DateTime.now().toIso8601String(),
               });
 
-              // Refresh data
               await fetchCustomerData();
             },
             child: const Text("Add"),
@@ -429,6 +429,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                           final remaining = totalPerDate - totalPaidForDate;
 
                           return Card(
+                            color: Colors.white,
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -515,7 +516,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                         ],
                                       ),
                                     );
-                                  }).toList(),
+                                  }),
                                 ],
 
                                 const SizedBox(height: 8),
@@ -571,7 +572,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                       ],
                                     ),
                                   );
-                                }).toList(),
+                                }),
                               ],
                             ),
                           );
