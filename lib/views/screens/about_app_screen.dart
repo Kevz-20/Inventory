@@ -133,7 +133,7 @@ class _AboutAppScreenState extends State<AboutAppScreen>
 Created by the students of CTU Ginatilan:
 
 Project Manager:
-• Director GLicerio Baguia
+• Director Glicerio Baguia
 
 Developers:
 • Kevin Mejares
