@@ -15,6 +15,32 @@ class CapitalManagementScreen extends ConsumerStatefulWidget {
       _CapitalManagementScreenState();
 }
 
+class CurrencyTextInputFormatter extends TextInputFormatter {
+  final NumberFormat formatter = NumberFormat('#,##0.##');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(',', '');
+
+    if (text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    final number = double.tryParse(text);
+    if (number == null) return oldValue;
+
+    final formatted = formatter.format(number);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
   final TextEditingController _amountController = TextEditingController();
@@ -25,6 +51,11 @@ class _CapitalManagementScreenState
     symbol: '₱',
     decimalDigits: 2,
   );
+
+  double _parseAmount() {
+    final raw = _amountController.text.replaceAll(',', '');
+    return double.tryParse(raw) ?? 0;
+  }
 
   final DateFormat _dateFormatter = DateFormat('MMM dd, yyyy • hh:mm a');
 
@@ -58,7 +89,7 @@ class _CapitalManagementScreenState
                   .reduce((a, b) => a.isAfter(b) ? a : b)
             : null;
 
-        final enteredAmount = double.tryParse(_amountController.text) ?? 0;
+        final enteredAmount = _parseAmount();
 
         return Scaffold(
           backgroundColor: AppColors.surface,
@@ -243,7 +274,8 @@ class _CapitalManagementScreenState
       controller: _amountController,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+        FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+        CurrencyTextInputFormatter(),
       ],
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
