@@ -29,6 +29,15 @@ class _CapitalManagementScreenState
   final DateFormat _dateFormatter = DateFormat('MMM dd, yyyy • hh:mm a');
 
   @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      ref.read(capitalManagementViewModelProvider).loadCapitals();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final repoAsync = ref.watch(capitalManagementRepositoryProvider);
 
@@ -68,29 +77,21 @@ class _CapitalManagementScreenState
                       : 'Last capital added: ${_dateFormatter.format(lastAddedDate)}',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
-
                 const SizedBox(height: 16),
-
                 _miniBalanceCard(
                   title: "Cash on Hand",
                   value: totalCashOnHand,
                   icon: Icons.money,
                 ),
-
                 const SizedBox(height: 15),
-
                 _miniBalanceCard(
                   title: "Capital",
                   value: totalCapital,
                   icon: Icons.account_balance,
                 ),
-
                 const SizedBox(height: 30),
-
                 _addCapitalCard(),
-
                 const SizedBox(height: 24),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -203,19 +204,14 @@ class _CapitalManagementScreenState
             'Add New Capital',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 16),
-
           _amountInput(),
           const SizedBox(height: 6),
-
           Text(
             'Enter the amount you want to add',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
-
           const SizedBox(height: 12),
-
           Row(
             children: [
               _quickAmountChip('500'),
@@ -225,9 +221,7 @@ class _CapitalManagementScreenState
               _quickAmountChip('5000'),
             ],
           ),
-
           const SizedBox(height: 16),
-
           _remarksInput(),
         ],
       ),
