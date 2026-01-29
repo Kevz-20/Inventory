@@ -4,18 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../services/db_service.dart';
-import '../screens/utang_screen.dart'; // UtangCustomer model
+import '../screens/utang_screen.dart';
 
 // ================================
 // MODEL FOR INDIVIDUAL UTANG ITEMS
 // ================================
 class UtangItem {
+  final int salesCreditId;
   final String itemName;
   final double amount;
   final int quantity;
   final DateTime creditDate;
 
   UtangItem({
+    required this.salesCreditId,
     required this.itemName,
     required this.amount,
     required this.quantity,
@@ -24,10 +26,37 @@ class UtangItem {
 
   factory UtangItem.fromMap(Map<String, dynamic> map) {
     return UtangItem(
+      salesCreditId: map['sales_credit_id'],
       itemName: map['item_name'] ?? '',
-      amount: map['amount']?.toDouble() ?? 0.0,
+      amount: (map['amount'] ?? 0).toDouble(),
       quantity: map['quantity'] ?? 0,
       creditDate: DateTime.tryParse(map['credit_date'] ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+// ================================
+// MODEL FOR CUSTOMER PAYMENTS
+// ================================
+class CustomerPayment {
+  final int id;
+  final double amount;
+  final DateTime paidAt;
+  final int? creditDateId; // optional, in case you want to track
+
+  CustomerPayment({
+    required this.id,
+    required this.amount,
+    required this.paidAt,
+    this.creditDateId,
+  });
+
+  factory CustomerPayment.fromMap(Map<String, dynamic> map) {
+    return CustomerPayment(
+      id: map['id'],
+      amount: (map['amount'] ?? 0).toDouble(),
+      paidAt: DateTime.tryParse(map['paid_at'] ?? '') ?? DateTime.now(),
+      creditDateId: map['credit_date_id'],
     );
   }
 }
@@ -46,36 +75,117 @@ class UtangSummaryPage extends StatefulWidget {
 
 class _UtangSummaryPageState extends State<UtangSummaryPage> {
   List<UtangItem> customerItems = [];
+  List<CustomerPayment> customerPayments = [];
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchCustomerItems();
+    fetchCustomerData();
   }
 
   // ================================
-  // FETCH CUSTOMER ITEMS FROM DB (with product join)
+  // FETCH ITEMS AND PAYMENTS FROM DB
   // ================================
-  Future<void> fetchCustomerItems() async {
+  Future<void> fetchCustomerData() async {
+    setState(() => isLoading = true);
     final db = await DBService.instance.database;
 
-    final result = await db.rawQuery(
+    // Fetch items
+    final itemsResult = await db.rawQuery(
       '''
-      SELECT p.name AS item_name, sc.amount, sc.quantity, sc.credit_date
+      SELECT
+        sc.id AS sales_credit_id,
+        p.name AS item_name,
+        sc.amount,
+        sc.quantity,
+        sc.credit_date
       FROM sales_credit sc
       JOIN product p ON sc.product_id = p.id
       WHERE sc.customer_id = ?
-      ORDER BY sc.credit_date DESC
+      ORDER BY sc.credit_date ASC
       ''',
       [widget.customer.id],
     );
 
+    // Fetch customer payments
+    final paymentsResult = await db.query(
+      'customer_payment',
+      where: 'customer_id = ?',
+      whereArgs: [widget.customer.id],
+      orderBy: 'paid_at ASC',
+    );
+
     setState(() {
-      customerItems = result.map((e) => UtangItem.fromMap(e)).toList();
+      customerItems = itemsResult.map((e) => UtangItem.fromMap(e)).toList();
+      customerPayments = paymentsResult
+          .map((e) => CustomerPayment.fromMap(e))
+          .toList();
       isLoading = false;
     });
+  }
+
+  // ================================
+  // ADD CUSTOMER-LEVEL PAYMENT
+  // ================================
+  Future<void> addPartialPayment() async {
+    final TextEditingController paymentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Add Payment"),
+        content: TextField(
+          controller: paymentController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: "Enter payment amount",
+            prefixText: "₱",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = double.tryParse(paymentController.text);
+              if (amount == null || amount <= 0) return;
+
+              Navigator.pop(context);
+              final db = await DBService.instance.database;
+
+              await db.insert('customer_payment', {
+                'customer_id': widget.customer.id,
+                'amount': amount,
+                'paid_at': DateTime.now().toIso8601String(),
+              });
+
+              // Refresh data
+              await fetchCustomerData();
+            },
+            child: const Text("Add"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================================
+  // TOTAL UTANG (total items - total payments)
+  // ================================
+  double get totalUtang {
+    final totalItems = customerItems.fold(
+      0.0,
+      (sum, item) => sum + item.amount,
+    );
+    final totalPayments = customerPayments.fold(
+      0.0,
+      (sum, pay) => sum + pay.amount,
+    );
+    return totalItems - totalPayments;
   }
 
   // ================================
@@ -83,16 +193,46 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   // ================================
   Map<String, List<UtangItem>> groupItemsByDate() {
     Map<String, List<UtangItem>> grouped = {};
-
     for (var item in customerItems) {
       final dateKey = DateFormat('yyyy-MM-dd').format(item.creditDate);
-      if (!grouped.containsKey(dateKey)) {
-        grouped[dateKey] = [];
-      }
+      if (!grouped.containsKey(dateKey)) grouped[dateKey] = [];
       grouped[dateKey]!.add(item);
     }
-
     return grouped;
+  }
+
+  // ================================
+  // CALCULATE PAYMENTS PER DATE
+  // ================================
+  double totalPaymentsForDate(String dateKey) {
+    // For simplicity, apply payments sequentially to oldest credit first
+    final dateItems = groupItemsByDate()[dateKey]!;
+    double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
+    double applied = 0.0;
+
+    for (var pay in customerPayments) {
+      if (remaining <= 0) break;
+      final applyAmount = (pay.amount <= remaining) ? pay.amount : remaining;
+      applied += applyAmount;
+      remaining -= applyAmount;
+    }
+    return applied;
+  }
+
+  List<CustomerPayment> paymentsAppliedToDate(String dateKey) {
+    final dateItems = groupItemsByDate()[dateKey]!;
+    double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
+    List<CustomerPayment> appliedPayments = [];
+
+    for (var pay in customerPayments) {
+      if (remaining <= 0) break;
+      final applyAmount = (pay.amount <= remaining) ? pay.amount : remaining;
+      if (applyAmount > 0) {
+        appliedPayments.add(pay);
+        remaining -= applyAmount;
+      }
+    }
+    return appliedPayments;
   }
 
   // ================================
@@ -102,7 +242,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   Widget build(BuildContext context) {
     final groupedItems = groupItemsByDate();
     final sortedDates = groupedItems.keys.toList()
-      ..sort((a, b) => b.compareTo(a)); // newest first
+      ..sort((a, b) => a.compareTo(b));
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -178,7 +318,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      "₱${widget.customer.totalAmount.toStringAsFixed(2)}",
+                      "₱${currencyFormat.format(totalUtang)}",
                       style: const TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
@@ -223,6 +363,21 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               color: Colors.black87,
                             ),
                           ),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed: addPartialPayment,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0C4B3E),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text("Add Payment"),
+                          ),
                         ],
                       ),
                     ],
@@ -253,39 +408,30 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                         itemBuilder: (context, index) {
                           final dateKey = sortedDates[index];
                           final items = groupedItems[dateKey]!;
-                          final totalPerDate = items.fold<double>(
+
+                          final date = DateTime.parse(dateKey);
+                          final dateLabel = DateFormat(
+                            'MMM dd, yyyy',
+                          ).format(date);
+
+                          final totalPerDate = items.fold(
                             0.0,
                             (sum, item) => sum + item.amount,
                           );
 
-                          final date = DateTime.parse(dateKey);
-                          final isToday = DateUtils.isSameDay(
-                            date,
-                            DateTime.now(),
+                          final appliedPayments = paymentsAppliedToDate(
+                            dateKey,
                           );
-                          final isOverdue =
-                              !isToday && date.isBefore(DateTime.now());
-                          final dateColor = isOverdue
-                              ? Colors.red
-                              : isToday
-                              ? Colors.green[800]
-                              : Colors.black87;
-                          final dateLabel = isToday
-                              ? "Today"
-                              : DateFormat('MMM dd, yyyy').format(date);
+                          final totalPaidForDate = appliedPayments.fold(
+                            0.0,
+                            (sum, pay) => sum + pay.amount,
+                          );
+                          final remaining = totalPerDate - totalPaidForDate;
 
                           return Card(
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(
-                                color: isOverdue
-                                    ? Colors.red
-                                    : isToday
-                                    ? Colors.green
-                                    : Colors.transparent,
-                                width: 2,
-                              ),
                             ),
                             elevation: 3,
                             child: ExpansionTile(
@@ -297,7 +443,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 horizontal: 16,
                                 vertical: 8,
                               ),
-                              initiallyExpanded: isToday,
+                              initiallyExpanded: false,
                               title: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -308,79 +454,59 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     children: [
                                       Text(
                                         dateLabel,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
-                                          color: dateColor,
                                         ),
                                       ),
                                       Text(
-                                        "${items.length} item${items.length > 1 ? 's' : ''}",
+                                        "Total: ₱${currencyFormat.format(totalPerDate)}",
                                         style: const TextStyle(
-                                          fontSize: 13,
+                                          fontSize: 14,
                                           color: Colors.grey,
                                         ),
                                       ),
                                     ],
                                   ),
                                   Text(
-                                    "₱${currencyFormat.format(totalPerDate)}",
-                                    style: const TextStyle(
+                                    "Remaining: ₱${currencyFormat.format(remaining)}",
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                      fontSize: 14,
+                                      color: remaining > 0
+                                          ? Colors.red
+                                          : Colors.green[800],
                                     ),
                                   ),
                                 ],
                               ),
-                              children: items.map((item) {
-                                // ignore: unused_local_variable
-                                final isItemOverdue = item.creditDate.isBefore(
-                                  DateTime.now(),
-                                );
-
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 4,
+                              children: [
+                                // List payments applied to this date
+                                if (appliedPayments.isNotEmpty) ...[
+                                  const Divider(),
+                                  const Text(
+                                    "Payments applied:",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey.withOpacity(0.05),
-                                        blurRadius: 2,
-                                        offset: const Offset(0, 1),
+                                  ...appliedPayments.map((pay) {
+                                    final payTime = DateFormat(
+                                      'MMM dd, yyyy hh:mm a',
+                                    ).format(pay.paidAt);
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
                                       ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          item.itemName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            "₱${currencyFormat.format(item.amount)}",
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
+                                            "₱${currencyFormat.format(pay.amount)}",
                                           ),
-                                          const SizedBox(height: 4),
                                           Text(
-                                            "${item.quantity} pcs",
+                                            payTime,
                                             style: const TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey,
@@ -388,10 +514,65 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
+                                    );
+                                  }).toList(),
+                                ],
+
+                                const SizedBox(height: 8),
+                                // List items
+                                ...items.map((item) {
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                    ),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.05),
+                                          blurRadius: 2,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.itemName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            Text(
+                                              "${item.quantity} pcs",
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          "₱${currencyFormat.format(item.amount)}",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ],
                             ),
                           );
                         },
