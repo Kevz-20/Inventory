@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../services/db_service.dart';
 import '../screens/utang_screen.dart';
+import '../widgets/header.dart';
 
 // ================================
 // MODEL FOR INDIVIDUAL UTANG ITEMS
@@ -246,11 +247,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        title: Text(widget.customer.fullName),
-        backgroundColor: const Color(0xFF0C4B3E),
-        elevation: 0,
-      ),
+      appBar: AppHeader(title: widget.customer.fullName, showBackButton: true),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
