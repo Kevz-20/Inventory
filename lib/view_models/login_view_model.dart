@@ -83,6 +83,7 @@ class LoginViewModel extends ChangeNotifier {
     WidgetRef ref, {
     VoidCallback? onInvalid,
   }) async {
+    // No mobile number entered
     if (mobileNumber.isEmpty) {
       _showMessageDialog(
         context,
@@ -92,7 +93,10 @@ class LoginViewModel extends ChangeNotifier {
       return;
     }
 
+    // PIN not complete
     if (pin.length != 4) {
+      shakePin = true; // trigger red dots
+      notifyListeners();
       onInvalid?.call();
       _showMessageDialog(context, 'Enter 4-digit PIN', success: false);
       return;
@@ -101,6 +105,10 @@ class LoginViewModel extends ChangeNotifier {
     final account = await _repository.getAccountByMobileNumber(mobileNumber);
 
     if (account != null && account.pin == pin) {
+      // Successful login
+      shakePin = false; // reset error state
+      notifyListeners();
+
       await saveMobileNumber(account.mobileNumber);
       ref.read(currentMobileNumberProvider.notifier).state =
           account.mobileNumber;
@@ -114,9 +122,11 @@ class LoginViewModel extends ChangeNotifier {
         }
       }
     } else {
+      // Invalid PIN or account not found
+      shakePin = true; // trigger red dots
+      notifyListeners();
       clearPin();
       onInvalid?.call();
-      // ignore: use_build_context_synchronously
       _showMessageDialog(
         // ignore: use_build_context_synchronously
         context,
