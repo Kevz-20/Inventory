@@ -1,7 +1,7 @@
 name: dswd_slp
 description: "A new Flutter project."
 publish_to: "none"
-version: 1.0.0+2
+version: 1.0.0+4
 
 environment:
   sdk: ^3.9.2
@@ -12,6 +12,7 @@ dependencies:
   shared_preferences: ^2.5.3
   flutter_riverpod: ^2.6.1
   cupertino_icons: ^1.0.8
+  auto_size_text: ^3.0.0  
   path_provider: ^2.1.5
   image_picker: ^1.2.1
   google_fonts: ^6.3.2
@@ -21,8 +22,7 @@ dependencies:
   sqflite: ^2.3.0
   intl: ^0.20.2
   path: ^1.9.0
-  pdf: ^3.11.3
-  auto_size_text: ^3.0.0  
+  pdf: ^3.11.3]
 
 
 dev_dependencies:
