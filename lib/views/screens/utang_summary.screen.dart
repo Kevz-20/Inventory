@@ -43,7 +43,7 @@ class CustomerPayment {
   final int id;
   final double amount;
   final DateTime paidAt;
-  final int? creditDateId; // optional, in case you want to track
+  final int? creditDateId;
 
   CustomerPayment({
     required this.id,
@@ -132,45 +132,82 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   // ================================
   Future<void> addPartialPayment() async {
     final TextEditingController paymentController = TextEditingController();
+    double enteredAmount = 0;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white, // set dialog background to white
-        title: const Text("Add Payment"),
-        content: TextField(
-          controller: paymentController,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: "Enter payment amount",
-            prefixText: "₱",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final amount = double.tryParse(paymentController.text);
-              if (amount == null || amount <= 0) return;
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final remainingBalance = totalUtang;
+            final isOverPaying = enteredAmount > remainingBalance;
 
-              Navigator.pop(context);
-              final db = await DBService.instance.database;
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: const Text("Add Payment"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: paymentController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Enter payment amount",
+                      prefixText: "₱",
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        enteredAmount = double.tryParse(value) ?? 0;
+                      });
+                    },
+                  ),
+                  if (isOverPaying) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Amount exceeds remaining balance",
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      (enteredAmount <= 0 ||
+                          isOverPaying ||
+                          remainingBalance <= 0)
+                      ? null
+                      : () async {
+                          Navigator.pop(context);
+                          final db = await DBService.instance.database;
 
-              await db.insert('customer_payment', {
-                'customer_id': widget.customer.id,
-                'amount': amount,
-                'paid_at': DateTime.now().toIso8601String(),
-              });
+                          await db.insert('customer_payment', {
+                            'customer_id': widget.customer.id,
+                            'amount': enteredAmount,
+                            'paid_at': DateTime.now().toIso8601String(),
+                          });
 
-              await fetchCustomerData();
-            },
-            child: const Text("Add"),
-          ),
-        ],
-      ),
+                          await fetchCustomerData();
+                        },
+                  child: const Text("Add"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -203,23 +240,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   }
 
   // ================================
-  // CALCULATE PAYMENTS PER DATE
+  // PAYMENTS APPLIED PER DATE
   // ================================
-  double totalPaymentsForDate(String dateKey) {
-    // For simplicity, apply payments sequentially to oldest credit first
-    final dateItems = groupItemsByDate()[dateKey]!;
-    double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
-    double applied = 0.0;
-
-    for (var pay in customerPayments) {
-      if (remaining <= 0) break;
-      final applyAmount = (pay.amount <= remaining) ? pay.amount : remaining;
-      applied += applyAmount;
-      remaining -= applyAmount;
-    }
-    return applied;
-  }
-
   List<CustomerPayment> paymentsAppliedToDate(String dateKey) {
     final dateItems = groupItemsByDate()[dateKey]!;
     double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
@@ -415,7 +437,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             0.0,
                             (sum, item) => sum + item.amount,
                           );
-
                           final appliedPayments = paymentsAppliedToDate(
                             dateKey,
                           );
@@ -479,22 +500,32 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ],
                               ),
                               children: [
-                                // List payments applied to this date
+                                // ================= PAYMENTS APPLIED =================
                                 if (appliedPayments.isNotEmpty) ...[
                                   const Divider(),
                                   const Text(
                                     "Payments applied:",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
                                   ...appliedPayments.map((pay) {
                                     final payTime = DateFormat(
                                       'MMM dd, yyyy hh:mm a',
                                     ).format(pay.paidAt);
-                                    return Padding(
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 4,
+                                      ),
                                       padding: const EdgeInsets.symmetric(
-                                        vertical: 2,
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisAlignment:
@@ -502,22 +533,29 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                         children: [
                                           Text(
                                             "₱${currencyFormat.format(pay.amount)}",
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: Colors.black87,
+                                            ),
                                           ),
                                           Text(
                                             payTime,
                                             style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                              color: Colors.black54,
                                             ),
                                           ),
                                         ],
                                       ),
                                     );
-                                  }),
+                                  })
                                 ],
 
                                 const SizedBox(height: 8),
-                                // List items
+
+                                // ================= ITEMIZED LIST =================
                                 ...items.map((item) {
                                   return Container(
                                     margin: const EdgeInsets.symmetric(
