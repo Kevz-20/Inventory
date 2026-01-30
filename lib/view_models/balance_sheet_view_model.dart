@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../repositories/balancesheet_repository.dart';
 
 class BalanceSheetViewModel extends ChangeNotifier {
+  final BalanceSheetRepository repository = BalanceSheetRepository();
+
+  // ---------------- Dates ----------------
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
 
-  List<String> assets = [
-    "Cash on Hand",
-    "Cash in Bank",
-    "Accounts Receivable",
-    "Inventory",
-    "Fixed Assets",
-  ];
-
-  List<String> liabilities = ["Accounts Payable"];
-
-  double totalAssets = 150000;
-  double totalLiabilities = 50000;
-
   DateTime get startDate => _startDate;
   DateTime get endDate => _endDate;
+
+  // ---------------- Data ----------------
+  Map<String, double> assets = {};
+  Map<String, double> liabilities = {};
+  Map<String, double> equity = {};
+
+  double get totalAssets => assets.values.fold(0, (prev, cur) => prev + cur);
+  double get totalLiabilities => liabilities.values.fold(0, (prev, cur) => prev + cur);
+  double get totalEquity => equity.values.fold(0, (prev, cur) => prev + cur);
+
+  // ---------------- Methods ----------------
+  String formatCurrency(double value) {
+    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
+    return formatter.format(value);
+  }
 
   String getFormattedDate(bool isStart) {
     final date = isStart ? _startDate : _endDate;
@@ -47,8 +53,12 @@ class BalanceSheetViewModel extends ChangeNotifier {
     }
   }
 
-  String formatCurrency(double value) {
-    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
-    return formatter.format(value);
+  // ---------------- Load data from DB ----------------
+  // Supports multiple accounts for transparency
+  Future<void> loadBalanceSheet({List<int>? accountIds}) async {
+    assets = await repository.getAssets(accountIds: accountIds);
+    liabilities = await repository.getLiabilities(accountIds: accountIds);
+    equity = await repository.getEquity(accountIds: accountIds);
+    notifyListeners();
   }
 }

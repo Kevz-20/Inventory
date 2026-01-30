@@ -8,12 +8,43 @@ final balanceSheetProvider = ChangeNotifierProvider(
   (ref) => BalanceSheetViewModel(),
 );
 
-class BalanceSheetScreen extends ConsumerWidget {
+class BalanceSheetScreen extends ConsumerStatefulWidget {
   const BalanceSheetScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BalanceSheetScreen> createState() =>
+      _BalanceSheetScreenState();
+}
+
+class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
+  bool _isLoading = true;
+
+  // Example: select multiple account IDs
+  List<int> selectedAccounts = [1]; // replace with real IDs from user selection
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalanceSheet();
+  }
+
+  Future<void> _loadBalanceSheet() async {
+    final vm = ref.read(balanceSheetProvider);
+    await vm.loadBalanceSheet(accountIds: selectedAccounts);
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final vm = ref.watch(balanceSheetProvider);
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -21,14 +52,17 @@ class BalanceSheetScreen extends ConsumerWidget {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Date Range Row
             Row(
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => vm.selectDate(context, true),
+                    onTap: () async {
+                      await vm.selectDate(context, true);
+                      await _refreshData();
+                    },
                     child: _DateBox(
                       title: 'Start Date',
                       dateLabel: vm.getFormattedDate(true),
@@ -38,7 +72,10 @@ class BalanceSheetScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => vm.selectDate(context, false),
+                    onTap: () async {
+                      await vm.selectDate(context, false);
+                      await _refreshData();
+                    },
                     child: _DateBox(
                       title: 'End Date',
                       dateLabel: vm.getFormattedDate(false),
@@ -49,23 +86,39 @@ class BalanceSheetScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            // Assets Section
-            _buildSectionCard(
-              title: "Assets",
+            // Assets Section (Cash on Hand & Accounts Receivable & Fixed Assets)
+            _buildFinancialSection(
+              title: 'Assets',
               items: vm.assets,
-              footer: "Total Assets: ${vm.formatCurrency(vm.totalAssets)}",
+              total: vm.totalAssets,
+              vm: vm,
             ),
-
             const SizedBox(height: 20),
 
             // Liabilities Section
-            _buildSectionCard(
-              title: "Liabilities",
+            _buildFinancialSection(
+              title: 'Liabilities',
               items: vm.liabilities,
-              footer:
-                  "Total Liabilities: ${vm.formatCurrency(vm.totalLiabilities)}",
+              total: vm.totalLiabilities,
+              vm: vm,
             ),
+            const SizedBox(height: 20),
 
+            // Owner's Equity Section
+            _buildFinancialSection(
+              title: "Owner's Equity",
+              items: vm.equity,
+              total: vm.totalEquity,
+              vm: vm,
+            ),
+            const SizedBox(height: 20),
+
+            // Total Liabilities + Equity
+            _buildTotalRow(
+              title: 'Total Liabilities + Equity',
+              amount: vm.totalLiabilities + vm.totalEquity,
+              vm: vm,
+            ),
             const SizedBox(height: 80),
           ],
         ),
@@ -106,10 +159,26 @@ class BalanceSheetScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionCard({
+  // Refresh data
+  Future<void> _refreshData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    final vm = ref.read(balanceSheetProvider);
+    await vm.loadBalanceSheet(accountIds: selectedAccounts);
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  // ------------------------------
+  // Financial Section Card
+  // ------------------------------
+  Widget _buildFinancialSection({
     required String title,
-    required List<String> items,
-    required String footer,
+    required Map<String, double> items,
+    required double total,
+    required BalanceSheetViewModel vm,
   }) {
     return Card(
       color: Colors.white,
@@ -120,39 +189,76 @@ class BalanceSheetScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.black87,
-              ),
-            ),
+            Text(title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.black87)),
             const SizedBox(height: 10),
-            for (var item in items)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  item,
-                  style: const TextStyle(fontSize: 16, color: Colors.black87),
-                ),
-              ),
+            ...items.entries.map((entry) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                          child: Text(entry.key,
+                              style: const TextStyle(fontSize: 16))),
+                      Text(vm.formatCurrency(entry.value),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                )),
             const Divider(thickness: 1),
-            Text(
-              footer,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-                color: Colors.black87,
-              ),
-            ),
+            Row(
+              children: [
+                const Expanded(
+                    child: Text('Total',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 17))),
+                Text(vm.formatCurrency(total),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 17)),
+              ],
+            )
           ],
         ),
       ),
     );
   }
+
+  // ------------------------------
+  // Total Liabilities + Equity Row
+  // ------------------------------
+  Widget _buildTotalRow({
+    required String title,
+    required double amount,
+    required BalanceSheetViewModel vm,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+            ),
+          ),
+          Text(
+            vm.formatCurrency(amount),
+            style:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ------------------------------
+// Date Box Widget
+// ------------------------------
 class _DateBox extends StatelessWidget {
   final String title;
   final String dateLabel;
@@ -168,7 +274,7 @@ class _DateBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 51),
+            color: Colors.grey.withAlpha(51),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -177,14 +283,11 @@ class _DateBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
-            ),
-          ),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54)),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

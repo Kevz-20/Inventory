@@ -17,48 +17,60 @@ class DBService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-
     return await openDatabase(
       path,
-      version: 7, // increment version for new table
+      version: 5,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute(
-            'ALTER TABLE customer ADD COLUMN account_id INTEGER;',
-          );
-          await db.execute(
-            'ALTER TABLE customer ADD COLUMN municipality TEXT;',
-          );
-          await db.execute('ALTER TABLE customer ADD COLUMN barangay TEXT;');
-          await db.execute('ALTER TABLE customer ADD COLUMN landmark TEXT;');
+        if (oldVersion < 4) {
+          // your existing upgrade logic...
         }
 
         if (oldVersion < 5) {
-          await db.execute(
-            'ALTER TABLE sales_credit_payment ADD COLUMN sales_credit_id INTEGER;',
-          );
-        }
-
-        if (oldVersion < 6) {
-          await db.execute(
-            'ALTER TABLE sales_credit_payment ADD COLUMN payment_date TEXT;',
-          );
-        }
-
-        // NEW: Create customer_payment table if upgrading from older version
-        if (oldVersion < 7) {
+          // Rename create_at -> created_at in payable
           await db.execute('''
-            CREATE TABLE IF NOT EXISTS customer_payment (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              customer_id INTEGER NOT NULL,
-              amount REAL NOT NULL,
-              paid_at TEXT NOT NULL,
-              FOREIGN KEY (customer_id) REFERENCES customer(id)
-            )
-          ''');
+      CREATE TABLE IF NOT EXISTS payable_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        supplier_name TEXT,
+        item TEXT,
+        original_amount REAL,
+        remaining_amount REAL,
+        due_date TEXT,
+        note TEXT,
+        is_paid INTEGER,
+        has_plan INTEGER,
+        plan_months INTEGER,
+        plan_monthly REAL,
+        first_due_date TEXT,
+        next_due_date TEXT,
+        is_asset INTEGER,
+        asset_category TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id)
+      )
+    ''');
+
+          // Copy data from old table
+          await db.execute('''
+      INSERT INTO payable_new (
+        id, account_id, supplier_name, item, original_amount, remaining_amount,
+        due_date, note, is_paid, has_plan, plan_months, plan_monthly,
+        first_due_date, next_due_date, is_asset, asset_category, created_at, updated_at
+      )
+      SELECT
+        id, account_id, supplier_name, item, original_amount, remaining_amount,
+        due_date, note, is_paid, has_plan, plan_months, plan_monthly,
+        first_due_date, next_due_date, is_asset, asset_category, create_at, updated_at
+      FROM payable;
+    ''');
+
+          await db.execute('DROP TABLE payable;');
+          await db.execute('ALTER TABLE payable_new RENAME TO payable;');
         }
       },
+
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -146,10 +158,179 @@ class DBService {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS customer_payment (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        paid_at TEXT NOT NULL,
-        FOREIGN KEY (customer_id) REFERENCES customer(id)
+        account_id INTEGER,
+        name TEXT,
+        category TEXT,
+        cost REAL,
+        date_acquired TEXT,
+        accumulated_depreciation REAL,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id)
+      )
+    ''');
+
+    // Stock in
+    await db.execute('''
+      CREATE TABLE stock_in ( 
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        product_id INTEGER,
+        quantity INTEGER,
+        purchase_price REAL,
+        markup_rate REAL,
+        image TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (product_id) REFERENCES product (id)
+      )
+    ''');
+
+    // Sale item
+    await db.execute('''
+      CREATE TABLE sale_item (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sale_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        unit_price INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        subtotal INTEGER NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES sales(id),
+        FOREIGN KEY (product_id) REFERENCES product(id)
+      )
+    ''');
+
+    // Bank transaction
+    await db.execute('''
+
+      CREATE TABLE bank_transaction (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        amount REAL,
+        transaction_type_id INTEGER,
+        remarks TEXT,
+        date TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (transaction_type_id) REFERENCES transaction_type_choices (id)
+      )
+    ''');
+
+    // Sales cash
+    await db.execute('''
+      CREATE TABLE sales_cash (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        product_id INTEGER,
+        amount REAL,
+        quantity INTEGER,
+        date TEXT,
+        created_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (product_id) REFERENCES product (id)
+      )
+    ''');
+
+    // Sales credit
+    await db.execute('''
+      CREATE TABLE sales_credit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        sale_id INTEGER,
+        product_id INTEGER,
+        customer_id INTEGER,
+        amount REAL,
+        quantity INTEGER,
+        status_id INTEGER,
+        credit_date TEXT,
+        paid_date TEXT,
+        due_date TEXT,
+        created_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (sale_id) REFERENCES sales (id),
+        FOREIGN KEY (product_id) REFERENCES product (id),
+        FOREIGN KEY (customer_id) REFERENCES customer (id),
+        FOREIGN KEY (status_id) REFERENCES credit_status (id)
+      )
+    ''');
+
+    // Payable
+    await db.execute('''
+      CREATE TABLE payable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        supplier_name TEXT,
+        item TEXT,
+        original_amount REAL,
+        remaining_amount REAL,
+        due_date TEXT,
+        note TEXT,
+        is_paid INTEGER,
+        has_plan INTEGER,
+        plan_months INTEGER,
+        plan_monthly REAL,
+        first_due_date TEXT,
+        next_due_date TEXT,
+        is_asset INTEGER,
+        asset_category TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id)
+      )
+    ''');
+
+    // Payable payment
+    await db.execute('''
+      CREATE TABLE payable_payment (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payable_id INTEGER,
+        amount REAL,
+        date TEXT,
+        note TEXT,
+        idempotency_key TEXT,
+        created_at TEXT,
+        FOREIGN KEY (payable_id) REFERENCES payable (id)
+      )
+    ''');
+
+    // Balance assets
+    await db.execute('''
+      CREATE TABLE balance_assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        cash_on_hand REAL,
+        cash_in_bank REAL,
+        accounts_receivable REAL,
+        inventory REAL,
+        fixed_assets REAL,
+        FOREIGN KEY (account_id) REFERENCES account (id)
+      )
+    ''');
+
+    // Expenses
+    await db.execute('''
+      CREATE TABLE expenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        amount REAL,
+        category TEXT,
+        description TEXT,
+        receipt TEXT,
+        created_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE owner_installments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        item TEXT NOT NULL,          -- e.g., "Freezer"
+        downpayment REAL NOT NULL,   -- DP amount
+        total_amount REAL,           -- full installment price
+        installment_months INTEGER,  -- optional
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');
 
