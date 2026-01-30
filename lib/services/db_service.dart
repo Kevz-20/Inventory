@@ -79,9 +79,9 @@ class DBService {
 
   // Create all tables
   Future<void> _createDB(Database db, int version) async {
-    // --- Existing tables ---
+    // Account table
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS account (
+      CREATE TABLE account (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         mobile_number TEXT UNIQUE NOT NULL,
         association_name TEXT,
@@ -92,10 +92,71 @@ class DBService {
       )
     ''');
 
+    // Enum / choice tables
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS customer (
+      CREATE TABLE transaction_type_choices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE credit_status (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE type_choices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE source_choices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE category_choices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE security_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question TEXT NOT NULL
+      )
+    ''');
+
+    // Capital Management
+    await db.execute('''
+      CREATE TABLE capital_management (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        cash_on_hand REAL,
+        capital REAL,
+        bank_cash REAL,
+        remarks TEXT,
+        created_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account(id)
+      )
+    ''');
+
+    // Customer
+    await db.execute('''
+      CREATE TABLE customer (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER NOT NULL,
+
         first_name TEXT NOT NULL,
         middle_name TEXT,
         last_name TEXT,
@@ -104,12 +165,14 @@ class DBService {
         barangay TEXT,
         landmark TEXT,
         credit_limit REAL,
+
         FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');
 
+    // Product
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS product (
+      CREATE TABLE product (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
         name TEXT,
@@ -124,39 +187,78 @@ class DBService {
       )
     ''');
 
+    // Capital transaction
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS sales_credit (
+      CREATE TABLE capital_transaction (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
-        customer_id INTEGER,
-        product_id INTEGER,
         amount REAL,
-        quantity INTEGER,
-        credit_date TEXT,
-        FOREIGN KEY (account_id) REFERENCES account(id),
-        FOREIGN KEY (customer_id) REFERENCES customer(id),
-        FOREIGN KEY (product_id) REFERENCES product(id)
+        transaction_type_id INTEGER,
+        remarks TEXT,
+        date TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (transaction_type_id) REFERENCES transaction_type_choices (id)
       )
     ''');
 
+    // Sales
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS sales_credit_payment (
+      CREATE TABLE sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER,
+        account_id INTEGER NOT NULL,
         customer_id INTEGER,
-        amount REAL,
-        sales_credit_id INTEGER,
-        paid_at TEXT,
-        payment_date TEXT,
-        remarks TEXT,
+        sale_type TEXT NOT NULL,
+        total INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
         FOREIGN KEY (account_id) REFERENCES account(id),
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
 
-    // --- NEW: customer_payment table ---
+    // Transaction History (Universal Ledger)
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS customer_payment (
+      CREATE TABLE transaction_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        account_id INTEGER,
+        type TEXT NOT NULL,
+
+        product_id INTEGER,
+        sale_id INTEGER,
+        expense_id INTEGER,
+        capital_transaction_id INTEGER,
+
+        amount REAL,
+        quantity INTEGER,
+        description TEXT,
+
+        created_at TEXT NOT NULL,
+
+        FOREIGN KEY (account_id) REFERENCES account(id),
+        FOREIGN KEY (product_id) REFERENCES product(id),
+        FOREIGN KEY (sale_id) REFERENCES sales(id),
+        FOREIGN KEY (expense_id) REFERENCES expenses(id),
+        FOREIGN KEY (capital_transaction_id) REFERENCES capital_transaction(id)
+      )
+    ''');
+
+    // Sales credit payment
+    await db.execute('''
+      CREATE TABLE sales_credit_payment (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        customer_id INTEGER,
+        amount REAL,
+        paid_at TEXT,
+        remarks TEXT,
+        FOREIGN KEY (account_id) REFERENCES account (id),
+        FOREIGN KEY (customer_id) REFERENCES customer (id)
+      )
+    ''');
+
+    // Fixed asset
+    await db.execute('''
+      CREATE TABLE fixed_asset (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
         name TEXT,
@@ -349,6 +451,43 @@ class DBService {
     ];
     for (final q in securityQuestions) {
       await db.insert('security_questions', {'question': q});
+    }
+
+    await db.insert('transaction_type_choices', {
+      'name': 'Deposit',
+      'value': 'deposit',
+    });
+    await db.insert('transaction_type_choices', {
+      'name': 'Withdraw',
+      'value': 'withdraw',
+    });
+
+    await db.insert('credit_status', {'name': 'unpaid', 'code': 0});
+    await db.insert('credit_status', {'name': 'partial', 'code': 1});
+    await db.insert('credit_status', {'name': 'paid', 'code': 2});
+
+    const typeChoices = [
+      'capital_deposit',
+      'transfer_cash_out',
+      'transfer_bank_in',
+    ];
+    for (final t in typeChoices) {
+      await db.insert('type_choices', {'name': t});
+    }
+
+    const sourceChoices = ['cash', 'bank', 'capital'];
+    for (final s in sourceChoices) {
+      await db.insert('source_choices', {'name': s});
+    }
+
+    const categoryChoices = [
+      'inventory_purchase',
+      'rent',
+      'utilities',
+      'other',
+    ];
+    for (final c in categoryChoices) {
+      await db.insert('category_choices', {'name': c});
     }
   }
 
