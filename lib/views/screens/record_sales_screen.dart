@@ -380,7 +380,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               margin: EdgeInsets.symmetric(horizontal: dotSpacing / 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: selected ? AppColors.primary : Colors.grey.shade400,
+                color: selected ? Colors.grey.shade400 : Colors.grey.shade400,
               ),
             );
           }),
@@ -628,8 +628,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _dueDateCard() {
-    final isSelected = dueDate != null;
-
     return GestureDetector(
       onTap: () async {
         final now = DateTime.now();
@@ -638,11 +636,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           initialDate: dueDate ?? now,
           firstDate: now,
           lastDate: DateTime(now.year + 5),
-
-          // keep selected day visible
           initialDatePickerMode: DatePickerMode.day,
           initialEntryMode: DatePickerEntryMode.calendarOnly,
-
           builder: (context, child) => Theme(
             data: Theme.of(context).copyWith(
               colorScheme: ColorScheme.light(
@@ -666,48 +661,36 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14), // slightly tighter
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
-            width: 1, // thinner = cleaner
+            color: Colors.grey.shade400, // same as search bar
+            width: 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25), // green glow
-                    blurRadius: 6,
-                    spreadRadius: 1, // 👈 glow outside, not spacing
-                    offset: Offset.zero, // 👈 no downward gap
-                  ),
-                ]
-              : [],
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withOpacity(0.12)
-                    : Colors.grey.shade100,
+                color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.calendar_month_rounded,
                 size: 20,
-                color: isSelected ? AppColors.primary : Colors.black54,
+                color: Colors.black54,
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                isSelected
+                dueDate != null
                     ? "Due Date: ${dueDate!.month}/${dueDate!.day}/${dueDate!.year}"
                     : "Select Due Date",
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.black : Colors.black54,
+                  color: Colors.black,
                 ),
               ),
             ),
