@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
-import 'package:go_router/go_router.dart';
 import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
@@ -212,31 +211,35 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       );
 
   Widget _searchBar(SalesViewModel vm) {
+    const double height = 48;
+
+    BoxDecoration boxDecoration(Color color) => BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Colors.grey.shade400, width: 1),
+    );
+
+    InputDecoration inputDecoration(String hint, IconData icon) =>
+        InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.black54),
+          prefixIcon: Icon(icon, size: 22, color: Colors.black),
+          border: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.zero, // removes extra vertical padding
+        );
+
     if (isCash || (!isCash && isProductMode)) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha(51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        height: height,
+        decoration: boxDecoration(Colors.white),
         child: TextField(
           controller: searchController,
-          onChanged: (value) {
-            setState(() => searchQuery = value);
-          },
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            hintText: "Search products",
-            icon: Icon(Icons.search, size: 22, color: Colors.black),
-            hintStyle: TextStyle(color: Colors.black),
-          ),
+          onChanged: (value) => setState(() => searchQuery = value),
+          decoration: inputDecoration("Search products", Icons.search),
+          textAlignVertical:
+              TextAlignVertical.center, // ensures perfect vertical alignment
         ),
       );
     } else {
@@ -244,18 +247,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withAlpha(51),
-                    blurRadius: 2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              height: height,
+              decoration: boxDecoration(Colors.white),
               child: TextField(
                 controller: searchController,
                 onChanged: (value) {
@@ -264,37 +257,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                     isProductMode = false;
                   });
                 },
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "Search customer",
-                  icon: Icon(Icons.person, size: 22, color: Colors.black),
-                  hintStyle: TextStyle(color: Colors.black),
-                ),
+                decoration: inputDecoration("Search customer", Icons.person),
+                textAlignVertical: TextAlignVertical.center,
               ),
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () async {
-              final result = await context.push<bool>('/new_customer');
-
-              if (result == true) {
-                final vm = ref.read(salesViewModelProvider);
-                await vm.loadCustomers();
-                setState(() {
-                  searchController.clear();
-                  searchQuery = '';
-                });
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.add, color: Colors.white),
+          Container(
+            height: height,
+            width: height,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: const Icon(Icons.add, color: Colors.white),
           ),
         ],
       );
