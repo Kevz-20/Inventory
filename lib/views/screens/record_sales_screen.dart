@@ -206,26 +206,46 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       border: Border.all(color: Colors.grey.shade400, width: 1),
     );
 
-    InputDecoration inputDecoration(String hint, IconData icon) =>
-        InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.black54),
-          prefixIcon: Icon(icon, size: 22, color: Colors.black),
-          border: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          isDense: true,
-          contentPadding: EdgeInsets.zero,
-        );
+    InputDecoration inputDecoration(
+      String hint,
+      IconData icon,
+      TextEditingController controller,
+      VoidCallback onClear,
+    ) => InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.black54),
+      prefixIcon: Icon(icon, size: 22, color: Colors.black),
+      border: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      isDense: true,
+      contentPadding: EdgeInsets.zero,
+      suffixIcon: controller.text.isNotEmpty
+          ? GestureDetector(
+              onTap: onClear,
+              child: const Icon(Icons.clear, size: 22, color: Colors.black54),
+            )
+          : null,
+    );
 
     if (isCash || (!isCash && isProductMode)) {
       return Container(
         height: height,
         decoration: boxDecoration(Colors.white),
-        alignment: Alignment.center, // ensures inner alignment
+        alignment: Alignment.center,
         child: TextField(
           controller: searchController,
           onChanged: (value) => setState(() => searchQuery = value),
-          decoration: inputDecoration("Search products", Icons.search),
+          decoration: inputDecoration(
+            "Search products",
+            Icons.search,
+            searchController,
+            () {
+              setState(() {
+                searchController.clear();
+                searchQuery = '';
+              });
+            },
+          ),
           textAlignVertical: TextAlignVertical.center,
         ),
       );
@@ -245,7 +265,17 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                     isProductMode = false;
                   });
                 },
-                decoration: inputDecoration("Search customer", Icons.person),
+                decoration: inputDecoration(
+                  "Search customer",
+                  Icons.person,
+                  searchController,
+                  () {
+                    setState(() {
+                      searchController.clear();
+                      searchQuery = '';
+                    });
+                  },
+                ),
                 textAlignVertical: TextAlignVertical.center,
               ),
             ),
