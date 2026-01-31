@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
@@ -263,14 +264,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            height: height,
-            width: height,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(16),
+          GestureDetector(
+            onTap: () async {
+              final result = await context.push<bool>('/new_customer');
+              if (result == true) {
+                final vm = ref.read(salesViewModelProvider);
+                await vm.loadCustomers();
+                setState(() {
+                  searchController.clear();
+                  searchQuery = '';
+                });
+              }
+            },
+            child: Container(
+              height: height,
+              width: height,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add, color: Colors.white),
             ),
-            child: const Icon(Icons.add, color: Colors.white),
           ),
         ],
       );
