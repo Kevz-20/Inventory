@@ -28,37 +28,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   bool isCash = true;
   bool isProductMode = false;
 
-  bool _showLeftArrow = false;
-  bool _showRightArrow = false;
-
   final ScrollController _categoryScrollController = ScrollController();
   final TextEditingController searchController = TextEditingController();
   String searchQuery = '';
   DateTime? dueDate;
 
-  void _updateArrowVisibility() {
-    if (!_categoryScrollController.hasClients) return;
-    final position = _categoryScrollController.position;
-
-    setState(() {
-      _showLeftArrow = position.pixels > 0;
-      _showRightArrow = position.pixels < position.maxScrollExtent;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
-
-    _categoryScrollController.addListener(_updateArrowVisibility);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = ref.read(salesViewModelProvider);
       vm.resetQuantities();
       vm.loadProducts();
-
-      // Initial arrow check
-      _updateArrowVisibility();
     });
   }
 
@@ -186,6 +168,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         child: GestureDetector(
           onTap: onTap,
           child: Container(
+            height: 50,
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               color: active ? AppColors.primary : Colors.white,
@@ -296,112 +279,85 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
     }
   }
 
-  // ------------------------- CATEGORY CHIPS WITH ARROWS -------------------------
-
+  // Category Chips
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash) return const SizedBox.shrink();
 
-    const arrowWidth = 30.0;
-    const chipHeight = 45.0; // actual chip height
+    const chipHeight = 45.0;
     const chipFontSize = 15.0;
     const chipRadius = 24.0;
-    const verticalPadding = 4.0; // extra space for shadow
+    const verticalPadding = 4.0;
+    const dotSize = 6.0;
+    const dotSpacing = 6.0;
 
-    return SizedBox(
-      height: chipHeight + verticalPadding * 2, // extra space top & bottom
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Left arrow
-          if (_showLeftArrow)
-            SizedBox(
-              width: arrowWidth,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                iconSize: 20,
-                icon: const Icon(Icons.arrow_back_ios),
-                onPressed: () {
-                  _categoryScrollController.animateTo(
-                    (_categoryScrollController.offset - 120).clamp(
-                      0.0,
-                      _categoryScrollController.position.maxScrollExtent,
-                    ),
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                  );
-                },
-              ),
-            )
-          else
-            SizedBox(width: arrowWidth),
+    final totalCategories = SalesViewModel.categories.length;
 
-          // Categories
-          Expanded(
-            child: ListView.separated(
-              controller: _categoryScrollController,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: chipRadius),
-              itemCount: SalesViewModel.categories.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final selected = index == vm.selectedCategoryIndex;
-                return GestureDetector(
-                  onTap: () => vm.selectCategory(index),
-                  child: Container(
-                    height: chipHeight,
-                    margin: EdgeInsets.symmetric(vertical: verticalPadding),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: selected ? AppColors.primary : Colors.white,
-                      borderRadius: BorderRadius.circular(chipRadius),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withAlpha(51),
-                          blurRadius: 2,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      SalesViewModel.categories[index],
-                      style: TextStyle(
-                        color: selected ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.w500,
-                        fontSize: chipFontSize,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Chips
+        SizedBox(
+          height: chipHeight + verticalPadding * 2,
+          child: ListView.separated(
+            controller: _categoryScrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.symmetric(horizontal: chipRadius),
+            itemCount: totalCategories,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final selected = index == vm.selectedCategoryIndex;
+              return GestureDetector(
+                onTap: () => vm.selectCategory(index),
+                child: Container(
+                  height: chipHeight,
+                  margin: EdgeInsets.symmetric(vertical: verticalPadding),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(chipRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withAlpha(51),
+                        blurRadius: 2,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                  ),
+                  child: Text(
+                    SalesViewModel.categories[index],
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                      fontSize: chipFontSize,
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
+        ),
 
-          // Right arrow
-          if (_showRightArrow)
-            SizedBox(
-              width: arrowWidth,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                iconSize: 20,
-                icon: const Icon(Icons.arrow_forward_ios),
-                onPressed: () {
-                  _categoryScrollController.animateTo(
-                    (_categoryScrollController.offset + 120).clamp(
-                      0.0,
-                      _categoryScrollController.position.maxScrollExtent,
-                    ),
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                  );
-                },
+        const SizedBox(height: 8),
+
+        // Dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(totalCategories, (index) {
+            final selected = index == vm.selectedCategoryIndex;
+            return Container(
+              width: dotSize,
+              height: dotSize,
+              margin: EdgeInsets.symmetric(horizontal: dotSpacing / 2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? AppColors.primary : Colors.grey.shade400,
               ),
-            )
-          else
-            SizedBox(width: arrowWidth),
-        ],
-      ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
@@ -573,24 +529,15 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       }).toList();
 
       return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          10,
-          16,
-          10,
-        ), // 👈 very small bottom only
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             _dueDateCard(),
-            const SizedBox(height: 4), // 👈 reduced from 12
+            const SizedBox(height: 2), // reduced from 4
             if (filteredCustomers.isNotEmpty)
-              ...filteredCustomers.map(
-                (customer) => _customerItem(
-                  customer,
-                ), // 👈 removed extra Column + SizedBox
-              )
+              ...filteredCustomers.map((customer) => _customerItem(customer))
             else
               const Center(
                 child: Text(
@@ -606,12 +553,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         ),
       );
     } else {
-      // Product selection after customer is picked
       return Column(
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ), // reduced from 12
             color: Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -623,7 +572,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2), // reduced from 4
                 Text(
                   'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
@@ -631,18 +580,18 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4), // reduced from 8
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
                 _searchBar(vm),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6), // reduced from 12
                 _categoryChips(vm),
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4), // reduced from 8
           Expanded(child: _productList(vm)),
         ],
       );
