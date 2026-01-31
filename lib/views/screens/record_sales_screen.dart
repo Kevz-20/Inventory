@@ -199,12 +199,15 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               ],
             ),
             alignment: Alignment.center,
-            child: Text(
-              title,
-              style: TextStyle(
-                color: active ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+            child: Center(
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: active ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
@@ -212,7 +215,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       );
 
   Widget _searchBar(SalesViewModel vm) {
-    const double height = 48;
+    const double height = 55;
 
     BoxDecoration boxDecoration(Color color) => BoxDecoration(
       color: color,
@@ -228,19 +231,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           border: InputBorder.none,
           focusedBorder: InputBorder.none,
           isDense: true,
-          contentPadding: EdgeInsets.zero, // removes extra vertical padding
+          contentPadding: EdgeInsets.zero,
         );
 
     if (isCash || (!isCash && isProductMode)) {
       return Container(
         height: height,
         decoration: boxDecoration(Colors.white),
+        alignment: Alignment.center, // ensures inner alignment
         child: TextField(
           controller: searchController,
           onChanged: (value) => setState(() => searchQuery = value),
           decoration: inputDecoration("Search products", Icons.search),
-          textAlignVertical:
-              TextAlignVertical.center, // ensures perfect vertical alignment
+          textAlignVertical: TextAlignVertical.center,
         ),
       );
     } else {
@@ -250,6 +253,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             child: Container(
               height: height,
               decoration: boxDecoration(Colors.white),
+              alignment: Alignment.center,
               child: TextField(
                 controller: searchController,
                 onChanged: (value) {
@@ -279,6 +283,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             child: Container(
               height: height,
               width: height,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(16),
@@ -296,35 +301,39 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash) return const SizedBox.shrink();
 
-    const arrowWidth = 10.0;
-    const chipHeight = 40.0;
+    const arrowWidth = 30.0;
+    const chipHeight = 45.0; // actual chip height
     const chipFontSize = 15.0;
+    const chipRadius = 24.0;
+    const verticalPadding = 4.0; // extra space for shadow
 
     return SizedBox(
-      height: chipHeight,
+      height: chipHeight + verticalPadding * 2, // extra space top & bottom
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Left arrow
-          SizedBox(
-            width: arrowWidth,
-            child: _showLeftArrow
-                ? IconButton(
-                    padding: EdgeInsets.zero,
-                    iconSize: 20,
-                    icon: const Icon(Icons.arrow_back_ios),
-                    onPressed: () {
-                      _categoryScrollController.animateTo(
-                        (_categoryScrollController.offset - 120).clamp(
-                          0.0,
-                          _categoryScrollController.position.maxScrollExtent,
-                        ),
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      );
-                    },
-                  )
-                : const SizedBox.shrink(),
-          ),
+          if (_showLeftArrow)
+            SizedBox(
+              width: arrowWidth,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                iconSize: 20,
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: () {
+                  _categoryScrollController.animateTo(
+                    (_categoryScrollController.offset - 120).clamp(
+                      0.0,
+                      _categoryScrollController.position.maxScrollExtent,
+                    ),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                },
+              ),
+            )
+          else
+            SizedBox(width: arrowWidth),
 
           // Categories
           Expanded(
@@ -332,20 +341,21 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               controller: _categoryScrollController,
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: chipRadius),
               itemCount: SalesViewModel.categories.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final selected = index == vm.selectedCategoryIndex;
-
                 return GestureDetector(
                   onTap: () => vm.selectCategory(index),
                   child: Container(
                     height: chipHeight,
+                    margin: EdgeInsets.symmetric(vertical: verticalPadding),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: selected ? AppColors.primary : Colors.white,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(chipRadius),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.grey.withAlpha(51),
@@ -369,26 +379,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           ),
 
           // Right arrow
-          SizedBox(
-            width: arrowWidth,
-            child: _showRightArrow
-                ? IconButton(
-                    padding: EdgeInsets.zero,
-                    iconSize: 20,
-                    icon: const Icon(Icons.arrow_forward_ios),
-                    onPressed: () {
-                      _categoryScrollController.animateTo(
-                        (_categoryScrollController.offset + 120).clamp(
-                          0.0,
-                          _categoryScrollController.position.maxScrollExtent,
-                        ),
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      );
-                    },
-                  )
-                : const SizedBox.shrink(),
-          ),
+          if (_showRightArrow)
+            SizedBox(
+              width: arrowWidth,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                iconSize: 20,
+                icon: const Icon(Icons.arrow_forward_ios),
+                onPressed: () {
+                  _categoryScrollController.animateTo(
+                    (_categoryScrollController.offset + 120).clamp(
+                      0.0,
+                      _categoryScrollController.position.maxScrollExtent,
+                    ),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                },
+              ),
+            )
+          else
+            SizedBox(width: arrowWidth),
         ],
       ),
     );
