@@ -10,7 +10,8 @@ import '../repositories/capital_management_repository.dart';
 
 /// Updated SalesViewModel with proper callback to update CapitalManagementViewModel
 class SalesViewModel extends ChangeNotifier {
-  final void Function()? onCashUpdated; // 🔹 callback to notify CapitalManagement
+  final void Function()?
+  onCashUpdated; // 🔹 callback to notify CapitalManagement
 
   CapitalManagementRepository? _capitalRepository;
   ProductRepository? _productRepository;
@@ -56,6 +57,7 @@ class SalesViewModel extends ChangeNotifier {
   Future<void> loadProducts() async {
     if (_productRepository == null) return;
 
+    selectedCategoryIndex = 0;
     isLoading = true;
     notifyListeners();
 
@@ -281,8 +283,7 @@ class SalesViewModel extends ChangeNotifier {
 }
 
 /// 🔹 Updated provider passing callback
-final salesViewModelProvider =
-    ChangeNotifierProvider<SalesViewModel>((ref) {
+final salesViewModelProvider = ChangeNotifierProvider<SalesViewModel>((ref) {
   return SalesViewModel(
     onCashUpdated: () {
       // This will reload the CapitalManagementViewModel when cash is updated
