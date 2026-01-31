@@ -1,3 +1,4 @@
+import 'package:dswd_slp/views/screens/add_utang_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
@@ -186,6 +187,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const NewCustomerPage(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/add_utang',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const AddUtangPage(),
         transition: PageTransitionType.forward,
       ),
     ),

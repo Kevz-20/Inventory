@@ -6,7 +6,6 @@ import '../../models/payable_model.dart';
 import '../../repositories/payable_repository.dart';
 import '../widgets/header.dart';
 import '../../services/db_service.dart';
-import 'add_utang_screen.dart';
 
 // ============================================================
 // MODEL
@@ -775,15 +774,8 @@ class _UtangScreenState extends State<UtangScreen> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddUtangPage()),
-                );
-
-                if (result == true) {
-                  fetchOwnerPayables(); // reload owner utang
-                }
+              onPressed: () {
+                GoRouter.of(context).push('/add_utang');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
