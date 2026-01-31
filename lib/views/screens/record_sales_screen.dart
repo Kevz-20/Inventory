@@ -685,7 +685,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             Expanded(
               child: Text(
                 dueDate != null
-                    ? "Due Date: ${dueDate!.month}/${dueDate!.day}/${dueDate!.year}"
+                    ? "Due Date: ${DateFormat('MMMM d, y').format(dueDate!)}"
                     : "Select Due Date",
                 style: const TextStyle(
                   fontSize: 15,
