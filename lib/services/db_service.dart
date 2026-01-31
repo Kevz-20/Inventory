@@ -256,6 +256,16 @@ class DBService {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS customer_payment (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        paid_at TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customer(id)
+      )
+    ''');
+
     // Fixed asset
     await db.execute('''
       CREATE TABLE fixed_asset (
