@@ -49,6 +49,23 @@ class _AddUtangPageState extends State<AddUtangPage> {
     super.dispose();
   }
 
+   // -----------------------------
+  // ADD MONTHS UTILITY FUNCTION
+  // -----------------------------
+  DateTime addMonths(DateTime date, int months) {
+    int newMonth = date.month + months;
+    int yearAdjustment = (newMonth - 1) ~/ 12;
+    int month = ((newMonth - 1) % 12) + 1;
+    int year = date.year + yearAdjustment;
+    int day = date.day;
+
+    // Adjust for shorter months (e.g., Feb)
+    int lastDayOfMonth = DateTime(year, month + 1, 0).day;
+    if (day > lastDayOfMonth) day = lastDayOfMonth;
+
+    return DateTime(year, month, day);
+  }
+
   // ==============================
   // CALCULATE INSTALLMENT
   // ==============================
@@ -104,7 +121,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
         final firstDueDate = startDateController.text.isNotEmpty
             ? DateTime.tryParse(startDateController.text) ?? DateTime.now()
             : DateTime.now();
-        final nextDueDate = firstDueDate.add(const Duration(days: 30));
+
+        // Set next due date initially to the first installment
+        final nextDueDate = firstDueDate; // first installment is the next due
 
         // -----------------------------
         // CHECK DOWNPAYMENT VS CASH
@@ -120,27 +139,27 @@ class _AddUtangPageState extends State<AddUtangPage> {
         }
 
         // Insert into payable
-        await db.insert('payable', {
-          'account_id': 1,
-          'supplier_name': 'Owner',
-          'item': itemController.text,
-          'original_amount': total,
-          'remaining_amount': remaining,
-          'due_date': DateFormat(
-            'yyyy-MM-dd',
-          ).format(firstDueDate.add(Duration(days: 30 * months))),
-          'note': notesController.text,
-          'is_paid': 0,
-          'has_plan': 1,
-          'plan_months': months,
-          'plan_monthly': monthly,
-          'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
-          'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
-          'is_asset': 1,
-          'asset_category': 'Installment Purchase',
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+        final finalDueDate = addMonths(firstDueDate, months);
+
+      await db.insert('payable', {
+        'account_id': 1,
+        'supplier_name': 'Owner',
+        'item': itemController.text,
+        'original_amount': total,
+        'remaining_amount': remaining,
+        'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate), // use variable
+        'note': notesController.text,
+        'is_paid': 0,
+        'has_plan': 1,
+        'plan_months': months,
+        'plan_monthly': monthly,
+        'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
+        'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
+        'is_asset': 1,
+        'asset_category': 'Installment Purchase',
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
 
         // Insert downpayment into owner_installments
         if (down > 0) {

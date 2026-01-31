@@ -8,10 +8,6 @@ import '../widgets/header.dart';
 import '../../services/db_service.dart';
 import 'add_utang_screen.dart';
 
-final TextEditingController searchController = TextEditingController();
-List<UtangCustomer> allUtangan = [];
-List<UtangCustomer> visibleUtangan = [];
-
 // ============================================================
 // MODEL
 // ============================================================
@@ -103,39 +99,21 @@ class _UtangScreenState extends State<UtangScreen> {
     final db = await DBService.instance.database;
 
     final result = await db.rawQuery('''
-    SELECT c.id, c.first_name, c.middle_name, c.last_name,
-          c.municipality,
-          c.barangay,  
-          c.phone_number,
-          SUM(sc.amount) as total_amount,
-          MIN(sc.due_date) as due_date
-    FROM sales_credit sc
-    INNER JOIN customer c ON c.id = sc.customer_id
-    GROUP BY c.id
-    ORDER BY total_amount DESC
-  ''');
-
-    final data = result.map((e) => UtangCustomer.fromMap(e)).toList();
+        SELECT c.id, c.first_name, c.middle_name, c.last_name,
+              c.municipality,
+              c.barangay,  
+              c.phone_number,
+              SUM(sc.amount) as total_amount,
+              MIN(sc.due_date) as due_date
+        FROM sales_credit sc
+        INNER JOIN customer c ON c.id = sc.customer_id
+        GROUP BY c.id
+        ORDER BY total_amount DESC
+      ''');
 
     setState(() {
-      utangan = data; // preserved (optional legacy)
-      allUtangan = data; // source of truth
-      visibleUtangan = data; // filtered list
+      utangan = result.map((e) => UtangCustomer.fromMap(e)).toList();
     });
-  }
-
-  void filterUtangan(String query) {
-    final q = query.toLowerCase().trim();
-
-    if (q.isEmpty) {
-      visibleUtangan = List.from(allUtangan);
-    } else {
-      visibleUtangan = allUtangan
-          .where((u) => u.fullName.toLowerCase().contains(q))
-          .toList();
-    }
-
-    setState(() {});
   }
 
   // ============================================================
@@ -148,6 +126,194 @@ class _UtangScreenState extends State<UtangScreen> {
       ownerPayables = payables;
       applyOwnerFilter(selectedFilter); // apply default filter
     });
+  }
+
+  // ============================================================
+  // SHOW OWNER UTANG DETAILS MODAL
+  // ============================================================
+  void showOwnerUtangModal(Payable item) {
+    // Helper function to handle payment
+    Future<void> handlePay({required bool fullPay}) async {
+      final db = await DBService.instance.database;
+
+      double paymentAmount;
+
+      if (item.isInstallment) {
+        // Calculate installment amount per month
+        double monthly =
+            item.totalInstallments != null && item.totalInstallments! > 0
+            ? item.amount / item.totalInstallments!
+            : item.amount;
+
+        paymentAmount = fullPay
+            ? item.amount - (item.paidInstallments ?? 0) * monthly
+            : monthly;
+
+        // Update owner_payables
+        int newPaidInstallments =
+            (item.paidInstallments ?? 0) +
+            (fullPay ? (item.totalInstallments ?? 1) : 1);
+        bool isFullyPaid = newPaidInstallments >= (item.totalInstallments ?? 1);
+
+        await db.update(
+          'owner_payables',
+          {
+            'paid_installments': newPaidInstallments,
+            'is_paid': isFullyPaid ? 1 : 0,
+          },
+          where: 'id = ?',
+          whereArgs: [item.id],
+        );
+      } else {
+        // Non-installment
+        paymentAmount = fullPay ? item.amount : item.amount;
+
+        await db.update(
+          'owner_payables',
+          {'is_paid': 1},
+          where: 'id = ?',
+          whereArgs: [item.id],
+        );
+      }
+
+      // Update cash on hand
+      // Assuming you have a single row in cash_on_hand table with id=1
+      await db.rawUpdate(
+        'UPDATE cash_on_hand SET amount = amount - ? WHERE id = 1',
+        [paymentAmount],
+      );
+
+      // Optional: Insert payment record for history
+      await db.insert('payments', {
+        'payable_id': item.id,
+        'amount': paymentAmount,
+        'payment_type': fullPay ? 'full' : 'partial',
+        'date': DateTime.now().toIso8601String(),
+      });
+
+      // Refresh owner payables UI
+      fetchOwnerPayables();
+
+      // Close modal
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Text(
+                item.item,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Amount
+              Text(
+                "Amount: ₱${currencyFormat.format(item.amount)}",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Recorded / Created Date
+              if (item.createdAtDate != null)
+                Text(
+                  "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              if (item.createdAt != null) const SizedBox(height: 6),
+
+              // Next Due
+              if ((item.nextDueDate ?? item.dueDate) != null)
+                Text(
+                  "Next Due: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(item.nextDueDate ?? item.dueDate!))}",
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              const SizedBox(height: 6),
+
+              // Installment Type
+              Text(
+                item.isInstallment ? "Installment" : "Non-installment",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: item.isInstallment
+                      ? Colors.orange.shade800
+                      : Colors.blue.shade800,
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Installment Progress
+              if (item.isInstallment)
+                Text(
+                  "Paid: ${item.paidInstallments ?? 0}/${item.totalInstallments ?? 0}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange,
+                  ),
+                ),
+              if (item.isInstallment) const SizedBox(height: 20),
+
+              // Partial / Full Pay Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => handlePay(fullPay: false), // Partial Pay
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text("Partial Pay"),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => handlePay(fullPay: true), // Full Pay
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text("Full Pay"),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // ============================================================
@@ -267,19 +433,7 @@ class _UtangScreenState extends State<UtangScreen> {
           ),
           const SizedBox(height: 15),
           // Page content
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, animation) {
-                final offsetAnimation = Tween<Offset>(
-                  begin: Offset(selectedTab == 0 ? 1 : -1, 0),
-                  end: Offset.zero,
-                ).animate(animation);
-                return SlideTransition(position: offsetAnimation, child: child);
-              },
-              child: selectedTab == 0 ? customerPage() : ownerPage(),
-            ),
-          ),
+          Expanded(child: selectedTab == 0 ? customerPage() : ownerPage()),
         ],
       ),
     );
@@ -299,10 +453,8 @@ class _UtangScreenState extends State<UtangScreen> {
               borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: TextField(
-              controller: searchController,
-              onChanged: filterUtangan,
-              decoration: const InputDecoration(
+            child: const TextField(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: "Pangalan sa Utangan",
                 border: InputBorder.none,
@@ -318,7 +470,7 @@ class _UtangScreenState extends State<UtangScreen> {
         ),
         const SizedBox(height: 15),
         Expanded(
-          child: visibleUtangan.isEmpty
+          child: utangan.isEmpty
               ? const Center(
                   child: Text(
                     "Walay utangan",
@@ -327,10 +479,9 @@ class _UtangScreenState extends State<UtangScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: visibleUtangan.length,
+                  itemCount: utangan.length,
                   itemBuilder: (context, index) {
-                    final item = visibleUtangan[index];
-
+                    final item = utangan[index];
                     return GestureDetector(
                       onTap: () => GoRouter.of(
                         context,
@@ -360,6 +511,7 @@ class _UtangScreenState extends State<UtangScreen> {
                                       ),
                                     ),
                                   ),
+                                  // ✅ formatted amount
                                   Text(
                                     "₱${currencyFormat.format(item.totalAmount)}",
                                     style: const TextStyle(
@@ -381,7 +533,7 @@ class _UtangScreenState extends State<UtangScreen> {
                                 ),
                               const SizedBox(height: 2),
                               if (item.barangay != null &&
-                                  item.barangay!.isNotEmpty)
+                                  item.barangay!.isNotEmpty) // ✅ NEW
                                 Text(
                                   "Barangay ${item.barangay!}",
                                   style: const TextStyle(
@@ -504,28 +656,61 @@ class _UtangScreenState extends State<UtangScreen> {
                       itemBuilder: (context, index) {
                         final item = filteredOwnerPayables[index];
 
+                        // -------------------------
+                        // Compute Next Due Display
+                        // -------------------------
+                        String? nextDueDisplay;
+                        String status = item.isPaid ? "Paid" : "";
+                        final nextDateStr = item.isInstallment
+                            ? item.nextDueDate
+                            : item.dueDate;
+
+                        if (nextDateStr != null) {
+                          final due = DateTime.tryParse(nextDateStr);
+                          if (due != null) {
+                            nextDueDisplay =
+                                "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
+
+                            if (!item.isPaid) {
+                              final daysLeft = due
+                                  .difference(DateTime.now())
+                                  .inDays;
+                              if (daysLeft < 0) {
+                                status = "Overdue"; // past due
+                              } else if (daysLeft <= 7) {
+                                status = "Due Soon"; // within 7 days
+                              } else {
+                                status = ""; // not urgent
+                              }
+                            }
+                          }
+                        }
+
                         return Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 6,
                           ),
-                          child: Card(
-                            color: Colors.white,
-                            elevation: 1,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
+                          child: GestureDetector(
+                            onTap: () {
+                              showOwnerUtangModal(
+                                item,
+                              ); // ✅ call the modal here
+                            },
+                            child: Card(
+                              color: Colors.white,
+                              elevation: 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Stack(
                                 children: [
-                                  Expanded(
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        // ITEM NAME
                                         Text(
                                           item.item,
                                           style: const TextStyle(
@@ -533,67 +718,43 @@ class _UtangScreenState extends State<UtangScreen> {
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-
-                                        const SizedBox(height: 6),
-
-                                        // ✅ formatted amount
-                                        Text(
-                                          "₱${currencyFormat.format(item.amount)}",
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
+                                        if (nextDueDisplay != null)
+                                          Text(
+                                            nextDueDisplay,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                            ),
                                           ),
-                                        ),
-
-                                        const SizedBox(height: 4),
-
-                                        // DUE DATE
-                                        Text(
-                                          "Due: ${item.dueDate ?? '-'}",
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 4),
-
-                                        // INSTALLMENT TYPE
-                                        Text(
-                                          item.isInstallment
-                                              ? "Installment"
-                                              : "Non-installment",
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: item.isInstallment
-                                                ? Colors.orange.shade800
-                                                : Colors.blue.shade800,
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ),
-
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: statusColor(item.status),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      item.status,
-                                      style: TextStyle(
-                                        color: statusTextColor(item.status),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                  // status badge
+                                  if (status == "Due Soon")
+                                    Positioned(
+                                      top: 12,
+                                      right: 12,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: statusColor(status),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          status,
+                                          style: TextStyle(
+                                            color: statusTextColor(status),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -621,7 +782,7 @@ class _UtangScreenState extends State<UtangScreen> {
                 );
 
                 if (result == true) {
-                  fetchOwnerPayables(); // 🔥 reload owner utang
+                  fetchOwnerPayables(); // reload owner utang
                 }
               },
               style: ElevatedButton.styleFrom(
