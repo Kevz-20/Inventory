@@ -39,7 +39,7 @@ class AboutAppScreen extends StatelessWidget {
             _BodyText(
               'Team Members\n'
               'Kevin Mejares\n'
-              'Al Duane Mirasol\n'
+              'Al Duane Cuevas Mirasol\n'
               'Jay Suizo\n'
               'Jesel Cardiente\n'
               'Aiza Faith Allera\n'
