@@ -8,6 +8,10 @@ import '../widgets/header.dart';
 import '../../services/db_service.dart';
 import 'add_utang_screen.dart';
 
+final TextEditingController searchController = TextEditingController();
+List<UtangCustomer> allUtangan = [];
+List<UtangCustomer> visibleUtangan = [];
+
 // ============================================================
 // MODEL
 // ============================================================
@@ -99,21 +103,39 @@ class _UtangScreenState extends State<UtangScreen> {
     final db = await DBService.instance.database;
 
     final result = await db.rawQuery('''
-      SELECT c.id, c.first_name, c.middle_name, c.last_name,
-            c.municipality,
-            c.barangay,  
-            c.phone_number,
-            SUM(sc.amount) as total_amount,
-            MIN(sc.due_date) as due_date
-      FROM sales_credit sc
-      INNER JOIN customer c ON c.id = sc.customer_id
-      GROUP BY c.id
-      ORDER BY total_amount DESC
-    ''');
+    SELECT c.id, c.first_name, c.middle_name, c.last_name,
+          c.municipality,
+          c.barangay,  
+          c.phone_number,
+          SUM(sc.amount) as total_amount,
+          MIN(sc.due_date) as due_date
+    FROM sales_credit sc
+    INNER JOIN customer c ON c.id = sc.customer_id
+    GROUP BY c.id
+    ORDER BY total_amount DESC
+  ''');
+
+    final data = result.map((e) => UtangCustomer.fromMap(e)).toList();
 
     setState(() {
-      utangan = result.map((e) => UtangCustomer.fromMap(e)).toList();
+      utangan = data; // preserved (optional legacy)
+      allUtangan = data; // source of truth
+      visibleUtangan = data; // filtered list
     });
+  }
+
+  void filterUtangan(String query) {
+    final q = query.toLowerCase().trim();
+
+    if (q.isEmpty) {
+      visibleUtangan = List.from(allUtangan);
+    } else {
+      visibleUtangan = allUtangan
+          .where((u) => u.fullName.toLowerCase().contains(q))
+          .toList();
+    }
+
+    setState(() {});
   }
 
   // ============================================================
@@ -277,8 +299,10 @@ class _UtangScreenState extends State<UtangScreen> {
               borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: const TextField(
-              decoration: InputDecoration(
+            child: TextField(
+              controller: searchController,
+              onChanged: filterUtangan,
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: "Pangalan sa Utangan",
                 border: InputBorder.none,
@@ -294,7 +318,7 @@ class _UtangScreenState extends State<UtangScreen> {
         ),
         const SizedBox(height: 15),
         Expanded(
-          child: utangan.isEmpty
+          child: visibleUtangan.isEmpty
               ? const Center(
                   child: Text(
                     "Walay utangan",
@@ -303,9 +327,10 @@ class _UtangScreenState extends State<UtangScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: utangan.length,
+                  itemCount: visibleUtangan.length,
                   itemBuilder: (context, index) {
-                    final item = utangan[index];
+                    final item = visibleUtangan[index];
+
                     return GestureDetector(
                       onTap: () => GoRouter.of(
                         context,
@@ -335,7 +360,6 @@ class _UtangScreenState extends State<UtangScreen> {
                                       ),
                                     ),
                                   ),
-                                  // ✅ formatted amount
                                   Text(
                                     "₱${currencyFormat.format(item.totalAmount)}",
                                     style: const TextStyle(
@@ -357,7 +381,7 @@ class _UtangScreenState extends State<UtangScreen> {
                                 ),
                               const SizedBox(height: 2),
                               if (item.barangay != null &&
-                                  item.barangay!.isNotEmpty) // ✅ NEW
+                                  item.barangay!.isNotEmpty)
                                 Text(
                                   "Barangay ${item.barangay!}",
                                   style: const TextStyle(
