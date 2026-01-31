@@ -115,15 +115,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                                   ),
                                 ),
                               ),
-
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             _searchBar(vm),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             _categoryChips(vm),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
                       Expanded(
                         child: isCash || isProductMode
                             ? _productList(vm)
@@ -218,7 +216,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       border: InputBorder.none,
       focusedBorder: InputBorder.none,
       isDense: true,
-      contentPadding: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.symmetric(vertical: 14),
       suffixIcon: controller.text.isNotEmpty
           ? GestureDetector(
               onTap: onClear,
@@ -514,30 +512,35 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             onPressed: () => vm.decrementQuantity(product),
             icon: const Icon(Icons.remove, size: 18),
           ),
-          SizedBox(
-            width: 40,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.black),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
+          IntrinsicWidth(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: 40, // minimum width (same as before)
+                maxWidth: 80, // optional cap so it doesn’t get crazy wide
               ),
-              onChanged: (text) {
-                int qty = int.tryParse(text) ?? 0;
-                qty = qty.clamp(0, product.quantity); // clamp to stock
-                if (controller.text != qty.toString()) {
-                  controller.text = qty.toString();
-                  controller.selection = TextSelection.fromPosition(
-                    TextPosition(offset: controller.text.length),
-                  );
-                }
-                vm.productQuantities[product.id!] = qty;
-                vm.calculateTotal();
-              },
+              child: TextField(
+                controller: controller,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.black),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                ),
+                onChanged: (text) {
+                  int qty = int.tryParse(text) ?? 0;
+                  qty = qty.clamp(0, product.quantity);
+                  if (controller.text != qty.toString()) {
+                    controller.text = qty.toString();
+                    controller.selection = TextSelection.fromPosition(
+                      TextPosition(offset: controller.text.length),
+                    );
+                  }
+                  vm.productQuantities[product.id!] = qty;
+                  vm.calculateTotal();
+                },
+              ),
             ),
           ),
           IconButton(
@@ -559,13 +562,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
       }).toList();
 
       return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             _dueDateCard(),
-            const SizedBox(height: 2), // reduced from 4
+            SizedBox(height: 4),
             if (filteredCustomers.isNotEmpty)
               ...filteredCustomers.map((customer) => _customerItem(customer))
             else
@@ -587,10 +590,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ), // reduced from 12
             color: Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,7 +601,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 2), // reduced from 4
+                const SizedBox(height: 4), // reduced from 4
                 Text(
                   'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
@@ -639,30 +638,24 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
           initialDate: dueDate ?? now,
           firstDate: now,
           lastDate: DateTime(now.year + 5),
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.light(
-                  primary: AppColors.primary, // header + selected date
-                  onPrimary: Colors.white, // text on selected date
-                  onSurface: AppColors.textPrimary, // calendar text
-                ),
-                dialogTheme: DialogThemeData(
-                  backgroundColor: Colors.grey.shade100,
-                ),
-                datePickerTheme: DatePickerThemeData(
-                  todayForegroundColor: MaterialStateProperty.all(
-                    AppColors.primary,
-                  ),
-                  todayBorder: BorderSide(color: AppColors.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
+
+          // keep selected day visible
+          initialDatePickerMode: DatePickerMode.day,
+          initialEntryMode: DatePickerEntryMode.calendarOnly,
+
+          builder: (context, child) => Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: AppColors.primary,
+                onPrimary: Colors.white,
+                onSurface: AppColors.textPrimary,
               ),
-              child: child!,
-            );
-          },
+              dialogTheme: DialogThemeData(
+                backgroundColor: Colors.grey.shade100,
+              ),
+            ),
+            child: child!,
+          ),
         );
 
         if (pickedDate != null) {
@@ -670,7 +663,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14), // slightly tighter
