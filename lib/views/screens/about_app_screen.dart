@@ -7,42 +7,97 @@ class AboutAppScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // White background
+      backgroundColor: Colors.white,
       appBar: const AppHeader(title: 'About App', showBackButton: true),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "About DSWD POS System\n\n"
-                "This app is designed to empower associations in managing their "
-                "Point-of-Sale system efficiently and seamlessly. With this tool, "
-                "you can easily edit your profile, change your PIN, view system "
-                "settings, track transactions, and more.\n\n"
-                "The DSWD POS system is intuitive and reliable, ensuring that "
-                "your association can handle daily operations quickly while maintaining "
-                "accuracy and security. Whether you are a small team or a large association, "
-                "this app is tailored to support your needs.\n\n"
-                "We strive to provide a smooth experience for all users, making "
-                "account management simple and effective.\n\n"
-                "Created by the students of CTU Ginatilan:\n"
-                "Project Manager: Director GLicerio Baguia\n"
-                "Team Members: Kevin Mejares, Al Duane Mirasol, Jay Suizo, "
-                "Jessel Cardeinte, Mariel, Aiza, Kristian, Ashleyy, Lhory, Velchez \n \n\n"
-                "Thank you for using the DSWD POS System!",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            _SectionTitle('DSWD POS System'),
+            SizedBox(height: 12),
+            _BodyText(
+              'The DSWD POS System is built to help associations manage '
+              'their point-of-sale operations efficiently and securely. '
+              'It simplifies daily transactions and system monitoring '
+              'through a clean and intuitive interface.',
+            ),
+            SizedBox(height: 20),
+            _BodyText(
+              'Designed for reliability and ease of use, the system supports '
+              'both small and large associations in maintaining accuracy, '
+              'security, and operational efficiency.',
+            ),
+            SizedBox(height: 32),
+            _SectionTitle('Development Team'),
+            SizedBox(height: 12),
+            _BodyText(
+              'Project Manager\n'
+              'Director Glicerio Baguia',
+            ),
+            SizedBox(height: 16),
+            _BodyText(
+              'Team Members\n'
+              'Kevin Mejares\n'
+              'Al Duane Mirasol\n'
+              'Jay Suizo\n'
+              'Jesel Cardiente\n'
+              'Aiza Faith Allera\n'
+              'Kristian Rusiana\n'
+              'Ashley Mae Tanio\n'
+              'Lhory Hiramis\n'
+              'Lawrence Ivan Velchez',
+            ),
+            SizedBox(height: 32),
+            Divider(height: 1),
+            SizedBox(height: 16),
+            _FooterText('Thank you for using the DSWD POS System.'),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+      ),
+    );
+  }
+}
+
+class _BodyText extends StatelessWidget {
+  final String text;
+  const _BodyText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 15, height: 1.6, color: Colors.black87),
+    );
+  }
+}
+
+class _FooterText extends StatelessWidget {
+  final String text;
+  const _FooterText(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontSize: 14, color: Colors.black54),
     );
   }
 }
