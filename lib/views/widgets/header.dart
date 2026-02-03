@@ -5,11 +5,13 @@ import '../../core/app_colors.dart';
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBackButton;
+  final Widget? action; // ✅ defined
 
   const AppHeader({
     super.key,
     required this.title,
     this.showBackButton = false,
+    this.action,
   });
 
   @override
@@ -35,6 +37,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       centerTitle: true,
       backgroundColor: AppColors.primary,
       elevation: 2,
+      actions: action != null ? [action!] : null, // ✅ added this
     );
   }
 

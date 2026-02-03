@@ -164,7 +164,8 @@ class DBService {
         municipality TEXT,
         barangay TEXT,
         landmark TEXT,
-        credit_limit REAL,
+        credit_limit REAL DEFAULT 1000,
+        available_credit REAL DEFAULT 1000,
 
         FOREIGN KEY (account_id) REFERENCES account(id)
       )

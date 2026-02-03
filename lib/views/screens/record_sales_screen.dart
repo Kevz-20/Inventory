@@ -138,62 +138,88 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
 
   // ---------------------------- Helper Widgets ----------------------------
 
-  Widget _cashUtangSwitch(SalesViewModel vm) => Row(
-    children: [
-      _switchButton("Cash", isCash, () {
-        setState(() {
-          isCash = true;
-          isProductMode = false;
-          vm.selectedCustomer = null;
-          dueDate = null;
-        });
-        vm.resetQuantities();
-        vm.loadProducts();
-      }),
-      const SizedBox(width: 10),
-      _switchButton("Utang", !isCash, () {
-        setState(() {
-          isCash = false;
-          isProductMode = false;
-        });
-        vm.resetQuantities();
-      }),
-    ],
-  );
+  Widget _cashUtangSwitch(SalesViewModel vm) {
+  final double toggleWidth = MediaQuery.of(context).size.width - 32; // account for horizontal padding
+  final double sliderWidth = toggleWidth / 2;
 
-  Widget _switchButton(String title, bool active, VoidCallback onTap) =>
-      Expanded(
-        child: GestureDetector(
-          onTap: onTap,
+  return Container(
+    height: 50,
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade300.withOpacity(0.3),
+      borderRadius: BorderRadius.circular(25),
+    ),
+    child: Stack(
+      children: [
+        // 🔹 Sliding background pill
+        AnimatedAlign(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: isCash ? Alignment.centerLeft : Alignment.centerRight,
           child: Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            width: sliderWidth,
+            margin: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: active ? AppColors.primary : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(51),
-                  blurRadius: 2,
+                  color: Colors.black26,
+                  blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            alignment: Alignment.center,
-            child: Center(
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: active ? Colors.white : Colors.black87,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
           ),
         ),
-      );
+
+        // 🔹 Toggle buttons
+        Row(
+          children: [
+            _switchButton("Cash", isCash, () {
+              setState(() {
+                isCash = true;
+                isProductMode = false;
+                vm.selectedCustomer = null;
+                dueDate = null;
+              });
+              vm.resetQuantities();
+              vm.loadProducts();
+            }),
+            _switchButton("Utang", !isCash, () {
+              setState(() {
+                isCash = false;
+                isProductMode = false;
+              });
+              vm.resetQuantities();
+            }),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+  Widget _switchButton(String title, bool active, VoidCallback onTap) {
+  return Expanded(
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          style: TextStyle(
+            color: active ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+          child: Text(title),
+        ),
+      ),
+    ),
+  );
+}
 
   Widget _searchBar(SalesViewModel vm) {
     const double height = 55;
@@ -553,26 +579,29 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _utangList() {
-    final vm = ref.watch(salesViewModelProvider);
+  final vm = ref.watch(salesViewModelProvider);
 
-    if (!isProductMode) {
-      final filteredCustomers = vm.customers.where((customer) {
-        final name = '${customer['first_name']} ${customer['last_name']}';
-        return name.toLowerCase().contains(searchQuery.toLowerCase());
-      }).toList();
+  if (!isProductMode) {
+    // Filter customers by search query
+    final filteredCustomers = vm.customers.where((customer) {
+      final name = '${customer['first_name']} ${customer['last_name']}';
+      return name.toLowerCase().contains(searchQuery.toLowerCase());
+    }).toList();
 
-      return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _dueDateCard(),
-            SizedBox(height: 4),
-            if (filteredCustomers.isNotEmpty)
-              ...filteredCustomers.map((customer) => _customerItem(customer))
-            else
-              const Center(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _dueDateCard(),
+          const SizedBox(height: 4),
+          if (filteredCustomers.isNotEmpty)
+            ...filteredCustomers.map((customer) => _customerItem(customer))
+          else
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
                 child: Text(
                   "No customers found",
                   style: TextStyle(
@@ -582,50 +611,133 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                   ),
                 ),
               ),
-          ],
+            ),
+        ],
+      ),
+    );
+  } else {
+    // When a customer is selected, show products for credit sale
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          color: Colors.white,
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+            ],
+          ),
         ),
-      );
-    } else {
-      return Column(
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              _searchBar(vm),
+              const SizedBox(height: 6),
+              _categoryChips(vm),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Expanded(child: _productList(vm)),
+      ],
+    );
+  }
+}
+
+Widget _customerItem(Map<String, dynamic> customer) {
+  final vm = ref.read(salesViewModelProvider);
+
+  // ✅ Correctly get available credit from DB field
+  final double availableCredit = (customer['available_credit'] ?? 1000.0) as double;
+
+  return GestureDetector(
+    onTap: () {
+      if (dueDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a due date first.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        vm.selectedCustomer = customer;
+        isProductMode = true;
+        searchController.clear();
+        searchQuery = '';
+      });
+    },
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(25),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          Container(
-            width: double.infinity,
-            color: Colors.white,
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.primary.withOpacity(0.15),
+            child: const Icon(Icons.person, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
+                  "${customer['first_name']} ${customer['last_name']}",
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4), // reduced from 4
+                const SizedBox(height: 4),
                 Text(
-                  'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  "Available Credit: ₱${availableCredit.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 4), // reduced from 8
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                _searchBar(vm),
-                const SizedBox(height: 6), // reduced from 12
-                _categoryChips(vm),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4), // reduced from 8
-          Expanded(child: _productList(vm)),
+          const Icon(Icons.chevron_right),
         ],
-      );
-    }
-  }
+      ),
+    ),
+  );
+}
+
 
   Widget _dueDateCard() {
     return GestureDetector(
@@ -695,60 +807,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               ),
             ),
             const Icon(Icons.chevron_right, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _customerItem(Map<String, dynamic> customer) {
-    final vm = ref.read(salesViewModelProvider);
-
-    return GestureDetector(
-      onTap: () {
-        if (dueDate == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please select a due date first.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        setState(() {
-          vm.selectedCustomer = customer;
-          isProductMode = true;
-          searchController.clear();
-          searchQuery = '';
-        });
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary.withOpacity(0.15),
-              child: const Icon(Icons.person, color: AppColors.primary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                "${customer['first_name']} ${customer['last_name']}",
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const Icon(Icons.chevron_right),
           ],
         ),
       ),
@@ -908,90 +966,116 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final selectedCustomer = vm.selectedCustomer;
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final selectedCustomer = vm.selectedCustomer;
 
-                            if (!isCash &&
-                                (selectedCustomer == null || dueDate == null)) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please select a customer and due date for utang.',
+                                  // If Utang, validate customer and due date
+                                  if (!isCash) {
+                                    if (selectedCustomer == null || dueDate == null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please select a customer and due date for utang.'),
+                                          duration: Duration(seconds: 2),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // Ensure at least one product is selected
+                                    if (selectedProducts.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please select at least one product for utang.'),
+                                          duration: Duration(seconds: 2),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // --- NEW: Credit limit check centralized (optional if ViewModel handles it) ---
+                                    final double totalSale = vm.total;
+                                    final double creditLimit = (selectedCustomer['credit_limit'] ?? 0.0) as double;
+                                    final double currentBalance = (selectedCustomer['current_balance'] ?? 0.0) as double;
+                                    final double availableCredit = creditLimit - currentBalance;
+
+                                    if (totalSale > availableCredit) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Customer\'s available credit is ₱${availableCredit.toStringAsFixed(2)}. '
+                                            'You cannot exceed this limit.',
+                                          ),
+                                          duration: const Duration(seconds: 3),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                  }
+
+                                  // Close summary sheet
+                                  Navigator.pop(context);
+
+                                  try {
+                                    // Checkout
+                                    if (isCash) {
+                                      await vm.checkout(); // Cash checkout
+                                    } else {
+                                      await vm.checkout(
+                                        isCash: false,
+                                        customerId: selectedCustomer!['id'],
+                                        dueDate: dueDate!,
+                                      );
+                                    }
+
+                                    // Reload customers to refresh available credit after checkout
+                                    await vm.loadCustomers();
+
+                                    // Reset UI & state
+                                    vm.resetQuantities();
+                                    vm.selectedCustomer = null;
+                                    dueDate = null;
+                                    isProductMode = false;
+                                    searchController.clear();
+                                    searchQuery = '';
+
+                                    // Success message
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('Sale successfully recorded!'),
+                                        duration: const Duration(seconds: 2),
+                                        backgroundColor: AppColors.success,
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Checkout failed: $e'),
+                                        duration: const Duration(seconds: 2),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(52),
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
-                                  duration: Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
                                 ),
-                              );
-                              return;
-                            }
-
-                            if (!isCash && selectedProducts.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please select at least one product for utang.',
+                                child: const Text(
+                                  'Confirm',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
-                                  duration: Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
                                 ),
-                              );
-                              return;
-                            }
-
-                            Navigator.pop(context);
-
-                            try {
-                              if (isCash) {
-                                await vm.checkout();
-                              } else {
-                                await vm.checkout(
-                                  isCash: false,
-                                  customerId: selectedCustomer!['id'],
-                                  dueDate: dueDate!,
-                                );
-                              }
-
-                              vm.resetQuantities();
-                              vm.selectedCustomer = null;
-                              dueDate = null;
-                              isProductMode = false;
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                    'Sale successfully recorded!',
-                                  ),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Checkout failed: $e'),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Confirm',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],

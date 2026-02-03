@@ -319,31 +319,35 @@ class _UtangScreenState extends State<UtangScreen> {
   // APPLY FILTER FUNCTION
   // ============================================================
   void applyOwnerFilter(int filterIndex) {
-    selectedFilter = filterIndex;
+  selectedFilter = filterIndex;
 
-    switch (filterIndex) {
-      case 0: // Tanan
-        filteredOwnerPayables = List.from(ownerPayables);
-        break;
-      case 1: // Overdue
-        filteredOwnerPayables = ownerPayables
-            .where(
-              (p) =>
-                  !p.isPaid &&
-                  p.dueDate != null &&
-                  DateTime.tryParse(p.dueDate!) != null &&
-                  DateTime.parse(p.dueDate!).isBefore(DateTime.now()),
-            )
-            .toList();
-        break;
-      case 2: // Nabayran (Paid)
-        filteredOwnerPayables = ownerPayables.where((p) => p.isPaid).toList();
-        break;
-      default:
-        filteredOwnerPayables = List.from(ownerPayables);
-    }
-    setState(() {});
+  switch (filterIndex) {
+    case 0: // Tanan
+      filteredOwnerPayables = List.from(ownerPayables);
+      break;
+    case 1: // Overdue
+      filteredOwnerPayables = ownerPayables
+          .where(
+            (p) =>
+                !p.isPaid &&
+                p.dueDate != null &&
+                DateTime.tryParse(p.dueDate!) != null &&
+                DateTime.parse(p.dueDate!).isBefore(DateTime.now()),
+          )
+          .toList();
+      break;
+    case 2: // Nabayran
+      filteredOwnerPayables = ownerPayables.where((p) => p.isPaid).toList();
+      break;
+    default:
+      filteredOwnerPayables = List.from(ownerPayables);
   }
+
+  // 🔥 SORT BY NEAREST DUE DATE
+  sortOwnerPayablesByDueDate();
+
+  setState(() {});
+}
 
   // ============================================================
   // BUILD
@@ -590,6 +594,31 @@ class _UtangScreenState extends State<UtangScreen> {
       ],
     );
   }
+
+  void sortOwnerPayablesByDueDate() {
+  filteredOwnerPayables.sort((a, b) {
+    // Paid items always go last
+    if (a.isPaid && !b.isPaid) return 1;
+    if (!a.isPaid && b.isPaid) return -1;
+
+    // Determine which date to use
+    DateTime? dateA = DateTime.tryParse(
+      a.isInstallment ? (a.nextDueDate ?? '') : (a.dueDate ?? ''),
+    );
+    DateTime? dateB = DateTime.tryParse(
+      b.isInstallment ? (b.nextDueDate ?? '') : (b.dueDate ?? ''),
+    );
+
+    // No dates = push to bottom
+    if (dateA == null && dateB == null) return 0;
+    if (dateA == null) return 1;
+    if (dateB == null) return -1;
+
+    // Nearest due date first
+    return dateA.compareTo(dateB);
+  });
+}
+
 
   // ============================================================
   // OWNER UTANG PAGE

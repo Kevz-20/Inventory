@@ -8,9 +8,7 @@ import '../repositories/expense_repository.dart';
 import '../repositories/capital_management_repository.dart';
 import '../providers/database_provider.dart';
 
-final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
-  ref,
-) {
+final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((ref) {
   final repoFuture = ref.watch(expenseRepositoryProvider.future);
   final dbFuture = ref.watch(databaseProvider.future);
   return ExpensesViewModel(
@@ -26,8 +24,13 @@ class ExpensesViewModel extends ChangeNotifier {
   ExpensesViewModel({
     required this.expenseRepositoryFuture,
     required this.databaseFuture,
-  });
+  }) {
+    loadExpenses();
+  }
 
+  // ------------------------
+  // STATE
+  // ------------------------
   DateTime selectedDate = DateTime.now();
   final amountController = TextEditingController();
   final descriptionController = TextEditingController();
@@ -48,6 +51,9 @@ class ExpensesViewModel extends ChangeNotifier {
     "Mga Bayronon",
     "Uban pa",
   ];
+
+  List<ExpenseModel> _expenses = [];
+  List<ExpenseModel> get expenses => _expenses;
 
   String get formattedDate => DateFormat('MMMM d, y').format(selectedDate);
 
@@ -91,13 +97,24 @@ class ExpensesViewModel extends ChangeNotifier {
   }
 
   // ------------------------
+  // LOAD EXPENSES
+  // ------------------------
+  Future<void> loadExpenses() async {
+    try {
+      final repo = await expenseRepositoryFuture;
+      final accountId = await repo.accountRepository.getAccountId();
+      _expenses = await repo.fetchExpensesByAccount(accountId);
+      notifyListeners();
+    } catch (_) {
+      _expenses = [];
+      notifyListeners();
+    }
+  }
+
+  // ------------------------
   // MESSAGE HANDLER
   // ------------------------
-  void _showMessage(
-    String msg, {
-    bool isError = false,
-    int durationSeconds = 2,
-  }) {
+  void _showMessage(String msg, {bool isError = false, int durationSeconds = 2}) {
     if (isError) {
       errorMessage = msg;
     } else {
@@ -156,6 +173,9 @@ class ExpensesViewModel extends ChangeNotifier {
 
       _showMessage("Expense saved successfully");
       resetForm();
+
+      // Refresh list after adding
+      await loadExpenses();
 
       isLoading = false;
       notifyListeners();

@@ -227,97 +227,114 @@ class ProductRepository {
 
   // Credit checkout
   Future<void> checkoutCredit(
-    List<Map<String, dynamic>> items,
-    int customerId, {
-    DateTime? dueDate,
-  }) async {
-    final accountId = await accountRepo.getAccountId();
-    final now = DateTime.now().toIso8601String();
-    final due =
-        dueDate?.toIso8601String() ??
-        DateTime.now().add(const Duration(days: 30)).toIso8601String();
+  List<Map<String, dynamic>> items,
+  int customerId, {
+  DateTime? dueDate,
+}) async {
+  final accountId = await accountRepo.getAccountId();
+  final now = DateTime.now().toIso8601String();
+  final due =
+      dueDate?.toIso8601String() ??
+      DateTime.now().add(const Duration(days: 30)).toIso8601String();
 
-    await db.transaction((txn) async {
-      // 1️⃣ Verify customer exists for this account
-      final customerExists = await txn.query(
-        'customer',
+  await db.transaction((txn) async {
+    // 1️⃣ Verify customer exists for this account
+    final customerExists = await txn.query(
+      'customer',
+      where: 'id = ? AND account_id = ?',
+      whereArgs: [customerId, accountId],
+    );
+    if (customerExists.isEmpty) {
+      throw Exception('Customer does not exist for this account');
+    }
+
+    // 1️⃣a Get current available_credit
+    final currentCredit = (customerExists.first['available_credit'] as num?)?.toDouble() ?? 1000.0;
+
+    // 2️⃣ Get status_id for unpaid credit
+    final statusResult = await txn.query(
+      'credit_status',
+      where: 'code = ?',
+      whereArgs: [0], // unpaid
+    );
+    if (statusResult.isEmpty) {
+      throw Exception('Credit status "unpaid" not found in database');
+    }
+    final statusId = statusResult.first['id'] as int;
+
+    // 3️⃣ Insert main sale record
+    final saleId = await txn.insert('sales', {
+      'account_id': accountId,
+      'customer_id': customerId,
+      'sale_type': 'credit',
+      'total': items.fold<int>(
+        0,
+        (sum, item) => sum + (item['subtotal'] as num).toInt(),
+      ),
+      'created_at': now,
+    });
+
+    // 4️⃣ Insert each sale item + sales_credit + update stock
+    for (var item in items) {
+      final productId = item['productId'];
+
+      // Check product exists for this account
+      final productExists = await txn.query(
+        'product',
         where: 'id = ? AND account_id = ?',
-        whereArgs: [customerId, accountId],
+        whereArgs: [productId, accountId],
       );
-      if (customerExists.isEmpty) {
-        throw Exception('Customer does not exist for this account');
+      if (productExists.isEmpty) {
+        throw Exception('Product $productId does not exist for this account');
       }
 
-      // 2️⃣ Get status_id for unpaid credit
-      final statusResult = await txn.query(
-        'credit_status',
-        where: 'code = ?',
-        whereArgs: [0], // unpaid
-      );
-      if (statusResult.isEmpty) {
-        throw Exception('Credit status "unpaid" not found in database');
-      }
-      final statusId = statusResult.first['id'] as int;
+      final subtotal = (item['subtotal'] as num).toInt();
+      final unitPrice = (item['price'] as num).toInt();
+      final quantity = (item['quantity'] as num).toInt();
 
-      // 3️⃣ Insert main sale record
-      final saleId = await txn.insert('sales', {
+      // Insert into sale_item
+      await txn.insert('sale_item', {
+        'sale_id': saleId,
+        'product_id': productId,
+        'unit_price': unitPrice,
+        'quantity': quantity,
+        'subtotal': subtotal,
+      });
+
+      // Insert into sales_credit
+      await txn.insert('sales_credit', {
         'account_id': accountId,
+        'sale_id': saleId,
+        'product_id': productId,
         'customer_id': customerId,
-        'sale_type': 'credit',
-        'total': items.fold<int>(
-          0,
-          (sum, item) => sum + (item['subtotal'] as num).toInt(),
-        ),
+        'amount': subtotal,
+        'quantity': quantity,
+        'status_id': statusId,
+        'credit_date': now,
+        'due_date': due,
         'created_at': now,
       });
 
-      // 4️⃣ Insert each sale item + sales_credit + update stock
-      for (var item in items) {
-        final productId = item['productId'];
+      // Update product stock
+      await txn.rawUpdate(
+        'UPDATE product SET quantity = quantity - ? WHERE id = ?',
+        [quantity, productId],
+      );
+    }
 
-        // Check product exists for this account
-        final productExists = await txn.query(
-          'product',
-          where: 'id = ? AND account_id = ?',
-          whereArgs: [productId, accountId],
-        );
-        if (productExists.isEmpty) {
-          throw Exception('Product $productId does not exist for this account');
-        }
+    // 5️⃣ Update customer's available_credit
+    final totalAmount = items.fold<double>(
+      0,
+      (sum, item) => sum + (item['subtotal'] as num).toDouble(),
+    );
+    final newCredit = (currentCredit - totalAmount).clamp(0, double.infinity);
 
-        final subtotal = (item['subtotal'] as num).toInt();
-        final unitPrice = (item['price'] as num).toInt();
-        final quantity = (item['quantity'] as num).toInt();
-
-        // Insert into sale_item
-        await txn.insert('sale_item', {
-          'sale_id': saleId,
-          'product_id': productId,
-          'unit_price': unitPrice,
-          'quantity': quantity,
-          'subtotal': subtotal,
-        });
-
-        // Insert into sales_credit
-        await txn.insert('sales_credit', {
-          'account_id': accountId,
-          'sale_id': saleId,
-          'product_id': productId,
-          'customer_id': customerId,
-          'amount': subtotal,
-          'quantity': quantity,
-          'status_id': statusId,
-          'credit_date': now,
-          'due_date': due,
-          'created_at': now,
-        });
-
-        // Update product stock
-        await txn.rawUpdate(
-          'UPDATE product SET quantity = quantity - ? WHERE id = ?',
-          [quantity, productId],
-        );
-      }
-    });
-  }
+    await txn.update(
+      'customer',
+      {'available_credit': newCredit},
+      where: 'id = ? AND account_id = ?',
+      whereArgs: [customerId, accountId],
+    );
+  });
+}
 }

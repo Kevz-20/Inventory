@@ -7,11 +7,11 @@ import '../repositories/product_repository.dart';
 import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
 import '../repositories/capital_management_repository.dart';
+import '../repositories/account_repository.dart';
 
 /// Updated SalesViewModel with proper callback to update CapitalManagementViewModel
 class SalesViewModel extends ChangeNotifier {
-  final void Function()?
-  onCashUpdated; // 🔹 callback to notify CapitalManagement
+  final void Function()? onCashUpdated; // 🔹 callback to notify CapitalManagement
 
   CapitalManagementRepository? _capitalRepository;
   ProductRepository? _productRepository;
@@ -46,9 +46,15 @@ class SalesViewModel extends ChangeNotifier {
   Future<void> _initRepository() async {
     try {
       final db = await DBService.instance.database;
+
       _productRepository = ProductRepository(db);
-      _customerRepository = CustomerRepository(db);
+
+      // ✅ Updated CustomerRepository initialization
+      final accountRepo = AccountRepository();
+      _customerRepository = CustomerRepository(db, accountRepo);
+
       _capitalRepository = CapitalManagementRepository(db);
+
       await loadProducts();
       await loadCustomers();
     } catch (_) {}
@@ -208,78 +214,87 @@ class SalesViewModel extends ChangeNotifier {
 
   /// 🔹 Checkout method with callback to refresh CapitalManagementViewModel
   Future<void> checkout({
-    bool isCash = true,
-    int? customerId,
-    DateTime? dueDate,
-  }) async {
-    if (_productRepository == null) return;
+  bool isCash = true,
+  int? customerId,
+  DateTime? dueDate,
+}) async {
+  if (_productRepository == null || _customerRepository == null) return;
 
-    final purchasedItems = <Map<String, dynamic>>[];
+  final purchasedItems = <Map<String, dynamic>>[];
 
-    for (var p in products) {
-      final qty = productQuantities[p.id!] ?? 0;
-      if (qty > 0) {
-        purchasedItems.add({
-          'productId': p.id,
-          'quantity': qty,
-          'price': p.sellingPrice,
-          'subtotal': qty * p.sellingPrice,
-        });
-      }
+  for (var p in products) {
+    final qty = productQuantities[p.id!] ?? 0;
+    if (qty > 0) {
+      purchasedItems.add({
+        'productId': p.id,
+        'quantity': qty,
+        'price': p.sellingPrice,
+        'subtotal': qty * p.sellingPrice,
+      });
     }
+  }
 
-    if (purchasedItems.isEmpty) return;
+  if (purchasedItems.isEmpty) return;
 
-    try {
-      if (isCash) {
-        // Record cash sale
-        await _productRepository!.checkoutCash(purchasedItems);
+  try {
+    if (isCash) {
+      // Record cash sale
+      await _productRepository!.checkoutCash(purchasedItems);
 
-        // Update cash on hand in CapitalManagement
-        if (_capitalRepository != null) {
-          double totalCash = purchasedItems.fold<double>(
-            0.0,
-            (sum, item) => sum + (item['subtotal'] as double),
+      // Update cash on hand in CapitalManagement
+      if (_capitalRepository != null) {
+        double totalCash = purchasedItems.fold<double>(
+          0.0,
+          (sum, item) => sum + (item['subtotal'] as double),
+        );
+
+        final capitals = await _capitalRepository!.getCapitalByAccount();
+        if (capitals.isNotEmpty) {
+          final latest = capitals.last;
+          final updatedCash = latest.cashOnHand + totalCash;
+
+          final updatedModel = CapitalManagementModel(
+            id: latest.id,
+            accountId: latest.accountId,
+            capital: latest.capital,
+            cashOnHand: updatedCash,
+            bankCash: latest.bankCash,
+            remarks: 'Cash sale added',
+            createdAt: DateTime.now(),
           );
 
-          final capitals = await _capitalRepository!.getCapitalByAccount();
-          if (capitals.isNotEmpty) {
-            final latest = capitals.last;
-            final updatedCash = latest.cashOnHand + totalCash;
+          await _capitalRepository!.updateCapital(updatedModel);
 
-            final updatedModel = CapitalManagementModel(
-              id: latest.id,
-              accountId: latest.accountId,
-              capital: latest.capital,
-              cashOnHand: updatedCash,
-              bankCash: latest.bankCash,
-              remarks: 'Cash sale added',
-              createdAt: DateTime.now(),
-            );
-
-            await _capitalRepository!.updateCapital(updatedModel);
-
-            // 🔹 Call the callback to refresh the CapitalManagementViewModel
-            if (onCashUpdated != null) onCashUpdated!();
-          }
+          if (onCashUpdated != null) onCashUpdated!();
         }
-      } else {
-        if (customerId == null || dueDate == null) {
-          throw Exception('Customer and due date required for utang.');
-        }
-        await _productRepository!.checkoutCredit(
-          purchasedItems,
-          customerId,
-          dueDate: dueDate,
-        );
       }
-    } catch (_) {
-      rethrow;
-    }
+    } else {
+      // ✅ Credit / Utang sale
+      if (customerId == null || dueDate == null) {
+        throw Exception('Customer and due date required for utang.');
+      }
 
-    await loadProducts();
-    resetQuantities();
+      // 1️⃣ Checkout as credit
+      await _productRepository!.checkoutCredit(
+        purchasedItems,
+        customerId,
+        dueDate: dueDate,
+      );
+
+      // 2️⃣ ⚡ Remove manual deduction to prevent double deduction
+      // await _customerRepository!.deductAvailableCredit(customerId, totalCredit);
+
+      // 3️⃣ Reload customers so UI shows updated Available Credit
+      await loadCustomers(); // 🔹 important
+    }
+  } catch (_) {
+    rethrow;
   }
+
+  await loadProducts();
+  resetQuantities();
+}
+
 }
 
 /// 🔹 Updated provider passing callback

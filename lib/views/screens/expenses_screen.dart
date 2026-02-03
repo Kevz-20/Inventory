@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
-import '../widgets/header.dart';
+import '../widgets/header.dart'; // ✅ AppHeader import
+import 'existing_expense_screen.dart';
 
 /// -----------------------------
 /// Custom TextInputFormatter for thousands separator
@@ -28,10 +29,8 @@ class ThousandsFormatter extends TextInputFormatter {
     }
 
     final formatted = _formatter.format(int.parse(digits));
-
     final diff = formatted.length - digits.length;
     int cursor = newValue.selection.end + diff;
-
     cursor = cursor.clamp(0, formatted.length);
 
     return TextEditingValue(
@@ -50,7 +49,21 @@ class ExpensesScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Gasto', showBackButton: true),
+      appBar: AppHeader(
+        title: 'Gasto',
+        showBackButton: true,
+        action: IconButton(
+          icon: const Icon(Icons.list, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ExistingExpensesScreen(),
+              ),
+            );
+          },
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -69,7 +82,6 @@ class ExpensesScreen extends ConsumerWidget {
                 AppColors.error,
                 Colors.red.shade100,
               ),
-
             InkWell(
               onTap: () => _pickDate(context, vm),
               child: _inputRow(
@@ -80,7 +92,6 @@ class ExpensesScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 15),
-
             _inputDropdown(
               icon: Icons.category,
               label: 'Kategorya',
@@ -90,10 +101,6 @@ class ExpensesScreen extends ConsumerWidget {
               onChanged: vm.setCategory,
             ),
             const SizedBox(height: 15),
-
-            // -----------------------------
-            // Presyo field with automatic commas
-            // -----------------------------
             _inputTextField(
               prefix: const SizedBox(
                 width: 48,
@@ -101,9 +108,9 @@ class ExpensesScreen extends ConsumerWidget {
                   child: Text(
                     '₱',
                     style: TextStyle(
-                      fontSize: 20, // ✅ replicate StockInScreen
-                      color: AppColors.primary, // ✅ replicate StockInScreen
-                      fontWeight: FontWeight.bold, // ✅ replicate StockInScreen
+                      fontSize: 20,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -114,9 +121,7 @@ class ExpensesScreen extends ConsumerWidget {
               keyboardType: TextInputType.number,
               inputFormatters: [ThousandsFormatter()],
             ),
-
             const SizedBox(height: 15),
-
             _inputTextField(
               prefix: const Icon(Icons.description, color: AppColors.primary),
               label: 'Deskripsyon',
@@ -124,8 +129,8 @@ class ExpensesScreen extends ConsumerWidget {
               showError: vm.showValidationErrors,
             ),
             const SizedBox(height: 25),
-
             _receiptSection(context, vm),
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -143,10 +148,9 @@ class ExpensesScreen extends ConsumerWidget {
               ? null
               : () async {
                   vm.triggerValidation();
-                  // Remove commas before parsing
                   if (vm.amountController.text.isNotEmpty) {
-                    vm.amountController.text = vm.amountController.text
-                        .replaceAll(',', '');
+                    vm.amountController.text =
+                        vm.amountController.text.replaceAll(',', '');
                   }
                   await vm.save();
                 },
@@ -158,6 +162,9 @@ class ExpensesScreen extends ConsumerWidget {
     );
   }
 
+  // -----------------------------
+  // Widgets (Receipt, Input, Banner, etc.)
+  // -----------------------------
   Widget _receiptSection(BuildContext context, ExpensesViewModel vm) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,12 +208,7 @@ class ExpensesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _banner(
-    String message,
-    IconData icon,
-    Color iconColor,
-    Color bgColor,
-  ) {
+  Widget _banner(String message, IconData icon, Color iconColor, Color bgColor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -232,7 +234,7 @@ class ExpensesScreen extends ConsumerWidget {
     required IconData icon,
     required String label,
     required String value,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return SizedBox(
       height: 60,
@@ -248,10 +250,7 @@ class ExpensesScreen extends ConsumerWidget {
           fillColor: Colors.white,
           prefixIcon: Icon(icon, color: AppColors.primary),
           labelText: label,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 16,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
@@ -277,7 +276,7 @@ class ExpensesScreen extends ConsumerWidget {
     final bool isError = showError && value == null;
 
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       isExpanded: true,
       dropdownColor: Colors.white,
       decoration: InputDecoration(
@@ -285,10 +284,7 @@ class ExpensesScreen extends ConsumerWidget {
         fillColor: Colors.white,
         prefixIcon: Icon(icon, color: AppColors.primary),
         labelText: label,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 17,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -311,7 +307,7 @@ class ExpensesScreen extends ConsumerWidget {
               child: Text(
                 e,
                 style: const TextStyle(
-                  color: Colors.black, // ✅ replicate StockInScreen
+                  color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -339,18 +335,15 @@ class ExpensesScreen extends ConsumerWidget {
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         style: const TextStyle(
-          color: Colors.black, // ✅ replicate StockInScreen
-          fontWeight: FontWeight.bold, // ✅ replicate StockInScreen
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
         ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.white,
           prefixIcon: prefix,
           labelText: label,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 16,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
@@ -392,10 +385,7 @@ class ExpensesScreen extends ConsumerWidget {
     if (picked != null) vm.setDate(picked);
   }
 
-  Future<void> _pickReceiptImage(
-    BuildContext context,
-    ExpensesViewModel vm,
-  ) async {
+  Future<void> _pickReceiptImage(BuildContext context, ExpensesViewModel vm) async {
     showDialog(
       context: context,
       builder: (_) => Dialog(
