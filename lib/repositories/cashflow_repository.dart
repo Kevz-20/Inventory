@@ -1,82 +1,71 @@
 import '../services/db_service.dart';
 import '../models/cashflow_model.dart';
+import 'capital_management_repository.dart';
 
 class CashflowRepository {
   final _dbService = DBService.instance;
 
-  Future<List<CashflowRecord>> getCashflows(int accountId) async {
+  /// Fetch all cashflow records (no account filter)
+  Future<List<CashflowRecord>> getCashflows() async {
     final db = await _dbService.database;
 
     // --------------------
-    // Fetch starting cash from capital_management
+    // Fetch starting cash from capital_management (latest record)
     // --------------------
     double startingCash = 0;
-    DateTime startingDate = DateTime(2000); // default very old date
-    final capitalResult = await db.query(
-      'capital_management',
-      columns: ['cash_on_hand', 'created_at'],
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      limit: 1,
-    );
-    if (capitalResult.isNotEmpty) {
-      startingCash = (capitalResult.first['cash_on_hand'] as num?)?.toDouble() ?? 0;
-      final dateStr = capitalResult.first['created_at'] as String?;
-      if (dateStr != null) startingDate = DateTime.parse(dateStr);
+    DateTime startingDate = DateTime.now();
+
+    final capitalRepo = CapitalManagementRepository(db);
+    final latestCapital = await capitalRepo.getLatestCapital();
+
+    if (latestCapital != null) {
+      startingCash = latestCapital.cashOnHand;
+      startingDate = latestCapital.createdAt;
     }
 
     // --------------------
-    // Fetch all other transactions
+    // Fetch all transactions (global, no account filter)
     // --------------------
     final salesCash = await db.rawQuery('''
       SELECT created_at AS date, 'Cash Sale' AS item, amount AS cash_in, 0 AS cash_out
       FROM sales_cash
-      WHERE account_id = ?
-    ''', [accountId]);
+    ''');
 
     final creditPayments = await db.rawQuery('''
       SELECT paid_at AS date, 'Credit Payment' AS item, amount AS cash_in, 0 AS cash_out
       FROM sales_credit_payment
-      WHERE account_id = ?
-    ''', [accountId]);
+    ''');
 
     final capitalIn = await db.rawQuery('''
       SELECT date AS date, 'Capital Deposit' AS item, amount AS cash_in, 0 AS cash_out
       FROM capital_transaction
-      WHERE account_id = ?
-        AND transaction_type_id = (
-          SELECT id FROM transaction_type_choices WHERE value = 'deposit'
-        )
-    ''', [accountId]);
+      WHERE transaction_type_id = (
+        SELECT id FROM transaction_type_choices WHERE value = 'deposit'
+      )
+    ''');
 
     final expenses = await db.rawQuery('''
       SELECT created_at AS date, category AS item, 0 AS cash_in, amount AS cash_out
       FROM expenses
-      WHERE account_id = ?
-    ''', [accountId]);
+    ''');
 
     final payablePayments = await db.rawQuery('''
       SELECT date AS date, 'Payable Payment' AS item, 0 AS cash_in, amount AS cash_out
       FROM payable_payment
-      WHERE payable_id IN (
-        SELECT id FROM payable WHERE account_id = ?
-      )
-    ''', [accountId]);
+    ''');
 
     final capitalOut = await db.rawQuery('''
       SELECT date AS date, 'Capital Withdrawal' AS item, 0 AS cash_in, amount AS cash_out
       FROM capital_transaction
-      WHERE account_id = ?
-        AND transaction_type_id = (
-          SELECT id FROM transaction_type_choices WHERE value = 'withdraw'
-        )
-    ''', [accountId]);
+      WHERE transaction_type_id = (
+        SELECT id FROM transaction_type_choices WHERE value = 'withdraw'
+      )
+    ''');
 
     final ownerInstallments = await db.rawQuery('''
       SELECT created_at AS date, item || ' Downpayment' AS item, 0 AS cash_in, downpayment AS cash_out
       FROM owner_installments
-      WHERE account_id = ?
-    ''', [accountId]);
+    ''');
 
     // --------------------
     // Merge all transactions
@@ -93,7 +82,6 @@ class CashflowRepository {
 
     // --------------------
     // Include Starting Cash as first transaction if > 0
-    // Give it the earliest date so it stays at the bottom
     // --------------------
     if (startingCash > 0) {
       allRows.add({
@@ -105,10 +93,11 @@ class CashflowRepository {
     }
 
     // --------------------
-    // Sort chronologically for balance computation
+    // Sort chronologically
     // --------------------
     allRows.sort((a, b) =>
-        DateTime.parse(a['date'] as String).compareTo(DateTime.parse(b['date'] as String)));
+        DateTime.parse(a['date'] as String)
+            .compareTo(DateTime.parse(b['date'] as String)));
 
     // --------------------
     // Compute running balance
@@ -132,7 +121,7 @@ class CashflowRepository {
     }
 
     // --------------------
-    // Reverse for display: newest transactions at top
+    // Reverse for display: newest first
     // --------------------
     return records.reversed.toList();
   }

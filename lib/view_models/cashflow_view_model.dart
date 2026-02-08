@@ -31,8 +31,8 @@ class CashflowViewModel extends ChangeNotifier {
   }
 
   // Load transactions from DB
-  Future<void> loadCashflows(int accountId) async {
-    final records = await _repository.getCashflows(accountId);
+  Future<void> loadCashflows() async {
+    final records = await _repository.getCashflows();
     setRecords(records);
   }
 }

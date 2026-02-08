@@ -107,26 +107,26 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   child: viewModel.isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : viewModel.sections.isEmpty
-                      ? Center(
-                          child: Text(
-                            viewModel.emptyStateMessage,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black45,
+                          ? Center(
+                              child: Text(
+                                viewModel.emptyStateMessage,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              itemCount: viewModel.sections.length,
+                              itemBuilder: (context, sectionIndex) {
+                                final section = viewModel.sections[sectionIndex];
+                                return _buildSection(section);
+                              },
                             ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          itemCount: viewModel.sections.length,
-                          itemBuilder: (context, sectionIndex) {
-                            final section = viewModel.sections[sectionIndex];
-                            return _buildSection(section);
-                          },
-                        ),
                 ),
               ],
             ),
@@ -148,147 +148,167 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     Color typeColor = isHalin
         ? Colors.green
         : isExpense
-        ? Colors.red
-        : Colors.blue;
+            ? Colors.red
+            : Colors.blue;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.white, // removed card background
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(25),
-            blurRadius: 2,
-            offset: const Offset(0, 2),
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        // Show BottomSheet
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Top row: type + amount
-          Row(
-            children: [
-              Text(
-                isHalin
-                    ? 'Halin'
-                    : isExpense
-                    ? 'Gasto'
-                    : 'Capital',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: typeColor,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                isCapital
-                    ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                    : isExpense
-                    ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                    : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: typeColor,
-                ),
-              ),
-            ],
+          builder: (_) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: _TransactionDetailsSheet(transaction: tx),
           ),
-
-          const SizedBox(height: 4),
-
-          // Second row: Note + View Receipt (Gasto)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  (isCapital || isExpense)
-                      ? 'Note: ${tx.description ?? ''}'
-                      : (tx.productName ?? 'Product'),
-                  style: const TextStyle(
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha(25),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top row: type + amount
+            Row(
+              children: [
+                Text(
+                  isHalin
+                      ? 'Halin'
+                      : isExpense
+                          ? 'Gasto'
+                          : 'Capital',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: typeColor,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  isCapital
+                      ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                      : isExpense
+                          ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                          : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+                  style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    color: typeColor,
                   ),
                 ),
-              ),
-              if (isExpense && tx.receiptImagePath != null)
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade50,
-                    foregroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: BorderSide(color: Colors.green.shade200),
+              ],
+            ),
+
+            const SizedBox(height: 4),
+
+            // Second row: Note + View Receipt (Gasto)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    (isCapital || isExpense)
+                        ? 'Note: ${tx.description ?? ''}'
+                        : (tx.productName ?? 'Product'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
                     ),
                   ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => Dialog(
-                        child: InteractiveViewer(
-                          child: Image.file(
-                            File(tx.receiptImagePath!),
-                            fit: BoxFit.contain,
+                ),
+                if (isExpense && tx.receiptImagePath != null)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade50,
+                      foregroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: BorderSide(color: Colors.green.shade200),
+                      ),
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          child: InteractiveViewer(
+                            child: Image.file(
+                              File(tx.receiptImagePath!),
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'View Receipt',
-                    style: TextStyle(fontSize: 13),
+                      );
+                    },
+                    child: const Text(
+                      'View Receipt',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ),
+              ],
+            ),
+
+            const SizedBox(height: 2),
+
+            // Third row: category / qty + time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (isHalin || isCapital)
+                  tx.quantity != null
+                      ? Text(
+                          'Qty: ${tx.quantity}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        )
+                      : const SizedBox()
+                else if (isExpense)
+                  tx.category != null
+                      ? Text(
+                          'Category: ${tx.category}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        )
+                      : const SizedBox(),
+                Text(
+                  DateFormat('hh:mm a').format(tx.createdAt),
+                  style: const TextStyle(fontSize: 13, color: Colors.black45),
                 ),
-            ],
-          ),
-
-          const SizedBox(height: 2),
-
-          // Third row: category / qty + time
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (isHalin || isCapital)
-                tx.quantity != null
-                    ? Text(
-                        'Qty: ${tx.quantity}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      )
-                    : const SizedBox()
-              else if (isExpense)
-                tx.category != null
-                    ? Text(
-                        'Category: ${tx.category}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      )
-                    : const SizedBox(),
-              Text(
-                DateFormat('hh:mm a').format(tx.createdAt),
-                style: const TextStyle(fontSize: 13, color: Colors.black45),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -474,6 +494,160 @@ class CategoryChipsWithDots extends StatelessWidget {
         ),
         const SizedBox(height: 5),
       ],
+    );
+  }
+}
+
+// ---------------- Transaction BottomSheet ----------------
+class _TransactionDetailsSheet extends StatelessWidget {
+  final TransactionItem transaction;
+
+  const _TransactionDetailsSheet({required this.transaction});
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpense = transaction.type == 'Gasto';
+    final isHalin = transaction.type == 'Halin';
+    final isCapital = transaction.type == 'Capital';
+    final NumberFormat currency =
+        NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 2);
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Wrap(
+        children: [
+          Center(
+            child: Container(
+              width: 50,
+              height: 5,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(5),
+              ),
+            ),
+          ),
+          Text(
+            '${transaction.type} Details',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Amount
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Amount:', style: TextStyle(fontSize: 16)),
+              Text(
+                '${isCapital ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isHalin
+                      ? Colors.green
+                      : isExpense
+                          ? Colors.red
+                          : Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Date
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Date:', style: TextStyle(fontSize: 16)),
+              Text(
+                DateFormat('MMMM d, y • hh:mm a').format(transaction.createdAt),
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Category or Quantity
+          if (isExpense && transaction.category != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Category:', style: TextStyle(fontSize: 16)),
+                Text(transaction.category!, style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+          if ((isHalin || isCapital) && transaction.quantity != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Quantity:', style: TextStyle(fontSize: 16)),
+                Text(transaction.quantity.toString(),
+                    style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+          const SizedBox(height: 8),
+
+          // Recorded by
+          if (transaction.recordedBy != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Recorded By:', style: TextStyle(fontSize: 16)),
+                Text(transaction.recordedBy!,
+                    style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+          const SizedBox(height: 8),
+
+          // Note
+          if (transaction.description != null && transaction.description!.isNotEmpty)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Note: ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(transaction.description!, style: const TextStyle(fontSize: 16)),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Receipt Image
+          if (isExpense && transaction.receiptImagePath != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Receipt:', style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: InteractiveViewer(
+                          child: Image.file(
+                            File(transaction.receiptImagePath!),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Image.file(
+                    File(transaction.receiptImagePath!),
+                    height: 150,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ],
+            ),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 }

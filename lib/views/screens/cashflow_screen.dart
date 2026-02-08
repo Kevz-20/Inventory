@@ -25,7 +25,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Future<void> _loadCashflows() async {
     final vm = ref.read(cashflowViewModelProvider);
-    await vm.loadCashflows(1); // Replace 1 with actual accountId
+    await vm.loadCashflows(); // Replace 1 with actual accountId
     setState(() => _loading = false);
   }
 

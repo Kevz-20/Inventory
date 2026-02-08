@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/region7_psgc.dart';
 import '../models/region7_psgc_model.dart';
 import '../repositories/customer_repository.dart';
-import '../repositories/account_repository.dart'; // ✅ import AccountRepository
 import '../services/db_service.dart';
 
 final newCustomerViewModelProvider =
@@ -41,9 +40,8 @@ class NewCustomerViewModel extends ChangeNotifier {
 
   /// Initialize database repository
   Future<void> _initRepository() async {
-    final db = await DBService.instance.database;
-    final accountRepo = AccountRepository(); // ✅ new AccountRepository
-    _repo = CustomerRepository(db, accountRepo); // ✅ pass both DB and account repo
+  final db = await DBService.instance.database;
+  _repo = CustomerRepository(db); // ✅ only pass DB, no AccountRepository
   }
 
   /// Load Region VII data and flatten cities

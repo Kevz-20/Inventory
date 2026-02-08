@@ -103,14 +103,23 @@ class EditExpenseViewModel extends ChangeNotifier {
     try {
       final expenseRepo = await expenseRepositoryFuture;
 
+      // -------------------------
+      // Keep original Recorded By fields
+      // -------------------------
       final updatedExpense = ExpenseModel(
         id: expense.id,
-        accountId: expense.accountId,
         amount: double.parse(amountController.text.replaceAll(',', '')),
         category: selectedCategory!,
         description: descriptionController.text,
         receipt: expense.receipt,
         createdAt: selectedDate.toIso8601String(),
+        createdByFirstName: expense.createdByFirstName.isNotEmpty
+            ? expense.createdByFirstName
+            : 'Unknown',
+        createdByMiddleName: expense.createdByMiddleName,
+        createdByLastName: expense.createdByLastName.isNotEmpty
+            ? expense.createdByLastName
+            : 'Unknown',
       );
 
       await expenseRepo.updateExpense(updatedExpense);
@@ -158,18 +167,35 @@ class ExistingExpensesScreen extends ConsumerWidget {
               itemCount: vm.expenses.length,
               itemBuilder: (context, index) {
                 final exp = vm.expenses[index];
+
+                // -------------------------
+                // Build "Recorded By" text safely
+                // -------------------------
+                final recordedBy = [
+                  exp.createdByFirstName.isNotEmpty ? exp.createdByFirstName : 'Unknown',
+                  if (exp.createdByMiddleName != null && exp.createdByMiddleName!.isNotEmpty)
+                    exp.createdByMiddleName!,
+                  exp.createdByLastName.isNotEmpty ? exp.createdByLastName : 'Unknown',
+                ].join(' ');
+
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   child: ListTile(
-                    title: Text(exp.description),
-                    subtitle:
-                        Text('₱${exp.amount.toStringAsFixed(2)} • ${exp.category}'),
+                    title: Text(exp.description.isNotEmpty
+                        ? exp.description
+                        : 'Wala deskripsyon'),
+                    subtitle: Text(
+                        '₱${exp.amount.toStringAsFixed(2)} • ${exp.category}\nRecorded By: $recordedBy'),
+                    isThreeLine: true,
                     trailing: IconButton(
                       icon: const Icon(Icons.edit, color: AppColors.primary),
                       onPressed: () {
                         _showEditExpenseModal(context, ref, exp);
                       },
                     ),
+                    onTap: () {
+                      _showExpenseDetails(context, exp);
+                    },
                   ),
                 );
               },
@@ -204,14 +230,109 @@ class ExistingExpensesScreen extends ConsumerWidget {
       },
     );
   }
+
+  /// -------------------------
+  /// Gasto Details Modal
+  /// -------------------------
+  void _showExpenseDetails(BuildContext context, ExpenseModel expense) {
+    final recordedBy = [
+      expense.createdByFirstName.isNotEmpty ? expense.createdByFirstName : 'Unknown',
+      if (expense.createdByMiddleName != null && expense.createdByMiddleName!.isNotEmpty)
+        expense.createdByMiddleName!,
+      expense.createdByLastName.isNotEmpty ? expense.createdByLastName : 'Unknown',
+    ].join(' ');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.5,
+            minChildSize: 0.3,
+            maxChildSize: 0.8,
+            builder: (context, scrollController) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 50,
+                          height: 5,
+                          margin: const EdgeInsets.only(bottom: 15),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                      ),
+                      _detailRow("Amount", '₱${expense.amount.toStringAsFixed(2)}'),
+                      const SizedBox(height: 10),
+                      _detailRow(
+                        "Date",
+                        DateFormat('MMMM d, y').format(DateTime.parse(expense.createdAt)),
+                      ),
+                      const SizedBox(height: 10),
+                      _detailRow("Category", expense.category),
+                      const SizedBox(height: 10),
+                      _detailRow(
+                        "Note",
+                        expense.description.isNotEmpty ? expense.description : "Wala deskripsyon",
+                      ),
+                      const SizedBox(height: 10),
+                      _detailRow("Recorded By", recordedBy),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// -------------------------
+  /// Detail Row Widget
+  /// -------------------------
+  Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$label: ",
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// -------------------------
-/// EDIT MODAL CONTENT
+/// EDIT MODAL CONTENT (unchanged)
 /// -------------------------
 class _EditExpenseModalContent extends StatelessWidget {
   final EditExpenseViewModel vm;
-  const _EditExpenseModalContent({required this.vm}); // simpler if you never use key
+  const _EditExpenseModalContent({required this.vm});
 
   @override
   Widget build(BuildContext context) {
@@ -272,22 +393,6 @@ class _EditExpenseModalContent extends StatelessWidget {
                       initialDate: vm.selectedDate,
                       firstDate: DateTime(2020),
                       lastDate: DateTime(2100),
-                      builder: (context, child) {
-                        return Theme(
-                          data: Theme.of(context).copyWith(
-                            colorScheme: ColorScheme.light(
-                              primary: AppColors.primary,
-                              onPrimary: AppColors.textOnPrimary,
-                              onSurface: AppColors.textPrimary,
-                            ),
-                            textButtonTheme: TextButtonThemeData(
-                              style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.primary),
-                            ),
-                          ),
-                          child: child!,
-                        );
-                      },
                     );
                     if (picked != null) vm.setDate(picked);
                   },
@@ -396,13 +501,12 @@ class _EditExpenseModalContent extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              BorderSide(color: isError ? AppColors.error : AppColors.border, width: 1.2),
+          borderSide: BorderSide(
+              color: isError ? AppColors.error : AppColors.border, width: 1.2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              BorderSide(color: isError ? AppColors.error : AppColors.primary, width: 1.2),
+          borderSide: BorderSide(color: isError ? AppColors.error : AppColors.primary, width: 1.2),
         ),
       ),
       items: items

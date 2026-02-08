@@ -1,40 +1,24 @@
 import '../services/db_service.dart';
 import '../models/income_statement_model.dart';
-import 'account_repository.dart';
 
 class IncomeStatementRepository {
-  final AccountRepository accountRepository;
-
-  IncomeStatementRepository({required this.accountRepository});
+  IncomeStatementRepository();
 
   Future<IncomeStatementModel> fetchIncomeStatement({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     final db = await DBService.instance.database;
-    final accountId = await accountRepository.getAccountId();
 
-    // Convert startDate and endDate to the full day range
-    final start = DateTime(
-      startDate.year,
-      startDate.month,
-      startDate.day,
-      0,
-      0,
-      0,
-    );
+    // Convert to start/end of day
+    final start = DateTime(startDate.year, startDate.month, startDate.day, 0, 0, 0);
     final end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
-
-    // Convert to ISO8601 string for sqflite
     final startStr = start.toIso8601String();
     final endStr = end.toIso8601String();
 
-    double valueOf(List<Map<String, Object?>> r) {
-      return (r.first['total'] as num?)?.toDouble() ?? 0;
-    }
+    double valueOf(List<Map<String, Object?>> r) =>
+        (r.first['total'] as num?)?.toDouble() ?? 0;
 
-
-    // CATEGORY MAP FOR EXPENSES
     final categoryMap = {
       'kompra': ['Kumpra'], 
       'electricity': ['Tubig / Kuryente'],
@@ -43,7 +27,7 @@ class IncomeStatementRepository {
       'misc': ['Uban pa'],
     };
 
-    // Helper to get total expenses by category
+    // ---------------- EXPENSES ----------------
     Future<double> fetchExpenseByCategory(String key) async {
       final categories = categoryMap[key] ?? [key];
       final placeholders = List.filled(categories.length, '?').join(',');
@@ -51,47 +35,36 @@ class IncomeStatementRepository {
         '''
         SELECT SUM(amount) AS total
         FROM expenses
-        WHERE account_id = ? AND category IN ($placeholders) AND created_at BETWEEN ? AND ?
+        WHERE category IN ($placeholders) AND created_at BETWEEN ? AND ?
         ''',
-        [accountId, ...categories, startStr, endStr],
+        [...categories, startStr, endStr],
       );
       return valueOf(result);
     }
 
-    // ----------------------
-    // SALES
-    // ----------------------
+    // ---------------- SALES ----------------
     final salesResult = await db.rawQuery(
       '''
       SELECT SUM(si.unit_price * si.quantity) AS total
       FROM sale_item si
       JOIN sales s ON si.sale_id = s.id
-      WHERE s.account_id = ? AND s.created_at BETWEEN ? AND ?
+      WHERE s.created_at BETWEEN ? AND ?
       ''',
-      [accountId, startStr, endStr],
+      [startStr, endStr],
     );
 
     final sales = valueOf(salesResult);
-    final merchandiseSales = sales; // assuming all sales are merchandise
+    final merchandiseSales = sales;
 
-    // ----------------------
-    // COST OF GOODS SOLD (KOMPRA)
-    // ----------------------
+    // ---------------- EXPENSES ----------------
     final kompra = await fetchExpenseByCategory('kompra');
-
-    // ----------------------
-    // OTHER EXPENSES
-    // ----------------------
     final electricity = await fetchExpenseByCategory('electricity');
     final rentPayment = await fetchExpenseByCategory('rent');
     final miscExpenses = await fetchExpenseByCategory('misc');
     final transportation = await fetchExpenseByCategory('transportation');
 
-    // ----------------------
-    // NET INCOME
-    // ----------------------
-    final totalExpenses =
-        kompra + electricity + rentPayment + miscExpenses + transportation;
+    // ---------------- NET INCOME ----------------
+    final totalExpenses = kompra + electricity + rentPayment + miscExpenses + transportation;
     final netIncome = sales - totalExpenses;
 
     return IncomeStatementModel(

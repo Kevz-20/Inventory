@@ -142,24 +142,27 @@ class _AddUtangPageState extends State<AddUtangPage> {
         final finalDueDate = addMonths(firstDueDate, months);
 
       await db.insert('payable', {
-        'account_id': 1,
-        'supplier_name': 'Owner',
-        'item': itemController.text,
-        'original_amount': total,
-        'remaining_amount': remaining,
-        'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate), // use variable
-        'note': notesController.text,
-        'is_paid': 0,
-        'has_plan': 1,
-        'plan_months': months,
-        'plan_monthly': monthly,
-        'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
-        'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
-        'is_asset': 1,
-        'asset_category': 'Installment Purchase',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+          'supplier_name': 'Owner',
+          'item': itemController.text,
+          'original_amount': total,
+          'remaining_amount': remaining,
+          'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate),
+          'note': notesController.text,
+          'is_paid': 0,
+          'has_plan': 1,
+          'plan_months': months,
+          'plan_monthly': monthly,
+          'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
+          'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
+          'is_asset': 1,
+          'asset_category': 'Installment Purchase',
+          'created_by_first_name': 'Kevin', // Replace with actual user
+          'created_by_middle_name': 'R.',
+          'created_by_last_name': 'Mejares',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
 
         // Insert downpayment into owner_installments
         if (down > 0) {
@@ -211,24 +214,27 @@ class _AddUtangPageState extends State<AddUtangPage> {
         }
 
         await db.insert('payable', {
-          'account_id': 1,
-          'supplier_name': 'Owner',
-          'item': itemController.text,
-          'original_amount': total,
-          'remaining_amount': 0,
-          'due_date': datePaid,
-          'note': notesController.text,
-          'is_paid': 1,
-          'has_plan': 0,
-          'plan_months': null,
-          'plan_monthly': null,
-          'first_due_date': null,
-          'next_due_date': null,
-          'is_asset': 1,
-          'asset_category': 'Direct Purchase',
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
+            'supplier_name': 'Owner',
+            'item': itemController.text,
+            'original_amount': total,
+            'remaining_amount': 0,
+            'due_date': datePaid,
+            'note': notesController.text,
+            'is_paid': 1,
+            'has_plan': 0,
+            'plan_months': null,
+            'plan_monthly': null,
+            'first_due_date': null,
+            'next_due_date': null,
+            'is_asset': 1,
+            'asset_category': 'Direct Purchase',
+            'created_by_first_name': 'Kevin', // Replace with actual user
+            'created_by_middle_name': 'R.',
+            'created_by_last_name': 'Mejares',
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+
 
         // Deduct from Cash on Hand
         if (total > 0) {

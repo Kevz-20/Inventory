@@ -7,21 +7,18 @@ import '../services/db_service.dart';
 
 final createAccountProvider =
     ChangeNotifierProvider.autoDispose<CreateAccountViewModel>((ref) {
-      final dbService = DBService.instance;
-      final repository = CreateAccountRepository(dbService);
-      return CreateAccountViewModel(repository);
-    });
+  final dbService = DBService.instance;
+  final repository = CreateAccountRepository(dbService);
+  return CreateAccountViewModel(repository);
+});
 
 class CreateAccountViewModel extends ChangeNotifier {
   final CreateAccountRepository _repository;
 
   CreateAccountViewModel(this._repository) {
-    loadSecurityQuestions(); // Load security questions from DB
+    loadSecurityQuestions();
 
-    // Real-time validation for each field
-    associationNameController.addListener(() {
-      if (associationError != null) _validateAssociation();
-    });
+    // Real-time validation listeners
     mobileController.addListener(() {
       if (mobileError != null) _validateMobile();
     });
@@ -31,41 +28,56 @@ class CreateAccountViewModel extends ChangeNotifier {
     confirmPinController.addListener(() {
       if (confirmPinError != null) _validatePin();
     });
+    firstNameController.addListener(() {
+      if (firstNameError != null) _validateNameFields();
+    });
+    middleNameController.addListener(() {
+      if (middleNameError != null) _validateNameFields();
+    });
+    lastNameController.addListener(() {
+      if (lastNameError != null) _validateNameFields();
+    });
     answerController.addListener(() {
       if (answerError != null) _validateAnswer();
     });
   }
 
+  // ================== CONTROLLERS ==================
   final formKey = GlobalKey<FormState>();
 
-  // Controllers
-  final associationNameController = TextEditingController();
   final mobileController = TextEditingController();
   final pinController = TextEditingController();
   final confirmPinController = TextEditingController();
+
+  final firstNameController = TextEditingController();
+  final middleNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+
   final answerController = TextEditingController();
 
-  // Dropdown
+  // ================== DROPDOWN ==================
   String? selectedQuestion;
   List<String> questions = [];
 
-  // State
-  bool isLoading = false; // For create account button
-  bool submitted = false; // Form submitted flag
-  bool isLoadingQuestions = true; // Loading questions
-  bool isSuccessMessage = false; // To differentiate success/error message
+  // ================== STATE ==================
+  bool isLoading = false;
+  bool submitted = false;
+  bool isLoadingQuestions = true;
+  bool isSuccessMessage = false;
 
-  // Field errors
-  String? associationError;
+  // ================== FIELD ERRORS ==================
   String? mobileError;
   String? pinError;
   String? confirmPinError;
+  String? firstNameError;
+  String? middleNameError;
+  String? lastNameError;
   String? answerError;
   String? questionError;
 
-  String? errorMessage; // General response message
+  String? errorMessage;
 
-  // Load security questions
+  // ================== SECURITY QUESTIONS ==================
   Future<void> loadSecurityQuestions() async {
     setLoading(true);
     questions = await _repository.getSecurityQuestions();
@@ -73,60 +85,44 @@ class CreateAccountViewModel extends ChangeNotifier {
     setLoading(false);
   }
 
-  // Dropdown selection
   void setSelectedQuestion(String? value) {
     selectedQuestion = value;
     questionError = null;
     notifyListeners();
   }
 
-  // Create account
+  // ================== CREATE ACCOUNT ==================
   Future<bool> createAccount() async {
-    debugPrint('DEBUG: createAccount() called'); // debug entry point
     submitted = true;
-    if (!_validateForm()) {
-      debugPrint('DEBUG: Form validation failed'); // debug validation failure
-      return false;
-    }
+    if (!_validateForm()) return false;
 
     setLoading(true);
     errorMessage = null;
 
     try {
       final account = Account(
-        associationName: associationNameController.text.trim(),
         mobileNumber: mobileController.text.trim(),
         pin: pinController.text.trim(),
+        firstName: firstNameController.text.trim(),
+        middleName: middleNameController.text.trim(),
+        lastName: lastNameController.text.trim(),
         securityQuestionId: selectedQuestion != null
             ? questions.indexOf(selectedQuestion!) + 1
             : null,
         securityAnswer: answerController.text.trim(),
       );
 
-      debugPrint(
-        'DEBUG: Account object created -> $account',
-      ); // debug account data
-
       await _repository.createAccount(account);
-      debugPrint(
-        'DEBUG: Account inserted into repository',
-      ); // debug after insertion
 
-      // Save the created mobile number locally
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('mobileNumber', account.mobileNumber);
-      debugPrint(
-        'DEBUG: Mobile number saved locally -> ${account.mobileNumber}',
-      );
+      await prefs.setString('fullName',
+          '${account.firstName} ${account.middleName} ${account.lastName}');
 
       clearFields();
       showResponseMessage("Account created successfully!", success: true);
-      debugPrint(
-        'DEBUG: Account creation completed successfully',
-      ); // debug success
       return true;
     } catch (e) {
-      debugPrint('DEBUG: Exception occurred -> $e'); // debug exception
       showResponseMessage(
         e.toString().contains('Mobile number already exists')
             ? 'Mobile number already exists'
@@ -135,23 +131,24 @@ class CreateAccountViewModel extends ChangeNotifier {
       return false;
     } finally {
       setLoading(false);
-      debugPrint('DEBUG: setLoading(false) called'); // debug finally block
     }
   }
 
-  // Validate all fields
+  // ================== VALIDATION ==================
   bool _validateForm() {
-    _validateAssociation();
     _validateMobile();
     _validatePin();
+    _validateNameFields();
     _validateAnswer();
     _validateQuestion();
 
     bool valid =
-        associationError == null &&
         mobileError == null &&
         pinError == null &&
         confirmPinError == null &&
+        firstNameError == null &&
+        middleNameError == null &&
+        lastNameError == null &&
         answerError == null &&
         questionError == null;
 
@@ -159,15 +156,6 @@ class CreateAccountViewModel extends ChangeNotifier {
     return valid;
   }
 
-  // Individual field validation
-  void _validateAssociation() {
-    associationError = associationNameController.text.isEmpty
-        ? 'Please enter association name'
-        : null;
-    notifyListeners();
-  }
-
-  // Check mobile number
   void _validateMobile() {
     if (mobileController.text.isEmpty) {
       mobileError = 'Please enter mobile number';
@@ -180,7 +168,6 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Check PIN
   void _validatePin() {
     if (pinController.text.isEmpty) {
       pinError = 'Please enter PIN';
@@ -201,15 +188,22 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Check answer
-  void _validateAnswer() {
-    answerError = answerController.text.isEmpty
-        ? 'Please enter your answer'
-        : null;
+  void _validateNameFields() {
+    firstNameError =
+        firstNameController.text.isEmpty ? 'Please enter first name' : null;
+    middleNameError =
+        middleNameController.text.isEmpty ? 'Please enter middle name' : null;
+    lastNameError =
+        lastNameController.text.isEmpty ? 'Please enter last name' : null;
     notifyListeners();
   }
 
-  // Check question
+  void _validateAnswer() {
+    answerError =
+        answerController.text.isEmpty ? 'Please enter your answer' : null;
+    notifyListeners();
+  }
+
   void _validateQuestion() {
     questionError = (selectedQuestion == null || selectedQuestion!.isEmpty)
         ? 'Please select a question'
@@ -217,28 +211,25 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Set loading state
+  // ================== HELPERS ==================
   void setLoading(bool value) {
     isLoading = value;
     notifyListeners();
   }
 
-  // Clear specific field error on input
   void clearFieldError(TextEditingController controller) {
-    if (controller == associationNameController) associationError = null;
     if (controller == mobileController) mobileError = null;
     if (controller == pinController) pinError = null;
     if (controller == confirmPinController) confirmPinError = null;
+    if (controller == firstNameController) firstNameError = null;
+    if (controller == middleNameController) middleNameError = null;
+    if (controller == lastNameController) lastNameError = null;
     if (controller == answerController) answerError = null;
     notifyListeners();
   }
 
-  // Show temporary message (error or success)
-  void showResponseMessage(
-    String message, {
-    bool success = false,
-    int durationSeconds = 3,
-  }) {
+  void showResponseMessage(String message,
+      {bool success = false, int durationSeconds = 3}) {
     errorMessage = message;
     isSuccessMessage = success;
     notifyListeners();
@@ -250,19 +241,22 @@ class CreateAccountViewModel extends ChangeNotifier {
     });
   }
 
-  // Clear all fields and errors
   void clearFields() {
-    associationNameController.clear();
     mobileController.clear();
     pinController.clear();
     confirmPinController.clear();
+    firstNameController.clear();
+    middleNameController.clear();
+    lastNameController.clear();
     answerController.clear();
     selectedQuestion = null;
 
-    associationError = null;
     mobileError = null;
     pinError = null;
     confirmPinError = null;
+    firstNameError = null;
+    middleNameError = null;
+    lastNameError = null;
     answerError = null;
     questionError = null;
     errorMessage = null;

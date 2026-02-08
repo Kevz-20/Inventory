@@ -6,24 +6,30 @@ import 'package:intl/intl.dart';
 import '../models/expense_model.dart';
 import '../repositories/expense_repository.dart';
 import '../repositories/capital_management_repository.dart';
+import '../repositories/account_repository.dart'; // ✅ import AccountRepository
 import '../providers/database_provider.dart';
+import '../models/current_user.dart'; // ✅ CurrentUser import
 
 final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((ref) {
   final repoFuture = ref.watch(expenseRepositoryProvider.future);
   final dbFuture = ref.watch(databaseProvider.future);
+  final accountRepo = AccountRepository(); // ✅ 
   return ExpensesViewModel(
     expenseRepositoryFuture: repoFuture,
     databaseFuture: dbFuture,
+    accountRepository: accountRepo, // ✅ pass it
   );
 });
 
 class ExpensesViewModel extends ChangeNotifier {
   final Future<ExpenseRepository> expenseRepositoryFuture;
   final Future databaseFuture;
+  final AccountRepository accountRepository; // ✅ added
 
   ExpensesViewModel({
     required this.expenseRepositoryFuture,
     required this.databaseFuture,
+    required this.accountRepository, // ✅ added
   }) {
     loadExpenses();
   }
@@ -97,19 +103,22 @@ class ExpensesViewModel extends ChangeNotifier {
   }
 
   // ------------------------
-  // LOAD EXPENSES
+  // LOAD EXPENSES (shared DB)
   // ------------------------
   Future<void> loadExpenses() async {
     try {
       final repo = await expenseRepositoryFuture;
-      final accountId = await repo.accountRepository.getAccountId();
-      _expenses = await repo.fetchExpensesByAccount(accountId);
+      _expenses = await repo.fetchAllExpenses(); // <-- show all users
       notifyListeners();
     } catch (_) {
       _expenses = [];
       notifyListeners();
     }
   }
+
+  
+
+  
 
   // ------------------------
   // MESSAGE HANDLER
@@ -123,75 +132,86 @@ class ExpensesViewModel extends ChangeNotifier {
     notifyListeners();
 
     Future.delayed(Duration(seconds: durationSeconds), () {
-      if (isError) {
-        errorMessage = null;
-      } else {
-        successMessage = null;
+      try {
+        if (isError) {
+          errorMessage = null;
+        } else {
+          successMessage = null;
+        }
+        notifyListeners();
+      } catch (_) {
+        // Ignore if view model is disposed
       }
-      notifyListeners();
     });
   }
 
   // ------------------------
   // MAIN SAVE FUNCTION
   // ------------------------
-  Future<bool> save() async {
-    triggerValidation();
+  Future<bool> save({
+  required String createdByFirstName,
+  String? createdByMiddleName,
+  required String createdByLastName,
+}) async {
+  triggerValidation();
 
-    if (!validate()) {
-      _showMessage("Please fill out all fields", isError: true);
-      return false;
+  if (!validate()) {
+    _showMessage("Please fill out all fields", isError: true);
+    return false;
+  }
+
+  isLoading = true;
+  successMessage = null;
+  errorMessage = null;
+  notifyListeners();
+
+  try {
+    final expenseRepo = await expenseRepositoryFuture;
+    final db = await databaseFuture;
+    final capitalRepo = CapitalManagementRepository(db);
+
+    final amount = double.parse(amountController.text);
+
+    await capitalRepo.deductCash(amount: amount);
+
+    final expense = ExpenseModel(
+      amount: amount,
+      category: selectedCategory!,
+      description: descriptionController.text,
+      receipt: receiptImage?.path,
+      createdAt: selectedDate.toIso8601String(),
+      createdByFirstName: CurrentUser.firstName ?? createdByFirstName,
+      createdByMiddleName: CurrentUser.middleName ?? createdByMiddleName,
+      createdByLastName: CurrentUser.lastName ?? createdByLastName,
+    );
+
+    await expenseRepo.addExpense(expense);
+
+    // ✅ Safe refresh of expenses
+    try {
+      _expenses = await expenseRepo.fetchAllExpenses();
+    } catch (_) {
+      // Ignore refresh errors; expense is still saved
     }
 
-    isLoading = true;
-    successMessage = null;
-    errorMessage = null;
+    _showMessage("Expense saved successfully");
+    resetForm();
+
+    isLoading = false;
+    return true;
+  } catch (e) {
+    isLoading = false;
     notifyListeners();
 
-    try {
-      final expenseRepo = await expenseRepositoryFuture;
-      final db = await databaseFuture;
-      final capitalRepo = CapitalManagementRepository(db);
-
-      final accountId = await expenseRepo.accountRepository.getAccountId();
-      final amount = double.parse(amountController.text);
-
-      // Deduct cash first
-      await capitalRepo.deductCash(accountId: accountId, amount: amount);
-
-      // Save expense
-      final expense = ExpenseModel(
-        accountId: accountId,
-        amount: amount,
-        category: selectedCategory!,
-        description: descriptionController.text,
-        receipt: receiptImage?.path,
-        createdAt: selectedDate.toIso8601String(),
-      );
-
-      await expenseRepo.addExpense(expense);
-
-      _showMessage("Expense saved successfully");
-      resetForm();
-
-      // Refresh list after adding
-      await loadExpenses();
-
-      isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      if (e.toString().contains('Insufficient cash')) {
-        _showMessage('Insufficient cash on hand', isError: true);
-      } else {
-        _showMessage('Something went wrong. Please try again.', isError: true);
-      }
-
-      isLoading = false;
-      notifyListeners();
-      return false;
+    if (e.toString().contains('Insufficient cash')) {
+      _showMessage('Insufficient cash on hand', isError: true);
+    } else {
+      _showMessage('Something went wrong. Please try again.', isError: true);
     }
+
+    return false;
   }
+}
 
   // ------------------------
   // RESET FORM
@@ -204,12 +224,5 @@ class ExpensesViewModel extends ChangeNotifier {
     selectedDate = DateTime.now();
     showValidationErrors = false;
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    amountController.dispose();
-    descriptionController.dispose();
-    super.dispose();
   }
 }

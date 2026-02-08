@@ -10,7 +10,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 
 import '../models/income_statement_model.dart';
-import '../repositories/account_repository.dart';
 import '../repositories/income_statement_repository.dart';
 import '../providers/database_provider.dart';
 
@@ -26,20 +25,14 @@ final incomeStatementViewModelProvider =
 
       return dbAsync.when(
         data: (_) {
-          final accountRepository = AccountRepository();
-          final repository = IncomeStatementRepository(
-            accountRepository: accountRepository,
-          );
+          final repository = IncomeStatementRepository(); // NO AccountRepository
           return IncomeStatementViewModel(repository);
         },
         loading: () {
-          final accountRepository = AccountRepository();
-          final repository = IncomeStatementRepository(
-            accountRepository: accountRepository,
-          );
+          final repository = IncomeStatementRepository(); // NO AccountRepository
           return IncomeStatementViewModel(repository);
         },
-        error: (_, _) => throw Exception('Database initialization failed'),
+        error: (_, __) => throw Exception('Database initialization failed'),
       );
     });
 

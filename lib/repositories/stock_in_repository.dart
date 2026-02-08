@@ -6,10 +6,6 @@ class StockInRepository {
   final Database db;
   StockInRepository(this.db);
 
-  // Account cache
-  int? cachedAccountId;
-  int? cachedMobileNumber;
-
   // Get current timestamp
   String _now() => DateTime.now().toIso8601String();
 
@@ -19,40 +15,11 @@ class StockInRepository {
     return prefs.getString('mobileNumber');
   }
 
-  // Get account id
-  Future<int> getAccountId() async {
-    final mobileNumber = await getMobileNumber();
-    if (mobileNumber == null) throw Exception('Account not found');
-
-    if (cachedAccountId != null &&
-        cachedMobileNumber != mobileNumber.hashCode) {
-      cachedAccountId = null;
-    }
-
-    if (cachedAccountId != null) return cachedAccountId!;
-
-    final result = await db.query(
-      'account',
-      columns: ['id'],
-      where: 'mobile_number = ?',
-      whereArgs: [mobileNumber],
-      limit: 1,
-    );
-
-    if (result.isEmpty) throw Exception('Account not found');
-
-    cachedAccountId = result.first['id'] as int;
-    cachedMobileNumber = mobileNumber.hashCode;
-    return cachedAccountId!;
-  }
-
   // Add product
   Future<int> addProduct(ProductModel product) async {
-    final accountId = await getAccountId();
     final now = _now();
 
     final data = {
-      'account_id': accountId,
       'name': product.name,
       'category': product.category,
       'purchase_price': product.purchasePrice,
@@ -61,6 +28,10 @@ class StockInRepository {
       'image': product.image,
       'created_at': now,
       'updated_at': now,
+      // Optional accountability fields:
+      // 'created_by_first_name': 'John',
+      // 'created_by_middle_name': 'D.',
+      // 'created_by_last_name': 'Doe',
     };
 
     return await db.insert(
@@ -72,12 +43,8 @@ class StockInRepository {
 
   // Get products
   Future<List<ProductModel>> getProducts() async {
-    final accountId = await getAccountId();
-
     final List<Map<String, dynamic>> maps = await db.query(
       'product',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
       orderBy: 'created_at DESC',
     );
 
@@ -86,7 +53,6 @@ class StockInRepository {
 
   // Update product
   Future<int> updateProduct(ProductModel product) async {
-    final accountId = await getAccountId();
     final now = _now();
 
     final data = {
@@ -102,31 +68,27 @@ class StockInRepository {
     return await db.update(
       'product',
       data,
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [product.id, accountId],
+      where: 'id = ?',
+      whereArgs: [product.id],
     );
   }
 
   // Delete product
   Future<int> deleteProduct(int productId) async {
-    final accountId = await getAccountId();
-
     return await db.delete(
       'product',
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [productId, accountId],
+      where: 'id = ?',
+      whereArgs: [productId],
     );
   }
 
   // Check if product name already exists
   Future<bool> isDuplicateProduct(String name) async {
-    final accountId = await getAccountId();
-
     final result = await db.query(
       'product',
       columns: ['id'],
-      where: 'account_id = ? AND LOWER(name) = ?',
-      whereArgs: [accountId, name.toLowerCase()],
+      where: 'LOWER(name) = ?',
+      whereArgs: [name.toLowerCase()],
       limit: 1,
     );
 
@@ -135,12 +97,8 @@ class StockInRepository {
 
   // Load all products for autocomplete
   Future<List<ProductModel>> loadAllProducts() async {
-    final accountId = await getAccountId();
-
     final result = await db.query(
       'product',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
       orderBy: 'name ASC',
     );
 
@@ -149,18 +107,9 @@ class StockInRepository {
 
   // Delete all products
   Future<int> deleteAllProducts() async {
-    final accountId = await getAccountId();
-
-    return await db.delete(
-      'product',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-    );
+    return await db.delete('product');
   }
 
-  // Clear cache
-  void clearCache() {
-    cachedAccountId = null;
-    cachedMobileNumber = null;
-  }
+  // Clear cache (no longer needed for accountId)
+  void clearCache() {}
 }

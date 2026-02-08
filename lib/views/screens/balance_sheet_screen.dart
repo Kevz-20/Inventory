@@ -19,9 +19,6 @@ class BalanceSheetScreen extends ConsumerStatefulWidget {
 class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
   bool _isLoading = true;
 
-  // Example: select multiple account IDs
-  List<int> selectedAccounts = [1]; // replace with real IDs from user selection
-
   @override
   void initState() {
     super.initState();
@@ -30,7 +27,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
 
   Future<void> _loadBalanceSheet() async {
     final vm = ref.read(balanceSheetProvider);
-    await vm.loadBalanceSheet(accountIds: selectedAccounts);
+    await vm.loadBalanceSheet(); // ✅ no accountIds, show all transactions
     setState(() {
       _isLoading = false;
     });
@@ -86,7 +83,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Assets Section (Cash on Hand & Accounts Receivable & Fixed Assets)
+            // Assets Section
             _buildFinancialSection(
               title: 'Assets',
               items: vm.assets,
@@ -165,7 +162,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
       _isLoading = true;
     });
     final vm = ref.read(balanceSheetProvider);
-    await vm.loadBalanceSheet(accountIds: selectedAccounts);
+    await vm.loadBalanceSheet(); // ✅ no accountIds
     setState(() {
       _isLoading = false;
     });

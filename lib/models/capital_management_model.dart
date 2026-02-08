@@ -36,13 +36,34 @@ class CapitalManagementModel {
   // Create model from DB map
   factory CapitalManagementModel.fromMap(Map<String, dynamic> map) {
     return CapitalManagementModel(
-      id: map['id'],
-      accountId: map['account_id'],
-      cashOnHand: map['cash_on_hand'],
-      capital: map['capital'],
-      bankCash: map['bank_cash'],
-      remarks: map['remarks'],
+      id: map['id'] as int?,
+      accountId: map['account_id'] as int,
+      cashOnHand: (map['cash_on_hand'] as num).toDouble(),
+      capital: (map['capital'] as num).toDouble(),
+      bankCash: (map['bank_cash'] as num).toDouble(),
+      remarks: map['remarks'] as String?,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+    );
+  }
+
+  /// ✅ copyWith method to update fields easily
+  CapitalManagementModel copyWith({
+    int? id,
+    int? accountId,
+    double? cashOnHand,
+    double? capital,
+    double? bankCash,
+    String? remarks,
+    DateTime? createdAt,
+  }) {
+    return CapitalManagementModel(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      cashOnHand: cashOnHand ?? this.cashOnHand,
+      capital: capital ?? this.capital,
+      bankCash: bankCash ?? this.bankCash,
+      remarks: remarks ?? this.remarks,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

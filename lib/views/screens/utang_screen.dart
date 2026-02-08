@@ -7,6 +7,7 @@ import '../../repositories/payable_repository.dart';
 import '../widgets/header.dart';
 import '../../services/db_service.dart';
 
+
 // ============================================================
 // MODEL
 // ============================================================
@@ -119,13 +120,13 @@ class _UtangScreenState extends State<UtangScreen> {
   // FETCH OWNER PAYABLES FROM DB
   // ============================================================
   Future<void> fetchOwnerPayables() async {
-    final payables = await PayableRepository().getAllPayables();
+  final payables = await PayableRepository().getAllPayables();
 
-    setState(() {
-      ownerPayables = payables;
-      applyOwnerFilter(selectedFilter); // apply default filter
-    });
-  }
+  setState(() {
+    ownerPayables = payables;
+    applyOwnerFilter(selectedFilter);
+  });
+}
 
   // ============================================================
   // SHOW OWNER UTANG DETAILS MODAL

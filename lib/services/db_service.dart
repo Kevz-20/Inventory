@@ -83,8 +83,10 @@ class DBService {
     await db.execute('''
       CREATE TABLE account (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        first_name TEXT NOT NULL,
+        middle_name TEXT,
+        last_name TEXT,
         mobile_number TEXT UNIQUE NOT NULL,
-        association_name TEXT,
         pin TEXT NOT NULL,
         security_question_id INTEGER,
         security_answer TEXT,
@@ -147,7 +149,11 @@ class DBService {
         bank_cash REAL,
         remarks TEXT,
         created_at TEXT,
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
         FOREIGN KEY (account_id) REFERENCES account(id)
+
       )
     ''');
 
@@ -155,8 +161,6 @@ class DBService {
     await db.execute('''
       CREATE TABLE customer (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER NOT NULL,
-
         first_name TEXT NOT NULL,
         middle_name TEXT,
         last_name TEXT,
@@ -166,8 +170,8 @@ class DBService {
         landmark TEXT,
         credit_limit REAL DEFAULT 1000,
         available_credit REAL DEFAULT 1000,
-
-        FOREIGN KEY (account_id) REFERENCES account(id)
+        created_at TEXT,
+        updated_at TEXT
       )
     ''');
 
@@ -175,7 +179,6 @@ class DBService {
     await db.execute('''
       CREATE TABLE product (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER,
         name TEXT,
         category TEXT,
         purchase_price REAL,
@@ -183,8 +186,7 @@ class DBService {
         quantity INTEGER,
         image TEXT,
         created_at TEXT,
-        updated_at TEXT,
-        FOREIGN KEY (account_id) REFERENCES account(id)
+        updated_at TEXT
       )
     ''');
 
@@ -206,12 +208,13 @@ class DBService {
     await db.execute('''
       CREATE TABLE sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER NOT NULL,
         customer_id INTEGER,
         sale_type TEXT NOT NULL,
         total INTEGER NOT NULL,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (account_id) REFERENCES account(id),
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
@@ -309,6 +312,9 @@ class DBService {
         unit_price INTEGER NOT NULL,
         quantity INTEGER NOT NULL,
         subtotal INTEGER NOT NULL,
+        created_by_first_name TEXT,   -- new
+        created_by_middle_name TEXT,  -- new
+        created_by_last_name TEXT,    -- new
         FOREIGN KEY (sale_id) REFERENCES sales(id),
         FOREIGN KEY (product_id) REFERENCES product(id)
       )
@@ -331,18 +337,19 @@ class DBService {
 
     // Sales cash
     await db.execute('''
-      CREATE TABLE sales_cash (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER,
-        product_id INTEGER,
-        amount REAL,
-        quantity INTEGER,
-        date TEXT,
-        created_at TEXT,
-        FOREIGN KEY (account_id) REFERENCES account (id),
-        FOREIGN KEY (product_id) REFERENCES product (id)
-      )
-    ''');
+        CREATE TABLE sales_cash (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          product_id INTEGER,
+          amount REAL,
+          quantity INTEGER,
+          date TEXT,
+          created_at TEXT,
+          created_by_first_name TEXT,
+          created_by_middle_name TEXT,
+          created_by_last_name TEXT,
+          FOREIGN KEY (product_id) REFERENCES product (id)
+        )
+      ''');
 
     // Sales credit
     await db.execute('''
@@ -359,6 +366,9 @@ class DBService {
         paid_date TEXT,
         due_date TEXT,
         created_at TEXT,
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
         FOREIGN KEY (account_id) REFERENCES account (id),
         FOREIGN KEY (sale_id) REFERENCES sales (id),
         FOREIGN KEY (product_id) REFERENCES product (id),
@@ -367,11 +377,11 @@ class DBService {
       )
     ''');
 
+
     // Payable
     await db.execute('''
       CREATE TABLE payable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER,
         supplier_name TEXT,
         item TEXT,
         original_amount REAL,
@@ -386,9 +396,11 @@ class DBService {
         next_due_date TEXT,
         is_asset INTEGER,
         asset_category TEXT,
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
         created_at TEXT,
-        updated_at TEXT,
-        FOREIGN KEY (account_id) REFERENCES account (id)
+        updated_at TEXT
       )
     ''');
 
@@ -424,13 +436,14 @@ class DBService {
     await db.execute('''
       CREATE TABLE expenses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER,
         amount REAL,
         category TEXT,
         description TEXT,
         receipt TEXT,
-        created_at TEXT,
-        FOREIGN KEY (account_id) REFERENCES account (id)
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
+        created_at TEXT
       )
     ''');
 

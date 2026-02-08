@@ -24,7 +24,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     settingsVM = SettingsViewModel(AccountRepository());
-    settingsVM.loadAssociationName();
+    settingsVM.loadFullName(); // Load full name of current account
   }
 
   @override
@@ -45,44 +45,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           /// PROFILE HEADER
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundImage: account?.profileImage != null
-                      ? FileImage(File(account!.profileImage!))
-                      : null,
-                  backgroundColor: AppColors.primary,
-                  child: account?.profileImage == null
-                      ? const Icon(Icons.person, color: Colors.white, size: 32)
-                      : null,
+          AnimatedBuilder(
+            animation: settingsVM,
+            builder: (_, __) {
+              // Show loading indicator if fullName not yet loaded
+              final isLoading = settingsVM.isLoading;
+              final nameToShow = isLoading
+                  ? 'Loading...'
+                  : settingsVM.fullName ?? '—'; // <-- updated
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      account?.associationName ?? '—',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundImage: account?.profileImage != null
+                          ? FileImage(File(account!.profileImage!))
+                          : null,
+                      backgroundColor: AppColors.primary,
+                      child: account?.profileImage == null
+                          ? const Icon(Icons.person,
+                              color: Colors.white, size: 32)
+                          : null,
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      "Association",
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nameToShow,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          "Account",
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
 
           const SizedBox(height: 20),
@@ -123,16 +135,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _sectionTitle(String title) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: Colors.grey,
-      ),
-    ),
-  );
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Colors.grey,
+          ),
+        ),
+      );
 
   Widget _settingsTile({
     required String title,
@@ -140,26 +152,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     VoidCallback? onTap,
     Color? textColor,
     Color? iconColor,
-  }) => Container(
-    margin: const EdgeInsets.only(bottom: 4),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: ListTile(
-      leading: Icon(
-        icon,
-        color: iconColor ?? const Color.fromARGB(255, 1, 37, 10),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: textColor ?? Colors.black87,
+  }) =>
+      Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
         ),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: onTap,
-    ),
-  );
+        child: ListTile(
+          leading: Icon(
+            icon,
+            color: iconColor ?? const Color.fromARGB(255, 1, 37, 10),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: textColor ?? Colors.black87,
+            ),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: onTap,
+        ),
+      );
 }

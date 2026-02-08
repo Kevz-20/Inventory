@@ -43,10 +43,16 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveMobileNumber(String number) async {
+  Future<void> saveMobileNumber(String number, {WidgetRef? ref}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('mobileNumber', number);
     mobileNumber = number;
+
+    // ⚡ Update the current mobile number provider so other screens react
+    if (ref != null) {
+      ref.read(currentMobileNumberProvider.notifier).state = number;
+    }
+
     notifyListeners();
   }
 
@@ -109,9 +115,8 @@ class LoginViewModel extends ChangeNotifier {
       shakePin = false; // reset error state
       notifyListeners();
 
-      await saveMobileNumber(account.mobileNumber);
-      ref.read(currentMobileNumberProvider.notifier).state =
-          account.mobileNumber;
+      // ⚡ Save mobile number and update provider
+      await saveMobileNumber(account.mobileNumber, ref: ref);
 
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
@@ -159,7 +164,7 @@ class LoginViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> changeMobileNumber(BuildContext context) async {
+  Future<void> changeMobileNumber(BuildContext context, {WidgetRef? ref}) async {
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
@@ -189,6 +194,6 @@ class LoginViewModel extends ChangeNotifier {
       ),
     );
 
-    if (result != null) await saveMobileNumber(result);
+    if (result != null) await saveMobileNumber(result, ref: ref);
   }
 }

@@ -8,24 +8,52 @@ class CapitalManagementRepository {
   final AccountRepository accountRepository;
 
   CapitalManagementRepository(this.database)
-    : accountRepository = AccountRepository();
+      : accountRepository = AccountRepository();
 
-  // Insert new capital record
+  // ---------------- INSERT NEW CAPITAL ----------------
   Future<int> insertCapital(CapitalManagementModel model) async {
-    final accountId = await accountRepository.getAccountId();
+    final accountId = await accountRepository.getAccountId(); // for accountability
     final map = model.toMap();
     map['account_id'] = accountId;
+    map['created_at'] = model.createdAt.toIso8601String();
+
     debugPrint('>> Inserting capital: $map');
     return await database.insert('capital_management', map);
   }
 
-  // Get all capital records
+  // ---------------- GET ALL CAPITAL RECORDS ----------------
   Future<List<CapitalManagementModel>> getAllCapital() async {
-    final result = await database.query('capital_management');
+    final result = await database.query(
+      'capital_management',
+      orderBy: 'id ASC',
+    );
+
     return result.map((e) => CapitalManagementModel.fromMap(e)).toList();
   }
 
-  // Update capital record
+  // ---------------- GET LATEST CAPITAL RECORD ----------------
+  Future<CapitalManagementModel?> getLatestCapital({int? accountId}) async {
+    String? whereClause;
+    List<dynamic>? whereArgs;
+
+    if (accountId != null) {
+      whereClause = 'account_id = ?';
+      whereArgs = [accountId];
+    }
+
+    final result = await database.query(
+      'capital_management',
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'id DESC',
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+    return CapitalManagementModel.fromMap(result.first);
+  }
+
+  // ---------------- UPDATE CAPITAL RECORD ----------------
   Future<int> updateCapital(CapitalManagementModel model) async {
     if (model.id == null) {
       throw Exception('Cannot update a record without ID');
@@ -38,7 +66,7 @@ class CapitalManagementRepository {
     );
   }
 
-  // Delete capital record
+  // ---------------- DELETE CAPITAL RECORD ----------------
   Future<int> deleteCapital(int id) async {
     return await database.delete(
       'capital_management',
@@ -47,102 +75,63 @@ class CapitalManagementRepository {
     );
   }
 
-  // Get capital by account
-  Future<List<CapitalManagementModel>> getCapitalByAccount() async {
-    final accountId = await accountRepository.getAccountId();
-    final result = await database.query(
-      'capital_management',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-    );
-    return result.map((e) => CapitalManagementModel.fromMap(e)).toList();
-  }
-
-  // Get total balance for the account (cash_on_hand + bank_cash)
-  Future<double> getTotalBalanceByAccount() async {
-    final accountId = await accountRepository.getAccountId();
-    final result = await database.rawQuery(
-      '''
-        SELECT SUM(cash_on_hand + bank_cash) as total_cash
-        FROM capital_management
-        WHERE account_id = ?
-      ''',
-      [accountId],
-    );
+  // ---------------- GET TOTAL BALANCE ----------------
+  Future<double> getTotalBalance() async {
+    final result = await database.rawQuery('''
+      SELECT IFNULL(SUM(cash_on_hand + bank_cash), 0) as total_cash
+      FROM capital_management
+    ''');
 
     final total = result.first['total_cash'];
     return total != null ? (total as num).toDouble() : 0.0;
   }
 
-  // Fetch only cash_on_hand for the current account
-  Future<List<CapitalManagementModel>> getCashOnHandOnly() async {
-    final accountId = await accountRepository.getAccountId();
-    final result = await database.query(
-      'capital_management',
-      columns: ['cash_on_hand'], // only fetch cash_on_hand
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-    );
+  // ---------------- GET CASH ON HAND ONLY ----------------
+  Future<double> getTotalCashOnHand({int? accountId}) async {
+    if (accountId != null) {
+      final result = await database.rawQuery('''
+        SELECT IFNULL(SUM(cash_on_hand), 0) as total_cash
+        FROM capital_management
+        WHERE account_id = ?
+      ''', [accountId]);
 
-    return result
-        .map(
-          (e) => CapitalManagementModel(
-            accountId: accountId,
-            cashOnHand: (e['cash_on_hand'] as num).toDouble(),
-            capital: 0, // default
-            bankCash: 0, // default
-          ),
-        )
-        .toList();
+      final total = result.first['total_cash'];
+      return total != null ? (total as num).toDouble() : 0.0;
+    }
+
+    // fallback: sum all accounts
+    final result = await database.rawQuery('''
+      SELECT IFNULL(SUM(cash_on_hand), 0) as total_cash
+      FROM capital_management
+    ''');
+
+    final total = result.first['total_cash'];
+    return total != null ? (total as num).toDouble() : 0.0;
   }
 
+  // ---------------- DEDUCT CASH ----------------
+  /// Deduct cash from the latest record for a specific account
   Future<void> deductCash({
-    required int accountId,
-    required double amount,
+  required double amount, // no accountId
   }) async {
-    // 1️⃣ Get TOTAL cash_on_hand
-    final result = await database.rawQuery(
-      '''
-    SELECT SUM(cash_on_hand) AS total_cash
-    FROM capital_management
-    WHERE account_id = ?
-    ''',
-      [accountId],
-    );
+    // Get the latest global capital record
+    final latest = await getLatestCapital(); // ignore accountId
+    if (latest == null || latest.id == null) {
+      throw Exception('No capital record found');
+    }
 
-    final totalCash = (result.first['total_cash'] as num?)?.toDouble() ?? 0.0;
+    final totalCash = latest.cashOnHand;
 
     if (totalCash < amount) {
       throw Exception('Insufficient cash on hand');
     }
 
-    // 2️⃣ Deduct from the MOST RECENT capital record
-    final latestRecord = await database.query(
-      'capital_management',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      orderBy: 'id DESC',
-      limit: 1,
-    );
+    final newCash = (latest.cashOnHand - amount).clamp(0.0, double.infinity);
 
-    if (latestRecord.isEmpty) {
-      throw Exception('No capital record found');
-    }
+    final updated = latest.copyWith(cashOnHand: newCash);
 
-    final recordId = latestRecord.first['id'] as int;
-    final currentCash = (latestRecord.first['cash_on_hand'] as num).toDouble();
+    await updateCapital(updated);
 
-    final newCash = currentCash - amount;
-
-    await database.update(
-      'capital_management',
-      {'cash_on_hand': newCash},
-      where: 'id = ?',
-      whereArgs: [recordId],
-    );
-
-    debugPrint(
-      '>> Expense deducted: $amount | Remaining cash: ${totalCash - amount}',
-    );
+    debugPrint('>> Expense deducted: $amount | Remaining cash: $newCash (global)');
   }
 }

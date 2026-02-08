@@ -6,14 +6,17 @@ class LoginRepository {
 
   LoginRepository(this._dbService);
 
-  // Get account by mobile number
+  /// -------------------------
+  /// LOGIN WITH MOBILE NUMBER + PIN
+  /// -------------------------
   Future<LoginModel?> getAccount(String mobileNumber, String pin) async {
     final db = await _dbService.database;
+
     final result = await db.query(
       'account',
-      columns: ['mobile_number', 'pin'],
+      columns: ['id', 'first_name', 'middle_name', 'last_name', 'mobile_number', 'pin'],
       where: 'mobile_number = ? AND pin = ?',
-      whereArgs: [mobileNumber, pin],
+      whereArgs: [mobileNumber.trim(), pin.trim()],
     );
 
     if (result.isNotEmpty) {
@@ -22,14 +25,17 @@ class LoginRepository {
     return null;
   }
 
-  // Fetch only by mobile number
+  /// -------------------------
+  /// FETCH ACCOUNT BY MOBILE NUMBER ONLY
+  /// -------------------------
   Future<LoginModel?> getAccountByMobileNumber(String mobileNumber) async {
     final db = await _dbService.database;
+
     final result = await db.query(
       'account',
-      columns: ['mobile_number', 'pin'],
+      columns: ['id', 'first_name', 'middle_name', 'last_name', 'mobile_number', 'pin'],
       where: 'mobile_number = ?',
-      whereArgs: [mobileNumber],
+      whereArgs: [mobileNumber.trim()],
     );
 
     if (result.isNotEmpty) {
@@ -38,10 +44,22 @@ class LoginRepository {
     return null;
   }
 
-  // Verify PIN
+  /// -------------------------
+  /// VERIFY PIN FOR LOGIN
+  /// -------------------------
   Future<bool> verifyPin(String mobileNumber, String pin) async {
-    final account = await getAccountByMobileNumber(mobileNumber);
+    final account = await getAccountByMobileNumber(mobileNumber.trim());
     if (account == null) return false;
-    return account.pin == pin;
+    return account.pin == pin.trim();
+  }
+
+  /// -------------------------
+  /// FETCH FULL NAME
+  /// -------------------------
+  Future<String?> getFullName(String mobileNumber) async {
+    final account = await getAccountByMobileNumber(mobileNumber.trim());
+    if (account == null) return null;
+    final middle = account.middleName?.isNotEmpty == true ? ' ${account.middleName}' : '';
+    return '${account.firstName}$middle ${account.lastName}';
   }
 }

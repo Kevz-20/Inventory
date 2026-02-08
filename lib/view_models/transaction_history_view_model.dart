@@ -4,7 +4,6 @@ import '../models/transaction_history_model.dart';
 import '../repositories/transaction_history_repository.dart';
 
 // Represents a single transaction
-// Represents a single transaction
 class TransactionItem {
   final String type;
   final String? description;
@@ -14,7 +13,10 @@ class TransactionItem {
   final String? productName;
   final int? quantity;
   final String? receiptImagePath;
-  final String? category; // <-- add this
+  final String? category;
+
+  // NEW FIELD
+  final String? recordedBy;
 
   TransactionItem({
     required this.type,
@@ -25,7 +27,8 @@ class TransactionItem {
     this.productName,
     this.quantity,
     this.receiptImagePath,
-    this.category, // <-- add this
+    this.category,
+    this.recordedBy, // <-- add here
   });
 
   factory TransactionItem.fromMap(
@@ -49,22 +52,32 @@ class TransactionItem {
       if (value > 0) paymentType = 'Withdraw';
     } else {
       value = (map['amount'] as num?)?.toDouble() ?? 0.0;
-      paymentType = map['payment_type'];
+      paymentType = 'Cash'; // default cash
     }
+
+    // Build recordedBy from map
+    final createdByFirst = map['created_by_first_name'] ?? '';
+    final createdByMiddle = map['created_by_middle_name'] ?? '';
+    final createdByLast = map['created_by_last_name'] ?? '';
+    final recordedBy =
+        [createdByFirst, createdByMiddle, createdByLast].where((s) => s.isNotEmpty).join(' ');
 
     return TransactionItem(
       type: map['type'] ?? fallbackType,
-      description: map['description'] ?? map['remarks'],
+      description: map['description']?.toString(), // Keep description clean
       amount: value,
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       paymentType: paymentType,
       productName: map['product_name'],
       quantity: (map['quantity'] as num?)?.toInt(),
       receiptImagePath: receiptImagePath,
-      category: map['category'], // <-- assign category here
+      category: map['category'],
+      recordedBy: recordedBy.isNotEmpty ? recordedBy : null, // <-- set here
     );
   }
 }
+
+
 // Transaction section (grouped by date)
 class TransactionSection {
   final String title;
@@ -99,7 +112,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   final TransactionHistoryRepository _repository =
       TransactionHistoryRepository();
 
-  late final TransactionHistoryModel _fullHistory;
+  TransactionHistoryModel? _fullHistory;
   TransactionHistoryModel _filteredHistory = TransactionHistoryModel(
     expenses: [],
     salesCash: [],
@@ -214,11 +227,13 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
   // ---------------- Filters ----------------
   void _applyFilters() {
+    if (_fullHistory == null) return; // <-- prevent crash if not loaded yet
+
     _filteredHistory = TransactionHistoryModel(
-      expenses: _filterByDate(_fullHistory.expenses),
-      salesCash: _filterByDate(_fullHistory.salesCash),
-      salesCredit: _filterByDate(_fullHistory.salesCredit),
-      capitalManagement: _filterByDate(_fullHistory.capitalManagement),
+      expenses: _filterByDate(_fullHistory!.expenses),
+      salesCash: _filterByDate(_fullHistory!.salesCash),
+      salesCredit: _filterByDate(_fullHistory!.salesCredit),
+      capitalManagement: _filterByDate(_fullHistory!.capitalManagement),
     );
     _cache.clear();
     _currentPage = 0;

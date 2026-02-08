@@ -5,39 +5,46 @@ import '../core/app_colors.dart';
 
 class SettingsViewModel extends ChangeNotifier {
   final AccountRepository repository;
+
   SettingsViewModel(this.repository);
 
-  String? _associationName;
-  final bool _isLoading = false;
+  String? _fullName;
+  bool _isLoading = false;
   String? _error;
 
-  String? get associationName => _associationName;
+  String? get fullName => _fullName;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  Future<void> loadAssociationName() async {
-    debugPrint('[VM] loadAssociationName called');
+  /// Load current account's full name (first + middle + last)
+  Future<void> loadFullName() async {
+    debugPrint('[VM] loadFullName called');
 
-    if (_associationName != null) {
+    if (_fullName != null) {
       debugPrint('[VM] already cached → skip');
       return;
     }
 
-    try {
-      final name = await repository.getAssociationName();
-      debugPrint('[VM] fetched name=$name');
+    _isLoading = true;
+    notifyListeners();
 
-      if (name != null) {
-        _associationName = name;
-        debugPrint('[VM] notify once');
-        notifyListeners();
-      }
+    try {
+      // Use getFullName from AccountRepository
+      final name = await repository.getFullName();
+      debugPrint('[VM] fetched fullName=$name');
+
+      _fullName = name;
+      _error = null;
     } catch (e) {
       _error = e.toString();
+      debugPrint('[VM] error fetching fullName: $_error');
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
 
+  /// Logout dialog
   void logout(BuildContext context) {
     showDialog(
       context: context,
@@ -61,6 +68,7 @@ class SettingsViewModel extends ChangeNotifier {
     );
   }
 
+  /// Handle actual logout
   Future<void> _handleLogout(BuildContext context) async {
     Navigator.pop(context);
     if (!context.mounted) return;

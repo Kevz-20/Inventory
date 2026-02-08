@@ -1,76 +1,60 @@
 import 'package:sqflite/sqflite.dart';
-import 'account_repository.dart';
 
 class CustomerRepository {
   final Database _db;
-  final AccountRepository _accountRepository;
 
-  // Inject both DB and AccountRepository
-  CustomerRepository(this._db, this._accountRepository);
+  // Inject DB only, AccountRepository no longer needed
+  CustomerRepository(this._db);
 
-  /// Insert a new customer for the current logged-in account
+  /// Insert a new customer
   Future<int> insertCustomer(Map<String, dynamic> customer) async {
-    final accountId = await _accountRepository.getAccountId();
-
-    final customerWithAccount = {
+    final customerWithDefaults = {
       ...customer,
-      'account_id': accountId, // Link to current account
       'available_credit': customer['available_credit'] ?? 1000.0, // default
+      'created_at': customer['created_at'] ?? DateTime.now().toIso8601String(),
+      'updated_at': customer['updated_at'] ?? DateTime.now().toIso8601String(),
     };
 
     return await _db.insert(
       'customer',
-      customerWithAccount,
+      customerWithDefaults,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  /// Update an existing customer by ID (account-specific)
+  /// Update an existing customer by ID
   Future<int> updateCustomer(int id, Map<String, dynamic> updatedCustomer) async {
-    final accountId = await _accountRepository.getAccountId();
     return await _db.update(
       'customer',
       updatedCustomer,
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [id, accountId],
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
-  /// Delete a customer by ID (account-specific)
+  /// Delete a customer by ID
   Future<int> deleteCustomer(int id) async {
-    final accountId = await _accountRepository.getAccountId();
     return await _db.delete(
       'customer',
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [id, accountId],
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   /// Get all customers
-  Future<List<Map<String, dynamic>>> getCustomers({bool allAccounts = false}) async {
-    if (allAccounts) {
-      return await _db.query(
-        'customer',
-        orderBy: 'first_name ASC',
-      );
-    }
-
-    final currentAccountId = await _accountRepository.getAccountId();
+  Future<List<Map<String, dynamic>>> getCustomers() async {
     return await _db.query(
       'customer',
-      where: 'account_id = ?',
-      whereArgs: [currentAccountId],
       orderBy: 'first_name ASC',
     );
   }
 
-  /// Get a single customer by ID (account-specific)
+  /// Get a single customer by ID
   Future<Map<String, dynamic>?> getCustomerById(int id) async {
-    final accountId = await _accountRepository.getAccountId();
     final result = await _db.query(
       'customer',
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [id, accountId],
+      where: 'id = ?',
+      whereArgs: [id],
     );
     if (result.isNotEmpty) return result.first;
     return null;
@@ -91,8 +75,6 @@ class CustomerRepository {
 
   /// Deduct available credit after utang / credit checkout
   Future<void> deductAvailableCredit(int customerId, double amount) async {
-    final accountId = await _accountRepository.getAccountId();
-
     // 1️⃣ Get current credit
     final currentCredit = await getAvailableCredit(customerId);
 
@@ -103,8 +85,21 @@ class CustomerRepository {
     await _db.update(
       'customer',
       {'available_credit': newCredit},
-      where: 'id = ? AND account_id = ?',
-      whereArgs: [customerId, accountId],
+      where: 'id = ?',
+      whereArgs: [customerId],
     );
+  }
+
+  /// ------------------- OPTIONAL -------------------
+  /// Get customer by full name (useful for multi-user associations)
+  Future<Map<String, dynamic>?> getCustomerByFullName(
+      String firstName, String? middleName, String lastName) async {
+    final result = await _db.query(
+      'customer',
+      where: 'first_name = ? AND middle_name = ? AND last_name = ?',
+      whereArgs: [firstName, middleName, lastName],
+    );
+    if (result.isNotEmpty) return result.first;
+    return null;
   }
 }

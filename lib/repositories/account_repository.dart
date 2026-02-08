@@ -5,6 +5,7 @@ import '../services/db_service.dart';
 class AccountRepository {
   final dbService = DBService.instance;
 
+  /// Get current logged-in mobile number from SharedPreferences
   Future<String?> getMobileNumber() async {
     final prefs = await SharedPreferences.getInstance();
     final mobile = prefs.getString('mobileNumber');
@@ -14,6 +15,7 @@ class AccountRepository {
     return mobile;
   }
 
+  /// Get current account ID by mobile number
   Future<int> getAccountId() async {
     final mobileNumber = await getMobileNumber();
     final db = await dbService.database;
@@ -31,6 +33,7 @@ class AccountRepository {
     return result.first['id'] as int;
   }
 
+  /// Get full account details
   Future<Account> getAccountDetails() async {
     final accountId = await getAccountId();
     final db = await dbService.database;
@@ -47,27 +50,33 @@ class AccountRepository {
     return Account.fromMap(result.first);
   }
 
-  Future<String?> getAssociationName() async {
-    final mobileNumber = await getMobileNumber();
-    final db = await dbService.database;
-    final result = await db.query(
-      'account',
-      columns: ['association_name'],
-      where: 'mobile_number = ?',
-      whereArgs: [mobileNumber],
-      limit: 1,
-    );
-
-    if (result.isNotEmpty) {
-      return result.first['association_name'] as String?;
-    }
-    return null;
+  /// Get the full name of the current user (First + Middle + Last)
+  Future<String> getFullName() async {
+    final account = await getAccountDetails();
+    final middle = account.middleName != null && account.middleName!.isNotEmpty
+        ? ' ${account.middleName}'
+        : '';
+    return '${account.firstName}$middle ${account.lastName}';
   }
 
+  Future<Map<String, String>> getNameParts() async {
+    final fullName = await getFullName(); // "John M Doe"
+    final parts = fullName.split(' ');
+    return {
+      'first': parts.isNotEmpty ? parts[0] : '',
+      'middle': parts.length == 3 ? parts[1] : '',
+      'last': parts.length >= 2 ? parts.last : '',
+    };
+  }
+
+
+  
+
+  /// Update account info and save mobile number + full name to SharedPreferences
   Future<void> updateAccount(Account updated) async {
     final db = await dbService.database;
 
-    // Correct SQLite update
+    // Update account table
     await db.update(
       'account',
       updated.toMap(),
@@ -75,15 +84,13 @@ class AccountRepository {
       whereArgs: [updated.id],
     );
 
-    // Optional: save mobile number to SharedPreferences
+    // Save current mobile number
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('mobileNumber', updated.mobileNumber);
 
-    if (updated.associationName != null) {
-      await prefs.setString('associationName', updated.associationName!);
-    }
-    if (updated.securityAnswer != null) {
-      await prefs.setString('securityAnswer', updated.securityAnswer!);
-    }
+    // Save full name for creator tracking
+    final fullName =
+        '${updated.firstName} ${updated.middleName ?? ''} ${updated.lastName}';
+    await prefs.setString('fullName', fullName.trim());
   }
 }

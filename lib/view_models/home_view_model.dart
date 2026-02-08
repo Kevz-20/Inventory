@@ -4,6 +4,7 @@ import '../providers/database_provider.dart';
 import '../repositories/capital_management_repository.dart';
 import '../repositories/account_repository.dart';
 
+/// Provider for HomeViewModel
 final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>(
   (ref) => HomeViewModel(ref),
 );
@@ -20,32 +21,30 @@ class HomeViewModel extends StateNotifier<HomeState> {
     _init();
   }
 
+  /// Initialize repositories and load initial state
   Future<void> _init() async {
     final db = await ref.read(databaseProvider.future);
     _accountRepo = AccountRepository();
     _capitalRepo = CapitalManagementRepository(db);
 
-    // Load saved visibility from preferences
+    // Load saved money visibility from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     final savedVisibility = prefs.getBool(_prefsKeyMoneyVisible) ?? true;
-
     state = state.copyWith(isMoneyVisible: savedVisibility);
 
     _initialized = true;
     await fetchHomeData();
   }
 
-  /// Fetch mobile number and cash_on_hand safely
+  /// Fetch mobile number and total cash on hand
   Future<void> fetchHomeData() async {
     if (!_initialized || _accountRepo == null || _capitalRepo == null) return;
 
     try {
       final mobile = await _accountRepo!.getMobileNumber();
-      final cashList = await _capitalRepo!.getCashOnHandOnly();
-      final totalCash = cashList.fold<double>(
-        0.0,
-        (sum, e) => sum + e.cashOnHand,
-      );
+
+      // Use updated repository method
+      final totalCash = await _capitalRepo!.getTotalCashOnHand();
 
       state = state.copyWith(
         mobileNumber: mobile,
@@ -57,10 +56,12 @@ class HomeViewModel extends StateNotifier<HomeState> {
     }
   }
 
+  /// Handle bottom navigation tap
   void onNavTap(int index) {
     state = state.copyWith(selectedIndex: index);
   }
 
+  /// Toggle visibility of money
   Future<void> toggleMoneyVisibility() async {
     final newVisibility = !state.isMoneyVisible;
     state = state.copyWith(isMoneyVisible: newVisibility);
@@ -70,6 +71,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
   }
 }
 
+/// Home state class
 class HomeState {
   final int selectedIndex;
   final String? mobileNumber;

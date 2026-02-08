@@ -54,11 +54,11 @@ class BalanceSheetViewModel extends ChangeNotifier {
   }
 
   // ---------------- Load data from DB ----------------
-  // Supports multiple accounts for transparency
-  Future<void> loadBalanceSheet({List<int>? accountIds}) async {
-    assets = await repository.getAssets(accountIds: accountIds);
-    liabilities = await repository.getLiabilities(accountIds: accountIds);
-    equity = await repository.getEquity(accountIds: accountIds);
+  /// All transactions are visible to all users — no account filtering
+  Future<void> loadBalanceSheet() async {
+    assets = await repository.getAssets();         // no accountIds
+    liabilities = await repository.getLiabilities(); // no accountIds
+    equity = await repository.getEquity();         // no accountIds
     notifyListeners();
   }
 }

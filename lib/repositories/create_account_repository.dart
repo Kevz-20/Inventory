@@ -6,21 +6,19 @@ class CreateAccountRepository {
 
   CreateAccountRepository(this._dbService);
 
-  // Check if phone number exists
-  Future<bool> isPhoneNumberExists(
-    String mobileNumber,
-    String associationName,
-  ) async {
+  // ---------------- CHECK IF PHONE NUMBER EXISTS ----------------
+  Future<bool> isPhoneNumberExists(String mobileNumber) async {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
       where: 'mobile_number = ?',
-      whereArgs: [mobileNumber, associationName],
+      whereArgs: [mobileNumber.trim()],
+      limit: 1,
     );
     return result.isNotEmpty;
   }
 
-  // Insert a new account
+  // ---------------- CREATE NEW ACCOUNT ----------------
   Future<int> createAccount(Account account) async {
     final db = await _dbService.database;
 
@@ -28,26 +26,44 @@ class CreateAccountRepository {
     return await db.insert('account', account.toMap());
   }
 
-  // Fetch account by phone number
+  // ---------------- FETCH ACCOUNT BY PHONE NUMBER ----------------
   Future<Account?> getAccountByPhone(String phoneNumber) async {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
       where: 'mobile_number = ?',
-      whereArgs: [phoneNumber],
+      whereArgs: [phoneNumber.trim()],
+      limit: 1,
     );
     if (result.isNotEmpty) return Account.fromMap(result.first);
     return null;
   }
 
-  // Fetch all security questions
+  // ---------------- FETCH ACCOUNT BY FULL NAME ----------------
+  Future<Account?> getAccountByFullName(
+    String firstName,
+    String? middleName,
+    String lastName,
+  ) async {
+    final db = await _dbService.database;
+    final result = await db.query(
+      'account',
+      where: 'first_name = ? AND middle_name = ? AND last_name = ?',
+      whereArgs: [firstName.trim(), middleName?.trim() ?? '', lastName.trim()],
+      limit: 1,
+    );
+    if (result.isNotEmpty) return Account.fromMap(result.first);
+    return null;
+  }
+
+  // ---------------- FETCH ALL SECURITY QUESTIONS ----------------
   Future<List<String>> getSecurityQuestions() async {
     final db = await _dbService.database;
     final result = await db.query('security_questions');
     return result.map((row) => row['question'] as String).toList();
   }
 
-  // Delete all accounts
+  // ---------------- DELETE ALL ACCOUNTS ----------------
   Future<void> wipeAccounts() async {
     final db = await _dbService.database;
     await db.delete('account');

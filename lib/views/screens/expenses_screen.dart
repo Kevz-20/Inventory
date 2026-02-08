@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
 import '../widgets/header.dart'; // ✅ AppHeader import
 import 'existing_expense_screen.dart';
+import '../../models/current_user.dart'; // ✅ Import CurrentUser
 
 /// -----------------------------
 /// Custom TextInputFormatter for thousands separator
@@ -131,6 +132,9 @@ class ExpensesScreen extends ConsumerWidget {
             const SizedBox(height: 25),
             _receiptSection(context, vm),
             const SizedBox(height: 30),
+            const Divider(),
+            const SizedBox(height: 15),
+            _allTransactionsList(vm), // ✅ Show all transactions
           ],
         ),
       ),
@@ -148,11 +152,18 @@ class ExpensesScreen extends ConsumerWidget {
               ? null
               : () async {
                   vm.triggerValidation();
+
                   if (vm.amountController.text.isNotEmpty) {
                     vm.amountController.text =
                         vm.amountController.text.replaceAll(',', '');
                   }
-                  await vm.save();
+
+                  // ✅ Pass required CurrentUser info
+                  await vm.save(
+                    createdByFirstName: CurrentUser.firstName ?? '',
+                    createdByMiddleName: CurrentUser.middleName ?? '',
+                    createdByLastName: CurrentUser.lastName ?? '',
+                  );
                 },
           child: vm.isLoading
               ? const CircularProgressIndicator(color: Colors.white)
@@ -161,6 +172,48 @@ class ExpensesScreen extends ConsumerWidget {
       ),
     );
   }
+
+  // -----------------------------
+  // Show all transactions (no filtering by account)
+  // -----------------------------
+  Widget _allTransactionsList(ExpensesViewModel vm) {
+  final expenses = vm.expenses; // ✅ All expenses from DB
+  if (expenses.isEmpty) {
+    return const Text("Wala pang Gasto", style: TextStyle(color: Colors.grey));
+  }
+
+  // Parse createdAt to DateTime and sort descending
+  final sorted = [...expenses];
+  sorted.sort((a, b) {
+    final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1970);
+    final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1970);
+    return dateB.compareTo(dateA);
+  });
+
+  return ListView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: sorted.length,
+    itemBuilder: (context, index) {
+      final e = sorted[index];
+      return Card(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        child: ListTile(
+          title: Text(e.description.isNotEmpty ? e.description : 'Wala deskripsyon'),
+          subtitle: Text(
+            '${e.createdByFirstName} ${e.createdByMiddleName ?? ''} ${e.createdByLastName}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          trailing: Text('₱${e.amount.toStringAsFixed(2)}'),
+          onTap: () {
+            // Optional: open existing expense
+          },
+        ),
+      );
+    },
+  );
+}
+
 
   // -----------------------------
   // Widgets (Receipt, Input, Banner, etc.)

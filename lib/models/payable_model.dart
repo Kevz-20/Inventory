@@ -9,13 +9,20 @@ class Payable {
 
   final bool isInstallment;
   final bool isPaid;
-  final String? createdAt; // ✅ updated from createAt
+  final String? createdAt; // optional
 
   // -------------------------
-  // NEW FIELDS FOR INSTALLMENT PROGRESS
+  // Installment progress
   // -------------------------
   final int? totalInstallments;
   final int? paidInstallments;
+
+  // -------------------------
+  // Creator info for multi-user DB
+  // -------------------------
+  final String? createdByFirstName;
+  final String? createdByMiddleName;
+  final String? createdByLastName;
 
   Payable({
     required this.id,
@@ -27,10 +34,16 @@ class Payable {
     this.isInstallment = false,
     this.isPaid = false,
     this.createdAt,
-    this.totalInstallments,   // ✅ new
-    this.paidInstallments,    // ✅ new
+    this.totalInstallments,
+    this.paidInstallments,
+    this.createdByFirstName,
+    this.createdByMiddleName,
+    this.createdByLastName,
   });
 
+  // -------------------------
+  // Computed properties
+  // -------------------------
   int get remainingDays {
     if (dueDate == null) return 0;
     final due = DateTime.tryParse(dueDate!);
@@ -44,13 +57,9 @@ class Payable {
     return "Due Soon";
   }
 
-  // ✅ optional getter for easy DateTime conversion
   DateTime? get createdAtDate =>
       createdAt != null ? DateTime.tryParse(createdAt!) : null;
 
-  // -------------------------
-  // NEW GETTER: installment progress
-  // -------------------------
   String get installmentProgress {
     if (!isInstallment || totalInstallments == null || paidInstallments == null) {
       return "";
@@ -58,6 +67,9 @@ class Payable {
     return "$paidInstallments/$totalInstallments";
   }
 
+  // -------------------------
+  // Factory from DB
+  // -------------------------
   factory Payable.fromMap(Map<String, dynamic> map) {
     return Payable(
       id: map['id'] as int,
@@ -72,14 +84,18 @@ class Payable {
       isPaid: (map['is_paid'] ?? 0) == 1,
       createdAt: map['created_at'] as String?,
 
-      // -------------------------
-      // MAP NEW FIELDS FROM DB
-      // -------------------------
       totalInstallments: map['total_installments'] as int?,
       paidInstallments: map['paid_installments'] as int?,
+
+      createdByFirstName: map['created_by_first_name'] as String?,
+      createdByMiddleName: map['created_by_middle_name'] as String?,
+      createdByLastName: map['created_by_last_name'] as String?,
     );
   }
 
+  // -------------------------
+  // Convert to DB map
+  // -------------------------
   Map<String, dynamic> toMap() {
     return {
       'supplier_name': name,
@@ -91,9 +107,11 @@ class Payable {
       'is_paid': isPaid ? 1 : 0,
       'created_at': createdAt ?? DateTime.now().toIso8601String(),
 
-      // -------------------------
-      // NEW FIELDS TO MAP
-      // -------------------------
+      // Creator info
+      'created_by_first_name': createdByFirstName,
+      'created_by_middle_name': createdByMiddleName,
+      'created_by_last_name': createdByLastName,
+
       'total_installments': totalInstallments,
       'paid_installments': paidInstallments,
     };

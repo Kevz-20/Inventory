@@ -3,12 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/account_model.dart';
 import '../providers/account_repository_provider.dart';
 import '../repositories/account_repository.dart';
+import '../providers/current_mobile_number_provider.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final Ref ref;
   AccountRepository? accountRepository;
 
-  ProfileViewModel(this.ref);
+  ProfileViewModel(this.ref) {
+  // Listen to mobile number changes
+  ref.listen<String?>(currentMobileNumberProvider, (previous, next) {
+    if (next != previous && next != null) {
+      // Reload account when mobile number changes
+      loadAccount();
+    }
+  });
+}
 
   String? error;
   Account? account;
@@ -30,14 +39,30 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Load account details and ensure the current mobile number is correct
   Future<void> loadAccount() async {
     if (accountRepository == null) return;
 
+    isLoading = true;
+    notifyListeners();
+
     try {
-      account = await accountRepository!.getAccountDetails();
+      // Get the mobile number used in login (from SharedPreferences or AccountRepository)
+      final currentMobile = await accountRepository!.getMobileNumber();
+
+      // Fetch full account details
+      final accountDetails = await accountRepository!.getAccountDetails();
+
+      // Override mobileNumber to match logged-in number
+      account = accountDetails.copyWith(mobileNumber: currentMobile);
+
+      error = null;
     } catch (e) {
       error = e.toString();
+      account = null;
     }
+
+    isLoading = false;
     notifyListeners();
   }
 

@@ -1,57 +1,63 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/expense_model.dart';
-import '../providers/account_repository_provider.dart';
-import '../repositories/account_repository.dart';
-import '../providers/database_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/expense_model.dart';
+import '../providers/account_provider.dart';
+import '../providers/database_provider.dart';
 
-final expenseRepositoryProvider = FutureProvider<ExpenseRepository>((
-  ref,
-) async {
+
+// -----------------------------
+// Provider
+// -----------------------------
+final expenseRepositoryProvider = FutureProvider<ExpenseRepository>((ref) async {
   final db = await ref.watch(databaseProvider.future);
-  final accountRepo = await ref.watch(accountRepositoryProvider.future);
-  return ExpenseRepository(db, accountRepo);
+  return ExpenseRepository(db, ref);
 });
 
+// -----------------------------
+// Repository
+// -----------------------------
 class ExpenseRepository {
   final Database db;
-  final AccountRepository accountRepository;
+  final Ref ref;
 
-  ExpenseRepository(this.db, this.accountRepository);
+  ExpenseRepository(this.db, this.ref);
 
+  /// Add a new expense
   Future<int> addExpense(ExpenseModel expense) async {
-    return await db.insert(
-      'expenses',
-      expense.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
+  // Get current account's name
+  final accountRepo = ref.read(accountRepositoryProvider);
+  final nameParts = await accountRepo.getNameParts();
 
-  Future<List<ExpenseModel>> fetchExpensesForCurrentAccount() async {
-    final accountId = await accountRepository.getAccountId();
+  final data = expense.toMap();
 
+  // Automatically fill created_by fields
+  data['created_by_first_name'] = nameParts['first'];
+  data['created_by_middle_name'] = nameParts['middle'] ?? '';
+  data['created_by_last_name'] = nameParts['last'];
+
+  // created_at: if empty, use current datetime
+  data['created_at'] = expense.createdAt.isNotEmpty
+      ? expense.createdAt
+      : DateTime.now().toIso8601String();
+
+  return await db.insert(
+    'expenses',
+    data,
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}
+
+
+  /// Fetch all expenses
+  Future<List<ExpenseModel>> fetchAllExpenses() async {
     final result = await db.query(
       'expenses',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
       orderBy: 'created_at DESC',
     );
-
     return result.map((e) => ExpenseModel.fromMap(e)).toList();
   }
 
-
-  Future<List<ExpenseModel>> fetchExpensesByAccount(int accountId) async {
-    final result = await db.query(
-      'expenses',
-      where: 'account_id = ?',
-      whereArgs: [accountId],
-      orderBy: 'created_at DESC',
-    );
-
-    return result.map((e) => ExpenseModel.fromMap(e)).toList();
-  }
-
+  /// Fetch a single expense by ID
   Future<ExpenseModel?> fetchExpense(int id) async {
     final result = await db.query(
       'expenses',
@@ -59,21 +65,39 @@ class ExpenseRepository {
       whereArgs: [id],
       limit: 1,
     );
-
     if (result.isEmpty) return null;
     return ExpenseModel.fromMap(result.first);
   }
 
+  /// Update an expense
   Future<int> updateExpense(ExpenseModel expense) async {
-    return await db.update(
+  final data = expense.toMap();
+
+  // Keep the original creator
+  data['created_by_first_name'] = expense.createdByFirstName;
+  data['created_by_middle_name'] = expense.createdByMiddleName ?? '';
+  data['created_by_last_name'] = expense.createdByLastName;
+
+  return await db.update(
+    'expenses',
+    data,
+    where: 'id = ?',
+    whereArgs: [expense.id],
+  );
+}
+
+  /// Delete an expense
+  Future<int> deleteExpense(int id) async {
+    return await db.delete(
       'expenses',
-      expense.toMap(),
       where: 'id = ?',
-      whereArgs: [expense.id],
+      whereArgs: [id],
     );
   }
 
-  Future<int> deleteExpense(int id) async {
-    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
+  /// Fetch total expenses
+  Future<double> fetchTotalExpenses() async {
+    final result = await db.rawQuery('SELECT IFNULL(SUM(amount), 0) AS total FROM expenses');
+    return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 }

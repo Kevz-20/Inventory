@@ -6,6 +6,8 @@ import '../../view_models/create_account_view_model.dart';
 import '../../view_models/login_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
+import '../../repositories/account_repository.dart';
+import '../../models/account_model.dart';
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
@@ -18,6 +20,8 @@ class CreateAccountScreen extends ConsumerStatefulWidget {
 class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool pinVisible = false;
   bool confirmPinVisible = false;
+
+  final accountRepo = AccountRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -34,19 +38,16 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Response message
+              // ==================== Response message ====================
               if (vm.errorMessage != null)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 12,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: vm.isSuccessMessage
-                        ? AppColors.success
-                        : AppColors.error,
+                    color:
+                        vm.isSuccessMessage ? AppColors.success : AppColors.error,
                   ),
                   child: Text(
                     vm.errorMessage!,
@@ -57,32 +58,20 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   ),
                 ),
 
-              // Association Name
-              buildLabel("Association Name"),
-              buildTextField(
-                controller: vm.associationNameController,
-                hint: "DSWD-SLP",
-                errorText: vm.associationError,
-                onChanged: (_) =>
-                    vmNotifier.clearFieldError(vm.associationNameController),
-              ),
-              const SizedBox(height: 15),
-
-              // Mobile Number
+              // ==================== MOBILE NUMBER ====================
               buildLabel("Mobile Number"),
               buildTextField(
                 controller: vm.mobileController,
                 hint: "09XXXXXXXXX",
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 11,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 errorText: vm.mobileError,
-                onChanged: (_) =>
-                    vmNotifier.clearFieldError(vm.mobileController),
+                onChanged: (_) => vmNotifier.clearFieldError(vm.mobileController),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 15),
 
-              // PIN and Confirm PIN
+              // ==================== PIN ====================
               buildLabel("PIN"),
               Row(
                 children: [
@@ -95,25 +84,12 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       keyboardType: TextInputType.number,
                       errorText: vm.pinError,
-                      onChanged: (_) =>
-                          vmNotifier.clearFieldError(vm.pinController),
+                      onChanged: (_) => vmNotifier.clearFieldError(vm.pinController),
                       suffixIcon: InkWell(
-                        onTap: () {
-                          setState(() {
-                            pinVisible = !pinVisible;
-                          });
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(
-                            8.0,
-                          ), // reduces icon size
-                          child: Icon(
-                            pinVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            size: 20, // smaller size
-                            color: Colors.grey,
-                          ),
+                        onTap: () => setState(() => pinVisible = !pinVisible),
+                        child: Icon(
+                          pinVisible ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
@@ -131,20 +107,13 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                       onChanged: (_) =>
                           vmNotifier.clearFieldError(vm.confirmPinController),
                       suffixIcon: InkWell(
-                        onTap: () {
-                          setState(() {
-                            confirmPinVisible = !confirmPinVisible;
-                          });
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            confirmPinVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            size: 20,
-                            color: Colors.grey,
-                          ),
+                        onTap: () =>
+                            setState(() => confirmPinVisible = !confirmPinVisible),
+                        child: Icon(
+                          confirmPinVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
@@ -153,41 +122,43 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               ),
               const SizedBox(height: 15),
 
-              // Security Question
+              // ==================== FIRST NAME ====================
+              buildLabel("First Name"),
+              buildTextField(
+                controller: vm.firstNameController,
+                hint: "Juan",
+                errorText: vm.firstNameError,
+                onChanged: (_) => vmNotifier.clearFieldError(vm.firstNameController),
+              ),
+              const SizedBox(height: 15),
+
+              // ==================== MIDDLE NAME ====================
+              buildLabel("Middle Name"),
+              buildTextField(
+                controller: vm.middleNameController,
+                hint: "Dela",
+                errorText: vm.middleNameError,
+                onChanged: (_) => vmNotifier.clearFieldError(vm.middleNameController),
+              ),
+              const SizedBox(height: 15),
+
+              // ==================== LAST NAME ====================
+              buildLabel("Last Name"),
+              buildTextField(
+                controller: vm.lastNameController,
+                hint: "Cruz",
+                errorText: vm.lastNameError,
+                onChanged: (_) => vmNotifier.clearFieldError(vm.lastNameController),
+              ),
+              const SizedBox(height: 15),
+
+              // ==================== SECURITY QUESTION ====================
               buildLabel("Security Question (for PIN reset)"),
               DropdownButtonFormField<String>(
-                initialValue: vm.selectedQuestion,
+                value: vm.selectedQuestion,
                 hint: const Text("Pili ug pangutana"),
                 dropdownColor: Colors.white,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
-                  errorText: vm.questionError,
-                  errorStyle: const TextStyle(
-                    color: AppColors.error,
-                    fontSize: 12,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade400),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.error),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: AppColors.error, width: 2),
-                  ),
-                ),
+                decoration: inputDecorationWithError(vm.questionError),
                 isExpanded: true,
                 items: vm.questions
                     .map((q) => DropdownMenuItem(value: q, child: Text(q)))
@@ -201,26 +172,23 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               ),
               const SizedBox(height: 15),
 
-              // Answer
+              // ==================== SECURITY ANSWER ====================
               buildLabel("Tubag (Answer)"),
               buildTextField(
                 controller: vm.answerController,
                 hint: "Isulat ang imong tubag",
                 errorText: vm.answerError,
-                onChanged: (_) =>
-                    vmNotifier.clearFieldError(vm.answerController),
+                onChanged: (_) => vmNotifier.clearFieldError(vm.answerController),
               ),
               const SizedBox(height: 25),
 
-              // Create Account Button
+              // ==================== CREATE ACCOUNT BUTTON ====================
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: !vm.isLoading
-                        ? AppColors.primary
-                        : Colors.grey,
+                    backgroundColor: !vm.isLoading ? AppColors.primary : Colors.grey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -228,13 +196,25 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   onPressed: !vm.isLoading
                       ? () async {
                           vmNotifier.setLoading(true);
+
                           bool success = await vm.createAccount();
+
                           vmNotifier.setLoading(false);
 
                           if (success) {
                             if (!context.mounted) return;
 
-                            await Future.delayed(const Duration(seconds: 3));
+                            // Save mobile number & full name for MainPage
+                            final account = Account(
+                              id: 0, // will be replaced by actual DB id
+                              firstName: vm.firstNameController.text.trim(),
+                              middleName: vm.middleNameController.text.trim(),
+                              lastName: vm.lastNameController.text.trim(),
+                              mobileNumber: vm.mobileController.text.trim(),
+                              pin: vm.pinController.text.trim(),
+                              securityAnswer: vm.answerController.text.trim(),
+                            );
+                            await accountRepo.updateAccount(account);
 
                             vm.clearFields();
 
@@ -242,7 +222,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                             await loginVM.loadSavedMobile();
 
                             if (!context.mounted) return;
-
                             context.go('/login');
                           }
                         }
@@ -268,10 +247,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     );
   }
 
+  // ==================== HELPERS ====================
   Widget buildLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
-  );
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+      );
 
   Widget buildTextField({
     required TextEditingController controller,
@@ -298,10 +278,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 14,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: Colors.grey.shade400),
@@ -319,6 +296,32 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           borderSide: BorderSide(color: AppColors.error, width: 2),
         ),
         suffixIcon: suffixIcon,
+      ),
+    );
+  }
+
+  InputDecoration inputDecorationWithError(String? errorText) {
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.white,
+      errorText: errorText,
+      errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade400),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.error, width: 2),
       ),
     );
   }
