@@ -96,7 +96,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CategoryChipsWithDots(
-                    categories: TransactionCategory.values,
+                    categories: const [
+                      TransactionCategory.all,
+                      TransactionCategory.expenses,
+                      TransactionCategory.sales,
+                      TransactionCategory.capitalManagement,
+                      TransactionCategory.utangCustomerPayment,
+                    ],
                     selectedCategory: vm.selectedCategory,
                     onCategorySelected: (cat) => vm.setSelectedCategory(cat),
                   ),
@@ -144,12 +150,19 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final isHalin = tx.type == 'Halin';
     final isExpense = tx.type == 'Gasto';
     final isCapital = tx.type == 'Capital';
+    final isUtangCustomerPayment = tx.type == 'Utang Payment';
+    final isOwnerPayment = tx.type == 'Owner Payment';
+    final isDownPayment = tx.type == 'Down Payment';
 
     Color typeColor = isHalin
         ? Colors.green
         : isExpense
             ? Colors.red
-            : Colors.blue;
+            : isUtangCustomerPayment
+                ? Colors.green
+                : (isOwnerPayment || isDownPayment)
+                    ? Colors.red
+                    : Colors.blue;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -196,7 +209,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       ? 'Halin'
                       : isExpense
                           ? 'Gasto'
-                          : 'Capital',
+                          : isCapital
+                              ? 'Capital'
+                              : isUtangCustomerPayment
+                                  ? 'Utang Customer Payment'
+                                  : isOwnerPayment
+                                      ? 'Owner Payment'
+                                      : 'Down Payment',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -205,11 +224,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  isCapital
+                  (isCapital || isHalin || isUtangCustomerPayment)
                       ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                      : isExpense
-                          ? '-${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                          : '+${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+                      : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -227,8 +244,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    (isCapital || isExpense)
-                        ? 'Note: ${tx.description ?? ''}'
+                    (isCapital ||
+                            isExpense ||
+                            isUtangCustomerPayment ||
+                            isOwnerPayment ||
+                            isDownPayment)
+                        ? (tx.description ?? '')
                         : (tx.productName ?? 'Product'),
                     style: const TextStyle(
                       fontSize: 14,
@@ -509,6 +530,10 @@ class _TransactionDetailsSheet extends StatelessWidget {
     final isExpense = transaction.type == 'Gasto';
     final isHalin = transaction.type == 'Halin';
     final isCapital = transaction.type == 'Capital';
+    final isUtangCustomerPayment =
+        transaction.type == 'Utang Customer Payment';
+    final isOwnerPayment = transaction.type == 'Owner Payment';
+    final isDownPayment = transaction.type == 'Down Payment';
     final NumberFormat currency =
         NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 2);
 
@@ -542,7 +567,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
             children: [
               const Text('Amount:', style: TextStyle(fontSize: 16)),
               Text(
-                '${isCapital ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+                '${(isCapital || isHalin || isUtangCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -550,7 +575,11 @@ class _TransactionDetailsSheet extends StatelessWidget {
                       ? Colors.green
                       : isExpense
                           ? Colors.red
-                          : Colors.blue,
+                          : isUtangCustomerPayment
+                              ? Colors.green
+                              : (isOwnerPayment || isDownPayment)
+                                  ? Colors.red
+                                  : Colors.blue,
                 ),
               ),
             ],
@@ -603,16 +632,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Note
-          if (transaction.description != null && transaction.description!.isNotEmpty)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Note: ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              Expanded(
-                child: Text(transaction.description!, style: const TextStyle(fontSize: 16)),
-              ),
-            ],
-          ),
+          // Description already shown in the list item; avoid duplicating here.
 
           const SizedBox(height: 16),
 

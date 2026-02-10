@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../models/payable_model.dart';
 import '../../models/utang_customer_model.dart';
-import '../../repositories/account_repository.dart';
 import '../../repositories/capital_management_repository.dart';
 import '../../repositories/payable_repository.dart';
 import '../widgets/header.dart';
@@ -33,6 +32,29 @@ class ThousandsFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class OwnerPayablePayment {
+  final int id;
+  final double amount;
+  final DateTime paidAt;
+  final String? note;
+
+  OwnerPayablePayment({
+    required this.id,
+    required this.amount,
+    required this.paidAt,
+    this.note,
+  });
+
+  factory OwnerPayablePayment.fromMap(Map<String, dynamic> map) {
+    return OwnerPayablePayment(
+      id: map['id'] as int,
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      paidAt: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+      note: map['note']?.toString(),
     );
   }
 }
@@ -142,6 +164,20 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
       ownerPayables = payables;
       applyOwnerFilter(selectedFilter);
     });
+  }
+
+  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(
+    int payableId,
+  ) async {
+    final db = await DBService.instance.database;
+    final result = await db.query(
+      'payable_payment',
+      where: 'payable_id = ?',
+      whereArgs: [payableId],
+      orderBy: 'date ASC',
+    );
+
+    return result.map((row) => OwnerPayablePayment.fromMap(row)).toList();
   }
 
   void filterUtangan(String query) {
@@ -333,12 +369,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
 
       if (payAmount <= 0) return;
 
-      // Verify sufficient cash on hand
-      final accountRepository = AccountRepository();
-      final accountId = await accountRepository.getAccountId();
+      // Verify sufficient cash on hand (global pool, same as other screens)
       final cashRes = await db.rawQuery(
-        'SELECT SUM(cash_on_hand) AS total_cash FROM capital_management WHERE account_id = ?',
-        [accountId],
+        'SELECT IFNULL(SUM(cash_on_hand), 0) AS total_cash FROM capital_management',
       );
       final cashOnHand =
           (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
@@ -396,6 +429,17 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
       );
 
       await fetchOwnerPayables();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isFullPay
+                ? "Full payment recorded successfully"
+                : "Partial payment recorded successfully",
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
@@ -407,14 +451,10 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
-          backgroundColor: isInsufficientCash
-              ? AppColors.error
-              : AppColors.success,
+          backgroundColor: AppColors.error,
           duration: Duration(seconds: 3),
         ),
       );
-
-      rethrow;
     }
   }
 
@@ -423,6 +463,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   // ============================================================
 
   Future<void> showOwnerUtangModal(Payable item) async {
+    final paymentHistory = await fetchOwnerPaymentHistory(item.id);
+    if (!mounted) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -433,6 +476,8 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         final double remaining = (item.remainingAmount ?? item.amount)
             .clamp(0.0, item.amount.toDouble())
             .toDouble();
+        final bool isFullyPaid =
+            item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
         final nextDateStr = item.isInstallment
             ? item.nextDueDate
             : item.dueDate;
@@ -450,108 +495,182 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
           displayNextDue = DateTime.tryParse(nextDateStr);
         }
 
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.item,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.5,
+          minChildSize: 0.5,
+          maxChildSize: 0.6,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              const SizedBox(height: 12),
-              Text(
-                "Amount: ₱${currencyFormat.format(item.amount)}",
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "Remaining: ₱${currencyFormat.format(remaining)}",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 6),
-              if (item.createdAtDate != null)
+              child: SizedBox(
+                width: double.infinity,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 Text(
-                  "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  item.item,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              if (displayNextDue != null)
+                const SizedBox(height: 12),
                 Text(
-                  "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  "Amount: \u20B1${currencyFormat.format(item.amount)}",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              const SizedBox(height: 6),
-              Text(
-                item.isInstallment ? "Installment" : "Non-installment",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: item.isInstallment
-                      ? Colors.orange.shade800
-                      : Colors.blue.shade800,
+                const SizedBox(height: 6),
+                Text(
+                  "Remaining: \u20B1${currencyFormat.format(remaining)}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                if (item.createdAtDate != null)
+                  Text(
+                    "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                if (displayNextDue != null)
+                  Text(
+                    "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                const SizedBox(height: 6),
+                Text(
+                  item.isInstallment ? "Installment" : "Non-installment",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: item.isInstallment
+                        ? Colors.orange.shade800
+                        : Colors.blue.shade800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "Payment Trace",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                if (paymentHistory.isEmpty)
+                  const Text(
+                    "No payments recorded yet.",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ...paymentHistory.map((payment) {
+                  final paidLabel = DateFormat(
+                    'MMM dd, yyyy hh:mm a',
+                  ).format(payment.paidAt);
+                  final leftLabel = !item.isInstallment
+                      ? 'Full payment \u20B1${currencyFormat.format(payment.amount)}'
+                      : (payment.note?.isNotEmpty == true
+                          ? payment.note!
+                          : 'Owner payment');
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            leftLabel,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          paidLabel,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 12),
+                if (!isFullyPaid)
+                  if (!isFullyPaid)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              double? amount = await promptPartialAmount(
+                                remaining,
+                                suggested: item.planMonthly,
+                              );
+                              if (amount != null) {
+                                await applyPayment(item, amount);
+                                if (context.mounted) Navigator.pop(context);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text("Partial Pay"),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await applyPayment(
+                                item,
+                                remaining,
+                                isFullPay: true,
+                              );
+                              if (context.mounted) Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text("Full Pay"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        double? amount = await promptPartialAmount(
-                          remaining,
-                          suggested: item.planMonthly,
-                        );
-                        if (amount != null) {
-                          await applyPayment(item, amount);
-                          if (context.mounted) Navigator.pop(context);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text("Partial Pay"),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await applyPayment(item, remaining, isFullPay: true);
-                        if (context.mounted) Navigator.pop(context);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text("Full Pay"),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
+            ),
+          );
+        });
       },
     );
   }
@@ -898,7 +1017,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
 
   Widget _buildOwnerPayableCard(Payable item) {
     String? nextDueDisplay;
-    String status = item.isPaid ? "Paid" : "";
+    final isFullyPaid =
+        item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
+    String status = isFullyPaid ? "Paid" : "";
     final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
 
     if (nextDateStr != null) {
@@ -906,7 +1027,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
       if (due != null) {
         nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
 
-        if (!item.isPaid) {
+        if (!isFullyPaid) {
           final daysLeft = due.difference(DateTime.now()).inDays;
           if (daysLeft < 0) {
             status = "Overdue";
@@ -952,7 +1073,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                   ],
                 ),
               ),
-              if (status == "Due Soon")
+              if (status == "Due Soon" || status == "Paid")
                 Positioned(
                   top: 12,
                   right: 12,

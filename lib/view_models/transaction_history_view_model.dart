@@ -90,7 +90,15 @@ class TransactionSection {
 }
 
 // Transaction categories
-enum TransactionCategory { all, expenses, sales, capitalManagement }
+enum TransactionCategory {
+  all,
+  expenses,
+  sales,
+  capitalManagement,
+  utangCustomerPayment,
+  ownerPayment,
+  downPayment,
+}
 
 extension TransactionCategoryExtension on TransactionCategory {
   String get displayName {
@@ -103,6 +111,12 @@ extension TransactionCategoryExtension on TransactionCategory {
         return 'Halin';
       case TransactionCategory.capitalManagement:
         return 'Capital';
+      case TransactionCategory.utangCustomerPayment:
+        return 'Utang Payment';
+      case TransactionCategory.ownerPayment:
+        return 'Owner Payment';
+      case TransactionCategory.downPayment:
+        return 'Down Payment';
     }
   }
 }
@@ -118,6 +132,9 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     salesCash: [],
     salesCredit: [],
     capitalManagement: [],
+    utangPayments: [],
+    ownerPayments: [],
+    downPayments: [],
   );
 
   bool _isLoading = false;
@@ -147,6 +164,12 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         return 'No sales transactions yet';
       case TransactionCategory.capitalManagement:
         return 'No capital transactions yet';
+      case TransactionCategory.utangCustomerPayment:
+        return 'No utang payments yet';
+      case TransactionCategory.ownerPayment:
+        return 'No owner payments yet';
+      case TransactionCategory.downPayment:
+        return 'No down payments yet';
       case TransactionCategory.all:
         return 'No transactions found';
     }
@@ -184,16 +207,40 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         yield TransactionItem.fromMap(map,
             fallbackType: 'Capital', isCapital: true);
       }
+      for (var map in _filteredHistory.utangPayments) {
+        yield TransactionItem.fromMap(
+          map,
+          fallbackType: 'Utang Customer Payment',
+        );
+      }
+      for (var map in _filteredHistory.ownerPayments) {
+        yield TransactionItem.fromMap(map, fallbackType: 'Owner Payment');
+      }
+      for (var map in _filteredHistory.downPayments) {
+        yield TransactionItem.fromMap(map, fallbackType: 'Down Payment');
+      }
     }
 
     Iterable<TransactionItem> result;
     if (selectedCategory != TransactionCategory.all) {
-      final type = selectedCategory == TransactionCategory.expenses
-          ? 'Gasto'
-          : selectedCategory == TransactionCategory.sales
-              ? 'Halin'
-              : 'Capital';
-      result = items().where((tx) => tx.type == type);
+      if (selectedCategory == TransactionCategory.utangCustomerPayment) {
+        result = items().where(
+          (tx) =>
+              tx.type == 'Utang Customer Payment' ||
+              tx.type == 'Owner Payment',
+        );
+      } else {
+        final type = selectedCategory == TransactionCategory.expenses
+            ? 'Gasto'
+            : selectedCategory == TransactionCategory.sales
+                ? 'Halin'
+                : selectedCategory == TransactionCategory.capitalManagement
+                    ? 'Capital'
+                    : selectedCategory == TransactionCategory.ownerPayment
+                        ? 'Owner Payment'
+                        : 'Down Payment';
+        result = items().where((tx) => tx.type == type);
+      }
     } else {
       result = items().toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -234,6 +281,9 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       salesCash: _filterByDate(_fullHistory!.salesCash),
       salesCredit: _filterByDate(_fullHistory!.salesCredit),
       capitalManagement: _filterByDate(_fullHistory!.capitalManagement),
+      utangPayments: _filterByDate(_fullHistory!.utangPayments),
+      ownerPayments: _filterByDate(_fullHistory!.ownerPayments),
+      downPayments: _filterByDate(_fullHistory!.downPayments),
     );
     _cache.clear();
     _currentPage = 0;

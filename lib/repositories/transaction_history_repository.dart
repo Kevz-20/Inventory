@@ -87,20 +87,28 @@ class TransactionHistoryRepository {
       ORDER BY cp.paid_at DESC
     ''');
 
-    // Owner Payments (if any)
-    // final ownerPayments = await db.rawQuery('''
-    //   SELECT 
-    //     op.amount,
-    //     op.paid_at AS created_at,
-    //     'out' AS direction,
-    //     'Owner Payment - ' || 
-    //       COALESCE(a.first_name, '') || ' ' ||
-    //       COALESCE(a.middle_name, '') || ' ' ||
-    //       COALESCE(a.last_name, '') AS description
-    //   FROM owner_payment op
-    //   JOIN account a ON a.id = op.account_id
-    //   ORDER BY op.paid_at DESC
-    // ''');
+    // Owner Payments (payable payments)
+    final ownerPayments = await db.rawQuery('''
+      SELECT 
+        pp.amount,
+        pp.date AS created_at,
+        'out' AS direction,
+        'Owner Payment - ' || COALESCE(p.item, '') AS description
+      FROM payable_payment pp
+      JOIN payable p ON p.id = pp.payable_id
+      ORDER BY pp.date DESC
+    ''');
+
+    // Down Payments (owner installments)
+    final downPayments = await db.rawQuery('''
+      SELECT
+        oi.downpayment AS amount,
+        oi.created_at AS created_at,
+        'out' AS direction,
+        'Down Payment - ' || COALESCE(oi.item, '') AS description
+      FROM owner_installments oi
+      ORDER BY oi.created_at DESC
+    ''');
 
     // Merge utang payments and sort by date descending
     final utangPayments = [...customerPayments]
@@ -117,6 +125,8 @@ class TransactionHistoryRepository {
       salesCredit: salesCredit,
       capitalManagement: capitalManagement,
       utangPayments: utangPayments,
+      ownerPayments: ownerPayments,
+      downPayments: downPayments,
     );
   }
 

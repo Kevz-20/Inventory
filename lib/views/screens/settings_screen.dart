@@ -47,7 +47,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           /// PROFILE HEADER
           AnimatedBuilder(
             animation: settingsVM,
-            builder: (_, __) {
+            builder: (context, child) {
               // Show loading indicator if fullName not yet loaded
               final isLoading = settingsVM.isLoading;
               final nameToShow = isLoading

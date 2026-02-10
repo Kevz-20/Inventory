@@ -329,7 +329,7 @@ class ExpensesScreen extends ConsumerWidget {
     final bool isError = showError && value == null;
 
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       isExpanded: true,
       dropdownColor: Colors.white,
       decoration: InputDecoration(

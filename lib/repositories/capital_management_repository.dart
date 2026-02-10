@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
+import 'dart:math' as math;
 import '../models/capital_management_model.dart';
 
 class CapitalManagementRepository {
@@ -84,24 +85,55 @@ class CapitalManagementRepository {
 
   // ---------------- DEDUCT CASH ----------------
   Future<void> deductCash({required double amount}) async {
-    final latest = await getLatestCapital();
-    if (latest == null || latest.id == null) {
-      throw Exception('No capital record found');
-    }
+    if (amount <= 0) return;
 
-    final totalCash = latest.cashOnHand;
+    await database.transaction((txn) async {
+      final totalRes = await txn.rawQuery('''
+        SELECT IFNULL(SUM(cash_on_hand), 0) AS total_cash
+        FROM capital_management
+      ''');
+      final totalCash = (totalRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
 
-    if (totalCash < amount) {
-      throw Exception('Insufficient cash on hand');
-    }
+      if (totalCash < amount) {
+        throw Exception('Insufficient cash on hand');
+      }
 
-    final newCash = (latest.cashOnHand - amount).clamp(0.0, double.infinity);
+      var remainingToDeduct = amount;
+      final rows = await txn.query(
+        'capital_management',
+        columns: ['id', 'cash_on_hand'],
+        orderBy: 'id DESC',
+      );
 
-    final updated = latest.copyWith(cashOnHand: newCash);
+      for (final row in rows) {
+        if (remainingToDeduct <= 0) break;
 
-    await updateCapital(updated);
+        final id = row['id'] as int;
+        final currentCash = (row['cash_on_hand'] as num?)?.toDouble() ?? 0.0;
+        if (currentCash <= 0) continue;
 
-    debugPrint('>> Expense deducted: $amount | Remaining cash: $newCash (global)');
+        final deduct = math.min(currentCash, remainingToDeduct);
+        final newCash = currentCash - deduct;
+
+        await txn.update(
+          'capital_management',
+          {'cash_on_hand': newCash},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+
+        remainingToDeduct -= deduct;
+      }
+
+      if (remainingToDeduct > 0) {
+        throw Exception('Insufficient cash on hand');
+      }
+    });
+
+    final updatedTotal = await getTotalCashOnHand();
+    debugPrint(
+      '>> Expense deducted: $amount | Remaining cash (global): $updatedTotal',
+    );
   }
 
   // ---------------- ADD CASH ----------------

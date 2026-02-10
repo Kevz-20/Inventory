@@ -88,14 +88,14 @@ class _AddUtangPageState extends State<AddUtangPage> {
   // SAVE UTANG
   // ==============================
   Future<void> saveUtang() async {
-  final db = await DBService.instance.database;
-
   if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Please fill item and total cost")),
     );
     return;
   }
+
+  final db = await DBService.instance.database;
 
   try {
     // -----------------------------
@@ -129,6 +129,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       // CHECK DOWNPAYMENT AGAINST CASH
       // -----------------------------
       if (down > cashOnHand) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -171,7 +172,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       // -----------------------------
       if (down > 0) {
         await db.insert('owner_installments', {
-          'account_id': 1, // TODO: replace with dynamic account if needed
+          'account_id': 1, // static account id used by current data model
           'item': itemController.text,
           'downpayment': down,
           'created_at': DateTime.now().toIso8601String(),
@@ -208,6 +209,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           : DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       if (total > cashOnHand) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -264,6 +266,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     // -----------------------------
     // SUCCESS
     // -----------------------------
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Bayronon saved successfully")),
     );
@@ -283,9 +286,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
     });
 
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       Navigator.pop(context, true);
     });
   } catch (e) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Failed to save: $e")),
     );
