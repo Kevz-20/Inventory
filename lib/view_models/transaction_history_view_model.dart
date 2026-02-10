@@ -223,18 +223,22 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
     Iterable<TransactionItem> result;
     if (selectedCategory != TransactionCategory.all) {
-      if (selectedCategory == TransactionCategory.utangCustomerPayment) {
+      if (selectedCategory == TransactionCategory.sales) {
+        // Show only cash sales under Halin; credit/utang sales are excluded.
+        result = _filteredHistory.salesCash.map(
+          (map) => TransactionItem.fromMap(map, fallbackType: 'Halin'),
+        );
+      } else if (selectedCategory == TransactionCategory.utangCustomerPayment) {
         result = items().where(
           (tx) =>
               tx.type == 'Utang Customer Payment' ||
-              tx.type == 'Owner Payment',
+              tx.type == 'Owner Payment' ||
+              tx.type == 'Down Payment',
         );
       } else {
         final type = selectedCategory == TransactionCategory.expenses
             ? 'Gasto'
-            : selectedCategory == TransactionCategory.sales
-                ? 'Halin'
-                : selectedCategory == TransactionCategory.capitalManagement
+            : selectedCategory == TransactionCategory.capitalManagement
                     ? 'Capital'
                     : selectedCategory == TransactionCategory.ownerPayment
                         ? 'Owner Payment'

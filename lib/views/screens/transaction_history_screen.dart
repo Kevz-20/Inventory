@@ -150,7 +150,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final isHalin = tx.type == 'Halin';
     final isExpense = tx.type == 'Gasto';
     final isCapital = tx.type == 'Capital';
-    final isUtangCustomerPayment = tx.type == 'Utang Payment';
+    final isUtangCustomerPayment = tx.type == 'Utang Customer Payment';
     final isOwnerPayment = tx.type == 'Owner Payment';
     final isDownPayment = tx.type == 'Down Payment';
 
@@ -212,7 +212,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           : isCapital
                               ? 'Capital'
                               : isUtangCustomerPayment
-                                  ? 'Utang Customer Payment'
+                                  ? 'Customer Payment'
                                   : isOwnerPayment
                                       ? 'Owner Payment'
                                       : 'Down Payment',

@@ -78,10 +78,11 @@ class TransactionHistoryRepository {
         cp.amount,
         cp.paid_at AS created_at,
         'in' AS direction,
-        'Customer Payment - ' || 
+        TRIM(
           COALESCE(c.first_name, '') || ' ' ||
           COALESCE(c.middle_name, '') || ' ' ||
-          COALESCE(c.last_name, '') AS description
+          COALESCE(c.last_name, '')
+        ) AS description
       FROM customer_payment cp
       JOIN customer c ON c.id = cp.customer_id
       ORDER BY cp.paid_at DESC
@@ -93,7 +94,7 @@ class TransactionHistoryRepository {
         pp.amount,
         pp.date AS created_at,
         'out' AS direction,
-        'Owner Payment - ' || COALESCE(p.item, '') AS description
+        COALESCE(p.item, '') AS description
       FROM payable_payment pp
       JOIN payable p ON p.id = pp.payable_id
       ORDER BY pp.date DESC
@@ -105,7 +106,7 @@ class TransactionHistoryRepository {
         oi.downpayment AS amount,
         oi.created_at AS created_at,
         'out' AS direction,
-        'Down Payment - ' || COALESCE(oi.item, '') AS description
+        COALESCE(oi.item, '') AS description
       FROM owner_installments oi
       ORDER BY oi.created_at DESC
     ''');
