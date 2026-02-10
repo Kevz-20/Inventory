@@ -155,7 +155,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               // ==================== SECURITY QUESTION ====================
               buildLabel("Security Question (for PIN reset)"),
               DropdownButtonFormField<String>(
-                value: vm.selectedQuestion,
+                initialValue: vm.selectedQuestion,
                 hint: const Text("Pili ug pangutana"),
                 dropdownColor: Colors.white,
                 decoration: inputDecorationWithError(vm.questionError),

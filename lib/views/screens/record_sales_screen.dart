@@ -139,87 +139,89 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   // ---------------------------- Helper Widgets ----------------------------
 
   Widget _cashUtangSwitch(SalesViewModel vm) {
-  final double toggleWidth = MediaQuery.of(context).size.width - 32; // account for horizontal padding
-  final double sliderWidth = toggleWidth / 2;
+    final double toggleWidth =
+        MediaQuery.of(context).size.width -
+        32; // account for horizontal padding
+    final double sliderWidth = toggleWidth / 2;
 
-  return Container(
-    height: 50,
-    padding: const EdgeInsets.all(4),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade300.withOpacity(0.3),
-      borderRadius: BorderRadius.circular(25),
-    ),
-    child: Stack(
-      children: [
-        // 🔹 Sliding background pill
-        AnimatedAlign(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          alignment: isCash ? Alignment.centerLeft : Alignment.centerRight,
-          child: Container(
-            width: sliderWidth,
-            margin: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Stack(
+        children: [
+          // 🔹 Sliding background pill
+          AnimatedAlign(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: isCash ? Alignment.centerLeft : Alignment.centerRight,
+            child: Container(
+              width: sliderWidth,
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
 
-        // 🔹 Toggle buttons
-        Row(
-          children: [
-            _switchButton("Cash", isCash, () {
-              setState(() {
-                isCash = true;
-                isProductMode = false;
-                vm.selectedCustomer = null;
-                dueDate = null;
-              });
-              vm.resetQuantities();
-              vm.loadProducts();
-            }),
-            _switchButton("Utang", !isCash, () {
-              setState(() {
-                isCash = false;
-                isProductMode = false;
-              });
-              vm.resetQuantities();
-            }),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+          // 🔹 Toggle buttons
+          Row(
+            children: [
+              _switchButton("Cash", isCash, () {
+                setState(() {
+                  isCash = true;
+                  isProductMode = false;
+                  vm.selectedCustomer = null;
+                  dueDate = null;
+                });
+                vm.resetQuantities();
+                vm.loadProducts();
+              }),
+              _switchButton("Utang", !isCash, () {
+                setState(() {
+                  isCash = false;
+                  isProductMode = false;
+                });
+                vm.resetQuantities();
+              }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _switchButton(String title, bool active, VoidCallback onTap) {
-  return Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        alignment: Alignment.center,
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          style: TextStyle(
-            color: active ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          alignment: Alignment.center,
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            style: TextStyle(
+              color: active ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+            child: Text(title),
           ),
-          child: Text(title),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _searchBar(SalesViewModel vm) {
     const double height = 55;
@@ -356,7 +358,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
             controller: _categoryScrollController,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.symmetric(horizontal: chipRadius),
+            padding: EdgeInsets.zero,
             itemCount: totalCategories,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
@@ -406,7 +408,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
               margin: EdgeInsets.symmetric(horizontal: dotSpacing / 2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: selected ? Colors.grey.shade400 : Colors.grey.shade400,
+                color: selected ? AppColors.primary : Colors.grey.shade400,
               ),
             );
           }),
@@ -579,141 +581,55 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   Widget _utangList() {
-  final vm = ref.watch(salesViewModelProvider);
+    final vm = ref.watch(salesViewModelProvider);
 
-  if (!isProductMode) {
-    // Filter customers by search query
-    final filteredCustomers = vm.customers.where((customer) {
-      final name = '${customer['first_name']} ${customer['last_name']}';
-      return name.toLowerCase().contains(searchQuery.toLowerCase());
-    }).toList();
+    if (!isProductMode) {
+      // Filter customers by search query
+      final filteredCustomers = vm.customers.where((customer) {
+        final name = '${customer['first_name']} ${customer['last_name']}';
+        return name.toLowerCase().contains(searchQuery.toLowerCase());
+      }).toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _dueDateCard(),
-          const SizedBox(height: 4),
-          if (filteredCustomers.isNotEmpty)
-            ...filteredCustomers.map((customer) => _customerItem(customer))
-          else
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Text(
-                  "No customers found",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black54,
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _dueDateCard(),
+            const SizedBox(height: 4),
+            if (filteredCustomers.isNotEmpty)
+              ...filteredCustomers.map((customer) => _customerItem(customer))
+            else
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text(
+                    "No customers found",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black54,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
-      ),
-    );
-  } else {
-    // When a customer is selected, show products for credit sale
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          color: Colors.white,
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                style: const TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-            ],
-          ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              _searchBar(vm),
-              const SizedBox(height: 6),
-              _categoryChips(vm),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Expanded(child: _productList(vm)),
-      ],
-    );
-  }
-}
-
-Widget _customerItem(Map<String, dynamic> customer) {
-  final vm = ref.read(salesViewModelProvider);
-
-  // ✅ Correctly get available credit from DB field
-  final double availableCredit = (customer['available_credit'] ?? 1000.0) as double;
-
-  return GestureDetector(
-    onTap: () {
-      if (dueDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select a due date first.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      setState(() {
-        vm.selectedCustomer = customer;
-        isProductMode = true;
-        searchController.clear();
-        searchQuery = '';
-      });
-    },
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(25),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
+      );
+    } else {
+      // When a customer is selected, show products for credit sale
+      return Column(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: AppColors.primary.withOpacity(0.15),
-            child: const Icon(Icons.person, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "${customer['first_name']} ${customer['last_name']}",
+                  'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -721,23 +637,109 @@ Widget _customerItem(Map<String, dynamic> customer) {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Available Credit: ₱${availableCredit.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                _searchBar(vm),
+                const SizedBox(height: 6),
+                _categoryChips(vm),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(child: _productList(vm)),
         ],
-      ),
-    ),
-  );
-}
+      );
+    }
+  }
 
+  Widget _customerItem(Map<String, dynamic> customer) {
+    final vm = ref.read(salesViewModelProvider);
+
+    // ✅ Correctly get available credit from DB field
+    final double availableCredit =
+        (customer['available_credit'] ?? 1000.0) as double;
+
+    return GestureDetector(
+      onTap: () {
+        if (dueDate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select a due date first.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        setState(() {
+          vm.selectedCustomer = customer;
+          isProductMode = true;
+          searchController.clear();
+          searchQuery = '';
+        });
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha(25),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.primary.withOpacity(0.15),
+              child: const Icon(Icons.person, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${customer['first_name']} ${customer['last_name']}",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Available Credit: ₱${availableCredit.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _dueDateCard() {
     return GestureDetector(
@@ -845,287 +847,292 @@ Widget _customerItem(Map<String, dynamic> customer) {
   }
 
   void _showSummary(BuildContext context, SalesViewModel vm) {
-  final selectedProducts = vm.products.where((p) {
-    final id = p.id;
-    if (id == null) return false;
-    return (vm.productQuantities[id] ?? 0) > 0;
-  }).toList();
+    final selectedProducts = vm.products.where((p) {
+      final id = p.id;
+      if (id == null) return false;
+      return (vm.productQuantities[id] ?? 0) > 0;
+    }).toList();
 
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (_) {
-      final selectedCustomer = vm.selectedCustomer;
-      final double? availableCredit =
-          !isCash && selectedCustomer != null
-              ? ((selectedCustomer['available_credit'] ?? 0.0) as num)
-                  .toDouble()
-              : null;
-      final bool exceedsAvailableCredit =
-          availableCredit != null && vm.total > availableCredit;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        final selectedCustomer = vm.selectedCustomer;
+        final double? availableCredit = !isCash && selectedCustomer != null
+            ? ((selectedCustomer['available_credit'] ?? 0.0) as num).toDouble()
+            : null;
+        final bool exceedsAvailableCredit =
+            availableCredit != null && vm.total > availableCredit;
 
-      return SafeArea(
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Sale Summary',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: selectedProducts.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No products selected',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black54,
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text(
+                    'Sale Summary',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: selectedProducts.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No products selected',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black54,
+                              ),
                             ),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: selectedProducts.length,
-                          itemBuilder: (_, index) {
-                            final product = selectedProducts[index];
-                            final qty = vm.getQuantity(product);
-                            final subtotal = vm.getSubtotal(product);
+                          )
+                        : ListView.builder(
+                            itemCount: selectedProducts.length,
+                            itemBuilder: (_, index) {
+                              final product = selectedProducts[index];
+                              final qty = vm.getQuantity(product);
+                              final subtotal = vm.getSubtotal(product);
 
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 4,
-                              ),
-                              title: Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4,
                                 ),
-                              ),
-                              subtitle: Text(
-                                '₱${product.sellingPrice} × $qty',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black54,
+                                title: Text(
+                                  product.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 17,
+                                  ),
                                 ),
-                              ),
-                              trailing: Text(
-                                currencyFormatter.format(subtotal),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
+                                subtitle: Text(
+                                  '₱${product.sellingPrice} × $qty',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black54,
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-                const Divider(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'TOTAL',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    Text(
-                      currencyFormatter.format(vm.total),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                if (!isCash && availableCredit != null) ...[
-                  const SizedBox(height: 10),
+                                trailing: Text(
+                                  currencyFormatter.format(subtotal),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const Divider(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Available Credit',
+                        'TOTAL',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black54,
+                          letterSpacing: 1,
                         ),
                       ),
                       Text(
-                        currencyFormatter.format(availableCredit),
+                        currencyFormatter.format(vm.total),
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
                         ),
                       ),
                     ],
                   ),
-                  if (exceedsAvailableCredit) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Amount exceeds available credit. Please reduce items.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.red.shade700,
-                      ),
-                    ),
-                  ],
-                ],
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cancel',
+                  if (!isCash && availableCredit != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Available Credit',
                           style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        Text(
+                          currencyFormatter.format(availableCredit),
+                          style: const TextStyle(
                             fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (exceedsAvailableCredit) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Amount exceeds available credit. Please reduce items.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          // Validate customer and due date for Utang
-                          if (!isCash) {
-                            if (selectedCustomer == null || dueDate == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Please select a customer and due date for utang.'),
-                                  duration: Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            // Validate customer and due date for Utang
+                            if (!isCash) {
+                              if (selectedCustomer == null || dueDate == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please select a customer and due date for utang.',
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (selectedProducts.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please select at least one product for utang.',
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // Credit limit check
+                              final double totalSale = vm.total;
+                              final double creditLimit =
+                                  (selectedCustomer['credit_limit'] ?? 0.0)
+                                      as double;
+                              final double currentBalance =
+                                  (selectedCustomer['current_balance'] ?? 0.0)
+                                      as double;
+                              final double availableCredit =
+                                  creditLimit - currentBalance;
+
+                              if (totalSale > availableCredit) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Customer\'s available credit is ₱${availableCredit.toStringAsFixed(2)}. '
+                                      'You cannot exceed this limit.',
+                                    ),
+                                    duration: const Duration(seconds: 3),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
                             }
 
-                            if (selectedProducts.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Please select at least one product for utang.'),
-                                  duration: Duration(seconds: 2),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
+                            Navigator.pop(context);
 
-                            // Credit limit check
-                            final double totalSale = vm.total;
-                            final double creditLimit =
-                                (selectedCustomer['credit_limit'] ?? 0.0) as double;
-                            final double currentBalance =
-                                (selectedCustomer['current_balance'] ?? 0.0) as double;
-                            final double availableCredit = creditLimit - currentBalance;
+                            try {
+                              // Checkout
+                              if (isCash) {
+                                await vm.checkout(); // Cash checkout
+                              } else {
+                                await vm.checkout(
+                                  isCash: false,
+                                  customerId: selectedCustomer!['id'],
+                                  dueDate: dueDate!,
+                                );
+                              }
 
-                            if (totalSale > availableCredit) {
+                              // Reload customers to refresh available credit
+                              await vm.loadCustomers();
+
+                              // Reset UI
+                              vm.resetQuantities();
+                              vm.selectedCustomer = null;
+                              dueDate = null;
+                              isProductMode = false;
+                              searchController.clear();
+                              searchQuery = '';
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                    'Customer\'s available credit is ₱${availableCredit.toStringAsFixed(2)}. '
-                                    'You cannot exceed this limit.',
+                                  content: const Text(
+                                    'Sale successfully recorded!',
                                   ),
-                                  duration: const Duration(seconds: 3),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Checkout failed: $e'),
+                                  duration: const Duration(seconds: 2),
                                   backgroundColor: Colors.red,
                                 ),
                               );
-                              return;
                             }
-                          }
-
-                          Navigator.pop(context);
-
-                          try {
-                            // Checkout
-                            if (isCash) {
-                              await vm.checkout(); // Cash checkout
-                            } else {
-                              await vm.checkout(
-                                isCash: false,
-                                customerId: selectedCustomer!['id'],
-                                dueDate: dueDate!,
-                              );
-                            }
-
-                            // Reload customers to refresh available credit
-                            await vm.loadCustomers();
-
-                            // Reset UI
-                            vm.resetQuantities();
-                            vm.selectedCustomer = null;
-                            dueDate = null;
-                            isProductMode = false;
-                            searchController.clear();
-                            searchQuery = '';
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Sale successfully recorded!'),
-                                duration: const Duration(seconds: 2),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Checkout failed: $e'),
-                                duration: const Duration(seconds: 2),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                          },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Confirm',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                          child: const Text(
+                            'Confirm',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 }

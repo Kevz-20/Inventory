@@ -262,7 +262,12 @@ class _CapitalManagementScreenState
   Widget _quickAmountChip(String value) {
     return OutlinedButton(
       onPressed: () {
-        _amountController.text = value;
+        final current = _amountController.text.replaceAll(',', '');
+        final currentAmount = double.tryParse(current) ?? 0;
+        final chipAmount = double.tryParse(value) ?? 0;
+        final newAmount = currentAmount + chipAmount;
+
+        _amountController.text = NumberFormat('#,##0.##').format(newAmount);
         setState(() {});
       },
       child: Text('₱${NumberFormat('#,##0').format(int.parse(value))}'),

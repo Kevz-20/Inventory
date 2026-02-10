@@ -64,7 +64,9 @@ class EditExpenseViewModel extends ChangeNotifier {
 
   bool validate() {
     if (amountController.text.isEmpty ||
-        double.tryParse(amountController.text.replaceAll(',', '')) == null) return false;
+        double.tryParse(amountController.text.replaceAll(',', '')) == null) {
+      return false;
+    }
     if (selectedCategory == null) return false;
     if (descriptionController.text.isEmpty) return false;
     return true;
@@ -409,6 +411,7 @@ class _EditExpenseModalContent extends StatelessWidget {
                       ? null
                       : () async {
                           final success = await vm.save();
+                          // ignore: use_build_context_synchronously
                           if (success) Navigator.pop(context, true);
                         },
                   style: ElevatedButton.styleFrom(
@@ -437,6 +440,7 @@ class _EditExpenseModalContent extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
+        // ignore: deprecated_member_use
         color: color.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -492,7 +496,7 @@ class _EditExpenseModalContent extends StatelessWidget {
     final isError = showError && value == null;
 
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       isExpanded: true,
       decoration: InputDecoration(
         filled: true,

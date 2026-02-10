@@ -32,7 +32,7 @@ final incomeStatementViewModelProvider =
           final repository = IncomeStatementRepository(); // NO AccountRepository
           return IncomeStatementViewModel(repository);
         },
-        error: (_, __) => throw Exception('Database initialization failed'),
+        error: (_, _) => throw Exception('Database initialization failed'),
       );
     });
 
