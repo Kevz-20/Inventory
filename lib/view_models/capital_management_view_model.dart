@@ -48,7 +48,6 @@ class CapitalManagementViewModel extends ChangeNotifier {
 
     try {
       final model = CapitalManagementModel(
-        accountId: 0, // adjust if multi-account
         capital: capitalAmount,
         cashOnHand: capitalAmount,
         bankCash: 0,

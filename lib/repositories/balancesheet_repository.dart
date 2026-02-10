@@ -8,45 +8,54 @@ class BalanceSheetRepository {
   /// Fetches Assets (Cash, Accounts Receivable, Fixed Assets)
   /// Sums across all accounts (no account filter)
   Future<Map<String, double>> getAssets() async {
-    final db = await dbService.database;
+  final db = await dbService.database;
 
-    try {
-      // ---------------- CASH ON HAND ----------------
-      final capitalRes = await db.rawQuery('''
-        SELECT IFNULL(SUM(cash_on_hand),0) AS cash
-        FROM capital_management
-      ''');
-      double totalCashOnHand = (capitalRes.first['cash'] as num?)?.toDouble() ?? 0.0;
+  try {
+    // ---------------- CASH ON HAND ----------------
+    final capitalRes = await db.rawQuery('''
+      SELECT IFNULL(SUM(cash_on_hand),0) AS cash
+      FROM capital_management
+    ''');
+    double totalCashOnHand =
+        (capitalRes.first['cash'] as num?)?.toDouble() ?? 0.0;
 
-      // ---------------- FIXED ASSETS ----------------
-      final assetRes = await db.rawQuery('''
-        SELECT IFNULL(SUM(cost - accumulated_depreciation),0) AS fixed_assets
-        FROM fixed_asset
-      ''');
-      double fixedAssets = (assetRes.first['fixed_assets'] as num?)?.toDouble() ?? 0.0;
+    // ---------------- FIXED ASSETS ----------------
+    final assetRes = await db.rawQuery('''
+      SELECT IFNULL(SUM(cost - accumulated_depreciation),0) AS fixed_assets
+      FROM fixed_asset
+    ''');
+    double fixedAssets =
+        (assetRes.first['fixed_assets'] as num?)?.toDouble() ?? 0.0;
 
-      // ---------------- ACCOUNTS RECEIVABLE ----------------
-      final arRes = await db.rawQuery('''
-        SELECT IFNULL(SUM(amount),0) AS total_ar
-        FROM sales_credit
-        WHERE status_id IN (0, 1)
-      ''');
-      double totalAR = (arRes.first['total_ar'] as num?)?.toDouble() ?? 0.0;
+    // ---------------- ACCOUNTS RECEIVABLE (FIXED) ----------------
+    final arRes = await db.rawQuery('''
+      SELECT
+        IFNULL(SUM(sc.amount), 0) -
+        IFNULL((
+          SELECT SUM(cp.amount)
+          FROM customer_payment cp
+        ), 0) AS total_ar
+      FROM sales_credit sc
+      WHERE sc.status_id IN (0, 1)
+    ''');
+    double totalAR =
+        (arRes.first['total_ar'] as num?)?.toDouble() ?? 0.0;
 
-      return {
-        "Cash on Hand": totalCashOnHand,
-        "Accounts Receivable": totalAR,
-        "Assets": fixedAssets,
-      };
-    } catch (e) {
-      debugPrint("Error in getAssets: $e");
-      return {
-        "Cash on Hand": 0.0,
-        "Accounts Receivable": 0.0,
-        "Assets": 0.0,
-      };
-    }
+    return {
+      "Cash on Hand": totalCashOnHand,
+      "Accounts Receivable": totalAR,
+      "Assets": fixedAssets,
+    };
+  } catch (e) {
+    debugPrint("Error in getAssets: $e");
+    return {
+      "Cash on Hand": 0.0,
+      "Accounts Receivable": 0.0,
+      "Assets": 0.0,
+    };
   }
+}
+
 
   // ---------------- LIABILITIES ----------------
   /// Fetches total liabilities (Accounts Payable)

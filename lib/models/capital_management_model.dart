@@ -1,6 +1,5 @@
 class CapitalManagementModel {
   int? id;
-  int accountId;
   double cashOnHand;
   double capital;
   double bankCash;
@@ -9,7 +8,6 @@ class CapitalManagementModel {
 
   CapitalManagementModel({
     this.id,
-    required this.accountId,
     required this.cashOnHand,
     required this.capital,
     required this.bankCash,
@@ -20,7 +18,6 @@ class CapitalManagementModel {
   // Convert model to map for DB insertion
   Map<String, dynamic> toMap({bool includeId = false}) {
     final map = {
-      'account_id': accountId,
       'cash_on_hand': cashOnHand,
       'capital': capital,
       'bank_cash': bankCash,
@@ -37,7 +34,6 @@ class CapitalManagementModel {
   factory CapitalManagementModel.fromMap(Map<String, dynamic> map) {
     return CapitalManagementModel(
       id: map['id'] as int?,
-      accountId: map['account_id'] as int,
       cashOnHand: (map['cash_on_hand'] as num).toDouble(),
       capital: (map['capital'] as num).toDouble(),
       bankCash: (map['bank_cash'] as num).toDouble(),
@@ -58,7 +54,6 @@ class CapitalManagementModel {
   }) {
     return CapitalManagementModel(
       id: id ?? this.id,
-      accountId: accountId ?? this.accountId,
       cashOnHand: cashOnHand ?? this.cashOnHand,
       capital: capital ?? this.capital,
       bankCash: bankCash ?? this.bankCash,

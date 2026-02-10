@@ -845,245 +845,287 @@ Widget _customerItem(Map<String, dynamic> customer) {
   }
 
   void _showSummary(BuildContext context, SalesViewModel vm) {
-    final selectedProducts = vm.products.where((p) {
-      final id = p.id;
-      if (id == null) return false;
-      return (vm.productQuantities[id] ?? 0) > 0;
-    }).toList();
+  final selectedProducts = vm.products.where((p) {
+    final id = p.id;
+    if (id == null) return false;
+    return (vm.productQuantities[id] ?? 0) > 0;
+  }).toList();
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text(
-                    'Sale Summary',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: selectedProducts.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No products selected',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54,
-                              ),
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) {
+      final selectedCustomer = vm.selectedCustomer;
+      final double? availableCredit =
+          !isCash && selectedCustomer != null
+              ? ((selectedCustomer['available_credit'] ?? 0.0) as num)
+                  .toDouble()
+              : null;
+      final bool exceedsAvailableCredit =
+          availableCredit != null && vm.total > availableCredit;
+
+      return SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Sale Summary',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: selectedProducts.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No products selected',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54,
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: selectedProducts.length,
-                            itemBuilder: (_, index) {
-                              final product = selectedProducts[index];
-                              final qty = vm.getQuantity(product);
-                              final subtotal = vm.getSubtotal(product);
-
-                              return ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 4,
-                                ),
-                                title: Text(
-                                  product.name,
-                                  style: const TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold, // 🔥 BOLD PRODUCT
-                                    fontSize: 17,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '₱${product.sellingPrice} × $qty',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                                trailing: Text(
-                                  currencyFormatter.format(subtotal),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
-                  ),
-                  const Divider(height: 24),
+                        )
+                      : ListView.builder(
+                          itemCount: selectedProducts.length,
+                          itemBuilder: (_, index) {
+                            final product = selectedProducts[index];
+                            final qty = vm.getQuantity(product);
+                            final subtotal = vm.getSubtotal(product);
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                product.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '₱${product.sellingPrice} × $qty',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                              trailing: Text(
+                                currencyFormatter.format(subtotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const Divider(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'TOTAL',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    Text(
+                      currencyFormatter.format(vm.total),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                if (!isCash && availableCredit != null) ...[
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'TOTAL',
+                        'Available Credit',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 1,
+                          color: Colors.black54,
                         ),
                       ),
                       Text(
-                        currencyFormatter.format(vm.total),
+                        currencyFormatter.format(availableCredit),
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
+                  if (exceedsAvailableCredit) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Amount exceeds available credit. Please reduce items.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade700,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  final selectedCustomer = vm.selectedCustomer;
-
-                                  // If Utang, validate customer and due date
-                                  if (!isCash) {
-                                    if (selectedCustomer == null || dueDate == null) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Please select a customer and due date for utang.'),
-                                          duration: Duration(seconds: 2),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    // Ensure at least one product is selected
-                                    if (selectedProducts.isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Please select at least one product for utang.'),
-                                          duration: Duration(seconds: 2),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    // --- NEW: Credit limit check centralized (optional if ViewModel handles it) ---
-                                    final double totalSale = vm.total;
-                                    final double creditLimit = (selectedCustomer['credit_limit'] ?? 0.0) as double;
-                                    final double currentBalance = (selectedCustomer['current_balance'] ?? 0.0) as double;
-                                    final double availableCredit = creditLimit - currentBalance;
-
-                                    if (totalSale > availableCredit) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Customer\'s available credit is ₱${availableCredit.toStringAsFixed(2)}. '
-                                            'You cannot exceed this limit.',
-                                          ),
-                                          duration: const Duration(seconds: 3),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                  }
-
-                                  // Close summary sheet
-                                  Navigator.pop(context);
-
-                                  try {
-                                    // Checkout
-                                    if (isCash) {
-                                      await vm.checkout(); // Cash checkout
-                                    } else {
-                                      await vm.checkout(
-                                        isCash: false,
-                                        customerId: selectedCustomer!['id'],
-                                        dueDate: dueDate!,
-                                      );
-                                    }
-
-                                    // Reload customers to refresh available credit after checkout
-                                    await vm.loadCustomers();
-
-                                    // Reset UI & state
-                                    vm.resetQuantities();
-                                    vm.selectedCustomer = null;
-                                    dueDate = null;
-                                    isProductMode = false;
-                                    searchController.clear();
-                                    searchQuery = '';
-
-                                    // Success message
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('Sale successfully recorded!'),
-                                        duration: const Duration(seconds: 2),
-                                        backgroundColor: AppColors.success,
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Checkout failed: $e'),
-                                        duration: const Duration(seconds: 2),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size.fromHeight(52),
-                                  backgroundColor: AppColors.primary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Confirm',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
-              ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          // Validate customer and due date for Utang
+                          if (!isCash) {
+                            if (selectedCustomer == null || dueDate == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Please select a customer and due date for utang.'),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (selectedProducts.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Please select at least one product for utang.'),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Credit limit check
+                            final double totalSale = vm.total;
+                            final double creditLimit =
+                                (selectedCustomer['credit_limit'] ?? 0.0) as double;
+                            final double currentBalance =
+                                (selectedCustomer['current_balance'] ?? 0.0) as double;
+                            final double availableCredit = creditLimit - currentBalance;
+
+                            if (totalSale > availableCredit) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Customer\'s available credit is ₱${availableCredit.toStringAsFixed(2)}. '
+                                    'You cannot exceed this limit.',
+                                  ),
+                                  duration: const Duration(seconds: 3),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          Navigator.pop(context);
+
+                          try {
+                            // Checkout
+                            if (isCash) {
+                              await vm.checkout(); // Cash checkout
+                            } else {
+                              await vm.checkout(
+                                isCash: false,
+                                customerId: selectedCustomer!['id'],
+                                dueDate: dueDate!,
+                              );
+                            }
+
+                            // Reload customers to refresh available credit
+                            await vm.loadCustomers();
+
+                            // Reset UI
+                            vm.resetQuantities();
+                            vm.selectedCustomer = null;
+                            dueDate = null;
+                            isProductMode = false;
+                            searchController.clear();
+                            searchQuery = '';
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Sale successfully recorded!'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Checkout failed: $e'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text(
+                          'Confirm',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 }

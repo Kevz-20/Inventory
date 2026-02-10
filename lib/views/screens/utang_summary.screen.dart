@@ -1,10 +1,10 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
+import '../../models/utang_customer_model.dart';
+import '../../repositories/capital_management_repository.dart';
+import '../../repositories/customer_repository.dart';
 import '../../services/db_service.dart';
-import '../screens/utang_screen.dart';
 import '../widgets/header.dart';
 
 // ================================
@@ -16,6 +16,7 @@ class UtangItem {
   final double amount;
   final int quantity;
   final DateTime creditDate;
+  final DateTime? dueDate;
 
   UtangItem({
     required this.salesCreditId,
@@ -23,15 +24,19 @@ class UtangItem {
     required this.amount,
     required this.quantity,
     required this.creditDate,
+    this.dueDate,
   });
 
   factory UtangItem.fromMap(Map<String, dynamic> map) {
     return UtangItem(
       salesCreditId: map['sales_credit_id'],
       itemName: map['item_name'] ?? '',
-      amount: (map['amount'] ?? 0).toDouble(),
+      amount: (map['amount'] ?? 0).toDouble(),  
       quantity: map['quantity'] ?? 0,
       creditDate: DateTime.tryParse(map['credit_date'] ?? '') ?? DateTime.now(),
+      dueDate: map['due_date'] != null
+          ? DateTime.tryParse(map['due_date'])
+          : null,
     );
   }
 }
@@ -79,6 +84,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   List<CustomerPayment> customerPayments = [];
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
   bool isLoading = true;
+  double? creditLimit;
+  double? availableCredit;
 
   @override
   void initState() {
@@ -93,6 +100,15 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     setState(() => isLoading = true);
     final db = await DBService.instance.database;
 
+    // Fetch customer credit info
+    final customerResult = await db.query(
+      'customer',
+      columns: ['credit_limit', 'available_credit'],
+      where: 'id = ?',
+      whereArgs: [widget.customer.id],
+      limit: 1,
+    );
+
     // Fetch items
     final itemsResult = await db.rawQuery(
       '''
@@ -101,7 +117,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
         p.name AS item_name,
         sc.amount,
         sc.quantity,
-        sc.credit_date
+        sc.credit_date,
+        sc.due_date
       FROM sales_credit sc
       JOIN product p ON sc.product_id = p.id
       WHERE sc.customer_id = ?
@@ -119,6 +136,12 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     );
 
     setState(() {
+      if (customerResult.isNotEmpty) {
+        creditLimit = (customerResult.first['credit_limit'] as num?)
+            ?.toDouble();
+        availableCredit = (customerResult.first['available_credit'] as num?)
+            ?.toDouble();
+      }
       customerItems = itemsResult.map((e) => UtangItem.fromMap(e)).toList();
       customerPayments = paymentsResult
           .map((e) => CustomerPayment.fromMap(e))
@@ -127,55 +150,180 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     });
   }
 
+
+
   // ================================
   // ADD CUSTOMER-LEVEL PAYMENT
   // ================================
-  Future<void> addPartialPayment() async {
-    final TextEditingController paymentController = TextEditingController();
-    double enteredAmount = 0;
+  // ================================
+// ADD CUSTOMER-LEVEL PAYMENT
+// ================================
+Future<void> addPartialPayment() async {
+  final TextEditingController paymentController = TextEditingController();
+  double enteredAmount = 0;
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final remainingBalance = totalUtang;
+          final isOverPaying = enteredAmount > remainingBalance;
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text("Add Payment"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: paymentController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: "Enter payment amount",
+                    prefixText: "₱",
+                  ),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      enteredAmount = double.tryParse(value) ?? 0;
+                    });
+                  },
+                ),
+                if (isOverPaying) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Amount exceeds remaining balance",
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed:
+                    (enteredAmount <= 0 || isOverPaying || remainingBalance <= 0)
+                        ? null
+                        : () async {
+                            Navigator.pop(context);
+                            final db = await DBService.instance.database;
+
+                            // Insert payment into shared customer_payment table
+                            await db.insert('customer_payment', {
+                              'customer_id': widget.customer.id,
+                              'amount': enteredAmount,
+                              'paid_at': DateTime.now().toIso8601String(),
+                            });
+
+                            // ----------------------------
+                            // Update available credit
+                            // ----------------------------
+                            final customerRepo = CustomerRepository(db);
+
+                            // Get current available credit
+                            final currentCredit = await customerRepo.getAvailableCredit(widget.customer.id);
+
+                            // Add payment to available credit
+                            await customerRepo.updateCustomer(widget.customer.id, {
+                              'available_credit': currentCredit + enteredAmount,
+                              'updated_at': DateTime.now().toIso8601String(),
+                            });
+
+                            // Record only in cash on hand (not capital, no account filter)
+                            final capitalRepo = CapitalManagementRepository(db);
+                            await capitalRepo.addCustomerPaymentCash(enteredAmount);
+
+                            await fetchCustomerData();
+                          },
+                child: const Text("Add"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+
+  // ================================
+  // ADJUST CREDIT LIMIT (INCREASE)
+  // ================================
+  Future<void> adjustCreditLimit() async {
+    final TextEditingController customController = TextEditingController();
+    double customAmount = 0;
+    int? selectedPreset;
+
+    const presets = [100, 200, 500, 1000];
 
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final remainingBalance = totalUtang;
-            final isOverPaying = enteredAmount > remainingBalance;
+            final selectedAmount = selectedPreset != null
+                ? presets[selectedPreset!]
+                : customAmount;
+            final isValid = selectedAmount > 0;
 
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: const Text("Add Payment"),
+              title: const Text("Increase Credit Limit"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
+                  const Text(
+                    "Choose an amount to add:",
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: List.generate(presets.length, (index) {
+                      final value = presets[index];
+                      final isSelected = selectedPreset == index;
+                      return ChoiceChip(
+                        label: Text("₱$value"),
+                        selected: isSelected,
+                        onSelected: (_) {
+                          setDialogState(() {
+                            selectedPreset = index;
+                            customAmount = 0;
+                            customController.clear();
+                          });
+                        },
+                        selectedColor: Colors.green[100],
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 14),
                   TextField(
-                    controller: paymentController,
+                    controller: customController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
-                      labelText: "Enter payment amount",
+                      labelText: "Custom amount",
                       prefixText: "₱",
                     ),
                     onChanged: (value) {
                       setDialogState(() {
-                        enteredAmount = double.tryParse(value) ?? 0;
+                        customAmount = double.tryParse(value) ?? 0;
+                        selectedPreset = null;
                       });
                     },
                   ),
-                  if (isOverPaying) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Amount exceeds remaining balance",
-                      style: TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ],
                 ],
               ),
               actions: [
@@ -184,20 +332,22 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                   child: const Text("Cancel"),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      (enteredAmount <= 0 ||
-                          isOverPaying ||
-                          remainingBalance <= 0)
+                  onPressed: !isValid
                       ? null
                       : () async {
                           Navigator.pop(context);
                           final db = await DBService.instance.database;
+                          final amountToAdd = selectedAmount;
 
-                          await db.insert('customer_payment', {
-                            'customer_id': widget.customer.id,
-                            'amount': enteredAmount,
-                            'paid_at': DateTime.now().toIso8601String(),
-                          });
+                          await db.rawUpdate(
+                            '''
+                            UPDATE customer
+                            SET credit_limit = credit_limit + ?,
+                                available_credit = available_credit + ?
+                            WHERE id = ?
+                            ''',
+                            [amountToAdd, amountToAdd, widget.customer.id],
+                          );
 
                           await fetchCustomerData();
                         },
@@ -224,6 +374,14 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
       (sum, pay) => sum + pay.amount,
     );
     return totalItems - totalPayments;
+  }
+
+  // ================================
+// AVAILABLE CREDIT (calculated dynamically)
+// ================================
+  double get availableCreditCalculated {
+    if (creditLimit == null) return 0;
+    return creditLimit! - totalUtang;
   }
 
   // ================================
@@ -308,7 +466,26 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             color: Color(0xFF555555),
                           ),
                         ),
-                        if (widget.customer.dueDate != null)
+                        if (totalUtang <= 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[100],
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Text(
+                              "Paid",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[800],
+                              ),
+                            ),
+                          )
+                        else if (widget.customer.dueDate != null)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -322,8 +499,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             ),
                             child: Text(
                               widget.customer.remainingDays <= 0
-                                  ? "Overdue"
-                                  : "${widget.customer.remainingDays} days left",
+                                  ? "Overdue • Due: ${DateFormat('MMM dd, yyyy').format(widget.customer.dueDate!)}"
+                                  : "Due: ${DateFormat('MMM dd, yyyy').format(widget.customer.dueDate!)} • ${widget.customer.remainingDays} days left",
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -348,7 +525,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     const Divider(thickness: 1),
                     const SizedBox(height: 14),
                     if (widget.customer.barangay != null &&
-                        widget.customer.barangay!.isNotEmpty) ...[
+                        widget.customer.barangay!.isNotEmpty)
                       Row(
                         children: [
                           const Icon(
@@ -368,38 +545,115 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                           ),
                         ],
                       ),
-                    ],
-                    if (widget.customer.phoneNumber != null) ...[
-                      const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                    if (creditLimit != null || availableCredit != null)
                       Row(
                         children: [
-                          const Icon(Icons.phone, size: 20, color: Colors.grey),
-                          const SizedBox(width: 10),
-                          Text(
-                            widget.customer.phoneNumber!,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: Colors.black87,
-                            ),
+                          const Icon(
+                            Icons.credit_score,
+                            size: 20,
+                            color: Colors.grey,
                           ),
-                          const Spacer(),
-                          ElevatedButton(
-                            onPressed: addPartialPayment,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0C4B3E),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "Credit Limit: ₱${currencyFormat.format(creditLimit ?? 0)}",
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: Colors.black87,
                               ),
                             ),
-                            child: const Text("Add Payment"),
                           ),
                         ],
                       ),
-                    ],
+                    if (creditLimit != null || availableCredit != null)
+                      const SizedBox(height: 8),
+                    if (creditLimit != null || availableCredit != null)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.account_balance_wallet,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "Available Credit: ₱${currencyFormat.format(availableCreditCalculated)}",
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (widget.customer.phoneNumber != null)
+                      const SizedBox(height: 12),
+                    if (widget.customer.phoneNumber != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.phone,
+                                size: 20,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  widget.customer.phoneNumber!,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: addPartialPayment,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0C4B3E),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text("Add Payment"),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: adjustCreditLimit,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF0C4B3E),
+                                side: const BorderSide(
+                                  color: Color(0xFF0C4B3E),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text("Add Credit"),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -471,6 +725,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      // Credit date (date they owed)
                                       Text(
                                         dateLabel,
                                         style: const TextStyle(
@@ -478,6 +733,21 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                           fontSize: 16,
                                         ),
                                       ),
+                                      // Due date
+                                      if (items.first.dueDate != null)
+                                        Text(
+                                          "Due: ${DateFormat('MMM dd, yyyy').format(items.first.dueDate!)}",
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color:
+                                                items.first.dueDate!.isBefore(
+                                                  DateTime.now(),
+                                                )
+                                                ? Colors.red
+                                                : Colors.green,
+                                          ),
+                                        ),
+                                      // Total for that date
                                       Text(
                                         "Total: ₱${currencyFormat.format(totalPerDate)}",
                                         style: const TextStyle(
@@ -488,7 +758,9 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     ],
                                   ),
                                   Text(
-                                    "Remaining: ₱${currencyFormat.format(remaining)}",
+                                    remaining > 0
+                                        ? "Remaining: ₱${currencyFormat.format(remaining)}"
+                                        : "Paid",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
@@ -550,7 +822,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                         ],
                                       ),
                                     );
-                                  })
+                                  }),
                                 ],
 
                                 const SizedBox(height: 8),
@@ -567,6 +839,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                       borderRadius: BorderRadius.circular(12),
                                       boxShadow: [
                                         BoxShadow(
+                                          // ignore: deprecated_member_use
                                           color: Colors.grey.withOpacity(0.05),
                                           blurRadius: 2,
                                           offset: const Offset(0, 1),

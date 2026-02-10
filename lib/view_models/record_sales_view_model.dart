@@ -248,7 +248,6 @@ class SalesViewModel extends ChangeNotifier {
 
             final updatedModel = CapitalManagementModel(
               id: latest.id,
-              accountId: latest.accountId,
               capital: latest.capital,
               cashOnHand: updatedCash,
               bankCash: latest.bankCash,

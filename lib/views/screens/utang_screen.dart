@@ -1,71 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart'; // ✅ import intl for formatting
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../models/payable_model.dart';
+import '../../models/utang_customer_model.dart';
+import '../../repositories/account_repository.dart';
+import '../../repositories/capital_management_repository.dart';
 import '../../repositories/payable_repository.dart';
 import '../widgets/header.dart';
 import '../../services/db_service.dart';
 
-
 // ============================================================
-// MODEL
+// FORMATTERS
 // ============================================================
-class UtangCustomer {
-  final int id;
-  final String firstName;
-  final String? middleName;
-  final String? lastName;
-  final String? municipality;
-  final String? barangay; // 🔥 NEW
-  final String? phoneNumber;
-  final double totalAmount;
-  final String? dueDate; // NEW
 
-  UtangCustomer({
-    required this.id,
-    required this.firstName,
-    this.middleName,
-    this.lastName,
-    this.municipality,
-    this.barangay, // 🔥 NEW
-    this.phoneNumber,
-    required this.totalAmount,
-    this.dueDate,
-  });
+class ThousandsFormatter extends TextInputFormatter {
+  final NumberFormat formatter = NumberFormat('#,###');
 
-  String get fullName => [
-    firstName,
-    middleName,
-    lastName,
-  ].where((e) => e != null && e.isNotEmpty).join(' ');
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String text = newValue.text.replaceAll(',', '');
+    if (text.isEmpty) return newValue;
 
-  // Compute remaining days
-  int get remainingDays {
-    if (dueDate == null) return 0;
-    final due = DateTime.tryParse(dueDate!);
-    if (due == null) return 0;
-    return due.difference(DateTime.now()).inDays;
-  }
+    final number = int.tryParse(text);
+    if (number == null) return oldValue;
 
-  factory UtangCustomer.fromMap(Map<String, dynamic> map) {
-    return UtangCustomer(
-      id: map['id'],
-      firstName: map['first_name'],
-      middleName: map['middle_name'],
-      lastName: map['last_name'],
-      municipality: map['municipality'],
-      barangay: map['barangay'],
-      phoneNumber: map['phone_number'],
-      totalAmount: map['total_amount']?.toDouble() ?? 0.0,
-      dueDate: map['due_date'], // NEW
+    final formatted = formatter.format(number);
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
 
 // ============================================================
-// SCREEN
+// MAIN SCREEN
 // ============================================================
+
 class UtangScreen extends StatefulWidget {
   const UtangScreen({super.key});
 
@@ -73,132 +48,381 @@ class UtangScreen extends StatefulWidget {
   State<UtangScreen> createState() => _UtangScreenState();
 }
 
-class _UtangScreenState extends State<UtangScreen> {
+class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
+  final currencyFormat = NumberFormat("#,##0.00", "en_PH");
+  final searchController = TextEditingController();
+
   int selectedTab = 0;
   int selectedFilter = 0;
+
   List<UtangCustomer> utangan = [];
+  List<UtangCustomer> filteredUtangan = [];
 
-  // ====== Owner Payables ======
-  List<Payable> ownerPayables = []; // all payables
-  List<Payable> filteredOwnerPayables = []; // filtered payables
+  List<Payable> ownerPayables = [];
+  List<Payable> filteredOwnerPayables = [];
 
-  // ✅ Number format for thousands separator
-  final currencyFormat = NumberFormat("#,##0.00", "en_PH");
+  // ============================================================
+  // LIFECYCLE
+  // ============================================================
 
   @override
   void initState() {
     super.initState();
-    fetchUtangan();
-    fetchOwnerPayables(); // ✅ fetch owner payables
+    WidgetsBinding.instance.addObserver(this);
+    _refreshData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _refreshData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshData();
+    }
   }
 
   // ============================================================
-  // FETCH ALL CUSTOMER UTANG
+  // DATA MANAGEMENT
   // ============================================================
+
+  Future<void> _refreshData() async {
+    await fetchUtangan();
+    await fetchOwnerPayables();
+  }
+
   Future<void> fetchUtangan() async {
     final db = await DBService.instance.database;
 
     final result = await db.rawQuery('''
         SELECT c.id, c.first_name, c.middle_name, c.last_name,
               c.municipality,
-              c.barangay,  
+              c.barangay,
               c.phone_number,
-              SUM(sc.amount) as total_amount,
-              MIN(sc.due_date) as due_date
-        FROM sales_credit sc
-        INNER JOIN customer c ON c.id = sc.customer_id
-        GROUP BY c.id
+              MAX(0, IFNULL(sc.total_amount, 0) - IFNULL(cp.total_paid, 0)) as total_amount,
+              sc.min_due_date as due_date
+        FROM customer c
+        LEFT JOIN (
+          SELECT customer_id,
+                 SUM(amount) as total_amount,
+                 MIN(due_date) as min_due_date
+          FROM sales_credit
+          GROUP BY customer_id
+        ) sc ON sc.customer_id = c.id
+        LEFT JOIN (
+          SELECT customer_id,
+                 SUM(amount) as total_paid
+          FROM customer_payment
+          GROUP BY customer_id
+        ) cp ON cp.customer_id = c.id
+        WHERE sc.customer_id IS NOT NULL
         ORDER BY total_amount DESC
       ''');
 
     setState(() {
       utangan = result.map((e) => UtangCustomer.fromMap(e)).toList();
+      filteredUtangan = List.from(utangan);
+    });
+  }
+
+  Future<void> fetchOwnerPayables() async {
+    final payables = await PayableRepository().getAllPayables();
+
+    setState(() {
+      ownerPayables = payables;
+      applyOwnerFilter(selectedFilter);
+    });
+  }
+
+  void filterUtangan(String query) {
+    if (query.isEmpty) {
+      filteredUtangan = List.from(utangan);
+    } else {
+      filteredUtangan = utangan
+          .where((u) => u.fullName.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    }
+    setState(() {});
+  }
+
+  void applyOwnerFilter(int filterIndex) {
+    selectedFilter = filterIndex;
+
+    switch (filterIndex) {
+      case 0: // Tanan (All)
+        filteredOwnerPayables = List.from(ownerPayables);
+        break;
+      case 1: // Overdue
+        filteredOwnerPayables = ownerPayables
+            .where(
+              (p) =>
+                  !p.isPaid &&
+                  p.dueDate != null &&
+                  DateTime.tryParse(p.dueDate!) != null &&
+                  DateTime.parse(p.dueDate!).isBefore(DateTime.now()),
+            )
+            .toList();
+        break;
+      case 2: // Nabayran (Paid)
+        filteredOwnerPayables = ownerPayables.where((p) => p.isPaid).toList();
+        break;
+      default:
+        filteredOwnerPayables = List.from(ownerPayables);
+    }
+
+    sortOwnerPayablesByDueDate();
+    setState(() {});
+  }
+
+  void sortOwnerPayablesByDueDate() {
+    filteredOwnerPayables.sort((a, b) {
+      if (a.isPaid && !b.isPaid) return 1;
+      if (!a.isPaid && b.isPaid) return -1;
+
+      DateTime? dateA = DateTime.tryParse(
+        a.isInstallment ? (a.nextDueDate ?? '') : (a.dueDate ?? ''),
+      );
+      DateTime? dateB = DateTime.tryParse(
+        b.isInstallment ? (b.nextDueDate ?? '') : (b.dueDate ?? ''),
+      );
+
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+
+      return dateA.compareTo(dateB);
     });
   }
 
   // ============================================================
-  // FETCH OWNER PAYABLES FROM DB
+  // OWNER PAYMENT LOGIC
   // ============================================================
-  Future<void> fetchOwnerPayables() async {
-  final payables = await PayableRepository().getAllPayables();
 
-  setState(() {
-    ownerPayables = payables;
-    applyOwnerFilter(selectedFilter);
-  });
-}
+  DateTime addMonths(DateTime date, int months) {
+    int year = date.year + ((date.month + months - 1) ~/ 12);
+    int month = (date.month + months - 1) % 12 + 1;
+    int day = date.day;
 
-  // ============================================================
-  // SHOW OWNER UTANG DETAILS MODAL
-  // ============================================================
-  void showOwnerUtangModal(Payable item) {
-    // Helper function to handle payment
-    Future<void> handlePay({required bool fullPay}) async {
-      final db = await DBService.instance.database;
+    int lastDayOfMonth = DateTime(year, month + 1, 0).day;
+    if (day > lastDayOfMonth) day = lastDayOfMonth;
 
-      double paymentAmount;
+    return DateTime(year, month, day);
+  }
 
-      if (item.isInstallment) {
-        // Calculate installment amount per month
-        double monthly =
-            item.totalInstallments != null && item.totalInstallments! > 0
-            ? item.amount / item.totalInstallments!
-            : item.amount;
+  Future<double?> promptPartialAmount(
+    double remaining, {
+    double? suggested,
+  }) async {
+    final controller = TextEditingController();
+    double? value;
 
-        paymentAmount = fullPay
-            ? item.amount - (item.paidInstallments ?? 0) * monthly
-            : monthly;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final current = value ?? 0.0;
+            final isValid =
+                current > 0 && current <= remaining && remaining > 0;
 
-        // Update owner_payables
-        int newPaidInstallments =
-            (item.paidInstallments ?? 0) +
-            (fullPay ? (item.totalInstallments ?? 1) : 1);
-        bool isFullyPaid = newPaidInstallments >= (item.totalInstallments ?? 1);
-
-        await db.update(
-          'owner_payables',
-          {
-            'paid_installments': newPaidInstallments,
-            'is_paid': isFullyPaid ? 1 : 0,
+            return AlertDialog(
+              title: const Text("Partial Payment"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (suggested != null && suggested > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        "Monthly: ₱${currencyFormat.format(suggested)}",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [ThousandsFormatter()],
+                    decoration: InputDecoration(
+                      hintText: "Enter amount",
+                      helperText:
+                          "Remaining: ₱${currencyFormat.format(remaining)}",
+                    ),
+                    onChanged: (v) => setState(() {
+                      value = double.tryParse(v.replaceAll(',', ''));
+                    }),
+                  ),
+                  if ((value ?? 0) > remaining && remaining > 0)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text(
+                        "Amount exceeds remaining balance",
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                if (suggested != null && suggested > 0)
+                  TextButton(
+                    onPressed: () {
+                      final capped = suggested > remaining
+                          ? remaining
+                          : suggested;
+                      controller.text = currencyFormat
+                          .format(capped)
+                          .replaceAll('.00', '');
+                      setState(() {
+                        value = capped;
+                      });
+                    },
+                    child: const Text("Use Monthly"),
+                  ),
+                ElevatedButton(
+                  onPressed: isValid
+                      ? () {
+                          value =
+                              double.tryParse(
+                                controller.text.replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          Navigator.pop(context);
+                        }
+                      : null,
+                  child: const Text("OK"),
+                ),
+              ],
+            );
           },
-          where: 'id = ?',
-          whereArgs: [item.id],
         );
-      } else {
-        // Non-installment
-        paymentAmount = fullPay ? item.amount : item.amount;
+      },
+    );
 
-        await db.update(
-          'owner_payables',
-          {'is_paid': 1},
-          where: 'id = ?',
-          whereArgs: [item.id],
+    return value;
+  }
+
+  Future<void> applyPayment(
+    Payable item,
+    double amount, {
+    bool isFullPay = false,
+  }) async {
+    try {
+      final db = await DBService.instance.database;
+      final double remaining = (item.remainingAmount ?? item.amount)
+          .clamp(0.0, item.amount.toDouble())
+          .toDouble();
+      final payAmount = amount.clamp(0.0, remaining).toDouble();
+
+      if (payAmount <= 0) return;
+
+      // Verify sufficient cash on hand
+      final accountRepository = AccountRepository();
+      final accountId = await accountRepository.getAccountId();
+      final cashRes = await db.rawQuery(
+        'SELECT SUM(cash_on_hand) AS total_cash FROM capital_management WHERE account_id = ?',
+        [accountId],
+      );
+      final cashOnHand =
+          (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
+
+      if (cashOnHand < payAmount) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.error,
+            content: Text(
+              isFullPay
+                  ? "You don't have enough money for Full payment"
+                  : "You don't have enough money for partial payment",
+            ),
+          ),
         );
+        return;
       }
 
-      // Update cash on hand
-      // Assuming you have a single row in cash_on_hand table with id=1
-      await db.rawUpdate(
-        'UPDATE cash_on_hand SET amount = amount - ? WHERE id = 1',
-        [paymentAmount],
-      );
+      // Deduct cash and record payment
+      final capitalRepo = CapitalManagementRepository(db);
+      await capitalRepo.deductCash(amount: payAmount);
 
-      // Optional: Insert payment record for history
-      await db.insert('payments', {
+
+      await db.insert('payable_payment', {
         'payable_id': item.id,
-        'amount': paymentAmount,
-        'payment_type': fullPay ? 'full' : 'partial',
+        'amount': payAmount,
         'date': DateTime.now().toIso8601String(),
+        'note': 'Owner payment',
+        'created_at': DateTime.now().toIso8601String(),
       });
 
-      // Refresh owner payables UI
-      fetchOwnerPayables();
+      // Update payable status
+      final newRemaining = (remaining - payAmount).clamp(0.0, remaining);
+      final updateMap = <String, dynamic>{
+        'remaining_amount': newRemaining,
+        'is_paid': newRemaining <= 0 ? 1 : 0,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-      // Close modal
-      // ignore: use_build_context_synchronously
-      Navigator.pop(context);
+      // Update next due date for installments
+      if (item.isInstallment && newRemaining > 0) {
+        final baseDate =
+            DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ??
+            DateTime.now();
+        final nextDue = addMonths(baseDate, 1);
+        updateMap['next_due_date'] = DateFormat('yyyy-MM-dd').format(nextDue);
+      }
+
+      await db.update(
+        'payable',
+        updateMap,
+        where: 'id = ?',
+        whereArgs: [item.id],
+      );
+
+      await fetchOwnerPayables();
+    } catch (e) {
+      if (!mounted) return;
+
+      final isInsufficientCash = e.toString().contains('Insufficient cash');
+      final msg = isInsufficientCash
+          ? 'Insufficient cash on hand'
+          : 'Failed to process payment';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: isInsufficientCash
+              ? AppColors.error
+              : AppColors.success,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      rethrow;
     }
+  }
 
+  // ============================================================
+  // UI - MODALS
+  // ============================================================
+
+  Future<void> showOwnerUtangModal(Payable item) async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -206,6 +430,26 @@ class _UtangScreenState extends State<UtangScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final double remaining = (item.remainingAmount ?? item.amount)
+            .clamp(0.0, item.amount.toDouble())
+            .toDouble();
+        final nextDateStr = item.isInstallment
+            ? item.nextDueDate
+            : item.dueDate;
+
+        DateTime? displayNextDue;
+        String nextDueLabel = "Next Due";
+
+        if (item.isInstallment) {
+          final baseDate = DateTime.tryParse(nextDateStr ?? '');
+          if (baseDate != null) {
+            displayNextDue = addMonths(baseDate, 1);
+            nextDueLabel = "Next Due (after payment)";
+          }
+        } else if (nextDateStr != null) {
+          displayNextDue = DateTime.tryParse(nextDateStr);
+        }
+
         return Padding(
           padding: EdgeInsets.only(
             left: 16,
@@ -217,7 +461,6 @@ class _UtangScreenState extends State<UtangScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title
               Text(
                 item.item,
                 style: const TextStyle(
@@ -226,8 +469,6 @@ class _UtangScreenState extends State<UtangScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Amount
               Text(
                 "Amount: ₱${currencyFormat.format(item.amount)}",
                 style: const TextStyle(
@@ -236,24 +477,26 @@ class _UtangScreenState extends State<UtangScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-
-              // Recorded / Created Date
+              Text(
+                "Remaining: ₱${currencyFormat.format(remaining)}",
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 6),
               if (item.createdAtDate != null)
                 Text(
                   "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-              if (item.createdAt != null) const SizedBox(height: 6),
-
-              // Next Due
-              if ((item.nextDueDate ?? item.dueDate) != null)
+              if (displayNextDue != null)
                 Text(
-                  "Next Due: ${DateFormat('MMM dd, yyyy').format(DateTime.parse(item.nextDueDate ?? item.dueDate!))}",
+                  "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               const SizedBox(height: 6),
-
-              // Installment Type
               Text(
                 item.isInstallment ? "Installment" : "Non-installment",
                 style: TextStyle(
@@ -264,27 +507,21 @@ class _UtangScreenState extends State<UtangScreen> {
                       : Colors.blue.shade800,
                 ),
               ),
-              const SizedBox(height: 6),
-
-              // Installment Progress
-              if (item.isInstallment)
-                Text(
-                  "Paid: ${item.paidInstallments ?? 0}/${item.totalInstallments ?? 0}",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.orange,
-                  ),
-                ),
-              if (item.isInstallment) const SizedBox(height: 20),
-
-              // Partial / Full Pay Buttons
+              const SizedBox(height: 20),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => handlePay(fullPay: false), // Partial Pay
+                      onPressed: () async {
+                        double? amount = await promptPartialAmount(
+                          remaining,
+                          suggested: item.planMonthly,
+                        );
+                        if (amount != null) {
+                          await applyPayment(item, amount);
+                          if (context.mounted) Navigator.pop(context);
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         shape: RoundedRectangleBorder(
@@ -297,7 +534,10 @@ class _UtangScreenState extends State<UtangScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => handlePay(fullPay: true), // Full Pay
+                      onPressed: () async {
+                        await applyPayment(item, remaining, isFullPay: true);
+                        if (context.mounted) Navigator.pop(context);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         shape: RoundedRectangleBorder(
@@ -317,42 +557,9 @@ class _UtangScreenState extends State<UtangScreen> {
   }
 
   // ============================================================
-  // APPLY FILTER FUNCTION
+  // UI - BUILD
   // ============================================================
-  void applyOwnerFilter(int filterIndex) {
-  selectedFilter = filterIndex;
 
-  switch (filterIndex) {
-    case 0: // Tanan
-      filteredOwnerPayables = List.from(ownerPayables);
-      break;
-    case 1: // Overdue
-      filteredOwnerPayables = ownerPayables
-          .where(
-            (p) =>
-                !p.isPaid &&
-                p.dueDate != null &&
-                DateTime.tryParse(p.dueDate!) != null &&
-                DateTime.parse(p.dueDate!).isBefore(DateTime.now()),
-          )
-          .toList();
-      break;
-    case 2: // Nabayran
-      filteredOwnerPayables = ownerPayables.where((p) => p.isPaid).toList();
-      break;
-    default:
-      filteredOwnerPayables = List.from(ownerPayables);
-  }
-
-  // 🔥 SORT BY NEAREST DUE DATE
-  sortOwnerPayablesByDueDate();
-
-  setState(() {});
-}
-
-  // ============================================================
-  // BUILD
-  // ============================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -361,92 +568,91 @@ class _UtangScreenState extends State<UtangScreen> {
       body: Column(
         children: [
           const SizedBox(height: 20),
-          // Toggle buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              height: 60,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Stack(
-                children: [
-                  // Sliding green background
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    left: selectedTab == 0
-                        ? 0
-                        : MediaQuery.of(context).size.width / 2 - 30,
-                    right: selectedTab == 0
-                        ? MediaQuery.of(context).size.width / 2 - 30
-                        : 0,
-                    top: 0,
-                    bottom: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0C4B3E),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                  ),
-                  // Toggle texts
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => selectedTab = 0),
-                          child: Center(
-                            child: Text(
-                              "Customer Utang",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: selectedTab == 0
-                                    ? Colors.white
-                                    : Colors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => selectedTab = 1),
-                          child: Center(
-                            child: Text(
-                              "Owner Utang",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: selectedTab == 1
-                                    ? Colors.white
-                                    : Colors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildTabToggle(),
           const SizedBox(height: 15),
-          // Page content
-          Expanded(child: selectedTab == 0 ? customerPage() : ownerPage()),
+          Expanded(
+            child: selectedTab == 0 ? _buildCustomerPage() : _buildOwnerPage(),
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildTabToggle() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        height: 60,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(40),
+        ),
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: selectedTab == 0
+                  ? 0
+                  : MediaQuery.of(context).size.width / 2 - 30,
+              right: selectedTab == 0
+                  ? MediaQuery.of(context).size.width / 2 - 30
+                  : 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0C4B3E),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => selectedTab = 0),
+                    child: Center(
+                      child: Text(
+                        "Customer Utang",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: selectedTab == 0 ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => selectedTab = 1),
+                    child: Center(
+                      child: Text(
+                        "Owner Utang",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: selectedTab == 1 ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ============================================================
-  // CUSTOMER UTANG PAGE
+  // UI - CUSTOMER PAGE
   // ============================================================
-  Widget customerPage() {
+
+  Widget _buildCustomerPage() {
     return Column(
       children: [
         Padding(
@@ -457,8 +663,9 @@ class _UtangScreenState extends State<UtangScreen> {
               borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: const TextField(
-              decoration: InputDecoration(
+            child: TextField(
+              controller: searchController,
+              decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: "Pangalan sa Utangan",
                 border: InputBorder.none,
@@ -469,6 +676,7 @@ class _UtangScreenState extends State<UtangScreen> {
                   vertical: 14,
                 ),
               ),
+              onChanged: filterUtangan,
             ),
           ),
         ),
@@ -483,112 +691,10 @@ class _UtangScreenState extends State<UtangScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: utangan.length,
+                  itemCount: filteredUtangan.length,
                   itemBuilder: (context, index) {
-                    final item = utangan[index];
-                    return GestureDetector(
-                      onTap: () => GoRouter.of(
-                        context,
-                      ).push('/utang_summary', extra: item),
-                      child: Card(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item.fullName,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  // ✅ formatted amount
-                                  Text(
-                                    "₱${currencyFormat.format(item.totalAmount)}",
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              if (item.municipality != null &&
-                                  item.municipality!.isNotEmpty)
-                                Text(
-                                  item.municipality!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              const SizedBox(height: 2),
-                              if (item.barangay != null &&
-                                  item.barangay!.isNotEmpty) // ✅ NEW
-                                Text(
-                                  "Barangay ${item.barangay!}",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              const SizedBox(height: 2),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  if (item.phoneNumber != null &&
-                                      item.phoneNumber!.isNotEmpty)
-                                    Text(
-                                      item.phoneNumber!,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  if (item.dueDate != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: item.remainingDays <= 0
-                                            ? Colors.red[100]
-                                            : Colors.green[100],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        "${item.remainingDays} day${item.remainingDays != 1 ? 's' : ''} left",
-                                        style: TextStyle(
-                                          color: item.remainingDays <= 0
-                                              ? Colors.red
-                                              : Colors.green[800],
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
+                    final item = filteredUtangan[index];
+                    return _buildCustomerCard(item);
                   },
                 ),
         ),
@@ -596,81 +702,133 @@ class _UtangScreenState extends State<UtangScreen> {
     );
   }
 
-  void sortOwnerPayablesByDueDate() {
-  filteredOwnerPayables.sort((a, b) {
-    // Paid items always go last
-    if (a.isPaid && !b.isPaid) return 1;
-    if (!a.isPaid && b.isPaid) return -1;
-
-    // Determine which date to use
-    DateTime? dateA = DateTime.tryParse(
-      a.isInstallment ? (a.nextDueDate ?? '') : (a.dueDate ?? ''),
+  Widget _buildCustomerCard(UtangCustomer item) {
+    return GestureDetector(
+      onTap: () async {
+        await GoRouter.of(context).push('/utang_summary', extra: item);
+        _refreshData();
+      },
+      child: Card(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        elevation: 3,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.fullName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        "₱${currencyFormat.format(item.totalAmount)}",
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (item.totalAmount <= 0)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            "Paid",
+                            style: TextStyle(
+                              color: Colors.green[800],
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              if (item.municipality != null && item.municipality!.isNotEmpty)
+                Text(
+                  item.municipality!,
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              const SizedBox(height: 2),
+              if (item.barangay != null && item.barangay!.isNotEmpty)
+                Text(
+                  "Barangay ${item.barangay!}",
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              const SizedBox(height: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (item.phoneNumber != null && item.phoneNumber!.isNotEmpty)
+                    Text(
+                      item.phoneNumber!,
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  if (item.dueDate != null && item.totalAmount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: item.remainingDays <= 0
+                            ? Colors.red[100]
+                            : Colors.green[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        "Due: ${DateFormat('MMM dd, yyyy').format(item.dueDate!)} • ${item.remainingDays} day${item.remainingDays != 1 ? 's' : ''} left",
+                        style: TextStyle(
+                          color: item.remainingDays <= 0
+                              ? Colors.red
+                              : Colors.green[800],
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
-    DateTime? dateB = DateTime.tryParse(
-      b.isInstallment ? (b.nextDueDate ?? '') : (b.dueDate ?? ''),
-    );
-
-    // No dates = push to bottom
-    if (dateA == null && dateB == null) return 0;
-    if (dateA == null) return 1;
-    if (dateB == null) return -1;
-
-    // Nearest due date first
-    return dateA.compareTo(dateB);
-  });
-}
-
+  }
 
   // ============================================================
-  // OWNER UTANG PAGE
+  // UI - OWNER PAGE
   // ============================================================
-  Widget ownerPage() {
-    Color statusColor(String status) {
-      switch (status) {
-        case 'Overdue':
-          return Colors.red.shade100;
-        case 'Due Soon':
-          return Colors.orange.shade100;
-        case 'Paid':
-          return Colors.green.shade100;
-        default:
-          return Colors.grey.shade200;
-      }
-    }
 
-    Color statusTextColor(String status) {
-      switch (status) {
-        case 'Overdue':
-          return Colors.red.shade800;
-        case 'Due Soon':
-          return Colors.orange.shade800;
-        case 'Paid':
-          return Colors.green.shade800;
-        default:
-          return Colors.grey.shade800;
-      }
-    }
-
+  Widget _buildOwnerPage() {
     return Stack(
       children: [
         Column(
           children: [
             const SizedBox(height: 20),
-            // FILTER BUTTONS
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  filterButton(0, "Tanan"),
-                  filterButton(1, "Overdue"),
-                  filterButton(2, "Nabayran"),
-                ],
-              ),
-            ),
+            _buildFilterButtons(),
             const SizedBox(height: 15),
-
-            // LIST OF OWNER UTANG
             Expanded(
               child: filteredOwnerPayables.isEmpty
                   ? const Center(
@@ -683,111 +841,8 @@ class _UtangScreenState extends State<UtangScreen> {
                       padding: EdgeInsets.zero,
                       itemCount: filteredOwnerPayables.length,
                       itemBuilder: (context, index) {
-                        final item = filteredOwnerPayables[index];
-
-                        // -------------------------
-                        // Compute Next Due Display
-                        // -------------------------
-                        String? nextDueDisplay;
-                        String status = item.isPaid ? "Paid" : "";
-                        final nextDateStr = item.isInstallment
-                            ? item.nextDueDate
-                            : item.dueDate;
-
-                        if (nextDateStr != null) {
-                          final due = DateTime.tryParse(nextDateStr);
-                          if (due != null) {
-                            nextDueDisplay =
-                                "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
-
-                            if (!item.isPaid) {
-                              final daysLeft = due
-                                  .difference(DateTime.now())
-                                  .inDays;
-                              if (daysLeft < 0) {
-                                status = "Overdue"; // past due
-                              } else if (daysLeft <= 7) {
-                                status = "Due Soon"; // within 7 days
-                              } else {
-                                status = ""; // not urgent
-                              }
-                            }
-                          }
-                        }
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
-                          ),
-                          child: GestureDetector(
-                            onTap: () {
-                              showOwnerUtangModal(
-                                item,
-                              ); // ✅ call the modal here
-                            },
-                            child: Card(
-                              color: Colors.white,
-                              elevation: 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.item,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        if (nextDueDisplay != null)
-                                          Text(
-                                            nextDueDisplay,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  // status badge
-                                  if (status == "Due Soon")
-                                    Positioned(
-                                      top: 12,
-                                      right: 12,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor(status),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          status,
-                                          style: TextStyle(
-                                            color: statusTextColor(status),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        return _buildOwnerPayableCard(
+                          filteredOwnerPayables[index],
                         );
                       },
                     ),
@@ -795,44 +850,26 @@ class _UtangScreenState extends State<UtangScreen> {
             const SizedBox(height: 100),
           ],
         ),
-        // ADD BUTTON
-        Positioned(
-          bottom: 20,
-          left: 20,
-          right: 20,
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {
-                GoRouter.of(context).push('/add_utang');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-              child: const Text(
-                "Pagdugang og Bayronon",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ),
+        _buildAddButton(),
       ],
     );
   }
 
-  // ============================================================
-  // FILTER BUTTON OVERRIDE
-  // ============================================================
-  Widget filterButton(int index, String text) {
+  Widget _buildFilterButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildFilterButton(0, "Tanan"),
+          _buildFilterButton(1, "Overdue"),
+          _buildFilterButton(2, "Nabayran"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterButton(int index, String text) {
     bool active = selectedFilter == index;
     return Expanded(
       child: GestureDetector(
@@ -857,5 +894,154 @@ class _UtangScreenState extends State<UtangScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildOwnerPayableCard(Payable item) {
+    String? nextDueDisplay;
+    String status = item.isPaid ? "Paid" : "";
+    final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
+
+    if (nextDateStr != null) {
+      final due = DateTime.tryParse(nextDateStr);
+      if (due != null) {
+        nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
+
+        if (!item.isPaid) {
+          final daysLeft = due.difference(DateTime.now()).inDays;
+          if (daysLeft < 0) {
+            status = "Overdue";
+          } else if (daysLeft <= 7) {
+            status = "Due Soon";
+          }
+        }
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: GestureDetector(
+        onTap: () => showOwnerUtangModal(item),
+        child: Card(
+          color: Colors.white,
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.item,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (nextDueDisplay != null)
+                      Text(
+                        nextDueDisplay,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (status == "Due Soon")
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: _getStatusTextColor(status),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return Positioned(
+      bottom: 20,
+      left: 20,
+      right: 20,
+      child: SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton(
+          onPressed: () async {
+            await GoRouter.of(context).push('/add_utang');
+            _refreshData();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+          ),
+          child: const Text(
+            "Pagdugang og Bayronon",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Overdue':
+        return Colors.red.shade100;
+      case 'Due Soon':
+        return Colors.orange.shade100;
+      case 'Paid':
+        return Colors.green.shade100;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  Color _getStatusTextColor(String status) {
+    switch (status) {
+      case 'Overdue':
+        return Colors.red.shade800;
+      case 'Due Soon':
+        return Colors.orange.shade800;
+      case 'Paid':
+        return Colors.green.shade800;
+      default:
+        return Colors.grey.shade800;
+    }
   }
 }

@@ -2,6 +2,7 @@ import 'package:dswd_slp/views/screens/add_utang_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
+import 'models/utang_customer_model.dart';
 import 'views/screens/about_app_screen.dart';
 import 'views/screens/cashflow_screen.dart';
 import 'views/screens/change_pin_screen.dart';

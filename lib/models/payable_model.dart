@@ -3,6 +3,13 @@ class Payable {
   final String name; // supplier / owner
   final String item;
   final double amount;
+  
+  // -------------------------
+  // Optional installment info
+  // -------------------------
+  final double? remainingAmount;
+  final double? planMonthly;
+  final int? planMonths;
 
   final String? dueDate;
   final String? nextDueDate;
@@ -29,6 +36,9 @@ class Payable {
     required this.name,
     required this.item,
     required this.amount,
+    this.remainingAmount,
+    this.planMonthly,
+    this.planMonths,
     this.dueDate,
     this.nextDueDate,
     this.isInstallment = false,
@@ -77,6 +87,10 @@ class Payable {
       item: map['item'] ?? 'No item',
       amount: (map['original_amount'] ?? 0).toDouble(),
 
+      remainingAmount: (map['remaining_amount'] as num?)?.toDouble(),
+      planMonthly: (map['plan_monthly'] as num?)?.toDouble(),
+      planMonths: map['plan_months'] as int?,
+
       dueDate: map['due_date'] as String?,
       nextDueDate: map['next_due_date'] as String?,
 
@@ -101,6 +115,9 @@ class Payable {
       'supplier_name': name,
       'item': item,
       'original_amount': amount,
+      'remaining_amount': remainingAmount,
+      'plan_monthly': planMonthly,
+      'plan_months': planMonths,
       'due_date': dueDate,
       'next_due_date': nextDueDate,
       'has_plan': isInstallment ? 1 : 0,
