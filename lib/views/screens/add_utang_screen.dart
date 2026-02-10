@@ -49,7 +49,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     super.dispose();
   }
 
-   // -----------------------------
+  // -----------------------------
   // ADD MONTHS UTILITY FUNCTION
   // -----------------------------
   DateTime addMonths(DateTime date, int months) {
@@ -88,209 +88,224 @@ class _AddUtangPageState extends State<AddUtangPage> {
   // SAVE UTANG
   // ==============================
   Future<void> saveUtang() async {
-  final db = await DBService.instance.database;
+    final db = await DBService.instance.database;
 
-  if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please fill item and total cost")),
-    );
-    return;
-  }
-
-  try {
-    // -----------------------------
-    // PARSE AMOUNTS SAFELY
-    // -----------------------------
-    final total = double.tryParse(totalCostController.text.replaceAll(',', '').trim()) ?? 0;
-    final down = double.tryParse(downpaymentController.text.replaceAll(',', '').trim()) ?? 0;
-
-    // -----------------------------
-    // FETCH CASH ON HAND (SHARED DB)
-    // -----------------------------
-    final cashRes = await db.rawQuery(
-      'SELECT SUM(cash_on_hand) as total_cash FROM capital_management',
-    );
-    final cashOnHand = (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
-
-    // -----------------------------
-    // INSTALLMENT LOGIC
-    // -----------------------------
-    if (selectedTab == 0) {
-      final months = int.tryParse(durationController.text) ?? 1;
-      final remaining = total - down;
-      final monthly = months > 0 ? remaining / months : remaining;
-      final firstDueDate = startDateController.text.isNotEmpty
-          ? DateTime.tryParse(startDateController.text) ?? DateTime.now()
-          : DateTime.now();
-
-      final nextDueDate = firstDueDate; // first installment
-
-      // -----------------------------
-      // CHECK DOWNPAYMENT AGAINST CASH
-      // -----------------------------
-      if (down > cashOnHand) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
-            ),
-          ),
-        );
-        return;
-      }
-
-      // -----------------------------
-      // INSERT PAYABLE
-      // -----------------------------
-      final finalDueDate = addMonths(firstDueDate, months);
-
-      await db.insert('payable', {
-        'supplier_name': 'Owner',
-        'item': itemController.text,
-        'original_amount': total,
-        'remaining_amount': remaining,
-        'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate),
-        'note': notesController.text,
-        'is_paid': 0,
-        'has_plan': 1,
-        'plan_months': months,
-        'plan_monthly': monthly,
-        'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
-        'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
-        'is_asset': 1,
-        'asset_category': 'Installment Purchase',
-        'created_by_first_name': 'Kevin',
-        'created_by_middle_name': 'R.',
-        'created_by_last_name': 'Mejares',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-
-      // -----------------------------
-      // INSERT OWNER INSTALLMENT AND DEDUCT CASH
-      // -----------------------------
-      if (down > 0) {
-        await db.insert('owner_installments', {
-          'account_id': 1, // TODO: replace with dynamic account if needed
-          'item': itemController.text,
-          'downpayment': down,
-          'created_at': DateTime.now().toIso8601String(),
-        });
-
-        await db.rawUpdate(
-          '''
-          UPDATE capital_management
-          SET cash_on_hand = cash_on_hand - ?
-          ''',
-          [down],
-        );
-      }
-
-      // -----------------------------
-      // ADD TO FIXED ASSET
-      // -----------------------------
-      await db.insert('fixed_asset', {
-        'account_id': 1,
-        'name': itemController.text,
-        'cost': total,
-        'accumulated_depreciation': 0,
-        'category': 'Installment Purchase',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-
-    } else {
-      // -----------------------------
-      // NON-INSTALLMENT LOGIC
-      // -----------------------------
-      final datePaid = datePaidController.text.isNotEmpty
-          ? datePaidController.text
-          : DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-      if (total > cashOnHand) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Total cost of ₱${currencyFormat.format(total)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
-            ),
-          ),
-        );
-        return;
-      }
-
-      await db.insert('payable', {
-        'supplier_name': 'Owner',
-        'item': itemController.text,
-        'original_amount': total,
-        'remaining_amount': 0,
-        'due_date': datePaid,
-        'note': notesController.text,
-        'is_paid': 1,
-        'has_plan': 0,
-        'plan_months': null,
-        'plan_monthly': null,
-        'first_due_date': null,
-        'next_due_date': null,
-        'is_asset': 1,
-        'asset_category': 'Direct Purchase',
-        'created_by_first_name': 'Kevin',
-        'created_by_middle_name': 'R.',
-        'created_by_last_name': 'Mejares',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-
-      if (total > 0) {
-        await db.rawUpdate(
-          '''
-          UPDATE capital_management
-          SET cash_on_hand = cash_on_hand - ?
-          ''',
-          [total],
-        );
-      }
-
-      await db.insert('fixed_asset', {
-        'account_id': 1,
-        'name': itemController.text,
-        'cost': total,
-        'accumulated_depreciation': 0,
-        'category': 'Direct Purchase',
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+    if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill item and total cost")),
+      );
+      return;
     }
 
-    // -----------------------------
-    // SUCCESS
-    // -----------------------------
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Bayronon saved successfully")),
-    );
+    try {
+      // -----------------------------
+      // PARSE AMOUNTS SAFELY
+      // -----------------------------
+      final total =
+          double.tryParse(
+            totalCostController.text.replaceAll(',', '').trim(),
+          ) ??
+          0;
+      final down =
+          double.tryParse(
+            downpaymentController.text.replaceAll(',', '').trim(),
+          ) ??
+          0;
 
-    // CLEAR FIELDS
-    itemController.clear();
-    totalCostController.clear();
-    downpaymentController.clear();
-    durationController.clear();
-    notesController.clear();
-    startDateController.clear();
-    paymentMethodController.clear();
-    datePaidController.clear();
-    setState(() {
-      remainingBalance = 0.0;
-      monthlyPayment = 0.0;
-    });
+      // -----------------------------
+      // FETCH CASH ON HAND (SHARED DB)
+      // -----------------------------
+      final cashRes = await db.rawQuery(
+        'SELECT SUM(cash_on_hand) as total_cash FROM capital_management',
+      );
+      final cashOnHand =
+          (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.pop(context, true);
-    });
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to save: $e")),
-    );
+      // -----------------------------
+      // INSTALLMENT LOGIC
+      // -----------------------------
+      if (selectedTab == 0) {
+        final months = int.tryParse(durationController.text) ?? 1;
+        final remaining = total - down;
+        final monthly = months > 0 ? remaining / months : remaining;
+        final firstDueDate = startDateController.text.isNotEmpty
+            ? DateTime.tryParse(startDateController.text) ?? DateTime.now()
+            : DateTime.now();
+
+        final nextDueDate = firstDueDate; // first installment
+
+        // -----------------------------
+        // CHECK DOWNPAYMENT AGAINST CASH
+        // -----------------------------
+        if (down > cashOnHand) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+              ),
+            ),
+          );
+          return;
+        }
+
+        // -----------------------------
+        // INSERT PAYABLE
+        // -----------------------------
+        final finalDueDate = addMonths(firstDueDate, months);
+
+        await db.insert('payable', {
+          'supplier_name': 'Owner',
+          'item': itemController.text,
+          'original_amount': total,
+          'remaining_amount': remaining,
+          'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate),
+          'note': notesController.text,
+          'is_paid': 0,
+          'has_plan': 1,
+          'plan_months': months,
+          'plan_monthly': monthly,
+          'first_due_date': DateFormat('yyyy-MM-dd').format(firstDueDate),
+          'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
+          'is_asset': 1,
+          'asset_category': 'Installment Purchase',
+          'created_by_first_name': 'Kevin',
+          'created_by_middle_name': 'R.',
+          'created_by_last_name': 'Mejares',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        // -----------------------------
+        // INSERT OWNER INSTALLMENT AND DEDUCT CASH
+        // -----------------------------
+        if (down > 0) {
+          await db.insert('owner_installments', {
+            'account_id': 1,
+            'item': itemController.text,
+            'downpayment': down,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+
+          await db.rawUpdate(
+            '''
+          UPDATE capital_management
+          SET cash_on_hand = cash_on_hand - ?
+          ''',
+            [down],
+          );
+        }
+
+        // -----------------------------
+        // ADD TO FIXED ASSET
+        // -----------------------------
+        await db.insert('fixed_asset', {
+          'account_id': 1,
+          'name': itemController.text,
+          'cost': total,
+          'accumulated_depreciation': 0,
+          'category': 'Installment Purchase',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      } else {
+        // -----------------------------
+        // NON-INSTALLMENT LOGIC
+        // -----------------------------
+        final datePaid = datePaidController.text.isNotEmpty
+            ? datePaidController.text
+            : DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+        if (total > cashOnHand) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Total cost of ₱${currencyFormat.format(total)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+              ),
+            ),
+          );
+          return;
+        }
+
+        await db.insert('payable', {
+          'supplier_name': 'Owner',
+          'item': itemController.text,
+          'original_amount': total,
+          'remaining_amount': 0,
+          'due_date': datePaid,
+          'note': notesController.text,
+          'is_paid': 1,
+          'has_plan': 0,
+          'plan_months': null,
+          'plan_monthly': null,
+          'first_due_date': null,
+          'next_due_date': null,
+          'is_asset': 1,
+          'asset_category': 'Direct Purchase',
+          'created_by_first_name': 'Kevin',
+          'created_by_middle_name': 'R.',
+          'created_by_last_name': 'Mejares',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        if (total > 0) {
+          await db.rawUpdate(
+            '''
+          UPDATE capital_management
+          SET cash_on_hand = cash_on_hand - ?
+          ''',
+            [total],
+          );
+        }
+
+        await db.insert('fixed_asset', {
+          'account_id': 1,
+          'name': itemController.text,
+          'cost': total,
+          'accumulated_depreciation': 0,
+          'category': 'Direct Purchase',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      // -----------------------------
+      // SUCCESS
+      // -----------------------------
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bayronon saved successfully")),
+      );
+
+      // CLEAR FIELDS
+      itemController.clear();
+      totalCostController.clear();
+      downpaymentController.clear();
+      durationController.clear();
+      notesController.clear();
+      startDateController.clear();
+      paymentMethodController.clear();
+      datePaidController.clear();
+      setState(() {
+        remainingBalance = 0.0;
+        monthlyPayment = 0.0;
+      });
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        // ignore: use_build_context_synchronously
+        Navigator.pop(context, true);
+      });
+    } catch (e) {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to save: $e")));
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +422,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
   // TEXT FIELD BUILDER
   // ==============================
   Widget buildTextField(
-    String label, 
+    String label,
     TextEditingController? controller, {
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
