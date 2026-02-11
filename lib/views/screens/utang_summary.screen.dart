@@ -87,6 +87,26 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   double? creditLimit;
   double? availableCredit;
 
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  int _daysUntil(DateTime dueDate) {
+    final today = _dateOnly(DateTime.now());
+    final due = _dateOnly(dueDate);
+    return due.difference(today).inDays;
+  }
+
+  bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
+
+  String _buildDueStatusText(DateTime dueDate) {
+    final daysLeft = _daysUntil(dueDate);
+    final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
+
+    if (daysLeft < 0) return "Overdue • Due: $formattedDueDate";
+    if (daysLeft == 0) return "Due today • Due: $formattedDueDate";
+    return "Due: $formattedDueDate • $daysLeft days left";
+  }
+
   @override
   void initState() {
     super.initState();
@@ -521,19 +541,17 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: widget.customer.remainingDays <= 0
+                              color: _isOverdue(widget.customer.dueDate!)
                                   ? Colors.red[100]
                                   : Colors.green[100],
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: Text(
-                              widget.customer.remainingDays <= 0
-                                  ? "Overdue • Due: ${DateFormat('MMM dd, yyyy').format(widget.customer.dueDate!)}"
-                                  : "Due: ${DateFormat('MMM dd, yyyy').format(widget.customer.dueDate!)} • ${widget.customer.remainingDays} days left",
+                              _buildDueStatusText(widget.customer.dueDate!),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: widget.customer.remainingDays <= 0
+                                color: _isOverdue(widget.customer.dueDate!)
                                     ? Colors.red
                                     : Colors.green[800],
                               ),
@@ -772,9 +790,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                           style: TextStyle(
                                             fontSize: 13,
                                             color:
-                                                items.first.dueDate!.isBefore(
-                                                  DateTime.now(),
-                                                )
+                                                _isOverdue(items.first.dueDate!)
                                                 ? Colors.red
                                                 : Colors.green,
                                           ),

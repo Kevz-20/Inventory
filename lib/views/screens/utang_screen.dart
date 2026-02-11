@@ -53,7 +53,8 @@ class OwnerPayablePayment {
     return OwnerPayablePayment(
       id: map['id'] as int,
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      paidAt: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+      paidAt:
+          DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
       note: map['note']?.toString(),
     );
   }
@@ -82,6 +83,30 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
 
   List<Payable> ownerPayables = [];
   List<Payable> filteredOwnerPayables = [];
+
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  int _daysUntil(DateTime dueDate) {
+    final today = _dateOnly(DateTime.now());
+    final due = _dateOnly(dueDate);
+    return due.difference(today).inDays;
+  }
+
+  bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
+
+  String _buildDueStatusText(DateTime dueDate) {
+    final daysLeft = _daysUntil(dueDate);
+    final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
+
+    if (daysLeft < 0) {
+      return "Overdue • Due: $formattedDueDate";
+    }
+    if (daysLeft == 0) {
+      return "Due today • Due: $formattedDueDate";
+    }
+    return "Due: $formattedDueDate • $daysLeft day${daysLeft != 1 ? 's' : ''} left";
+  }
 
   // ============================================================
   // LIFECYCLE
@@ -395,7 +420,6 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
       final capitalRepo = CapitalManagementRepository(db);
       await capitalRepo.deductCash(amount: payAmount);
 
-
       await db.insert('payable_payment', {
         'payable_id': item.id,
         'amount': payAmount,
@@ -513,164 +537,176 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                 child: SingleChildScrollView(
                   controller: scrollController,
                   child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(
-                  item.item,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  "Amount: \u20B1${currencyFormat.format(item.amount)}",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "Remaining: \u20B1${currencyFormat.format(remaining)}",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                if (item.createdAtDate != null)
-                  Text(
-                    "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                if (displayNextDue != null)
-                  Text(
-                    "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                const SizedBox(height: 6),
-                Text(
-                  item.isInstallment ? "Installment" : "Non-installment",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: item.isInstallment
-                        ? Colors.orange.shade800
-                        : Colors.blue.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  "Payment Trace",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (paymentHistory.isEmpty)
-                  const Text(
-                    "No payments recorded yet.",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ...paymentHistory.map((payment) {
-                  final paidLabel = DateFormat(
-                    'MMM dd, yyyy hh:mm a',
-                  ).format(payment.paidAt);
-                  final leftLabel = !item.isInstallment
-                      ? 'Full payment \u20B1${currencyFormat.format(payment.amount)}'
-                      : (payment.note?.isNotEmpty == true
-                          ? payment.note!
-                          : 'Owner payment');
-                  return Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            leftLabel,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
-                          ),
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.item,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(width: 10),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Amount: \u20B1${currencyFormat.format(item.amount)}",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Remaining: \u20B1${currencyFormat.format(remaining)}",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      if (item.createdAtDate != null)
                         Text(
-                          paidLabel,
+                          "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
                           style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
+                            fontSize: 14,
+                            color: Colors.grey,
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 12),
-                if (!isFullyPaid)
-                  if (!isFullyPaid)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              double? amount = await promptPartialAmount(
-                                remaining,
-                                suggested: item.planMonthly,
-                              );
-                              if (amount != null) {
-                                await applyPayment(item, amount);
-                                if (context.mounted) Navigator.pop(context);
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                      if (displayNextDue != null)
+                        Text(
+                          "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                      Text(
+                        item.isInstallment ? "Installment" : "Non-installment",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: item.isInstallment
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Payment Trace",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (paymentHistory.isEmpty)
+                        const Text(
+                          "No payments recorded yet.",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ...paymentHistory.map((payment) {
+                        final paidLabel = DateFormat(
+                          'MMM dd, yyyy hh:mm a',
+                        ).format(payment.paidAt);
+                        final leftLabel = !item.isInstallment
+                            ? 'Full payment \u20B1${currencyFormat.format(payment.amount)}'
+                            : (payment.note?.isNotEmpty == true
+                                  ? payment.note!
+                                  : 'Owner payment');
+                        return Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  leftLabel,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.black54,
+                                  ),
+                                ),
                               ),
-                            ),
-                            child: const Text("Partial Pay"),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              await applyPayment(
-                                item,
-                                remaining,
-                                isFullPay: true,
-                              );
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              const SizedBox(width: 10),
+                              Text(
+                                paidLabel,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
                               ),
-                            ),
-                            child: const Text("Full Pay"),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                      if (!isFullyPaid)
+                        if (!isFullyPaid)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    double? amount = await promptPartialAmount(
+                                      remaining,
+                                      suggested: item.planMonthly,
+                                    );
+                                    if (amount != null) {
+                                      await applyPayment(item, amount);
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text("Partial Pay"),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    await applyPayment(
+                                      item,
+                                      remaining,
+                                      isFullPay: true,
+                                    );
+                                    if (context.mounted) Navigator.pop(context);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text("Full Pay"),
+                                ),
+                              ),
+                            ],
+                          ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        });
+            );
+          },
+        );
       },
     );
   }
@@ -911,15 +947,15 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: item.remainingDays <= 0
+                        color: _isOverdue(item.dueDate!)
                             ? Colors.red[100]
                             : Colors.green[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        "Due: ${DateFormat('MMM dd, yyyy').format(item.dueDate!)} • ${item.remainingDays} day${item.remainingDays != 1 ? 's' : ''} left",
+                        _buildDueStatusText(item.dueDate!),
                         style: TextStyle(
-                          color: item.remainingDays <= 0
+                          color: _isOverdue(item.dueDate!)
                               ? Colors.red
                               : Colors.green[800],
                           fontSize: 13,

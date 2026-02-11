@@ -27,15 +27,18 @@ class UtangCustomer {
 
   /// Convenience getter for full name
   String get fullName => [
-        firstName,
-        middleName,
-        lastName,
-      ].where((e) => e != null && e.isNotEmpty).join(' ');
+    firstName,
+    middleName,
+    lastName,
+  ].where((e) => e != null && e.isNotEmpty).join(' ');
 
   /// Convenience getter for remaining days until due
   int get computedRemainingDays {
     if (dueDate == null) return 0;
-    return dueDate!.difference(DateTime.now()).inDays;
+    final dueDateOnly = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    return dueDateOnly.difference(todayOnly).inDays;
   }
 
   /// Factory constructor to create a UtangCustomer from a map (DB row)
@@ -65,7 +68,15 @@ class UtangCustomer {
       barangay: map['barangay'],
       dueDate: parsedDueDate,
       remainingDays: parsedDueDate != null
-          ? parsedDueDate.difference(DateTime.now()).inDays
+          ? DateTime(parsedDueDate.year, parsedDueDate.month, parsedDueDate.day)
+                .difference(
+                  DateTime(
+                    DateTime.now().year,
+                    DateTime.now().month,
+                    DateTime.now().day,
+                  ),
+                )
+                .inDays
           : 0,
       balance: remainingBalance > 0 ? remainingBalance : 0,
       totalAmount: totalAmount,
