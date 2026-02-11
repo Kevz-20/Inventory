@@ -31,7 +31,7 @@ class UtangItem {
     return UtangItem(
       salesCreditId: map['sales_credit_id'],
       itemName: map['item_name'] ?? '',
-      amount: (map['amount'] ?? 0).toDouble(),  
+      amount: (map['amount'] ?? 0).toDouble(),
       quantity: map['quantity'] ?? 0,
       creditDate: DateTime.tryParse(map['credit_date'] ?? '') ?? DateTime.now(),
       dueDate: map['due_date'] != null
@@ -65,25 +65,6 @@ class CustomerPayment {
       creditDateId: map['credit_date_id'],
     );
   }
-}
-
-class AppliedPayment {
-  final CustomerPayment payment;
-  final double appliedAmount;
-
-  AppliedPayment({required this.payment, required this.appliedAmount});
-}
-
-class DatePaymentAllocation {
-  final List<AppliedPayment> appliedPayments;
-  final double totalPaid;
-  final double remaining;
-
-  DatePaymentAllocation({
-    required this.appliedPayments,
-    required this.totalPaid,
-    required this.remaining,
-  });
 }
 
 // ================================
@@ -169,112 +150,141 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     });
   }
 
-
-
   // ================================
   // ADD CUSTOMER-LEVEL PAYMENT
   // ================================
-  // ================================
-// ADD CUSTOMER-LEVEL PAYMENT
-// ================================
-Future<void> addPartialPayment() async {
-  final TextEditingController paymentController = TextEditingController();
-  double enteredAmount = 0;
+  Future<void> addPartialPayment() async {
+    if (totalUtang <= 0) return;
 
-  showDialog(
-    context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          final remainingBalance = totalUtang;
-          final isOverPaying = enteredAmount > remainingBalance;
+    final TextEditingController paymentController = TextEditingController();
+    double enteredAmount = 0;
 
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text("Add Payment"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final remainingBalance = totalUtang;
+            final isOverPaying = enteredAmount > remainingBalance;
+            final isFullPay = enteredAmount == remainingBalance;
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Add Payment",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: paymentController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: "Enter payment amount",
-                    prefixText: "₱",
+                  const SizedBox(height: 16),
+                  Text(
+                    "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
                   ),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      enteredAmount = double.tryParse(value) ?? 0;
-                    });
-                  },
-                ),
-                if (isOverPaying) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Amount exceeds remaining balance",
-                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: paymentController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Enter payment amount",
+                      prefixText: "₱",
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setSheetState(() {
+                        enteredAmount = double.tryParse(value) ?? 0;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  if (isOverPaying)
+                    const Text(
+                      "Amount exceeds remaining balance",
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  if (isFullPay && enteredAmount > 0)
+                    const Text(
+                      "This will fully pay the utang.",
+                      style: TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: (enteredAmount <= 0 || isOverPaying)
+                              ? null
+                              : () async {
+                                  final db = await DBService.instance.database;
+
+                                  // Insert payment record
+                                  await db.insert('customer_payment', {
+                                    'customer_id': widget.customer.id,
+                                    'amount': enteredAmount,
+                                    'paid_at': DateTime.now().toIso8601String(),
+                                  });
+
+                                  // Update available credit
+                                  final customerRepo = CustomerRepository(db);
+                                  final currentCredit = await customerRepo
+                                      .getAvailableCredit(widget.customer.id);
+
+                                  await customerRepo
+                                      .updateCustomer(widget.customer.id, {
+                                        'available_credit':
+                                            currentCredit + enteredAmount,
+                                        'updated_at': DateTime.now()
+                                            .toIso8601String(),
+                                      });
+
+                                  // Add to cash on hand
+                                  final capitalRepo =
+                                      CapitalManagementRepository(db);
+                                  await capitalRepo.addCustomerPaymentCash(
+                                    enteredAmount,
+                                  );
+
+                                  // ignore: use_build_context_synchronously
+                                  Navigator.pop(context);
+                                  await fetchCustomerData();
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isFullPay
+                                ? Colors.green
+                                : Colors.orange,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(isFullPay ? "Full Pay" : "Partial Pay"),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
               ),
-              ElevatedButton(
-                onPressed:
-                    (enteredAmount <= 0 || isOverPaying || remainingBalance <= 0)
-                        ? null
-                        : () async {
-                            Navigator.pop(context);
-                            final db = await DBService.instance.database;
-
-                            // Insert payment into shared customer_payment table
-                            await db.insert('customer_payment', {
-                              'customer_id': widget.customer.id,
-                              'amount': enteredAmount,
-                              'paid_at': DateTime.now().toIso8601String(),
-                            });
-
-                            // ----------------------------
-                            // Update available credit
-                            // ----------------------------
-                            final customerRepo = CustomerRepository(db);
-
-                            // Get current available credit
-                            final currentCredit = await customerRepo.getAvailableCredit(widget.customer.id);
-
-                            // Add payment to available credit
-                            await customerRepo.updateCustomer(widget.customer.id, {
-                              'available_credit': currentCredit + enteredAmount,
-                              'updated_at': DateTime.now().toIso8601String(),
-                            });
-
-                            // Record only in cash on hand (not capital, no account filter)
-                            final capitalRepo = CapitalManagementRepository(db);
-                            await capitalRepo.addCustomerPaymentCash(enteredAmount);
-
-                            await fetchCustomerData();
-                          },
-                child: const Text("Add"),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-
+            );
+          },
+        );
+      },
+    );
+  }
 
   // ================================
   // ADJUST CREDIT LIMIT (INCREASE)
@@ -396,8 +406,8 @@ Future<void> addPartialPayment() async {
   }
 
   // ================================
-// AVAILABLE CREDIT (calculated dynamically)
-// ================================
+  // AVAILABLE CREDIT (calculated dynamically)
+  // ================================
   double get availableCreditCalculated {
     if (creditLimit == null) return 0;
     return creditLimit! - totalUtang;
@@ -417,72 +427,24 @@ Future<void> addPartialPayment() async {
   }
 
   // ================================
-  // PAYMENTS APPLIED PER DATE (sequential allocation)
+  // PAYMENTS APPLIED PER DATE
   // ================================
-  Map<String, DatePaymentAllocation> buildDatePaymentAllocations(
-    List<String> sortedDates,
-    Map<String, List<UtangItem>> groupedItems,
-  ) {
-    final allocations = <String, DatePaymentAllocation>{};
-    var paymentIndex = 0;
-    var paymentCarry = 0.0;
+  List<CustomerPayment> paymentsAppliedToDate(String dateKey) {
+    final dateItems = groupItemsByDate()[dateKey]!;
+    double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
+    List<CustomerPayment> appliedPayments = [];
 
-    for (final dateKey in sortedDates) {
-      final dateItems = groupedItems[dateKey] ?? [];
-      final totalPerDate = dateItems.fold(
-        0.0,
-        (sum, item) => sum + item.amount,
-      );
-
-      var remainingForDate = totalPerDate;
-      final applied = <AppliedPayment>[];
-
-      while (remainingForDate > 0 && paymentIndex < customerPayments.length) {
-        final currentPayment = customerPayments[paymentIndex];
-        var availableFromPayment = paymentCarry > 0
-            ? paymentCarry
-            : currentPayment.amount;
-
-        if (availableFromPayment <= 0) {
-          paymentIndex++;
-          paymentCarry = 0;
-          continue;
-        }
-
-        final appliedAmount = availableFromPayment <= remainingForDate
-            ? availableFromPayment
-            : remainingForDate;
-
-        applied.add(
-          AppliedPayment(payment: currentPayment, appliedAmount: appliedAmount),
-        );
-
-        remainingForDate -= appliedAmount;
-        availableFromPayment -= appliedAmount;
-
-        if (availableFromPayment <= 0) {
-          paymentIndex++;
-          paymentCarry = 0;
-        } else {
-          paymentCarry = availableFromPayment;
-        }
+    for (var pay in customerPayments) {
+      if (remaining <= 0) break;
+      final applyAmount = (pay.amount <= remaining) ? pay.amount : remaining;
+      if (applyAmount > 0) {
+        appliedPayments.add(pay);
+        remaining -= applyAmount;
       }
-
-      final totalPaid = applied.fold(
-        0.0,
-        (sum, entry) => sum + entry.appliedAmount,
-      );
-
-      allocations[dateKey] = DatePaymentAllocation(
-        appliedPayments: applied,
-        totalPaid: totalPaid,
-        remaining: remainingForDate,
-      );
     }
-
-    return allocations;
+    return appliedPayments;
   }
-  
+
   // ================================
   // BUILD
   // ================================
@@ -491,10 +453,6 @@ Future<void> addPartialPayment() async {
     final groupedItems = groupItemsByDate();
     final sortedDates = groupedItems.keys.toList()
       ..sort((a, b) => a.compareTo(b));
-    final paymentAllocations = buildDatePaymentAllocations(
-      sortedDates,
-      groupedItems,
-    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -688,7 +646,10 @@ Future<void> addPartialPayment() async {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: addPartialPayment,
+                              onPressed: totalUtang > 0
+                                  ? addPartialPayment
+                                  : null,
+
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0C4B3E),
                                 padding: const EdgeInsets.symmetric(
@@ -762,10 +723,14 @@ Future<void> addPartialPayment() async {
                             0.0,
                             (sum, item) => sum + item.amount,
                           );
-                          final allocation = paymentAllocations[dateKey];
-                          final appliedPayments =
-                              allocation?.appliedPayments ?? [];
-                          final remaining = allocation?.remaining ?? totalPerDate;
+                          final appliedPayments = paymentsAppliedToDate(
+                            dateKey,
+                          );
+                          final totalPaidForDate = appliedPayments.fold(
+                            0.0,
+                            (sum, pay) => sum + pay.amount,
+                          );
+                          final remaining = totalPerDate - totalPaidForDate;
 
                           return Card(
                             color: Colors.white,
@@ -853,7 +818,7 @@ Future<void> addPartialPayment() async {
                                   ...appliedPayments.map((pay) {
                                     final payTime = DateFormat(
                                       'MMM dd, yyyy hh:mm a',
-                                    ).format(pay.payment.paidAt);
+                                    ).format(pay.paidAt);
                                     return Container(
                                       margin: const EdgeInsets.symmetric(
                                         vertical: 4,
@@ -871,7 +836,7 @@ Future<void> addPartialPayment() async {
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            "₱${currencyFormat.format(pay.appliedAmount)}",
+                                            "₱${currencyFormat.format(pay.amount)}",
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 15,
