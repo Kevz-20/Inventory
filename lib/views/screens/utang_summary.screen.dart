@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../models/utang_customer_model.dart';
@@ -65,6 +65,25 @@ class CustomerPayment {
       creditDateId: map['credit_date_id'],
     );
   }
+}
+
+class AppliedPayment {
+  final CustomerPayment payment;
+  final double appliedAmount;
+
+  AppliedPayment({required this.payment, required this.appliedAmount});
+}
+
+class DatePaymentAllocation {
+  final List<AppliedPayment> appliedPayments;
+  final double totalPaid;
+  final double remaining;
+
+  DatePaymentAllocation({
+    required this.appliedPayments,
+    required this.totalPaid,
+    required this.remaining,
+  });
 }
 
 // ================================
@@ -398,24 +417,72 @@ Future<void> addPartialPayment() async {
   }
 
   // ================================
-  // PAYMENTS APPLIED PER DATE
+  // PAYMENTS APPLIED PER DATE (sequential allocation)
   // ================================
-  List<CustomerPayment> paymentsAppliedToDate(String dateKey) {
-    final dateItems = groupItemsByDate()[dateKey]!;
-    double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
-    List<CustomerPayment> appliedPayments = [];
+  Map<String, DatePaymentAllocation> buildDatePaymentAllocations(
+    List<String> sortedDates,
+    Map<String, List<UtangItem>> groupedItems,
+  ) {
+    final allocations = <String, DatePaymentAllocation>{};
+    var paymentIndex = 0;
+    var paymentCarry = 0.0;
 
-    for (var pay in customerPayments) {
-      if (remaining <= 0) break;
-      final applyAmount = (pay.amount <= remaining) ? pay.amount : remaining;
-      if (applyAmount > 0) {
-        appliedPayments.add(pay);
-        remaining -= applyAmount;
+    for (final dateKey in sortedDates) {
+      final dateItems = groupedItems[dateKey] ?? [];
+      final totalPerDate = dateItems.fold(
+        0.0,
+        (sum, item) => sum + item.amount,
+      );
+
+      var remainingForDate = totalPerDate;
+      final applied = <AppliedPayment>[];
+
+      while (remainingForDate > 0 && paymentIndex < customerPayments.length) {
+        final currentPayment = customerPayments[paymentIndex];
+        var availableFromPayment = paymentCarry > 0
+            ? paymentCarry
+            : currentPayment.amount;
+
+        if (availableFromPayment <= 0) {
+          paymentIndex++;
+          paymentCarry = 0;
+          continue;
+        }
+
+        final appliedAmount = availableFromPayment <= remainingForDate
+            ? availableFromPayment
+            : remainingForDate;
+
+        applied.add(
+          AppliedPayment(payment: currentPayment, appliedAmount: appliedAmount),
+        );
+
+        remainingForDate -= appliedAmount;
+        availableFromPayment -= appliedAmount;
+
+        if (availableFromPayment <= 0) {
+          paymentIndex++;
+          paymentCarry = 0;
+        } else {
+          paymentCarry = availableFromPayment;
+        }
       }
-    }
-    return appliedPayments;
-  }
 
+      final totalPaid = applied.fold(
+        0.0,
+        (sum, entry) => sum + entry.appliedAmount,
+      );
+
+      allocations[dateKey] = DatePaymentAllocation(
+        appliedPayments: applied,
+        totalPaid: totalPaid,
+        remaining: remainingForDate,
+      );
+    }
+
+    return allocations;
+  }
+  
   // ================================
   // BUILD
   // ================================
@@ -424,6 +491,10 @@ Future<void> addPartialPayment() async {
     final groupedItems = groupItemsByDate();
     final sortedDates = groupedItems.keys.toList()
       ..sort((a, b) => a.compareTo(b));
+    final paymentAllocations = buildDatePaymentAllocations(
+      sortedDates,
+      groupedItems,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -691,14 +762,10 @@ Future<void> addPartialPayment() async {
                             0.0,
                             (sum, item) => sum + item.amount,
                           );
-                          final appliedPayments = paymentsAppliedToDate(
-                            dateKey,
-                          );
-                          final totalPaidForDate = appliedPayments.fold(
-                            0.0,
-                            (sum, pay) => sum + pay.amount,
-                          );
-                          final remaining = totalPerDate - totalPaidForDate;
+                          final allocation = paymentAllocations[dateKey];
+                          final appliedPayments =
+                              allocation?.appliedPayments ?? [];
+                          final remaining = allocation?.remaining ?? totalPerDate;
 
                           return Card(
                             color: Colors.white,
@@ -786,7 +853,7 @@ Future<void> addPartialPayment() async {
                                   ...appliedPayments.map((pay) {
                                     final payTime = DateFormat(
                                       'MMM dd, yyyy hh:mm a',
-                                    ).format(pay.paidAt);
+                                    ).format(pay.payment.paidAt);
                                     return Container(
                                       margin: const EdgeInsets.symmetric(
                                         vertical: 4,
@@ -804,7 +871,7 @@ Future<void> addPartialPayment() async {
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            "₱${currencyFormat.format(pay.amount)}",
+                                            "₱${currencyFormat.format(pay.appliedAmount)}",
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 15,

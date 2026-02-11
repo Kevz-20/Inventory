@@ -72,7 +72,11 @@ class EditExpenseViewModel extends ChangeNotifier {
     return true;
   }
 
-  void _showMessage(String msg, {bool isError = false, int durationSeconds = 2}) {
+  void _showMessage(
+    String msg, {
+    bool isError = false,
+    int durationSeconds = 2,
+  }) {
     if (isError) {
       errorMessage = msg;
     } else {
@@ -174,20 +178,28 @@ class ExistingExpensesScreen extends ConsumerWidget {
                 // Build "Recorded By" text safely
                 // -------------------------
                 final recordedBy = [
-                  exp.createdByFirstName.isNotEmpty ? exp.createdByFirstName : 'Unknown',
-                  if (exp.createdByMiddleName != null && exp.createdByMiddleName!.isNotEmpty)
+                  exp.createdByFirstName.isNotEmpty
+                      ? exp.createdByFirstName
+                      : 'Unknown',
+                  if (exp.createdByMiddleName != null &&
+                      exp.createdByMiddleName!.isNotEmpty)
                     exp.createdByMiddleName!,
-                  exp.createdByLastName.isNotEmpty ? exp.createdByLastName : 'Unknown',
+                  exp.createdByLastName.isNotEmpty
+                      ? exp.createdByLastName
+                      : 'Unknown',
                 ].join(' ');
 
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   child: ListTile(
-                    title: Text(exp.description.isNotEmpty
-                        ? exp.description
-                        : 'Wala deskripsyon'),
+                    title: Text(
+                      exp.description.isNotEmpty
+                          ? exp.description
+                          : 'Wala deskripsyon',
+                    ),
                     subtitle: Text(
-                        '₱${exp.amount.toStringAsFixed(2)} • ${exp.category}\nRecorded By: $recordedBy'),
+                      '₱${exp.amount.toStringAsFixed(2)} • ${exp.category}\nRecorded By: $recordedBy',
+                    ),
                     isThreeLine: true,
                     trailing: IconButton(
                       icon: const Icon(Icons.edit, color: AppColors.primary),
@@ -205,15 +217,19 @@ class ExistingExpensesScreen extends ConsumerWidget {
     );
   }
 
-  void _showEditExpenseModal(BuildContext context, WidgetRef ref, ExpenseModel expense) {
+  void _showEditExpenseModal(
+    BuildContext context,
+    WidgetRef ref,
+    ExpenseModel expense,
+  ) {
     final editExpenseProvider =
         ChangeNotifierProvider.autoDispose<EditExpenseViewModel>((ref) {
-      return EditExpenseViewModel(
-        expense: expense,
-        expenseRepositoryFuture: ref.read(expenseRepositoryProvider.future),
-        databaseFuture: ref.read(databaseProvider.future),
-      );
-    });
+          return EditExpenseViewModel(
+            expense: expense,
+            expenseRepositoryFuture: ref.read(expenseRepositoryProvider.future),
+            databaseFuture: ref.read(databaseProvider.future),
+          );
+        });
 
     showModalBottomSheet(
       isScrollControlled: true,
@@ -221,7 +237,9 @@ class ExistingExpensesScreen extends ConsumerWidget {
       context: context,
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Consumer(
             builder: (context, ref, _) {
               final vm = ref.watch(editExpenseProvider);
@@ -238,10 +256,15 @@ class ExistingExpensesScreen extends ConsumerWidget {
   /// -------------------------
   void _showExpenseDetails(BuildContext context, ExpenseModel expense) {
     final recordedBy = [
-      expense.createdByFirstName.isNotEmpty ? expense.createdByFirstName : 'Unknown',
-      if (expense.createdByMiddleName != null && expense.createdByMiddleName!.isNotEmpty)
+      expense.createdByFirstName.isNotEmpty
+          ? expense.createdByFirstName
+          : 'Unknown',
+      if (expense.createdByMiddleName != null &&
+          expense.createdByMiddleName!.isNotEmpty)
         expense.createdByMiddleName!,
-      expense.createdByLastName.isNotEmpty ? expense.createdByLastName : 'Unknown',
+      expense.createdByLastName.isNotEmpty
+          ? expense.createdByLastName
+          : 'Unknown',
     ].join(' ');
 
     showModalBottomSheet(
@@ -250,7 +273,9 @@ class ExistingExpensesScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: DraggableScrollableSheet(
             initialChildSize: 0.5,
             minChildSize: 0.3,
@@ -278,18 +303,25 @@ class ExistingExpensesScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      _detailRow("Amount", '₱${expense.amount.toStringAsFixed(2)}'),
+                      _detailRow(
+                        "Amount",
+                        '₱${expense.amount.toStringAsFixed(2)}',
+                      ),
                       const SizedBox(height: 10),
                       _detailRow(
                         "Date",
-                        DateFormat('MMMM d, y').format(DateTime.parse(expense.createdAt)),
+                        DateFormat(
+                          'MMMM d, y',
+                        ).format(DateTime.parse(expense.createdAt)),
                       ),
                       const SizedBox(height: 10),
                       _detailRow("Category", expense.category),
                       const SizedBox(height: 10),
                       _detailRow(
                         "Note",
-                        expense.description.isNotEmpty ? expense.description : "Wala deskripsyon",
+                        expense.description.isNotEmpty
+                            ? expense.description
+                            : "Wala deskripsyon",
                       ),
                       const SizedBox(height: 10),
                       _detailRow("Recorded By", recordedBy),
@@ -313,17 +345,9 @@ class ExistingExpensesScreen extends ConsumerWidget {
       children: [
         Text(
           "$label: ",
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 16),
-          ),
-        ),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 16))),
       ],
     );
   }
@@ -411,7 +435,7 @@ class _EditExpenseModalContent extends StatelessWidget {
                       ? null
                       : () async {
                           final success = await vm.save();
-                          // ignore: use_build_context_synchronously
+                          if (!context.mounted) return;
                           if (success) Navigator.pop(context, true);
                         },
                   style: ElevatedButton.styleFrom(
@@ -423,8 +447,10 @@ class _EditExpenseModalContent extends StatelessWidget {
                   ),
                   child: vm.isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("Save Changes",
-                          style: TextStyle(fontSize: 18)),
+                      : const Text(
+                          "Save Changes",
+                          style: TextStyle(fontSize: 18),
+                        ),
                 ),
               ],
             ),
@@ -440,12 +466,13 @@ class _EditExpenseModalContent extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(msg,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+      child: Text(
+        msg,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -468,18 +495,23 @@ class _EditExpenseModalContent extends StatelessWidget {
           filled: true,
           fillColor: AppColors.surface,
           labelText: label,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-                color: isError ? AppColors.error : AppColors.border, width: 1.2),
+              color: isError ? AppColors.error : AppColors.border,
+              width: 1.2,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-                color: isError ? AppColors.error : AppColors.primary,
-                width: 1.2),
+              color: isError ? AppColors.error : AppColors.primary,
+              width: 1.2,
+            ),
           ),
         ),
       ),
@@ -502,22 +534,35 @@ class _EditExpenseModalContent extends StatelessWidget {
         filled: true,
         fillColor: AppColors.surface,
         labelText: label,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 16,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-              color: isError ? AppColors.error : AppColors.border, width: 1.2),
+            color: isError ? AppColors.error : AppColors.border,
+            width: 1.2,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: isError ? AppColors.error : AppColors.primary, width: 1.2),
+          borderSide: BorderSide(
+            color: isError ? AppColors.error : AppColors.primary,
+            width: 1.2,
+          ),
         ),
       ),
       items: items
-          .map((e) => DropdownMenuItem(
-                value: e,
-                child: Text(e, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ))
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text(
+                e,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
     );
