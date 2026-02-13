@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dswd_slp/core/app_colors.dart';
 import 'package:go_router/go_router.dart';
+import '../../app_router.dart';
 import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
@@ -24,7 +25,8 @@ final currencyFormatter = NumberFormat.currency(
   decimalDigits: 2, // show 2 decimal places
 );
 
-class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
+class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
+    with RouteAware {
   bool isCash = true;
   bool isProductMode = false;
 
@@ -45,12 +47,24 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen> {
   }
 
   @override
-  void dispose() {
-    searchController.dispose();
-    _categoryScrollController.dispose();
-    super.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
+  @override
+void didPopNext() async {
+  final vm = ref.read(salesViewModelProvider);
+  await vm.loadCustomers();   // 🔥 refresh credit limits
+}
+
+  @override
+  void dispose() {
+  routeObserver.unsubscribe(this); // 🔥 YOU ARE MISSING THIS
+  searchController.dispose();
+  _categoryScrollController.dispose();
+  super.dispose();
+}
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(salesViewModelProvider);

@@ -377,7 +377,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(context,true),
                   child: const Text("Cancel"),
                 ),
                 ElevatedButton(
@@ -497,7 +497,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     BoxShadow(
                       color: Colors.grey.withAlpha(51),
                       blurRadius: 2,
-                      offset: const Offset(0, 2),
+                      offset: const Offset(0, 2), 
                     ),
                   ],
                 ),
