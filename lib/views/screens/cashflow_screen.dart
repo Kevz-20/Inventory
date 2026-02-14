@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:auto_size_text/auto_size_text.dart'; // ✅ Add this package
+import 'package:auto_size_text/auto_size_text.dart';
 import '../../models/cashflow_model.dart';
 import '../../view_models/cashflow_view_model.dart';
 import '../../core/app_colors.dart';
-import '../widgets/header.dart';
+import '../widgets/header.dart'; // Ensure this matches your project structure
+import 'dart:math' as math; // Used to calculate the wider width
 
 class CashFlowScreen extends ConsumerStatefulWidget {
   const CashFlowScreen({super.key});
@@ -25,7 +26,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Future<void> _loadCashflows() async {
     final vm = ref.read(cashflowViewModelProvider);
-    await vm.loadCashflows(); // Replace 1 with actual accountId
+    await vm.loadCashflows();
     setState(() => _loading = false);
   }
 
@@ -116,25 +117,44 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Cash Flow', showBackButton: true),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : records.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No cashflow records yet',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: records.length,
-                    itemBuilder: (_, i) => _buildRow(records[i]),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // LOGIC:
+          // If screen is wider than 800 (e.g. Tablet), use screen width.
+          // If screen is smaller than 800 (e.g. Phone), use 800 and scroll.
+          final double finalWidth = math.max(constraints.maxWidth, 500.0);
+
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: finalWidth,
+              height: constraints.maxHeight,
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  Expanded(
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : records.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No cashflow records yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: records.length,
+                            itemBuilder: (_, i) => _buildRow(records[i]),
+                          ),
                   ),
-          ),
-        ],
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -145,7 +165,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       color: AppColors.primary,
       child: Row(
         children: const [
-          _HeaderCell('Item', flex: 3, align: TextAlign.left),
+          _HeaderCell('Date', flex: 2, align: TextAlign.left),
+          _HeaderCell('Item', flex: 3, align: TextAlign.center),
           _HeaderCell('In', flex: 2, align: TextAlign.right),
           _HeaderCell('Out', flex: 2, align: TextAlign.right),
           _HeaderCell('Balance', flex: 2, align: TextAlign.right),
@@ -174,7 +195,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         ),
         child: Row(
           children: [
-            _buildCell(r.item, flex: 3, align: TextAlign.left),
+            _buildCell(r.formattedDate, flex: 2, align: TextAlign.left),
+            _buildCell(r.item, flex: 3, align: TextAlign.center),
             _buildCell(
               r.cashIn == 0 ? '-' : _formatCurrency(r.cashIn),
               flex: 2,
