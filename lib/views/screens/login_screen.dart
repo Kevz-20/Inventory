@@ -1,6 +1,6 @@
 import 'package:dswd_slp/core/app_colors.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../view_models/login_view_model.dart';
 
@@ -19,7 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void initState() {
     super.initState();
-
     Future.microtask(() {
       ref.read(loginViewModelProvider).loadSavedMobile();
     });
@@ -44,199 +43,189 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
-  void triggerShake() {
-    _shakeController.forward(from: 0);
-  }
+  void triggerShake() => _shakeController.forward(from: 0);
 
   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(loginViewModelProvider);
+    final size = MediaQuery.of(context).size;
+    final scale = size.width > 600 ? 1.2 : 1.0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Column(
-                  children: [
-                    // Logo
-                    Column(
+            /// MAIN CONTENT
+            Flexible(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isSmallHeight = constraints.maxHeight < 600;
+
+                  Widget content = ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset('lib/assets/logo.png', height: 80),
+                        /// LOGO
+                        Image.asset('lib/assets/logo.png', height: 80 * scale),
                         const SizedBox(height: 10),
-                        const Text(
+                        Text(
                           "E.M.P.O.W.E.R",
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 20 * scale,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
-                    // Mobile Number
-                    GestureDetector(
-                      onTap: () => viewModel.changeMobileNumber(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 25,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withAlpha(51),
-                              blurRadius: 2,
-                              offset: const Offset(0, 2),
+                        /// MOBILE NUMBER
+                        GestureDetector(
+                          onTap: () => viewModel.changeMobileNumber(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 25,
+                              vertical: 12,
                             ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              "Mobile Number: ",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            Flexible(
-                              child: Text(
-                                viewModel.mobileNumber.isNotEmpty
-                                    ? viewModel.mobileNumber
-                                    : 'Not set',
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withAlpha(40),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.swap_horiz,
-                              color: AppColors.textPrimary,
-                              size: 22,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    // PIN
-                    const Text(
-                      "PIN",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    AnimatedBuilder(
-                      animation: _shakeAnimation,
-                      builder: (context, child) {
-                        final pin = viewModel.pin;
-                        return Transform.translate(
-                          offset: Offset(_shakeAnimation.value, 0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(4, (index) {
-                              return Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 8,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  "Mobile Number: ",
+                                  style: TextStyle(fontSize: 16),
                                 ),
-                                width: 18,
-                                height: 18,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: index < pin.length
-                                      ? AppColors.primaryLight
-                                      : Colors.transparent,
-                                  border: Border.all(
-                                    color: Colors.black54,
-                                    width: 2,
+                                Text(
+                                  viewModel.mobileNumber.isNotEmpty
+                                      ? viewModel.mobileNumber
+                                      : 'Not set',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              );
-                            }),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.swap_horiz),
+                              ],
+                            ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
 
-                    const SizedBox(height: 25),
+                        const SizedBox(height: 25),
 
-                    // Keypad
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Column(
-                        children: [
-                          GridView.builder(
-                            physics: const NeverScrollableScrollPhysics(),
-                            shrinkWrap: true,
-                            itemCount: 9,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                  childAspectRatio: 1,
-                                ),
-                            itemBuilder: (context, index) {
-                              final label = "${index + 1}";
-                              return _buildKey(label);
-                            },
+                        /// PIN INDICATOR
+                        const Text(
+                          "PIN",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(height: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        AnimatedBuilder(
+                          animation: _shakeAnimation,
+                          // ignore: unnecessary_underscores
+                          builder: (_, __) {
+                            return Transform.translate(
+                              offset: Offset(_shakeAnimation.value, 0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(4, (i) {
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    width: 18 * scale,
+                                    height: 18 * scale,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: i < viewModel.pin.length
+                                          ? AppColors.primaryLight
+                                          : Colors.transparent,
+                                      border: Border.all(
+                                        color: Colors.black54,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 25),
 
-                          // LAST ROW (0 + BACKSPACE)
-                          GridView.count(
-                            physics: const NeverScrollableScrollPhysics(),
-                            shrinkWrap: true,
-                            crossAxisCount: 3,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 1,
+                        /// KEYPAD
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
                             children: [
-                              Container(),
-
-                              _buildKey("0"),
-
-                              viewModel.pin.isNotEmpty
-                                  ? _buildBackspaceKey()
-                                  : Container(),
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: 9,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      mainAxisSpacing: 12,
+                                      crossAxisSpacing: 12,
+                                    ),
+                                itemBuilder: (_, i) =>
+                                    _buildKey("${i + 1}", scale),
+                              ),
+                              const SizedBox(height: 12),
+                              GridView.count(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                crossAxisCount: 3,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                children: [
+                                  const SizedBox(),
+                                  _buildKey("0", scale),
+                                  viewModel.pin.isNotEmpty
+                                      ? _buildBackspaceKey(scale)
+                                      : const SizedBox(),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+
+                  // On very short screens, allow small scroll
+                  if (isSmallHeight) {
+                    content = SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: content,
+                    );
+                  }
+
+                  return content;
+                },
               ),
             ),
 
-            // Bottom links
+            /// BOTTOM LINKS
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () => GoRouter.of(context).push('/create_account'),
+                    onTap: () => context.push('/create_account'),
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(
@@ -247,7 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => GoRouter.of(context).push('/forgot_pin'),
+                    onTap: () => context.push('/forgot_pin'),
                     child: const Text(
                       "NAKALIMOT SA PIN?",
                       style: TextStyle(
@@ -266,30 +255,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  // NUMBER KEY (unchanged)
-  Widget _buildKey(String label) {
-    final viewModel = ref.read(loginViewModelProvider);
+  Widget _buildKey(String label, double scale) {
+    final vm = ref.read(loginViewModelProvider);
     return GestureDetector(
-      onTapDown: (_) => viewModel.setPressed(label.hashCode, true),
+      onTapDown: (_) => vm.setPressed(label.hashCode, true),
       onTapUp: (_) {
-        viewModel.setPressed(label.hashCode, false);
-        viewModel.onKeyTap(context, label, ref, onInvalid: triggerShake);
+        vm.setPressed(label.hashCode, false);
+        vm.onKeyTap(context, label, ref, onInvalid: triggerShake);
       },
-      onTapCancel: () => viewModel.setPressed(label.hashCode, false),
+      onTapCancel: () => vm.setPressed(label.hashCode, false),
       child: AnimatedScale(
-        scale: viewModel.isPressed(label.hashCode) ? 0.85 : 1.0,
-        curve: Curves.easeOut,
+        scale: vm.isPressed(label.hashCode) ? 0.85 : 1,
         duration: const Duration(milliseconds: 120),
         child: Container(
-          width: 60,
-          height: 60,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withAlpha(51),
-                blurRadius: 2,
+                color: Colors.grey.withAlpha(40),
+                blurRadius: 3,
                 offset: const Offset(0, 2),
               ),
             ],
@@ -297,10 +282,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           child: Center(
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 22,
+              style: TextStyle(
+                fontSize: 22 * scale,
                 fontWeight: FontWeight.w500,
-                color: Colors.black,
               ),
             ),
           ),
@@ -309,35 +293,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  // BACKSPACE KEY (same style as numbers)
-  Widget _buildBackspaceKey() {
-    final viewModel = ref.read(loginViewModelProvider);
-
+  Widget _buildBackspaceKey(double scale) {
+    final vm = ref.read(loginViewModelProvider);
     return GestureDetector(
-      onTapDown: (_) => viewModel.setPressed(-1, true),
+      onTapDown: (_) => vm.setPressed(-1, true),
       onTapUp: (_) {
-        viewModel.setPressed(-1, false);
-        viewModel.onKeyTap(context, 'back', ref, onInvalid: triggerShake);
+        vm.setPressed(-1, false);
+        vm.onKeyTap(context, 'back', ref, onInvalid: triggerShake);
       },
-      onTapCancel: () => viewModel.setPressed(-1, false),
+      onTapCancel: () => vm.setPressed(-1, false),
       child: AnimatedScale(
-        scale: viewModel.isPressed(-1) ? 0.85 : 1.0,
+        scale: vm.isPressed(-1) ? 0.85 : 1,
         duration: const Duration(milliseconds: 120),
         child: Container(
-          width: 60,
-          height: 60,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withAlpha(51),
-                blurRadius: 2,
+                color: Colors.grey.withAlpha(40),
+                blurRadius: 3,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: const Center(child: Icon(Icons.backspace_outlined, size: 26)),
+          child: Icon(Icons.backspace_outlined, size: 26 * scale),
         ),
       ),
     );

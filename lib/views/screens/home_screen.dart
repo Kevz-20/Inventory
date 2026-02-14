@@ -5,7 +5,7 @@ import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
 import '../../app_router.dart'; // import for routeObserver
-import 'package:intl/intl.dart'; // make sure this is imported at the top
+import 'package:intl/intl.dart'; // for currency formatting
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -38,8 +38,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     ref.read(homeViewModelProvider.notifier).fetchHomeData();
   }
 
+  /// Responsive menu card
   Widget _menuCard(String title, String iconPath, {VoidCallback? onTap}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Scale for tablets
+    final iconSize = screenWidth > 600 ? 72.0 : 48.0;
+    final fontSize = screenWidth > 600 ? 18.0 : 15.0;
+    final cardHeight = screenWidth > 600 ? 120.0 : 80.0;
+
     bool isPressed = false;
+
     return StatefulBuilder(
       builder: (context, setState) {
         return GestureDetector(
@@ -54,7 +63,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOut,
             child: Container(
-              height: 80,
+              height: cardHeight,
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -70,15 +79,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(iconPath, height: 48),
+                  Image.asset(iconPath, height: iconSize),
                   const SizedBox(height: 4),
                   Text(
                     title,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
+                    style: TextStyle(
+                      fontSize: fontSize,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -159,7 +168,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 8),
                 Text(
                   'Mobile Number: ${homeState.mobileNumber ?? "Not set"}',
