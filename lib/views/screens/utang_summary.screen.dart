@@ -515,6 +515,80 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     return appliedPayments;
   }
 
+  void _showPaymentsAppliedSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Center(
+                    child: SizedBox(width: 40, child: Divider(thickness: 4)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Payments',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  if (customerPayments.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'No payments recorded yet.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: customerPayments.length,
+                        itemBuilder: (context, index) {
+                          final pay = customerPayments[index];
+                          final payTime = DateFormat(
+                            'MMM dd, yyyy hh:mm a',
+                          ).format(pay.paidAt);
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            child: ListTile(
+                              title: const Text(
+                                'Payment',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(payTime),
+                              trailing: Text(
+                                '₱${currencyFormat.format(pay.amount)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ================================
   // BUILD
   // ================================
@@ -526,7 +600,14 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppHeader(title: widget.customer.fullName, showBackButton: true),
+      appBar: AppHeader(
+        title: widget.customer.fullName,
+        showBackButton: true,
+        action: IconButton(
+          icon: const Icon(Icons.list, color: Colors.white),
+          onPressed: _showPaymentsAppliedSheet,
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -870,59 +951,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ],
                               ),
                               children: [
-                                // ================= PAYMENTS APPLIED =================
-                                if (appliedPayments.isNotEmpty) ...[
-                                  const Divider(),
-                                  const Text(
-                                    "Payments applied:",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ...appliedPayments.map((pay) {
-                                    final payTime = DateFormat(
-                                      'MMM dd, yyyy hh:mm a',
-                                    ).format(pay.paidAt);
-                                    return Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        vertical: 4,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            "₱${currencyFormat.format(pay.amount)}",
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          Text(
-                                            payTime,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13,
-                                              color: Colors.black54,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                ],
-
                                 const SizedBox(height: 8),
 
                                 // ================= ITEMIZED LIST =================
