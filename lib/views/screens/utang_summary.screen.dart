@@ -515,6 +515,26 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     return appliedPayments;
   }
 
+  String _paymentTypeLabel(int index) {
+    var remaining = customerItems.fold(0.0, (sum, item) => sum + item.amount);
+
+    for (var i = 0; i < customerPayments.length; i++) {
+      final payment = customerPayments[i];
+      final isFull = remaining > 0 && payment.amount >= remaining;
+      final appliedAmount = payment.amount <= remaining
+          ? payment.amount
+          : remaining;
+
+      if (i == index) {
+        return isFull ? 'Full' : 'Partial';
+      }
+
+      remaining = (remaining - appliedAmount).clamp(0.0, double.infinity);
+    }
+
+    return 'Partial';
+  }
+
   void _showPaymentsAppliedSheet() {
     showModalBottomSheet(
       context: context,
@@ -552,21 +572,37 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     )
                   else
                     Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: customerPayments.length,
-                        itemBuilder: (context, index) {
-                          final pay = customerPayments[index];
+                      child: Builder(
+                        builder: (context) {
+                          final paymentsLatestFirst = customerPayments.reversed
+                              .toList();
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: paymentsLatestFirst.length,
+                            itemBuilder: (context, index) {
+                              final pay = paymentsLatestFirst[index];
+                              final originalIndex = customerPayments.indexWhere(
+                                (p) => p.id == pay.id,
+                              );
                           final payTime = DateFormat(
                             'MMM dd, yyyy hh:mm a',
                           ).format(pay.paidAt);
+                              final paymentType = _paymentTypeLabel(
+                                originalIndex < 0 ? 0 : originalIndex,
+                              );
+                          final paymentTypeColor = paymentType == 'Full'
+                              ? Colors.green
+                              : Colors.orange;
 
                           return Card(
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             child: ListTile(
-                              title: const Text(
-                                'Payment',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                              title: Text(
+                                paymentType,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: paymentTypeColor,
+                                ),
                               ),
                               subtitle: Text(payTime),
                               trailing: Text(
@@ -576,6 +612,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ),
                               ),
                             ),
+                          );
+                            },
                           );
                         },
                       ),
