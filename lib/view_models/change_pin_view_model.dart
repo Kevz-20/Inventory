@@ -145,7 +145,7 @@ class ChangePinViewModel extends ChangeNotifier {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('PIN changed successfully!'),
+          content: Text('PIN saved successfully!'),
           backgroundColor: AppColors.success,
         ),
       );

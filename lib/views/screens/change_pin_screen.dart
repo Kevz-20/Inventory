@@ -108,12 +108,11 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
           builder: (context, constraints) {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(20),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
-                    child: Container(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -144,6 +143,16 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
                             'Follow each step to securely update your PIN.',
                             style: TextStyle(color: AppColors.textSecondary),
                           ),
+                          if (vm.isOldPinVerified) ...[
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Ready to save your new PIN.',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 20),
                           inputField(
                             controller: vm.mobileController,
@@ -223,7 +232,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
                                               ? 'Verify Answer'
                                               : !vm.isOldPinVerified
                                                   ? 'Verify Old PIN'
-                                                  : 'Change PIN',
+                                                  : 'Save PIN',
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
@@ -233,7 +242,6 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
                           ),
                         ],
                       ),
-                    ),
                   ),
                 ),
               ),
