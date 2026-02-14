@@ -51,5 +51,22 @@ class ChangePinRepository {
       whereArgs: [account['id']],
     );
   }
+
+  Future<void> updatePinById({
+    required int accountId,
+    required String newPin,
+  }) async {
+    final db = await _db.database;
+    final updated = await db.update(
+      'account',
+      {'pin': newPin.trim()},
+      where: 'id = ?',
+      whereArgs: [accountId],
+    );
+
+    if (updated == 0) {
+      throw Exception('Account not found');
+    }
+  }
 }
  

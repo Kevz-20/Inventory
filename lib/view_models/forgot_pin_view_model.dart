@@ -39,6 +39,7 @@ class ForgotPinViewModel extends ChangeNotifier {
   ForgotPinModel? _cachedAccount;
 
   bool isLoading = false;
+  bool isSecurityVerified = false;
   String? errorMessage;
 
   ForgotPinModel? get account => _cachedAccount;
@@ -58,6 +59,9 @@ class ForgotPinViewModel extends ChangeNotifier {
       if (_cachedAccount == null) {
         _setError("Mobile number not found");
       } else {
+        isSecurityVerified = false;
+        answerController.clear();
+        newPinController.clear();
         errorMessage = null;
         notifyListeners();
       }
@@ -85,6 +89,9 @@ class ForgotPinViewModel extends ChangeNotifier {
       return false;
     }
 
+    isSecurityVerified = true;
+    errorMessage = null;
+    notifyListeners();
     return true;
   }
 
@@ -94,6 +101,10 @@ class ForgotPinViewModel extends ChangeNotifier {
     if (!_validatePin(newPin)) return false;
     if (_cachedAccount == null) {
       _setError("No account loaded");
+      return false;
+    }
+    if (!isSecurityVerified) {
+      _setError("Please verify security answer first");
       return false;
     }
 
@@ -119,6 +130,7 @@ class ForgotPinViewModel extends ChangeNotifier {
       mobileController.clear();
       answerController.clear();
       newPinController.clear();
+      isSecurityVerified = false;
 
       notifyListeners();
 
@@ -151,6 +163,7 @@ class ForgotPinViewModel extends ChangeNotifier {
     answerController.clear();
     newPinController.clear();
     _cachedAccount = null;
+    isSecurityVerified = false;
     errorMessage = null;
     notifyListeners();
   }

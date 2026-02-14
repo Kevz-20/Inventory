@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 import 'package:dswd_slp/core/app_colors.dart';
 import 'package:dswd_slp/view_models/change_pin_view_model.dart';
 import 'package:flutter/material.dart';
@@ -17,25 +15,7 @@ class ChangePinScreen extends ConsumerStatefulWidget {
   ConsumerState<ChangePinScreen> createState() => _ChangePinScreenState();
 }
 
-class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _glowController;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _glowController.dispose();
-    super.dispose();
-  }
-
+class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
   Widget inputField({
     required TextEditingController controller,
     required String label,
@@ -48,10 +28,10 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
     final bool isError = showError && controller.text.isEmpty;
 
     return SizedBox(
-      height: 60,
+      height: 64,
       child: TextField(
         controller: controller,
-        obscureText: obscureText, // ✅ source of truth
+        obscureText: obscureText,
         maxLength: maxLength,
         keyboardType: onlyNumbers ? TextInputType.number : TextInputType.text,
         inputFormatters: onlyNumbers
@@ -61,23 +41,21 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
               ]
             : [LengthLimitingTextInputFormatter(maxLength)],
         style: const TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w600,
         ),
         decoration: InputDecoration(
           counterText: '',
           labelText: label,
+          labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
           fillColor: Colors.white,
           suffixIcon: toggleVisibility == null
               ? null
               : IconButton(
                   icon: Icon(
-                    obscureText
-                        ? Icons
-                              .visibility_off // 🔒 hidden first
-                        : Icons.visibility, // 👁 shown
-                    color: Colors.grey.shade600,
+                    obscureText ? Icons.visibility_off : Icons.visibility,
+                    color: AppColors.primary,
                   ),
                   onPressed: toggleVisibility,
                 ),
@@ -88,14 +66,14 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: isError ? Colors.red : Colors.grey.shade400,
+              color: isError ? AppColors.error : AppColors.border,
               width: 1.2,
             ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: isError ? Colors.red : AppColors.primary,
+              color: isError ? AppColors.error : AppColors.primary,
               width: 1.2,
             ),
           ),
@@ -107,73 +85,160 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen>
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(changePinProvider);
+    final title = !vm.isMobileVerified
+        ? 'Verify your number'
+        : !vm.isSecurityVerified
+            ? 'Confirm security answer'
+            : !vm.isOldPinVerified
+                ? 'Verify old PIN'
+                : 'Set a new PIN';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const AppHeader(title: "Change PIN", showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            inputField(
-              controller: vm.mobileController,
-              label: 'Mobile Number',
-              obscureText: false,
-              toggleVisibility: null,
-              maxLength: 11,
-              onlyNumbers: true,
-            ),
-            const SizedBox(height: 16),
-            inputField(
-              controller: vm.oldPinController,
-              label: 'Old PIN',
-              obscureText: !vm.showOldPin,
-              toggleVisibility: vm.toggleOldPin,
-              maxLength: 4,
-              onlyNumbers: true,
-            ),
-            const SizedBox(height: 16),
-            inputField(
-              controller: vm.newPinController,
-              label: 'New PIN',
-              obscureText: !vm.showNewPin,
-              toggleVisibility: vm.toggleNewPin,
-              maxLength: 4,
-              onlyNumbers: true,
-            ),
-            const SizedBox(height: 16),
-            inputField(
-              controller: vm.answerController,
-              label: 'Security Answer',
-              obscureText: false,
-              toggleVisibility: null,
-              maxLength: 50,
-              onlyNumbers: false,
-            ),
-            const SizedBox(height: 32),
-            vm.isLoading
-                ? const CircularProgressIndicator(
-                    color: Color.fromARGB(255, 9, 43, 10),
-                  )
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 50,
-                        vertical: 15,
+      backgroundColor: AppColors.surface,
+      appBar: const AppHeader(title: 'Change PIN', showBackButton: true),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFEAF4F1), AppColors.surface],
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFCFE5DE)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.shadow,
+                            blurRadius: 16,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Follow each step to securely update your PIN.',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 20),
+                          inputField(
+                            controller: vm.mobileController,
+                            label: 'Mobile Number',
+                            obscureText: false,
+                            toggleVisibility: null,
+                            maxLength: 11,
+                            onlyNumbers: true,
+                          ),
+                          if (vm.isMobileVerified) ...[
+                            const SizedBox(height: 16),
+                            inputField(
+                              controller: vm.answerController,
+                              label: 'Security Answer',
+                              obscureText: false,
+                              toggleVisibility: null,
+                              maxLength: 50,
+                              onlyNumbers: false,
+                            ),
+                          ],
+                          if (vm.isSecurityVerified) ...[
+                            const SizedBox(height: 16),
+                            inputField(
+                              controller: vm.oldPinController,
+                              label: 'Old PIN',
+                              obscureText: !vm.showOldPin,
+                              toggleVisibility: vm.toggleOldPin,
+                              maxLength: 4,
+                              onlyNumbers: true,
+                            ),
+                          ],
+                          if (vm.isOldPinVerified) ...[
+                            const SizedBox(height: 16),
+                            inputField(
+                              controller: vm.newPinController,
+                              label: 'New PIN',
+                              obscureText: !vm.showNewPin,
+                              toggleVisibility: vm.toggleNewPin,
+                              maxLength: 4,
+                              onlyNumbers: true,
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: vm.isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: AppColors.textOnPrimary,
+                                      elevation: 3,
+                                    ),
+                                    onPressed: () {
+                                      if (!vm.isMobileVerified) {
+                                        vm.verifyMobile(context);
+                                      } else if (!vm.isSecurityVerified) {
+                                        vm.verifySecurityAnswer(context);
+                                      } else if (!vm.isOldPinVerified) {
+                                        vm.verifyOldPin(context);
+                                      } else {
+                                        vm.saveNewPin(context);
+                                      }
+                                    },
+                                    child: Text(
+                                      !vm.isMobileVerified
+                                          ? 'Verify Number'
+                                          : !vm.isSecurityVerified
+                                              ? 'Verify Answer'
+                                              : !vm.isOldPinVerified
+                                                  ? 'Verify Old PIN'
+                                                  : 'Change PIN',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ],
                       ),
-                      backgroundColor: AppColors.primary,
-                      elevation: 12,
-                    ),
-                    onPressed: () => vm.changePin(context),
-                    child: const Text(
-                      'Change PIN',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
-          ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

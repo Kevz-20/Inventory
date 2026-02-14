@@ -1,17 +1,13 @@
 import 'package:sqflite/sqflite.dart';
 import '../models/forgot_pin_model.dart';
-import 'account_repository.dart';
 
 class ForgotPinRepository {
   final Database db;
-  final AccountRepository accountRepository;
 
-  ForgotPinRepository(this.db) : accountRepository = AccountRepository();
+  ForgotPinRepository(this.db);
 
-  /// Fetch account by mobile number for current account
+  /// Fetch account by mobile number (mobile_number is UNIQUE)
   Future<ForgotPinModel?> getAccountByMobileNumber(String mobileNumber) async {
-    final accountId = await accountRepository.getAccountId();
-
     final List<Map<String, dynamic>> maps = await db.query(
       'account',
       columns: [
@@ -20,8 +16,8 @@ class ForgotPinRepository {
         'security_answer',
         'pin',
       ],
-      where: 'mobile_number = ? AND account_id = ?',
-      whereArgs: [mobileNumber.trim(), accountId],
+      where: 'mobile_number = ?',
+      whereArgs: [mobileNumber.trim()],
       limit: 1,
     );
 
@@ -32,15 +28,17 @@ class ForgotPinRepository {
     }
   }
 
-  /// Update PIN for the current account and mobile number
+  /// Update PIN by mobile number
   Future<void> updatePin(String mobileNumber, String newPin) async {
-    final accountId = await accountRepository.getAccountId();
-
-    await db.update(
+    final updated = await db.update(
       'account',
       {'pin': newPin.trim()},
-      where: 'mobile_number = ? AND account_id = ?',
-      whereArgs: [mobileNumber.trim(), accountId],
+      where: 'mobile_number = ?',
+      whereArgs: [mobileNumber.trim()],
     );
+
+    if (updated == 0) {
+      throw Exception('Account not found');
+    }
   }
 }
