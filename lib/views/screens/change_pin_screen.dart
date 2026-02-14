@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/header.dart';
 
-final changePinProvider = ChangeNotifierProvider((ref) => ChangePinViewModel());
+final changePinProvider = ChangeNotifierProvider.autoDispose(
+  (ref) => ChangePinViewModel(),
+);
 
 class ChangePinScreen extends ConsumerStatefulWidget {
   const ChangePinScreen({super.key});

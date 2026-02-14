@@ -68,6 +68,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
     final vm = ref.watch(forgotPinViewModelProvider);
 
     ref.listen<ForgotPinViewModel>(forgotPinViewModelProvider, (_, state) {
+      if (!mounted) return;
       if (state.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
