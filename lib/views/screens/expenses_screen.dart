@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
-import '../widgets/header.dart'; // ✅ AppHeader import
-import 'existing_expense_screen.dart';
-import '../../models/current_user.dart'; // ✅ Import CurrentUser
+import '../widgets/header.dart';
+import '../../models/current_user.dart';
 
 /// -----------------------------
 /// Custom TextInputFormatter for thousands separator
@@ -56,12 +56,7 @@ class ExpensesScreen extends ConsumerWidget {
         action: IconButton(
           icon: const Icon(Icons.list, color: Colors.white),
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ExistingExpensesScreen(),
-              ),
-            );
+            GoRouter.of(context).push('/list_expenses');
           },
         ),
       ),
@@ -154,8 +149,8 @@ class ExpensesScreen extends ConsumerWidget {
                   vm.triggerValidation();
 
                   if (vm.amountController.text.isNotEmpty) {
-                    vm.amountController.text =
-                        vm.amountController.text.replaceAll(',', '');
+                    vm.amountController.text = vm.amountController.text
+                        .replaceAll(',', '');
                   }
 
                   // ✅ Pass required CurrentUser info
@@ -177,43 +172,47 @@ class ExpensesScreen extends ConsumerWidget {
   // Show all transactions (no filtering by account)
   // -----------------------------
   Widget _allTransactionsList(ExpensesViewModel vm) {
-  final expenses = vm.expenses; // ✅ All expenses from DB
-  if (expenses.isEmpty) {
-    return const Text("Wala pang Gasto", style: TextStyle(color: Colors.grey));
-  }
-
-  // Parse createdAt to DateTime and sort descending
-  final sorted = [...expenses];
-  sorted.sort((a, b) {
-    final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1970);
-    final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1970);
-    return dateB.compareTo(dateA);
-  });
-
-  return ListView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: sorted.length,
-    itemBuilder: (context, index) {
-      final e = sorted[index];
-      return Card(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        child: ListTile(
-          title: Text(e.description.isNotEmpty ? e.description : 'Wala deskripsyon'),
-          subtitle: Text(
-            '${e.createdByFirstName} ${e.createdByMiddleName ?? ''} ${e.createdByLastName}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          trailing: Text('₱${e.amount.toStringAsFixed(2)}'),
-          onTap: () {
-            // Optional: open existing expense
-          },
-        ),
+    final expenses = vm.expenses; // ✅ All expenses from DB
+    if (expenses.isEmpty) {
+      return const Text(
+        "Wala pang Gasto",
+        style: TextStyle(color: Colors.grey),
       );
-    },
-  );
-}
+    }
 
+    // Parse createdAt to DateTime and sort descending
+    final sorted = [...expenses];
+    sorted.sort((a, b) {
+      final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1970);
+      final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1970);
+      return dateB.compareTo(dateA);
+    });
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: sorted.length,
+      itemBuilder: (context, index) {
+        final e = sorted[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          child: ListTile(
+            title: Text(
+              e.description.isNotEmpty ? e.description : 'Wala deskripsyon',
+            ),
+            subtitle: Text(
+              '${e.createdByFirstName} ${e.createdByMiddleName ?? ''} ${e.createdByLastName}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            trailing: Text('₱${e.amount.toStringAsFixed(2)}'),
+            onTap: () {
+              // Optional: open existing expense
+            },
+          ),
+        );
+      },
+    );
+  }
 
   // -----------------------------
   // Widgets (Receipt, Input, Banner, etc.)
@@ -261,7 +260,12 @@ class ExpensesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _banner(String message, IconData icon, Color iconColor, Color bgColor) {
+  Widget _banner(
+    String message,
+    IconData icon,
+    Color iconColor,
+    Color bgColor,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -303,7 +307,10 @@ class ExpensesScreen extends ConsumerWidget {
           fillColor: Colors.white,
           prefixIcon: Icon(icon, color: AppColors.primary),
           labelText: label,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade400, width: 1.2),
@@ -337,7 +344,10 @@ class ExpensesScreen extends ConsumerWidget {
         fillColor: Colors.white,
         prefixIcon: Icon(icon, color: AppColors.primary),
         labelText: label,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 17),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 17,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
@@ -396,7 +406,10 @@ class ExpensesScreen extends ConsumerWidget {
           fillColor: Colors.white,
           prefixIcon: prefix,
           labelText: label,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 16,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
@@ -438,7 +451,10 @@ class ExpensesScreen extends ConsumerWidget {
     if (picked != null) vm.setDate(picked);
   }
 
-  Future<void> _pickReceiptImage(BuildContext context, ExpensesViewModel vm) async {
+  Future<void> _pickReceiptImage(
+    BuildContext context,
+    ExpensesViewModel vm,
+  ) async {
     showDialog(
       context: context,
       builder: (_) => Dialog(

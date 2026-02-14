@@ -6,6 +6,7 @@ import 'models/utang_customer_model.dart';
 import 'views/screens/about_app_screen.dart';
 import 'views/screens/cashflow_screen.dart';
 import 'views/screens/change_pin_screen.dart';
+import 'views/screens/existing_expense_screen.dart';
 import 'views/screens/login_screen.dart';
 import 'views/screens/home_screen.dart';
 import 'views/screens/create_account_screen.dart';
@@ -210,6 +211,14 @@ final router = GoRouter(
           transition: PageTransitionType.forward,
         );
       },
+    ),
+    GoRoute(
+      path: '/list_expenses',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const ExistingExpensesScreen(),
+        transition: PageTransitionType.forward,
+      ),
     ),
   ],
 );

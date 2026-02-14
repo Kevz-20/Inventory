@@ -7,6 +7,7 @@ import '../../models/expense_model.dart';
 import '../../repositories/expense_repository.dart';
 import '../../providers/database_provider.dart';
 import '../../view_models/expenses_view_model.dart';
+import '../widgets/header.dart';
 
 /// -------------------------
 /// LOCAL EDIT VIEWMODEL
@@ -162,9 +163,9 @@ class ExistingExpensesScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text('Mga Gasto'),
+      appBar: AppHeader(
+        title: 'Gasto',
+        showBackButton: true,
       ),
       body: vm.expenses.isEmpty
           ? const Center(child: Text('No expenses recorded yet.'))
