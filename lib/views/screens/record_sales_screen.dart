@@ -53,18 +53,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   }
 
   @override
-void didPopNext() async {
-  final vm = ref.read(salesViewModelProvider);
-  await vm.loadCustomers();   // 🔥 refresh credit limits
-}
+  void didPopNext() async {
+    final vm = ref.read(salesViewModelProvider);
+    await vm.loadCustomers(); // 🔥 refresh credit limits
+  }
 
   @override
   void dispose() {
-  routeObserver.unsubscribe(this); // 🔥 YOU ARE MISSING THIS
-  searchController.dispose();
-  _categoryScrollController.dispose();
-  super.dispose();
-}
+    routeObserver.unsubscribe(this); // 🔥 YOU ARE MISSING THIS
+    searchController.dispose();
+    _categoryScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(salesViewModelProvider);
@@ -220,6 +221,7 @@ void didPopNext() async {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
+        behavior: HitTestBehavior.opaque,
         child: Container(
           alignment: Alignment.center,
           child: AnimatedDefaultTextStyle(
