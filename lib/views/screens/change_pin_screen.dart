@@ -24,6 +24,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
     int maxLength = 50,
     bool onlyNumbers = false,
     bool showError = false,
+    bool readOnly = false,
   }) {
     final bool isError = showError && controller.text.isEmpty;
 
@@ -32,6 +33,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        readOnly: readOnly,
         maxLength: maxLength,
         keyboardType: onlyNumbers ? TextInputType.number : TextInputType.text,
         inputFormatters: onlyNumbers
@@ -49,7 +51,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
           labelText: label,
           labelStyle: const TextStyle(color: AppColors.textSecondary),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: readOnly ? const Color(0xFFF2F4F3) : Colors.white,
           suffixIcon: toggleVisibility == null
               ? null
               : IconButton(
@@ -161,28 +163,93 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
                             toggleVisibility: null,
                             maxLength: 11,
                             onlyNumbers: true,
+                            readOnly: vm.isMobileVerified,
                           ),
                           if (vm.isMobileVerified) ...[
                             const SizedBox(height: 16),
-                            inputField(
-                              controller: vm.answerController,
-                              label: 'Security Answer',
-                              obscureText: false,
-                              toggleVisibility: null,
-                              maxLength: 50,
-                              onlyNumbers: false,
-                            ),
+                            if (!vm.isSecurityVerified)
+                              inputField(
+                                controller: vm.answerController,
+                                label: 'Security Answer',
+                                obscureText: false,
+                                toggleVisibility: null,
+                                maxLength: 50,
+                                onlyNumbers: false,
+                              )
+                            else
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF2F4F3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_outline,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        vm.answerController.text,
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                           if (vm.isSecurityVerified) ...[
                             const SizedBox(height: 16),
-                            inputField(
-                              controller: vm.oldPinController,
-                              label: 'Old PIN',
-                              obscureText: !vm.showOldPin,
-                              toggleVisibility: vm.toggleOldPin,
-                              maxLength: 4,
-                              onlyNumbers: true,
-                            ),
+                            if (!vm.isOldPinVerified)
+                              inputField(
+                                controller: vm.oldPinController,
+                                label: 'Old PIN',
+                                obscureText: !vm.showOldPin,
+                                toggleVisibility: vm.toggleOldPin,
+                                maxLength: 4,
+                                onlyNumbers: true,
+                              )
+                            else
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF2F4F3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.lock_outline,
+                                      color: AppColors.primary,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Old PIN verified',
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                           if (vm.isOldPinVerified) ...[
                             const SizedBox(height: 16),

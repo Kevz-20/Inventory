@@ -22,12 +22,14 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
     bool obscureText = false,
     bool onlyNumbers = false,
     IconData? icon,
+    bool readOnly = false,
   }) {
     return SizedBox(
       height: 64,
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        readOnly: readOnly,
         maxLength: maxLength,
         keyboardType: onlyNumbers ? TextInputType.number : TextInputType.text,
         inputFormatters: onlyNumbers
@@ -46,7 +48,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
           labelStyle: const TextStyle(color: AppColors.textSecondary),
           prefixIcon: icon == null ? null : Icon(icon, color: AppColors.primary),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: readOnly ? const Color(0xFFF2F4F3) : Colors.white,
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -81,6 +83,8 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
         : !vm.isSecurityVerified
             ? 'Confirm security answer'
             : 'Set a new PIN';
+    final isMobileLocked =
+        vm.account != null && vm.account!.mobileNumber == vm.mobileController.text.trim();
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -149,6 +153,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                             maxLength: 11,
                             onlyNumbers: true,
                             icon: Icons.phone_android,
+                            readOnly: isMobileLocked,
                           ),
                           if (vm.account != null) ...[
                             const SizedBox(height: 16),
@@ -168,11 +173,43 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                                 );
                               },
                             ),
-                            _inputField(
-                              controller: vm.answerController,
-                              label: 'Security Answer',
-                              icon: Icons.help_outline,
-                            ),
+                            if (!vm.isSecurityVerified)
+                              _inputField(
+                                controller: vm.answerController,
+                                label: 'Security Answer',
+                                icon: Icons.help_outline,
+                              )
+                            else
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF2F4F3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.lock_outline,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        vm.answerController.text,
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                           if (vm.isSecurityVerified) ...[
                             const SizedBox(height: 16),
