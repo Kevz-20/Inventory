@@ -163,10 +163,7 @@ class ExistingExpensesScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppHeader(
-        title: 'Gasto',
-        showBackButton: true,
-      ),
+      appBar: AppHeader(title: 'Mga Gasto', showBackButton: true),
       body: vm.expenses.isEmpty
           ? const Center(child: Text('No expenses recorded yet.'))
           : ListView.builder(

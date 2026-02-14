@@ -53,11 +53,17 @@ class ExpensesScreen extends ConsumerWidget {
       appBar: AppHeader(
         title: 'Gasto',
         showBackButton: true,
-        action: IconButton(
-          icon: const Icon(Icons.list, color: Colors.white),
-          onPressed: () {
-            GoRouter.of(context).push('/list_expenses');
-          },
+        action: Visibility(
+          visible: false,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: IconButton(
+            icon: const Icon(Icons.list, color: Colors.white),
+            onPressed: () {
+              GoRouter.of(context).push('/list_expenses');
+            },
+          ),
         ),
       ),
       body: SingleChildScrollView(
