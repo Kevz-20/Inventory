@@ -26,8 +26,15 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Future<void> _loadCashflows() async {
     final vm = ref.read(cashflowViewModelProvider);
-    await vm.loadCashflows();
-    setState(() => _loading = false);
+    try {
+      await vm.loadCashflows();
+    } catch (e) {
+      print('Error fetching cashflows: $e');
+    }
+    // Check if the widget is still on screen before calling setState
+    if (mounted) {
+      setState(() => _loading = false);
+    }
   }
 
   String _formatCurrency(double value) {
@@ -177,6 +184,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Widget _buildRow(CashflowRecord r) {
     final isInstallment = r.item.toLowerCase().contains('downpayment');
+    
     return GestureDetector(
       onTap: () => _showCashflowDetails(r),
       child: Container(
@@ -195,20 +203,66 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         ),
         child: Row(
           children: [
-            _buildCell(r.formattedDate, flex: 2, align: TextAlign.left),
+            // ---------------------------------------------------
+            // ✅ COLUMN 1: DATE & TIME STACKED
+            // ---------------------------------------------------
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, // Align text to left
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 1. DATE (Bold, Dark)
+                  Text(
+                    r.formattedDate,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2), // Small gap
+                  // 2. TIME (Smaller, Grey)
+                  Text(
+                    r.formattedTime,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[600], // Lighter color distinguishes it
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ---------------------------------------------------
+            // COLUMN 2: ITEM
+            // ---------------------------------------------------
             _buildCell(r.item, flex: 3, align: TextAlign.center),
+
+            // ---------------------------------------------------
+            // COLUMN 3: IN (Green/Blue)
+            // ---------------------------------------------------
             _buildCell(
               r.cashIn == 0 ? '-' : _formatCurrency(r.cashIn),
               flex: 2,
               color: isInstallment ? Colors.blue : Colors.green,
               align: TextAlign.right,
             ),
+
+            // ---------------------------------------------------
+            // COLUMN 4: OUT (Red)
+            // ---------------------------------------------------
             _buildCell(
               r.cashOut == 0 ? '-' : _formatCurrency(r.cashOut),
               flex: 2,
               color: Colors.red,
               align: TextAlign.right,
             ),
+
+            // ---------------------------------------------------
+            // COLUMN 5: BALANCE (Bold)
+            // ---------------------------------------------------
             _buildCell(
               _formatCurrency(r.balance),
               flex: 2,
@@ -220,7 +274,6 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       ),
     );
   }
-
   Widget _buildCell(
     String text, {
     int flex = 1,
