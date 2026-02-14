@@ -282,6 +282,15 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                   // ignore: use_build_context_synchronously
                                   Navigator.pop(context);
                                   await fetchCustomerData();
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(
+                                    this.context,
+                                  ).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Successful payment'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isFullPay
