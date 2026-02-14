@@ -209,6 +209,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   isProductMode = false;
                 });
                 vm.resetQuantities();
+                vm.loadCustomers();
               }),
             ],
           ),
