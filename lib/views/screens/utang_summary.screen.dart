@@ -316,93 +316,134 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
     const presets = [100, 200, 500, 1000];
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (context, setModalState) {
             final selectedAmount = selectedPreset != null
                 ? presets[selectedPreset!]
                 : customAmount;
             final isValid = selectedAmount > 0;
 
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              title: const Text("Increase Credit Limit"),
-              content: Column(
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Center(
+                    child: SizedBox(width: 40, child: Divider(thickness: 4)),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Increase Credit Limit",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15),
                   const Text(
                     "Choose an amount to add:",
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 10),
+
+                  /// Presets
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: List.generate(presets.length, (index) {
                       final value = presets[index];
                       final isSelected = selectedPreset == index;
+
                       return ChoiceChip(
                         label: Text("₱$value"),
                         selected: isSelected,
                         onSelected: (_) {
-                          setDialogState(() {
+                          setModalState(() {
                             selectedPreset = index;
-                            customAmount = 0;
-                            customController.clear();
+                            customAmount = presets[index].toDouble();
+                            customController.text = presets[index].toString();
                           });
                         },
                         selectedColor: Colors.green[100],
                       );
                     }),
                   ),
-                  const SizedBox(height: 14),
+
+                  const SizedBox(height: 16),
+
+                  /// Custom Amount
                   TextField(
                     controller: customController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: "Custom amount",
                       prefixText: "₱",
+                      border: OutlineInputBorder(),
                     ),
                     onChanged: (value) {
-                      setDialogState(() {
+                      setModalState(() {
                         customAmount = double.tryParse(value) ?? 0;
                         selectedPreset = null;
                       });
                     },
                   ),
+
+                  const SizedBox(height: 20),
+
+                  /// Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: !isValid
+                              ? null
+                              : () async {
+                                  Navigator.pop(context);
+
+                                  final db = await DBService.instance.database;
+                                  final amountToAdd = selectedAmount;
+
+                                  await db.rawUpdate(
+                                    '''
+                                  UPDATE customer
+                                  SET credit_limit = credit_limit + ?,
+                                      available_credit = available_credit + ?
+                                  WHERE id = ?
+                                  ''',
+                                    [
+                                      amountToAdd,
+                                      amountToAdd,
+                                      widget.customer.id,
+                                    ],
+                                  );
+
+                                  await fetchCustomerData();
+                                },
+                          child: const Text("Add"),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context,true),
-                  child: const Text("Cancel"),
-                ),
-                ElevatedButton(
-                  onPressed: !isValid
-                      ? null
-                      : () async {
-                          Navigator.pop(context);
-                          final db = await DBService.instance.database;
-                          final amountToAdd = selectedAmount;
-
-                          await db.rawUpdate(
-                            '''
-                            UPDATE customer
-                            SET credit_limit = credit_limit + ?,
-                                available_credit = available_credit + ?
-                            WHERE id = ?
-                            ''',
-                            [amountToAdd, amountToAdd, widget.customer.id],
-                          );
-
-                          await fetchCustomerData();
-                        },
-                  child: const Text("Add"),
-                ),
-              ],
             );
           },
         );
@@ -497,7 +538,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     BoxShadow(
                       color: Colors.grey.withAlpha(51),
                       blurRadius: 2,
-                      offset: const Offset(0, 2), 
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
