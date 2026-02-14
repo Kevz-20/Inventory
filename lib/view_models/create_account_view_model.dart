@@ -7,10 +7,10 @@ import '../services/db_service.dart';
 
 final createAccountProvider =
     ChangeNotifierProvider.autoDispose<CreateAccountViewModel>((ref) {
-  final dbService = DBService.instance;
-  final repository = CreateAccountRepository(dbService);
-  return CreateAccountViewModel(repository);
-});
+      final dbService = DBService.instance;
+      final repository = CreateAccountRepository(dbService);
+      return CreateAccountViewModel(repository);
+    });
 
 class CreateAccountViewModel extends ChangeNotifier {
   final CreateAccountRepository _repository;
@@ -96,12 +96,19 @@ class CreateAccountViewModel extends ChangeNotifier {
     submitted = true;
     if (!_validateForm()) return false;
 
+    final mobile = mobileController.text.trim();
+
+    if (await _repository.isPhoneNumberExists(mobile)) {
+      showResponseMessage('Mobile Number Already Exist');
+      return false;
+    }
+
     setLoading(true);
     errorMessage = null;
 
     try {
       final account = Account(
-        mobileNumber: mobileController.text.trim(),
+        mobileNumber: mobile,
         pin: pinController.text.trim(),
         firstName: firstNameController.text.trim(),
         middleName: middleNameController.text.trim(),
@@ -116,18 +123,28 @@ class CreateAccountViewModel extends ChangeNotifier {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('mobileNumber', account.mobileNumber);
-      await prefs.setString('fullName',
-          '${account.firstName} ${account.middleName} ${account.lastName}');
+      await prefs.setString(
+        'fullName',
+        '${account.firstName} ${account.middleName} ${account.lastName}',
+      );
 
       clearFields();
       showResponseMessage("Account created successfully!", success: true);
       return true;
     } catch (e) {
+      final error = e.toString().toLowerCase();
+      final isDuplicateMobile =
+          error.contains('mobile number already exists') ||
+          error.contains('mobile number already exist') ||
+          (error.contains('unique constraint failed') &&
+              error.contains('account.mobile_number'));
+
       showResponseMessage(
-        e.toString().contains('Mobile number already exists')
-            ? 'Mobile number already exists'
+        isDuplicateMobile
+            ? 'Mobile Number Already Exist'
             : 'Failed to create account',
       );
+
       return false;
     } finally {
       setLoading(false);
@@ -189,18 +206,22 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void _validateNameFields() {
-    firstNameError =
-        firstNameController.text.isEmpty ? 'Please enter first name' : null;
-    middleNameError =
-        middleNameController.text.isEmpty ? 'Please enter middle name' : null;
-    lastNameError =
-        lastNameController.text.isEmpty ? 'Please enter last name' : null;
+    firstNameError = firstNameController.text.isEmpty
+        ? 'Please enter first name'
+        : null;
+    middleNameError = middleNameController.text.isEmpty
+        ? 'Please enter middle name'
+        : null;
+    lastNameError = lastNameController.text.isEmpty
+        ? 'Please enter last name'
+        : null;
     notifyListeners();
   }
 
   void _validateAnswer() {
-    answerError =
-        answerController.text.isEmpty ? 'Please enter your answer' : null;
+    answerError = answerController.text.isEmpty
+        ? 'Please enter your answer'
+        : null;
     notifyListeners();
   }
 
@@ -228,8 +249,11 @@ class CreateAccountViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void showResponseMessage(String message,
-      {bool success = false, int durationSeconds = 3}) {
+  void showResponseMessage(
+    String message, {
+    bool success = false,
+    int durationSeconds = 3,
+  }) {
     errorMessage = message;
     isSuccessMessage = success;
     notifyListeners();
