@@ -6,7 +6,7 @@ class CashflowRecord {
   final String item;
   final double cashIn;
   final double cashOut;
-  final double balance; // ✅ balance per row
+  final double balance;
 
   CashflowRecord({
     this.id,
@@ -14,10 +14,11 @@ class CashflowRecord {
     required this.item,
     required this.cashIn,
     required this.cashOut,
-    required this.balance, // required
+    required this.balance,
   });
 
-  String get formattedDate => DateFormat('yyyy-MM-dd').format(date);
+  String get formattedDate => DateFormat('MMM dd').format(date);
+  String get formattedTime => DateFormat('h:mm a').format(date);
 
   Map<String, dynamic> toMap() {
     return {
