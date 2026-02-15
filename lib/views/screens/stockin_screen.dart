@@ -269,13 +269,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   final option = options.elementAt(index);
                   return InkWell(
                     onTap: () async {
-                      FocusScope.of(
-                        context,
-                      ).unfocus(); // close keyboard + overlay
+                      FocusScope.of(context).unfocus();
                       await Future.delayed(const Duration(milliseconds: 50));
-                      onSelected(
-                        option,
-                      ); // still trigger Autocomplete selection
+                      onSelected(option);
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -303,7 +299,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         return SizedBox(
           height: 60,
           child: TextField(
-            key: UniqueKey(), // forces rebuild so overlay resets
+            // Remove this line: key: UniqueKey(),
             controller: fieldController,
             focusNode: focusNode,
             decoration: InputDecoration(
@@ -313,9 +309,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               fillColor: Colors.white,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.grey.shade400,
-                ), // match other fields
+                borderSide: BorderSide(color: Colors.grey.shade400),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -329,14 +323,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         final product = vm.allProducts.firstWhere((p) => p.name == value);
         vm.selectedProduct = product;
 
-        FocusScope.of(context).unfocus(); // hide keyboard and overlay
+        FocusScope.of(context).unfocus();
         await Future.delayed(const Duration(milliseconds: 50));
 
-        // update controllers
         vm.productController.text = product.name;
         vm.autocompleteFieldController?.text = product.name;
 
-        // populate other fields
         vm.setCategory(product.category);
         vm.purchasePriceController.text = product.purchasePrice.toString();
         vm.sellingPriceController.text = product.sellingPrice.toString();
