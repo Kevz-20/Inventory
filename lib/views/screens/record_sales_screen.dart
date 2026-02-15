@@ -70,6 +70,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   Widget build(BuildContext context) {
     final vm = ref.watch(salesViewModelProvider);
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Halin', showBackButton: true),
@@ -145,7 +147,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     ],
                   ),
           ),
-          _bottomBar(vm),
+          _bottomBar(vm, bottomPadding),
         ],
       ),
     );
@@ -832,11 +834,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  Widget _bottomBar(SalesViewModel vm) {
+  Widget _bottomBar(SalesViewModel vm, double bottomPadding) {
     final bool canCheckout = vm.hasSelectedProducts;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
       color: Colors.white,
       child: Row(
         children: [
