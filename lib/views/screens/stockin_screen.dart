@@ -299,13 +299,16 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         );
       },
       fieldViewBuilder: (context, fieldController, focusNode, onSubmit) {
-        fieldController.text = vm.productController.text;
+        // store controller reference in viewmodel (optional but recommended)
+        vm.autocompleteFieldController = fieldController;
+
         return SizedBox(
           height: 60,
           child: TextField(
-            key: UniqueKey(), // forces rebuild so overlay resets
             controller: fieldController,
             focusNode: focusNode,
+            keyboardType: TextInputType.text, // allows letters + numbers
+            textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               labelText: 'Pangalan sa produkto',
               prefixIcon: const Icon(Icons.edit, color: AppColors.primary),
@@ -313,18 +316,28 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               fillColor: Colors.white,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.grey.shade400,
-                ), // match other fields
+                borderSide: BorderSide(color: Colors.grey.shade400),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.primary),
               ),
             ),
+            onChanged: (value) {
+              vm.productController.text = value;
+
+              // 🔥 If typed text does not exactly match selected product,
+              // reset selectedProduct (meaning: NEW product)
+              if (vm.selectedProduct != null &&
+                  vm.selectedProduct!.name.toLowerCase() !=
+                      value.toLowerCase()) {
+                vm.selectedProduct = null;
+              }
+            },
           ),
         );
       },
+
       onSelected: (value) async {
         final product = vm.allProducts.firstWhere((p) => p.name == value);
         vm.selectedProduct = product;
