@@ -19,6 +19,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(stockInViewModelProvider);
 
+    // Get system bottom padding for adaptive layout
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
     if (!vm.isInitialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -86,33 +89,30 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ],
         ),
       ),
-      // ✅ Updated Save Button respecting system navigation bar
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            10,
-            20,
-            0 + MediaQuery.of(context).padding.bottom,
-          ),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + bottomPadding, // Add system bottom padding
+        ),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            onPressed: vm.isLoading
-                ? null
-                : () {
-                    vm.triggerValidation();
-                    vm.saveProduct();
-                  },
-            child: vm.isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Save', style: TextStyle(fontSize: 18)),
           ),
+          onPressed: vm.isLoading
+              ? null
+              : () {
+                  vm.triggerValidation();
+                  vm.saveProduct();
+                },
+          child: vm.isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text('Save', style: TextStyle(fontSize: 18)),
         ),
       ),
     );

@@ -12,8 +12,7 @@ class BalanceSheetScreen extends ConsumerStatefulWidget {
   const BalanceSheetScreen({super.key});
 
   @override
-  ConsumerState<BalanceSheetScreen> createState() =>
-      _BalanceSheetScreenState();
+  ConsumerState<BalanceSheetScreen> createState() => _BalanceSheetScreenState();
 }
 
 class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
@@ -37,10 +36,11 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(balanceSheetProvider);
 
+    // Get system bottom padding for adaptive layout
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -121,7 +121,12 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + bottomPadding, // Add system bottom padding
+        ),
         child: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(12),
@@ -186,37 +191,55 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black87)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.black87,
+              ),
+            ),
             const SizedBox(height: 10),
-            ...items.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                          child: Text(entry.key,
-                              style: const TextStyle(fontSize: 16))),
-                      Text(vm.formatCurrency(entry.value),
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                )),
+            ...items.entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        entry.key,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    Text(
+                      vm.formatCurrency(entry.value),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const Divider(thickness: 1),
             Row(
               children: [
                 const Expanded(
-                    child: Text('Total',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 17))),
-                Text(vm.formatCurrency(total),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 17)),
+                  child: Text(
+                    'Total',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                ),
+                Text(
+                  vm.formatCurrency(total),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -238,14 +261,12 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
           Expanded(
             child: Text(
               title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
           ),
           Text(
             vm.formatCurrency(amount),
-            style:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
           ),
         ],
       ),
@@ -280,11 +301,14 @@ class _DateBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black54,
+            ),
+          ),
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
