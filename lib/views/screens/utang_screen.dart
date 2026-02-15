@@ -977,6 +977,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   // ============================================================
 
   Widget _buildOwnerPage() {
+    // Get system bottom padding for adaptive layout
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
     return Stack(
       children: [
         Column(
@@ -1005,7 +1008,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
             const SizedBox(height: 100),
           ],
         ),
-        _buildAddButton(),
+        _buildAddButton(bottomPadding),
       ],
     );
   }
@@ -1139,9 +1142,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildAddButton() {
+  Widget _buildAddButton(double bottomPadding) {
     return Positioned(
-      bottom: 20,
+      bottom: 20 + bottomPadding, // Add system bottom padding
       left: 20,
       right: 20,
       child: SizedBox(
