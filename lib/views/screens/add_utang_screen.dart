@@ -88,14 +88,14 @@ class _AddUtangPageState extends State<AddUtangPage> {
   // SAVE UTANG
   // ==============================
   Future<void> saveUtang() async {
-  if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please fill item and total cost")),
-    );
-    return;
-  }
+    if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill item and total cost")),
+      );
+      return;
+    }
 
-  final db = await DBService.instance.database;
+    final db = await DBService.instance.database;
 
     try {
       // -----------------------------
@@ -134,20 +134,20 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
         final nextDueDate = firstDueDate; // first installment
 
-      // -----------------------------
-      // CHECK DOWNPAYMENT AGAINST CASH
-      // -----------------------------
-      if (down > cashOnHand) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+        // -----------------------------
+        // CHECK DOWNPAYMENT AGAINST CASH
+        // -----------------------------
+        if (down > cashOnHand) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+              ),
             ),
-          ),
-        );
-        return;
-      }
+          );
+          return;
+        }
 
         // -----------------------------
         // INSERT PAYABLE
@@ -176,16 +176,16 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'updated_at': DateTime.now().toIso8601String(),
         });
 
-      // -----------------------------
-      // INSERT OWNER INSTALLMENT AND DEDUCT CASH
-      // -----------------------------
-      if (down > 0) {
-        await db.insert('owner_installments', {
-          'account_id': 1, // static account id used by current data model
-          'item': itemController.text,
-          'downpayment': down,
-          'created_at': DateTime.now().toIso8601String(),
-        });
+        // -----------------------------
+        // INSERT OWNER INSTALLMENT AND DEDUCT CASH
+        // -----------------------------
+        if (down > 0) {
+          await db.insert('owner_installments', {
+            'account_id': 1, // static account id used by current data model
+            'item': itemController.text,
+            'downpayment': down,
+            'created_at': DateTime.now().toIso8601String(),
+          });
 
           await db.rawUpdate(
             '''
@@ -216,17 +216,17 @@ class _AddUtangPageState extends State<AddUtangPage> {
             ? datePaidController.text
             : DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      if (total > cashOnHand) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Total cost of ₱${currencyFormat.format(total)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+        if (total > cashOnHand) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Total cost of ₱${currencyFormat.format(total)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+              ),
             ),
-          ),
-        );
-        return;
-      }
+          );
+          return;
+        }
 
         await db.insert('payable', {
           'supplier_name': 'Owner',
@@ -271,13 +271,13 @@ class _AddUtangPageState extends State<AddUtangPage> {
         });
       }
 
-    // -----------------------------
-    // SUCCESS
-    // -----------------------------
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Bayronon saved successfully")),
-    );
+      // -----------------------------
+      // SUCCESS
+      // -----------------------------
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bayronon saved successfully")),
+      );
 
       // CLEAR FIELDS
       itemController.clear();
@@ -293,17 +293,17 @@ class _AddUtangPageState extends State<AddUtangPage> {
         monthlyPayment = 0.0;
       });
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        Navigator.pop(context, true);
+      });
+    } catch (e) {
       if (!mounted) return;
-      Navigator.pop(context, true);
-    });
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to save: $e")),
-    );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to save: $e")));
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -439,7 +439,22 @@ class _AddUtangPageState extends State<AddUtangPage> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: icon != null ? Icon(icon, color: Colors.grey) : null,
+        prefixIcon: icon != null
+            ? (icon == Icons.attach_money || icon == Icons.money_off
+                  ? const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Text(
+                        "₱",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    )
+                  : Icon(icon, color: Colors.grey))
+            : null,
+
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
