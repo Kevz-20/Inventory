@@ -60,6 +60,9 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   Widget build(BuildContext context) {
     final incomeState = ref.watch(incomeStatementViewModelProvider);
 
+    // Get system bottom padding for adaptive layout
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Income Statement', showBackButton: true),
@@ -176,7 +179,12 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       ),
 
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + bottomPadding, // Add system bottom padding
+        ),
         child: SizedBox(
           height: 50,
           child: ElevatedButton.icon(
