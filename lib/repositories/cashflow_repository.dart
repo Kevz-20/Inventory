@@ -31,6 +31,7 @@ class CashflowRepository {
         }
       }
     } catch (e) {
+      // ignore: avoid_print
       print("Error fetching capital: $e");
     }
 
@@ -98,6 +99,7 @@ class CashflowRepository {
       ]);
 
     } catch (e) {
+      // ignore: avoid_print
       print("Error fetching transactions: $e");
     }
 

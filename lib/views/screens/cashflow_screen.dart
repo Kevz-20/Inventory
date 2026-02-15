@@ -29,6 +29,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     try {
       await vm.loadCashflows();
     } catch (e) {
+      // ignore: avoid_print
       print('Error fetching cashflows: $e');
     }
     // Check if the widget is still on screen before calling setState
