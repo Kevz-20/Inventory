@@ -136,16 +136,19 @@ class StockInViewModel extends ChangeNotifier {
 
     final productName = effectiveProductName;
 
+    // Validation: required fields
     if (productName.isEmpty || selectedCategory == null) {
       errorMessage = 'Please fill all required fields';
       safeNotifyListeners();
       return;
     }
+
     final sellingPrice =
         double.tryParse(sellingPriceController.text.replaceAll(',', '')) ?? 0;
     final purchasePrice =
         double.tryParse(purchasePriceController.text.replaceAll(',', '')) ?? 0;
 
+    // Validation: selling price >= purchase price
     if (sellingPrice < purchasePrice) {
       errorMessage = 'Selling price cannot be lower than purchase price.';
       safeNotifyListeners();
@@ -154,6 +157,7 @@ class StockInViewModel extends ChangeNotifier {
 
     setLoading(true);
 
+    // Check if product already exists
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productName.toLowerCase()) {
@@ -166,28 +170,35 @@ class StockInViewModel extends ChangeNotifier {
 
     final sellingPriceText = sellingPriceController.text.replaceAll(',', '');
     final purchasePriceText = purchasePriceController.text.replaceAll(',', '');
+    final int newQuantity =
+        int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0;
 
+    // Build the ProductModel to save
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productName,
       category: selectedCategory!,
       sellingPrice: double.tryParse(sellingPriceText) ?? 0,
       purchasePrice: double.tryParse(purchasePriceText) ?? 0,
-      quantity: int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0,
-      image: productImage?.path,
+      // ✅ Add new quantity to existing quantity if product exists
+      quantity: (selectedProduct?.quantity ?? 0) + newQuantity,
+      image: productImage?.path ?? selectedProduct?.image,
       createdAt: selectedProduct?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
     try {
       if (selectedProduct != null) {
+        // Update existing product with added quantity
         await _repository.updateProduct(stock);
         successMessage = 'Product updated successfully';
       } else {
+        // Add new product
         await _repository.addProduct(stock);
         successMessage = 'Product saved successfully';
       }
 
+      // Refresh product names and clear form
       await loadProductNames();
       clearFields();
       selectedProduct = null;

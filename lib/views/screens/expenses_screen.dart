@@ -135,7 +135,7 @@ class ExpensesScreen extends ConsumerWidget {
             const SizedBox(height: 30),
             const Divider(),
             const SizedBox(height: 15),
-            _allTransactionsList(vm), // ✅ Show all transactions
+            //_allTransactionsList(vm), // ✅ Show all transactions
           ],
         ),
       ),
@@ -177,48 +177,48 @@ class ExpensesScreen extends ConsumerWidget {
   // -----------------------------
   // Show all transactions (no filtering by account)
   // -----------------------------
-  Widget _allTransactionsList(ExpensesViewModel vm) {
-    final expenses = vm.expenses; // ✅ All expenses from DB
-    if (expenses.isEmpty) {
-      return const Text(
-        "Wala pang Gasto",
-        style: TextStyle(color: Colors.grey),
-      );
-    }
+  // Widget _allTransactionsList(ExpensesViewModel vm) {
+  //   final expenses = vm.expenses; // ✅ All expenses from DB
+  //   if (expenses.isEmpty) {
+  //     return const Text(
+  //       "Wala pang Gasto",
+  //       style: TextStyle(color: Colors.grey),
+  //     );
+  //   }
 
-    // Parse createdAt to DateTime and sort descending
-    final sorted = [...expenses];
-    sorted.sort((a, b) {
-      final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1970);
-      final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1970);
-      return dateB.compareTo(dateA);
-    });
+  //   // Parse createdAt to DateTime and sort descending
+  //   final sorted = [...expenses];
+  //   sorted.sort((a, b) {
+  //     final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1970);
+  //     final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1970);
+  //     return dateB.compareTo(dateA);
+  //   });
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: sorted.length,
-      itemBuilder: (context, index) {
-        final e = sorted[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          child: ListTile(
-            title: Text(
-              e.description.isNotEmpty ? e.description : 'Wala deskripsyon',
-            ),
-            subtitle: Text(
-              '${e.createdByFirstName} ${e.createdByMiddleName ?? ''} ${e.createdByLastName}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            trailing: Text('₱${e.amount.toStringAsFixed(2)}'),
-            onTap: () {
-              // Optional: open existing expense
-            },
-          ),
-        );
-      },
-    );
-  }
+  //   return ListView.builder(
+  //     shrinkWrap: true,
+  //     physics: const NeverScrollableScrollPhysics(),
+  //     itemCount: sorted.length,
+  //     itemBuilder: (context, index) {
+  //       final e = sorted[index];
+  //       return Card(
+  //         margin: const EdgeInsets.symmetric(vertical: 6),
+  //         child: ListTile(
+  //           title: Text(
+  //             e.description.isNotEmpty ? e.description : 'Wala deskripsyon',
+  //           ),
+  //           subtitle: Text(
+  //             '${e.createdByFirstName} ${e.createdByMiddleName ?? ''} ${e.createdByLastName}',
+  //             style: const TextStyle(fontWeight: FontWeight.bold),
+  //           ),
+  //           trailing: Text('₱${e.amount.toStringAsFixed(2)}'),
+  //           onTap: () {
+  //             // Optional: open existing expense
+  //           },
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 
   // -----------------------------
   // Widgets (Receipt, Input, Banner, etc.)

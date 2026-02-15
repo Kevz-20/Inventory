@@ -59,18 +59,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             _autocompleteProduct(vm),
             const SizedBox(height: 15),
 
-            // Purchase Price
             _inputNumberField(
               label: 'Presyo sa pagpalit',
               controller: vm.purchasePriceController,
               showError: vm.showValidationErrors,
-              icon: Icons.currency_rupee, // Use any currency-like icon
-              isPeso: true, // ✅ show peso
+              icon: Icons.currency_rupee,
+              isPeso: true,
             ),
-
             const SizedBox(height: 15),
-
-            // Selling Price
             _inputNumberField(
               label: 'Presyo sa pagbaligya',
               controller: vm.sellingPriceController,
@@ -78,42 +74,45 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               icon: Icons.currency_rupee,
               isPeso: true,
             ),
-
             const SizedBox(height: 15),
-
-            // Quantity
             _inputNumberField(
               label: 'Gidaghanon',
               controller: vm.quantityController,
               showError: vm.showValidationErrors,
               icon: Icons.shopping_cart,
             ),
-
             const SizedBox(height: 15),
-
             _imagePicker(vm, context),
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+      // ✅ Updated Save Button respecting system navigation bar
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            10,
+            20,
+            0 + MediaQuery.of(context).padding.bottom,
           ),
-          onPressed: vm.isLoading
-              ? null
-              : () {
-                  vm.triggerValidation();
-                  vm.saveProduct();
-                },
-          child: vm.isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Text('Save', style: TextStyle(fontSize: 18)),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: vm.isLoading
+                ? null
+                : () {
+                    vm.triggerValidation();
+                    vm.saveProduct();
+                  },
+            child: vm.isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('Save', style: TextStyle(fontSize: 18)),
+          ),
         ),
       ),
     );
@@ -160,9 +159,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             builder: (context, child) => Theme(
               data: Theme.of(context).copyWith(
                 colorScheme: ColorScheme.light(
-                  primary: AppColors.primary, // header & selected day
-                  onPrimary: Colors.white, // selected day text
-                  onSurface: AppColors.textPrimary, // unselected day text
+                  primary: AppColors.primary,
+                  onPrimary: Colors.white,
+                  onSurface: AppColors.textPrimary,
                 ),
               ),
               child: child!,
@@ -253,7 +252,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           (name) => name.toLowerCase().startsWith(value.text.toLowerCase()),
         );
       },
-
       optionsViewBuilder: (context, onSelected, options) {
         return Align(
           alignment: Alignment.topLeft,
@@ -270,7 +268,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 itemBuilder: (context, index) {
                   final option = options.elementAt(index);
                   return InkWell(
-                    onTap: () => onSelected(option),
+                    onTap: () async {
+                      FocusScope.of(
+                        context,
+                      ).unfocus(); // close keyboard + overlay
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      onSelected(
+                        option,
+                      ); // still trigger Autocomplete selection
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -292,34 +298,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ),
         );
       },
-
       fieldViewBuilder: (context, fieldController, focusNode, onSubmit) {
-        // 🔥 CONNECT Autocomplete to ViewModel controller
         fieldController.text = vm.productController.text;
-
-        fieldController.addListener(() {
-          if (vm.productController.text != fieldController.text) {
-            vm.productController.text = fieldController.text;
-          }
-        });
-
         return SizedBox(
           height: 60,
           child: TextField(
+            key: UniqueKey(), // forces rebuild so overlay resets
             controller: fieldController,
             focusNode: focusNode,
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
             decoration: InputDecoration(
+              labelText: 'Pangalan sa produkto',
+              prefixIcon: const Icon(Icons.edit, color: AppColors.primary),
               filled: true,
               fillColor: Colors.white,
-              prefixIcon: const Icon(Icons.edit, color: AppColors.primary),
-              labelText: 'Pangalan sa produkto',
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade400),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade400,
+                ), // match other fields
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -329,11 +325,18 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ),
         );
       },
-
-      onSelected: (value) {
+      onSelected: (value) async {
         final product = vm.allProducts.firstWhere((p) => p.name == value);
         vm.selectedProduct = product;
+
+        FocusScope.of(context).unfocus(); // hide keyboard and overlay
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        // update controllers
         vm.productController.text = product.name;
+        vm.autocompleteFieldController?.text = product.name;
+
+        // populate other fields
         vm.setCategory(product.category);
         vm.purchasePriceController.text = product.purchasePrice.toString();
         vm.sellingPriceController.text = product.sellingPrice.toString();
@@ -348,7 +351,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     required TextEditingController controller,
     required bool showError,
     IconData? icon,
-    bool isPeso = false, // new flag for peso
+    bool isPeso = false,
   }) {
     return SizedBox(
       height: 60,
