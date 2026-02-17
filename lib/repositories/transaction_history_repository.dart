@@ -88,8 +88,8 @@ class TransactionHistoryRepository {
       ORDER BY cp.paid_at DESC
     ''');
 
-    // Owner Payments (payable payments)
-    final ownerPayments = await db.rawQuery('''
+    // Utang Payments (payable payments)
+    final utangPayments = await db.rawQuery('''
       SELECT 
         pp.amount,
         pp.date AS created_at,
@@ -100,34 +100,26 @@ class TransactionHistoryRepository {
       ORDER BY pp.date DESC
     ''');
 
-    // Down Payments (owner installments)
-    final downPayments = await db.rawQuery('''
+    // Owner Payments (owner installments/downpayments)
+    final ownerPayments = await db.rawQuery('''
       SELECT
         oi.downpayment AS amount,
         oi.created_at AS created_at,
+        'Downpayment' AS type,
         'out' AS direction,
         COALESCE(oi.item, '') AS description
       FROM owner_installments oi
       ORDER BY oi.created_at DESC
     ''');
 
-    // Merge utang payments and sort by date descending
-    final utangPayments = [...customerPayments]
-  ..sort((a, b) {
-    final aDate = DateTime.tryParse((a['created_at'] ?? '').toString());
-    final bDate = DateTime.tryParse((b['created_at'] ?? '').toString());
-    if (aDate == null || bDate == null) return 0;
-    return bDate.compareTo(aDate);
-    });
-
     return TransactionHistoryModel(
       expenses: expenses,
       salesCash: salesCash,
       salesCredit: salesCredit,
       capitalManagement: capitalManagement,
+      customerPayments: customerPayments,
       utangPayments: utangPayments,
       ownerPayments: ownerPayments,
-      downPayments: downPayments,
     );
   }
 

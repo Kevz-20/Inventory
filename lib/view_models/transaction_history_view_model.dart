@@ -95,9 +95,8 @@ enum TransactionCategory {
   expenses,
   sales,
   capitalManagement,
-  utangCustomerPayment,
+  customerPayment,
   ownerPayment,
-  downPayment,
 }
 
 extension TransactionCategoryExtension on TransactionCategory {
@@ -111,12 +110,10 @@ extension TransactionCategoryExtension on TransactionCategory {
         return 'Halin';
       case TransactionCategory.capitalManagement:
         return 'Capital';
-      case TransactionCategory.utangCustomerPayment:
-        return 'Utang Payment';
+      case TransactionCategory.customerPayment:
+        return 'Customer Payment';
       case TransactionCategory.ownerPayment:
         return 'Owner Payment';
-      case TransactionCategory.downPayment:
-        return 'Down Payment';
     }
   }
 }
@@ -132,9 +129,9 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     salesCash: [],
     salesCredit: [],
     capitalManagement: [],
+    customerPayments: [],
     utangPayments: [],
     ownerPayments: [],
-    downPayments: [],
   );
 
   bool _isLoading = false;
@@ -164,12 +161,10 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         return 'No sales transactions yet';
       case TransactionCategory.capitalManagement:
         return 'No capital transactions yet';
-      case TransactionCategory.utangCustomerPayment:
-        return 'No utang payments yet';
+      case TransactionCategory.customerPayment:
+        return 'No customer payments yet';
       case TransactionCategory.ownerPayment:
         return 'No owner payments yet';
-      case TransactionCategory.downPayment:
-        return 'No down payments yet';
       case TransactionCategory.all:
         return 'No transactions found';
     }
@@ -207,17 +202,17 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         yield TransactionItem.fromMap(map,
             fallbackType: 'Capital', isCapital: true);
       }
-      for (var map in _filteredHistory.utangPayments) {
+      for (var map in _filteredHistory.customerPayments) {
         yield TransactionItem.fromMap(
           map,
-          fallbackType: 'Utang Customer Payment',
+          fallbackType: 'Customer Payment',
         );
+      }
+      for (var map in _filteredHistory.utangPayments) {
+        yield TransactionItem.fromMap(map, fallbackType: 'Owner Payment');
       }
       for (var map in _filteredHistory.ownerPayments) {
         yield TransactionItem.fromMap(map, fallbackType: 'Owner Payment');
-      }
-      for (var map in _filteredHistory.downPayments) {
-        yield TransactionItem.fromMap(map, fallbackType: 'Down Payment');
       }
     }
 
@@ -228,21 +223,17 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         result = _filteredHistory.salesCash.map(
           (map) => TransactionItem.fromMap(map, fallbackType: 'Halin'),
         );
-      } else if (selectedCategory == TransactionCategory.utangCustomerPayment) {
-        result = items().where(
-          (tx) =>
-              tx.type == 'Utang Customer Payment' ||
-              tx.type == 'Owner Payment' ||
-              tx.type == 'Down Payment',
-        );
+      } else if (selectedCategory == TransactionCategory.customerPayment) {
+        result = items().where((tx) => tx.type == 'Customer Payment');
+      } else if (selectedCategory == TransactionCategory.ownerPayment) {
+        result =
+            items().where((tx) => tx.type == 'Owner Payment' || tx.type == 'Downpayment');
       } else {
         final type = selectedCategory == TransactionCategory.expenses
             ? 'Gasto'
             : selectedCategory == TransactionCategory.capitalManagement
                     ? 'Capital'
-                    : selectedCategory == TransactionCategory.ownerPayment
-                        ? 'Owner Payment'
-                        : 'Down Payment';
+                    : '';
         result = items().where((tx) => tx.type == type);
       }
     } else {
@@ -285,9 +276,9 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       salesCash: _filterByDate(_fullHistory!.salesCash),
       salesCredit: _filterByDate(_fullHistory!.salesCredit),
       capitalManagement: _filterByDate(_fullHistory!.capitalManagement),
+      customerPayments: _filterByDate(_fullHistory!.customerPayments),
       utangPayments: _filterByDate(_fullHistory!.utangPayments),
       ownerPayments: _filterByDate(_fullHistory!.ownerPayments),
-      downPayments: _filterByDate(_fullHistory!.downPayments),
     );
     _cache.clear();
     _currentPage = 0;

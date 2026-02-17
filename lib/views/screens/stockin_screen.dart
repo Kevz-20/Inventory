@@ -366,14 +366,23 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     IconData? icon,
     bool isPeso = false,
   }) {
+    final allowDecimal = isPeso;
+
     return SizedBox(
       height: 60,
       child: TextField(
         controller: controller,
-        keyboardType: TextInputType.number,
+        keyboardType: allowDecimal
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : TextInputType.number,
         inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          ThousandsSeparatorInputFormatter(),
+          if (allowDecimal) ...[
+            FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+            DecimalThousandsSeparatorInputFormatter(),
+          ] else ...[
+            FilteringTextInputFormatter.digitsOnly,
+            ThousandsSeparatorInputFormatter(),
+          ],
         ],
         style: const TextStyle(
           color: AppColors.textPrimary,
@@ -415,15 +424,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             ),
           ),
         ),
-        onChanged: (text) {
-          final number = text.replaceAll(',', '');
-          controller.value = controller.value.copyWith(
-            text: _formatNumber(number),
-            selection: TextSelection.collapsed(
-              offset: _formatNumber(number).length,
-            ),
-          );
-        },
       ),
     );
   }
@@ -536,20 +536,39 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   }
 }
 
-// ----------------- Number Formatter -----------------
-String _formatNumber(dynamic value) {
-  if (value == null || value.toString().isEmpty) return '';
-  final digits = value.toString().replaceAll(RegExp(r'[^\d]'), '');
+class DecimalThousandsSeparatorInputFormatter extends TextInputFormatter {
+  final RegExp _amountPattern = RegExp(r'^\d*\.?\d{0,2}$');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final raw = newValue.text.replaceAll(',', '');
+    if (raw.isEmpty) return const TextEditingValue();
+    if (!_amountPattern.hasMatch(raw)) return oldValue;
+
+    final hasDot = raw.contains('.');
+    final parts = raw.split('.');
+    final intPartRaw = parts.first;
+    final fracPart = hasDot ? (parts.length > 1 ? parts[1] : '') : '';
+
+    final formattedInt = _formatIntegerWithComma(intPartRaw);
+    final formatted = hasDot ? '$formattedInt.$fracPart' : formattedInt;
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+String _formatIntegerWithComma(String digits) {
   if (digits.isEmpty) return '';
   final chars = digits.split('').reversed.toList();
   final chunks = <String>[];
   for (var i = 0; i < chars.length; i += 3) {
     chunks.add(chars.skip(i).take(3).join());
   }
-  final formattedNumber = chunks
-      .map((e) => e.split('').reversed.join())
-      .toList()
-      .reversed
-      .join(',');
-  return formattedNumber;
+  return chunks.map((e) => e.split('').reversed.join()).toList().reversed.join(',');
 }

@@ -15,24 +15,33 @@ class CapitalManagementScreen extends ConsumerStatefulWidget {
       _CapitalManagementScreenState();
 }
 
-class CurrencyTextInputFormatter extends TextInputFormatter {
-  final NumberFormat formatter = NumberFormat('#,##0.##');
+class ThousandDecimalInputFormatter extends TextInputFormatter {
+  final RegExp _amountPattern = RegExp(r'^\d*\.?\d{0,2}$');
+  final NumberFormat _intFormatter = NumberFormat('#,##0');
 
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final text = newValue.text.replaceAll(',', '');
-
-    if (text.isEmpty) {
-      return newValue.copyWith(text: '');
+    final raw = newValue.text.replaceAll(',', '');
+    if (raw.isEmpty) {
+      return const TextEditingValue(text: '');
     }
 
-    final number = double.tryParse(text);
-    if (number == null) return oldValue;
+    if (!_amountPattern.hasMatch(raw)) {
+      return oldValue;
+    }
 
-    final formatted = formatter.format(number);
+    final hasDot = raw.contains('.');
+    final parts = raw.split('.');
+    final intPartRaw = parts.first;
+    final fracPart = hasDot ? (parts.length > 1 ? parts[1] : '') : '';
+
+    final formattedInt = intPartRaw.isEmpty
+        ? ''
+        : _intFormatter.format(int.parse(intPartRaw));
+    final formatted = hasDot ? '$formattedInt.$fracPart' : formattedInt;
 
     return TextEditingValue(
       text: formatted,
@@ -280,7 +289,7 @@ class _CapitalManagementScreenState
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-        CurrencyTextInputFormatter(),
+        ThousandDecimalInputFormatter(),
       ],
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
