@@ -539,139 +539,145 @@ class _TransactionDetailsSheet extends StatelessWidget {
       decimalDigits: 2,
     );
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Wrap(
-        children: [
-          Center(
-            child: Container(
-              width: 50,
-              height: 5,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-          ),
-          Text(
-            '${transaction.type} Details',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-
-          // Amount
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Amount:', style: TextStyle(fontSize: 16)),
-              Text(
-                '${(isCapital || isHalin || isUtangCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isHalin
-                      ? Colors.green
-                      : isExpense
-                      ? Colors.red
-                      : isUtangCustomerPayment
-                      ? Colors.green
-                      : (isOwnerPayment || isDownPayment)
-                      ? Colors.red
-                      : Colors.blue,
+    return SafeArea(
+      top: false, // keeps drag handle closer to top
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Wrap(
+          children: [
+            Center(
+              child: Container(
+                width: 50,
+                height: 5,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(5),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
+            ),
+            Text(
+              '${transaction.type} Details',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
 
-          // Date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Date:', style: TextStyle(fontSize: 16)),
-              Text(
-                DateFormat('MMMM d, y • hh:mm a').format(transaction.createdAt),
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Category or Quantity
-          if (isExpense && transaction.category != null)
+            // Amount
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Category:', style: TextStyle(fontSize: 16)),
+                const Text('Amount:', style: TextStyle(fontSize: 16)),
                 Text(
-                  transaction.category!,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          if ((isHalin || isCapital) && transaction.quantity != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Quantity:', style: TextStyle(fontSize: 16)),
-                Text(
-                  transaction.quantity.toString(),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          const SizedBox(height: 8),
-
-          // Recorded by
-          if (transaction.recordedBy != null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Recorded By:', style: TextStyle(fontSize: 16)),
-                Text(
-                  transaction.recordedBy!,
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          const SizedBox(height: 8),
-
-          // Note
-          // Description already shown in the list item; avoid duplicating here.
-          const SizedBox(height: 16),
-
-          // Receipt Image
-          if (isExpense && transaction.receiptImagePath != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Receipt:', style: TextStyle(fontSize: 16)),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => Dialog(
-                        child: InteractiveViewer(
-                          child: Image.file(
-                            File(transaction.receiptImagePath!),
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  child: Image.file(
-                    File(transaction.receiptImagePath!),
-                    height: 150,
-                    fit: BoxFit.contain,
+                  '${(isCapital || isHalin || isUtangCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isHalin
+                        ? Colors.green
+                        : isExpense
+                        ? Colors.red
+                        : isUtangCustomerPayment
+                        ? Colors.green
+                        : (isOwnerPayment || isDownPayment)
+                        ? Colors.red
+                        : Colors.blue,
                   ),
                 ),
               ],
             ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 8),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Date:', style: TextStyle(fontSize: 16)),
+                Text(
+                  DateFormat(
+                    'MMMM d, y • hh:mm a',
+                  ).format(transaction.createdAt),
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            if (isExpense && transaction.category != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Category:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.category!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            if ((isHalin || isCapital) && transaction.quantity != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Quantity:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.quantity.toString(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 8),
+
+            if (transaction.recordedBy != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Recorded By:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.recordedBy!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 16),
+
+            if (isExpense && transaction.receiptImagePath != null)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Receipt:', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          child: InteractiveViewer(
+                            child: Image.file(
+                              File(transaction.receiptImagePath!),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Image.file(
+                      File(transaction.receiptImagePath!),
+                      height: 150,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
