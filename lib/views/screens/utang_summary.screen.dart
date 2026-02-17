@@ -551,87 +551,84 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white, // White background
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Center(
-                    child: SizedBox(width: 40, child: Divider(thickness: 4)),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Payments',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  if (customerPayments.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text(
-                        'No payments recorded yet.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: Builder(
-                        builder: (context) {
-                          final paymentsLatestFirst = customerPayments.reversed
-                              .toList();
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: paymentsLatestFirst.length,
-                            itemBuilder: (context, index) {
-                              final pay = paymentsLatestFirst[index];
-                              final originalIndex = customerPayments.indexWhere(
-                                (p) => p.id == pay.id,
-                              );
-                              final payTime = DateFormat(
-                                'MMM dd, yyyy hh:mm a',
-                              ).format(pay.paidAt);
-                              final paymentType = _paymentTypeLabel(
-                                originalIndex < 0 ? 0 : originalIndex,
-                              );
-                              final paymentTypeColor = paymentType == 'Full'
-                                  ? Colors.green
-                                  : Colors.orange;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: SizedBox(width: 40, child: Divider(thickness: 4)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Payments',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                if (customerPayments.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'No payments recorded yet.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: Builder(
+                      builder: (context) {
+                        final paymentsLatestFirst = customerPayments.reversed
+                            .toList();
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: paymentsLatestFirst.length,
+                          itemBuilder: (context, index) {
+                            final pay = paymentsLatestFirst[index];
+                            final originalIndex = customerPayments.indexWhere(
+                              (p) => p.id == pay.id,
+                            );
+                            final payTime = DateFormat(
+                              'MMM dd, yyyy hh:mm a',
+                            ).format(pay.paidAt);
+                            final paymentType = _paymentTypeLabel(
+                              originalIndex < 0 ? 0 : originalIndex,
+                            );
+                            final paymentTypeColor = paymentType == 'Full'
+                                ? Colors.green
+                                : Colors.orange;
 
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                child: ListTile(
-                                  title: Text(
-                                    paymentType,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: paymentTypeColor,
-                                    ),
-                                  ),
-                                  subtitle: Text(payTime),
-                                  trailing: Text(
-                                    '₱${currencyFormat.format(pay.amount)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              child: ListTile(
+                                title: Text(
+                                  paymentType,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: paymentTypeColor,
                                   ),
                                 ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                                subtitle: Text(payTime),
+                                trailing: Text(
+                                  '₱${currencyFormat.format(pay.amount)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         );
