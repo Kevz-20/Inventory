@@ -94,6 +94,12 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   }
 
   bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
+  bool _isPastDueDate(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) return false;
+    final due = DateTime.tryParse(isoDate);
+    if (due == null) return false;
+    return _dateOnly(due).isBefore(_dateOnly(DateTime.now()));
+  }
 
   String _buildDueStatusText(DateTime dueDate) {
     final daysLeft = _daysUntil(dueDate);
@@ -228,9 +234,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
             .where(
               (p) =>
                   !p.isPaid &&
-                  p.dueDate != null &&
-                  DateTime.tryParse(p.dueDate!) != null &&
-                  DateTime.parse(p.dueDate!).isBefore(DateTime.now()),
+                  _isPastDueDate(p.isInstallment ? p.nextDueDate : p.dueDate),
             )
             .toList();
         break;
@@ -1067,7 +1071,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
 
         if (!isFullyPaid) {
-          final daysLeft = due.difference(DateTime.now()).inDays;
+          final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
           if (daysLeft < 0) {
             status = "Overdue";
           } else if (daysLeft <= 7) {
@@ -1112,7 +1116,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                   ],
                 ),
               ),
-              if (status == "Due Soon" || status == "Paid")
+              if (status.isNotEmpty)
                 Positioned(
                   top: 12,
                   right: 12,

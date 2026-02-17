@@ -133,7 +133,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               const SizedBox(height: 15),
 
               // ==================== MIDDLE NAME ====================
-              buildLabel("Middle Name"),
+              buildLabel("Middle Name (Optional)"),
               buildTextField(
                 controller: vm.middleNameController,
                 hint: "Dela",
@@ -208,7 +208,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                             final account = Account(
                               id: 0, // will be replaced by actual DB id
                               firstName: vm.firstNameController.text.trim(),
-                              middleName: vm.middleNameController.text.trim(),
+                              middleName: vm.middleNameController.text.trim().isEmpty
+                                  ? null
+                                  : vm.middleNameController.text.trim(),
                               lastName: vm.lastNameController.text.trim(),
                               mobileNumber: vm.mobileController.text.trim(),
                               pin: vm.pinController.text.trim(),

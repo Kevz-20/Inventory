@@ -111,7 +111,9 @@ class CreateAccountViewModel extends ChangeNotifier {
         mobileNumber: mobile,
         pin: pinController.text.trim(),
         firstName: firstNameController.text.trim(),
-        middleName: middleNameController.text.trim(),
+        middleName: middleNameController.text.trim().isEmpty
+            ? null
+            : middleNameController.text.trim(),
         lastName: lastNameController.text.trim(),
         securityQuestionId: selectedQuestion != null
             ? questions.indexOf(selectedQuestion!) + 1
@@ -123,10 +125,12 @@ class CreateAccountViewModel extends ChangeNotifier {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('mobileNumber', account.mobileNumber);
-      await prefs.setString(
-        'fullName',
-        '${account.firstName} ${account.middleName} ${account.lastName}',
-      );
+      final fullNameParts = [
+        account.firstName,
+        if ((account.middleName ?? '').isNotEmpty) account.middleName!,
+        account.lastName,
+      ];
+      await prefs.setString('fullName', fullNameParts.join(' '));
 
       clearFields();
       showResponseMessage("Account created successfully!", success: true);
@@ -164,7 +168,6 @@ class CreateAccountViewModel extends ChangeNotifier {
         pinError == null &&
         confirmPinError == null &&
         firstNameError == null &&
-        middleNameError == null &&
         lastNameError == null &&
         answerError == null &&
         questionError == null;
@@ -209,9 +212,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     firstNameError = firstNameController.text.isEmpty
         ? 'Please enter first name'
         : null;
-    middleNameError = middleNameController.text.isEmpty
-        ? 'Please enter middle name'
-        : null;
+    middleNameError = null;
     lastNameError = lastNameController.text.isEmpty
         ? 'Please enter last name'
         : null;

@@ -89,8 +89,11 @@ class AccountRepository {
     await prefs.setString('mobileNumber', updated.mobileNumber);
 
     // Save full name for creator tracking
-    final fullName =
-        '${updated.firstName} ${updated.middleName ?? ''} ${updated.lastName}';
-    await prefs.setString('fullName', fullName.trim());
+    final fullNameParts = [
+      updated.firstName,
+      if ((updated.middleName ?? '').isNotEmpty) updated.middleName!,
+      updated.lastName,
+    ];
+    await prefs.setString('fullName', fullNameParts.join(' '));
   }
 }
