@@ -22,12 +22,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     Future.microtask(() {
       ref.read(loginViewModelProvider).loadSavedMobile();
     });
-
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-
     _shakeAnimation = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
       TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
@@ -54,172 +52,145 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
-        child: Column(
-          children: [
-            /// MAIN CONTENT
-            Flexible(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isSmallHeight = constraints.maxHeight < 600;
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isSmallHeight = constraints.maxHeight < 600;
 
-                  Widget content = ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        /// LOGO
-                        Image.asset('lib/assets/logo.png', height: 80 * scale),
-                        const SizedBox(height: 10),
-                        Text(
-                          "E.M.P.O.W.E.R",
-                          style: TextStyle(
-                            fontSize: 20 * scale,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
+            final mainContent = ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  /// LOGO
+                  Image.asset('lib/assets/logo.png', height: 80 * scale),
+                  const SizedBox(height: 10),
+                  Text(
+                    "E.M.P.O.W.E.R",
+                    style: TextStyle(
+                      fontSize: 20 * scale,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  /// MOBILE NUMBER
+                  GestureDetector(
+                    onTap: () => viewModel.changeMobileNumber(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withAlpha(40),
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        /// MOBILE NUMBER
-                        GestureDetector(
-                          onTap: () => viewModel.changeMobileNumber(context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 25,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(25),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withAlpha(40),
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  "Mobile Number: ",
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                Text(
-                                  viewModel.mobileNumber.isNotEmpty
-                                      ? viewModel.mobileNumber
-                                      : 'Not set',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.swap_horiz),
-                              ],
-                            ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Mobile Number: ",
+                            style: TextStyle(fontSize: 16),
                           ),
-                        ),
-
-                        const SizedBox(height: 25),
-
-                        /// PIN INDICATOR
-                        const Text(
-                          "PIN",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                          Text(
+                            viewModel.mobileNumber.isNotEmpty
+                                ? viewModel.mobileNumber
+                                : 'Not set',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        AnimatedBuilder(
-                          animation: _shakeAnimation,
-                          // ignore: unnecessary_underscores
-                          builder: (_, __) {
-                            return Transform.translate(
-                              offset: Offset(_shakeAnimation.value, 0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(4, (i) {
-                                  return Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                    width: 18 * scale,
-                                    height: 18 * scale,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: i < viewModel.pin.length
-                                          ? AppColors.primaryLight
-                                          : Colors.transparent,
-                                      border: Border.all(
-                                        color: Colors.black54,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  );
-                                }),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.swap_horiz),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+
+                  /// PIN INDICATOR
+                  const Text(
+                    "PIN",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  AnimatedBuilder(
+                    animation: _shakeAnimation,
+                    // ignore: unnecessary_underscores
+                    builder: (_, __) {
+                      return Transform.translate(
+                        offset: Offset(_shakeAnimation.value, 0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(4, (i) {
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              width: 18 * scale,
+                              height: 18 * scale,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: i < viewModel.pin.length
+                                    ? AppColors.primaryLight
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: Colors.black54,
+                                  width: 2,
+                                ),
                               ),
                             );
-                          },
+                          }),
                         ),
-                        const SizedBox(height: 25),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 25),
 
-                        /// KEYPAD
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Column(
-                            children: [
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: 9,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      mainAxisSpacing: 12,
-                                      crossAxisSpacing: 12,
-                                    ),
-                                itemBuilder: (_, i) =>
-                                    _buildKey("${i + 1}", scale),
-                              ),
-                              const SizedBox(height: 12),
-                              GridView.count(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
+                  /// KEYPAD
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: 9,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
                                 mainAxisSpacing: 12,
                                 crossAxisSpacing: 12,
-                                children: [
-                                  const SizedBox(),
-                                  _buildKey("0", scale),
-                                  viewModel.pin.isNotEmpty
-                                      ? _buildBackspaceKey(scale)
-                                      : const SizedBox(),
-                                ],
                               ),
-                            ],
-                          ),
+                          itemBuilder: (_, i) => _buildKey("${i + 1}", scale),
+                        ),
+                        const SizedBox(height: 12),
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          children: [
+                            const SizedBox(),
+                            _buildKey("0", scale),
+                            viewModel.pin.isNotEmpty
+                                ? _buildBackspaceKey(scale)
+                                : const SizedBox(),
+                          ],
                         ),
                       ],
                     ),
-                  );
-
-                  // On very short screens, allow small scroll
-                  if (isSmallHeight) {
-                    content = SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      child: content,
-                    );
-                  }
-
-                  return content;
-                },
+                  ),
+                ],
               ),
-            ),
+            );
 
-            /// BOTTOM LINKS
-            Padding(
+            final bottomLinks = Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -248,8 +219,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   ),
                 ],
               ),
-            ),
-          ],
+            );
+
+            if (isSmallHeight) {
+              // On small screens: everything scrolls together
+              return SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Column(children: [mainContent, bottomLinks]),
+              );
+            }
+
+            // Normal screens: links pinned to bottom
+            return Column(
+              children: [
+                Expanded(child: Center(child: mainContent)),
+                bottomLinks,
+              ],
+            );
+          },
         ),
       ),
     );
