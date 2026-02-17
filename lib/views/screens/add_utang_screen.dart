@@ -572,10 +572,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
               readOnly: true,
               icon: Icons.date_range,
               onTap: () async {
+                final today = DateTime.now();
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
+                  initialDate: today,
+                  firstDate: today,
                   lastDate: DateTime(2100),
                 );
                 if (date != null) {
@@ -681,10 +682,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
               readOnly: true,
               icon: Icons.date_range,
               onTap: () async {
+                final today = DateTime.now();
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
+                  initialDate: today,
+                  firstDate: today,
                   lastDate: DateTime(2100),
                 );
                 if (date != null) {
