@@ -888,7 +888,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
               const SizedBox(height: 24),
               const Text(
-                "Itemized Utang",
+                "Lista",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
