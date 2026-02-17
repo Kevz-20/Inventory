@@ -129,6 +129,11 @@ class StockInViewModel extends ChangeNotifier {
     }
   }
 
+  void removeImage() {
+    productImage = null;
+    safeNotifyListeners();
+  }
+
   Future<void> saveProduct() async {
     debugPrint('saveProduct() called');
 

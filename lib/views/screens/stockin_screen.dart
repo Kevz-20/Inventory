@@ -496,15 +496,38 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             child: vm.productImage != null
                 ? Image.file(
                     vm.productImage!,
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                    height: 150,
+                    fit: BoxFit.cover,
                   )
                 : const Center(
                     child: Icon(Icons.camera_alt, size: 50, color: Colors.grey),
                   ),
           ),
         ),
+        if (vm.productImage != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextButton.icon(
+                  onPressed: pickImage,
+                  icon: const Icon(Icons.camera_alt, color: AppColors.primary),
+                  label: const Text(
+                    'Retake',
+                    style: TextStyle(color: AppColors.primary),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: vm.removeImage,
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  label: const Text(
+                    'Remove',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
