@@ -215,15 +215,6 @@ class AboutAppScreen extends StatelessWidget {
                                   color: AppColors.primary,
                                   width: 2.5,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.2,
-                                    ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
                               ),
                               child: ClipOval(
                                 child: Image.asset(
