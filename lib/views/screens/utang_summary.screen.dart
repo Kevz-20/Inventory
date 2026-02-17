@@ -190,123 +190,129 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
             final isOverPaying = enteredAmount > remainingBalance;
             final isFullPay = enteredAmount == remainingBalance;
 
-            return Container(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Add Payment",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: paymentController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter payment amount",
-                      prefixText: "₱",
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setSheetState(() {
-                        enteredAmount = double.tryParse(value) ?? 0;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  if (isOverPaying)
-                    const Text(
-                      "Amount exceeds remaining balance",
-                      style: TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  if (isFullPay && enteredAmount > 0)
-                    const Text(
-                      "This will fully pay the utang.",
-                      style: TextStyle(color: Colors.green, fontSize: 12),
-                    ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: (enteredAmount <= 0 || isOverPaying)
-                              ? null
-                              : () async {
-                                  final db = await DBService.instance.database;
-
-                                  // Insert payment record
-                                  await db.insert('customer_payment', {
-                                    'customer_id': widget.customer.id,
-                                    'amount': enteredAmount,
-                                    'paid_at': DateTime.now().toIso8601String(),
-                                  });
-
-                                  // Update available credit
-                                  final customerRepo = CustomerRepository(db);
-                                  final currentCredit = await customerRepo
-                                      .getAvailableCredit(widget.customer.id);
-
-                                  await customerRepo
-                                      .updateCustomer(widget.customer.id, {
-                                        'available_credit':
-                                            currentCredit + enteredAmount,
-                                        'updated_at': DateTime.now()
-                                            .toIso8601String(),
-                                      });
-
-                                  // Add to cash on hand
-                                  final capitalRepo =
-                                      CapitalManagementRepository(db);
-                                  await capitalRepo.addCustomerPaymentCash(
-                                    enteredAmount,
-                                  );
-
-                                  // ignore: use_build_context_synchronously
-                                  Navigator.pop(context);
-                                  await fetchCustomerData();
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(
-                                    this.context,
-                                  ).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Successful payment'),
-                                      backgroundColor: AppColors.success,
-                                    ),
-                                  );
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isFullPay
-                                ? Colors.green
-                                : Colors.orange,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(isFullPay ? "Full Pay" : "Partial Pay"),
-                        ),
+            return SafeArea(
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Add Payment",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: paymentController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Enter payment amount",
+                        prefixText: "₱",
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setSheetState(() {
+                          enteredAmount = double.tryParse(value) ?? 0;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (isOverPaying)
+                      const Text(
+                        "Amount exceeds remaining balance",
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    if (isFullPay && enteredAmount > 0)
+                      const Text(
+                        "This will fully pay the utang.",
+                        style: TextStyle(color: Colors.green, fontSize: 12),
+                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (enteredAmount <= 0 || isOverPaying)
+                                ? null
+                                : () async {
+                                    final db =
+                                        await DBService.instance.database;
+
+                                    await db.insert('customer_payment', {
+                                      'customer_id': widget.customer.id,
+                                      'amount': enteredAmount,
+                                      'paid_at': DateTime.now()
+                                          .toIso8601String(),
+                                    });
+
+                                    final customerRepo = CustomerRepository(db);
+                                    final currentCredit = await customerRepo
+                                        .getAvailableCredit(widget.customer.id);
+
+                                    await customerRepo
+                                        .updateCustomer(widget.customer.id, {
+                                          'available_credit':
+                                              currentCredit + enteredAmount,
+                                          'updated_at': DateTime.now()
+                                              .toIso8601String(),
+                                        });
+
+                                    final capitalRepo =
+                                        CapitalManagementRepository(db);
+                                    await capitalRepo.addCustomerPaymentCash(
+                                      enteredAmount,
+                                    );
+
+                                    if (!mounted) return;
+                                    // ignore: use_build_context_synchronously
+                                    Navigator.pop(context);
+                                    await fetchCustomerData();
+
+                                    ScaffoldMessenger.of(
+                                      // ignore: use_build_context_synchronously
+                                      this.context,
+                                    ).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Successful payment'),
+                                        backgroundColor: AppColors.success,
+                                      ),
+                                    );
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isFullPay
+                                  ? Colors.green
+                                  : Colors.orange,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(isFullPay ? "Full Pay" : "Partial Pay"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -340,118 +346,124 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                 : customAmount;
             final isValid = selectedAmount > 0;
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Center(
-                    child: SizedBox(width: 40, child: Divider(thickness: 4)),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Increase Credit Limit",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 15),
-                  const Text(
-                    "Choose an amount to add:",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 10),
-
-                  /// Presets
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: List.generate(presets.length, (index) {
-                      final value = presets[index];
-                      final isSelected = selectedPreset == index;
-
-                      return ChoiceChip(
-                        label: Text("₱$value"),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          setModalState(() {
-                            selectedPreset = index;
-                            customAmount = presets[index].toDouble();
-                            customController.text = presets[index].toString();
-                          });
-                        },
-                        selectedColor: Colors.green[100],
-                      );
-                    }),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  /// Custom Amount
-                  TextField(
-                    controller: customController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Custom amount",
-                      prefixText: "₱",
-                      border: OutlineInputBorder(),
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Center(
+                      child: SizedBox(width: 40, child: Divider(thickness: 4)),
                     ),
-                    onChanged: (value) {
-                      setModalState(() {
-                        customAmount = double.tryParse(value) ?? 0;
-                        selectedPreset = null;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  /// Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Cancel"),
-                        ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Increase Credit Limit",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: !isValid
-                              ? null
-                              : () async {
-                                  Navigator.pop(context);
+                    ),
+                    const SizedBox(height: 15),
+                    const Text(
+                      "Choose an amount to add:",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 10),
 
-                                  final db = await DBService.instance.database;
-                                  final amountToAdd = selectedAmount;
+                    /// Presets
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: List.generate(presets.length, (index) {
+                        final value = presets[index];
+                        final isSelected = selectedPreset == index;
 
-                                  await db.rawUpdate(
-                                    '''
+                        return ChoiceChip(
+                          label: Text("₱$value"),
+                          selected: isSelected,
+                          onSelected: (_) {
+                            setModalState(() {
+                              selectedPreset = index;
+                              customAmount = presets[index].toDouble();
+                              customController.text = presets[index].toString();
+                            });
+                          },
+                          selectedColor: Colors.green[100],
+                        );
+                      }),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    /// Custom Amount
+                    TextField(
+                      controller: customController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Custom amount",
+                        prefixText: "₱",
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setModalState(() {
+                          customAmount = double.tryParse(value) ?? 0;
+                          selectedPreset = null;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    /// Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Cancel"),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: !isValid
+                                ? null
+                                : () async {
+                                    Navigator.pop(context);
+
+                                    final db =
+                                        await DBService.instance.database;
+                                    final amountToAdd = selectedAmount;
+
+                                    await db.rawUpdate(
+                                      '''
                                   UPDATE customer
                                   SET credit_limit = credit_limit + ?,
                                       available_credit = available_credit + ?
                                   WHERE id = ?
                                   ''',
-                                    [
-                                      amountToAdd,
-                                      amountToAdd,
-                                      widget.customer.id,
-                                    ],
-                                  );
+                                      [
+                                        amountToAdd,
+                                        amountToAdd,
+                                        widget.customer.id,
+                                      ],
+                                    );
 
-                                  await fetchCustomerData();
-                                },
-                          child: const Text("Add"),
+                                    await fetchCustomerData();
+                                  },
+                            child: const Text("Add"),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -584,35 +596,35 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               final originalIndex = customerPayments.indexWhere(
                                 (p) => p.id == pay.id,
                               );
-                          final payTime = DateFormat(
-                            'MMM dd, yyyy hh:mm a',
-                          ).format(pay.paidAt);
+                              final payTime = DateFormat(
+                                'MMM dd, yyyy hh:mm a',
+                              ).format(pay.paidAt);
                               final paymentType = _paymentTypeLabel(
                                 originalIndex < 0 ? 0 : originalIndex,
                               );
-                          final paymentTypeColor = paymentType == 'Full'
-                              ? Colors.green
-                              : Colors.orange;
+                              final paymentTypeColor = paymentType == 'Full'
+                                  ? Colors.green
+                                  : Colors.orange;
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            child: ListTile(
-                              title: Text(
-                                paymentType,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: paymentTypeColor,
+                              return Card(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                child: ListTile(
+                                  title: Text(
+                                    paymentType,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: paymentTypeColor,
+                                    ),
+                                  ),
+                                  subtitle: Text(payTime),
+                                  trailing: Text(
+                                    '₱${currencyFormat.format(pay.amount)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              subtitle: Text(payTime),
-                              trailing: Text(
-                                '₱${currencyFormat.format(pay.amount)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          );
+                              );
                             },
                           );
                         },
