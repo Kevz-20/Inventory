@@ -113,26 +113,26 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   child: viewModel.isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : viewModel.sections.isEmpty
-                          ? Center(
-                              child: Text(
-                                viewModel.emptyStateMessage,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black45,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              itemCount: viewModel.sections.length,
-                              itemBuilder: (context, sectionIndex) {
-                                final section = viewModel.sections[sectionIndex];
-                                return _buildSection(section);
-                              },
+                      ? Center(
+                          child: Text(
+                            viewModel.emptyStateMessage,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black45,
                             ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          itemCount: viewModel.sections.length,
+                          itemBuilder: (context, sectionIndex) {
+                            final section = viewModel.sections[sectionIndex];
+                            return _buildSection(section);
+                          },
+                        ),
                 ),
               ],
             ),
@@ -157,12 +157,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     Color typeColor = isHalin
         ? Colors.green
         : isExpense
-            ? Colors.red
-            : isUtangCustomerPayment
-                ? Colors.green
-                : (isOwnerPayment || isDownPayment)
-                    ? Colors.red
-                    : Colors.blue;
+        ? Colors.red
+        : isUtangCustomerPayment
+        ? Colors.green
+        : (isOwnerPayment || isDownPayment)
+        ? Colors.red
+        : Colors.blue;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -208,14 +208,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   isHalin
                       ? 'Halin'
                       : isExpense
-                          ? 'Gasto'
-                          : isCapital
-                              ? 'Capital'
-                              : isUtangCustomerPayment
-                                  ? 'Customer Payment'
-                                  : isOwnerPayment
-                                      ? 'Owner Payment'
-                                      : 'Down Payment',
+                      ? 'Gasto'
+                      : isCapital
+                      ? 'Capital'
+                      : isUtangCustomerPayment
+                      ? 'Customer Payment'
+                      : isOwnerPayment
+                      ? 'Owner Payment'
+                      : 'Down Payment',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -454,7 +454,7 @@ class CategoryChipsWithDots extends StatelessWidget {
           height: 45,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.zero,
             itemCount: categories.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, index) {
@@ -530,12 +530,14 @@ class _TransactionDetailsSheet extends StatelessWidget {
     final isExpense = transaction.type == 'Gasto';
     final isHalin = transaction.type == 'Halin';
     final isCapital = transaction.type == 'Capital';
-    final isUtangCustomerPayment =
-        transaction.type == 'Utang Customer Payment';
+    final isUtangCustomerPayment = transaction.type == 'Utang Customer Payment';
     final isOwnerPayment = transaction.type == 'Owner Payment';
     final isDownPayment = transaction.type == 'Down Payment';
-    final NumberFormat currency =
-        NumberFormat.currency(locale: 'en_PH', symbol: '₱', decimalDigits: 2);
+    final NumberFormat currency = NumberFormat.currency(
+      locale: 'en_PH',
+      symbol: '₱',
+      decimalDigits: 2,
+    );
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -554,10 +556,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
           ),
           Text(
             '${transaction.type} Details',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
@@ -574,12 +573,12 @@ class _TransactionDetailsSheet extends StatelessWidget {
                   color: isHalin
                       ? Colors.green
                       : isExpense
-                          ? Colors.red
-                          : isUtangCustomerPayment
-                              ? Colors.green
-                              : (isOwnerPayment || isDownPayment)
-                                  ? Colors.red
-                                  : Colors.blue,
+                      ? Colors.red
+                      : isUtangCustomerPayment
+                      ? Colors.green
+                      : (isOwnerPayment || isDownPayment)
+                      ? Colors.red
+                      : Colors.blue,
                 ),
               ),
             ],
@@ -605,7 +604,10 @@ class _TransactionDetailsSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Category:', style: TextStyle(fontSize: 16)),
-                Text(transaction.category!, style: const TextStyle(fontSize: 16)),
+                Text(
+                  transaction.category!,
+                  style: const TextStyle(fontSize: 16),
+                ),
               ],
             ),
           if ((isHalin || isCapital) && transaction.quantity != null)
@@ -613,8 +615,10 @@ class _TransactionDetailsSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Quantity:', style: TextStyle(fontSize: 16)),
-                Text(transaction.quantity.toString(),
-                    style: const TextStyle(fontSize: 16)),
+                Text(
+                  transaction.quantity.toString(),
+                  style: const TextStyle(fontSize: 16),
+                ),
               ],
             ),
           const SizedBox(height: 8),
@@ -625,15 +629,16 @@ class _TransactionDetailsSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Recorded By:', style: TextStyle(fontSize: 16)),
-                Text(transaction.recordedBy!,
-                    style: const TextStyle(fontSize: 16)),
+                Text(
+                  transaction.recordedBy!,
+                  style: const TextStyle(fontSize: 16),
+                ),
               ],
             ),
           const SizedBox(height: 8),
 
           // Note
           // Description already shown in the list item; avoid duplicating here.
-
           const SizedBox(height: 16),
 
           // Receipt Image
