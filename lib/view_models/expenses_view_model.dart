@@ -6,30 +6,32 @@ import 'package:intl/intl.dart';
 import '../models/expense_model.dart';
 import '../repositories/expense_repository.dart';
 import '../repositories/capital_management_repository.dart';
-import '../repositories/account_repository.dart'; // ✅ import AccountRepository
+import '../repositories/account_repository.dart';
 import '../providers/database_provider.dart';
-import '../models/current_user.dart'; // ✅ CurrentUser import
+import '../models/current_user.dart';
 
-final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((ref) {
+final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
+  ref,
+) {
   final repoFuture = ref.watch(expenseRepositoryProvider.future);
   final dbFuture = ref.watch(databaseProvider.future);
-  final accountRepo = AccountRepository(); // ✅ 
+  final accountRepo = AccountRepository();
   return ExpensesViewModel(
     expenseRepositoryFuture: repoFuture,
     databaseFuture: dbFuture,
-    accountRepository: accountRepo, // ✅ pass it
+    accountRepository: accountRepo,
   );
 });
 
 class ExpensesViewModel extends ChangeNotifier {
   final Future<ExpenseRepository> expenseRepositoryFuture;
   final Future databaseFuture;
-  final AccountRepository accountRepository; // ✅ added
+  final AccountRepository accountRepository;
 
   ExpensesViewModel({
     required this.expenseRepositoryFuture,
     required this.databaseFuture,
-    required this.accountRepository, // ✅ added
+    required this.accountRepository,
   }) {
     loadExpenses();
   }
@@ -46,9 +48,6 @@ class ExpensesViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   bool showValidationErrors = false;
-
-  String? successMessage;
-  String? errorMessage;
 
   final List<String> categories = [
     "Kumpra",
@@ -103,12 +102,12 @@ class ExpensesViewModel extends ChangeNotifier {
   }
 
   // ------------------------
-  // LOAD EXPENSES (shared DB)
+  // LOAD EXPENSES
   // ------------------------
   Future<void> loadExpenses() async {
     try {
       final repo = await expenseRepositoryFuture;
-      _expenses = await repo.fetchAllExpenses(); // <-- show all users
+      _expenses = await repo.fetchAllExpenses();
       notifyListeners();
     } catch (_) {
       _expenses = [];
@@ -116,102 +115,106 @@ class ExpensesViewModel extends ChangeNotifier {
     }
   }
 
-  
-
-  
-
   // ------------------------
-  // MESSAGE HANDLER
+  // SNACKBAR (same pattern as LoginViewModel)
   // ------------------------
-  void _showMessage(String msg, {bool isError = false, int durationSeconds = 2}) {
-    if (isError) {
-      errorMessage = msg;
-    } else {
-      successMessage = msg;
-    }
-    notifyListeners();
+  void _showSnackBar(
+    BuildContext context,
+    String message, {
+    required bool success,
+  }) {
+    final color = success ? Colors.green : Colors.red;
+    final icon = success ? Icons.check_circle_outline : Icons.error_outline;
 
-    Future.delayed(Duration(seconds: durationSeconds), () {
-      try {
-        if (isError) {
-          errorMessage = null;
-        } else {
-          successMessage = null;
-        }
-        notifyListeners();
-      } catch (_) {
-        // Ignore if view model is disposed
-      }
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: color,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   // ------------------------
   // MAIN SAVE FUNCTION
   // ------------------------
   Future<bool> save({
-  required String createdByFirstName,
-  String? createdByMiddleName,
-  required String createdByLastName,
-}) async {
-  triggerValidation();
+    required BuildContext context,
+    required String createdByFirstName,
+    String? createdByMiddleName,
+    required String createdByLastName,
+  }) async {
+    triggerValidation();
 
-  if (!validate()) {
-    _showMessage("Please fill out all fields", isError: true);
-    return false;
-  }
-
-  isLoading = true;
-  successMessage = null;
-  errorMessage = null;
-  notifyListeners();
-
-  try {
-    final expenseRepo = await expenseRepositoryFuture;
-    final db = await databaseFuture;
-    final capitalRepo = CapitalManagementRepository(db);
-
-    final amount = double.parse(amountController.text);
-
-    await capitalRepo.deductCash(amount: amount);
-
-    final expense = ExpenseModel(
-      amount: amount,
-      category: selectedCategory!,
-      description: descriptionController.text,
-      receipt: receiptImage?.path,
-      createdAt: selectedDate.toIso8601String(),
-      createdByFirstName: CurrentUser.firstName ?? createdByFirstName,
-      createdByMiddleName: CurrentUser.middleName ?? createdByMiddleName,
-      createdByLastName: CurrentUser.lastName ?? createdByLastName,
-    );
-
-    await expenseRepo.addExpense(expense);
-
-    // ✅ Safe refresh of expenses
-    try {
-      _expenses = await expenseRepo.fetchAllExpenses();
-    } catch (_) {
-      // Ignore refresh errors; expense is still saved
+    if (!validate()) {
+      _showSnackBar(context, 'Please fill out all fields', success: false);
+      return false;
     }
 
-    _showMessage("Expense saved successfully");
-    resetForm();
-
-    isLoading = false;
-    return true;
-  } catch (e) {
-    isLoading = false;
+    isLoading = true;
     notifyListeners();
 
-    if (e.toString().contains('Insufficient cash')) {
-      _showMessage('Insufficient cash on hand', isError: true);
-    } else {
-      _showMessage('Something went wrong. Please try again.', isError: true);
-    }
+    try {
+      final expenseRepo = await expenseRepositoryFuture;
+      final db = await databaseFuture;
+      final capitalRepo = CapitalManagementRepository(db);
 
-    return false;
+      final amount = double.parse(amountController.text);
+
+      await capitalRepo.deductCash(amount: amount);
+
+      final expense = ExpenseModel(
+        amount: amount,
+        category: selectedCategory!,
+        description: descriptionController.text,
+        receipt: receiptImage?.path,
+        createdAt: selectedDate.toIso8601String(),
+        createdByFirstName: CurrentUser.firstName ?? createdByFirstName,
+        createdByMiddleName: CurrentUser.middleName ?? createdByMiddleName,
+        createdByLastName: CurrentUser.lastName ?? createdByLastName,
+      );
+
+      await expenseRepo.addExpense(expense);
+
+      try {
+        _expenses = await expenseRepo.fetchAllExpenses();
+      } catch (_) {}
+
+      isLoading = false;
+      notifyListeners();
+
+      resetForm();
+
+      if (context.mounted) {
+        _showSnackBar(context, 'Expense saved successfully!', success: true);
+      }
+
+      return true;
+    } catch (e) {
+      isLoading = false;
+      notifyListeners();
+
+      if (context.mounted) {
+        if (e.toString().contains('Insufficient cash')) {
+          _showSnackBar(context, 'Insufficient cash on hand', success: false);
+        } else {
+          _showSnackBar(
+            context,
+            'Something went wrong. Please try again.',
+            success: false,
+          );
+        }
+      }
+
+      return false;
+    }
   }
-}
 
   // ------------------------
   // RESET FORM

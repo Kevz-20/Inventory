@@ -71,7 +71,6 @@ class ThousandsFormatter extends TextInputFormatter {
   }
 }
 
-
 class ExpensesScreen extends ConsumerWidget {
   const ExpensesScreen({super.key});
 
@@ -104,20 +103,6 @@ class ExpensesScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            if (vm.successMessage != null)
-              _banner(
-                vm.successMessage!,
-                Icons.check_circle,
-                AppColors.success,
-                Colors.green.shade100,
-              ),
-            if (vm.errorMessage != null)
-              _banner(
-                vm.errorMessage!,
-                Icons.error,
-                AppColors.error,
-                Colors.red.shade100,
-              ),
             InkWell(
               onTap: () => _pickDate(context, vm),
               child: _inputRow(
@@ -171,7 +156,6 @@ class ExpensesScreen extends ConsumerWidget {
             const SizedBox(height: 30),
             const Divider(),
             const SizedBox(height: 15),
-            //_allTransactionsList(vm), // ✅ Show all transactions
           ],
         ),
       ),
@@ -200,8 +184,8 @@ class ExpensesScreen extends ConsumerWidget {
                         .replaceAll(',', '');
                   }
 
-                  // ✅ Pass required CurrentUser info
                   await vm.save(
+                    context: context,
                     createdByFirstName: CurrentUser.firstName ?? '',
                     createdByMiddleName: CurrentUser.middleName ?? '',
                     createdByLastName: CurrentUser.lastName ?? '',
@@ -214,52 +198,6 @@ class ExpensesScreen extends ConsumerWidget {
       ),
     );
   }
-
-  // -----------------------------
-  // Show all transactions (no filtering by account)
-  // -----------------------------
-  // Widget _allTransactionsList(ExpensesViewModel vm) {
-  //   final expenses = vm.expenses; // ✅ All expenses from DB
-  //   if (expenses.isEmpty) {
-  //     return const Text(
-  //       "Wala pang Gasto",
-  //       style: TextStyle(color: Colors.grey),
-  //     );
-  //   }
-
-  //   // Parse createdAt to DateTime and sort descending
-  //   final sorted = [...expenses];
-  //   sorted.sort((a, b) {
-  //     final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1970);
-  //     final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1970);
-  //     return dateB.compareTo(dateA);
-  //   });
-
-  //   return ListView.builder(
-  //     shrinkWrap: true,
-  //     physics: const NeverScrollableScrollPhysics(),
-  //     itemCount: sorted.length,
-  //     itemBuilder: (context, index) {
-  //       final e = sorted[index];
-  //       return Card(
-  //         margin: const EdgeInsets.symmetric(vertical: 6),
-  //         child: ListTile(
-  //           title: Text(
-  //             e.description.isNotEmpty ? e.description : 'Wala deskripsyon',
-  //           ),
-  //           subtitle: Text(
-  //             '${e.createdByFirstName} ${e.createdByMiddleName ?? ''} ${e.createdByLastName}',
-  //             style: const TextStyle(fontWeight: FontWeight.bold),
-  //           ),
-  //           trailing: Text('₱${e.amount.toStringAsFixed(2)}'),
-  //           onTap: () {
-  //             // Optional: open existing expense
-  //           },
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
 
   // -----------------------------
   // Widgets (Receipt, Input, Banner, etc.)
@@ -310,38 +248,14 @@ class ExpensesScreen extends ConsumerWidget {
               TextButton.icon(
                 onPressed: vm.removeReceipt,
                 icon: const Icon(Icons.delete, color: Colors.red),
-                label: const Text("Remove", style: TextStyle(color: Colors.red)),
+                label: const Text(
+                  "Remove",
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
             ],
           ),
       ],
-    );
-  }
-
-  Widget _banner(
-    String message,
-    IconData icon,
-    Color iconColor,
-    Color bgColor,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: iconColor),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(message, style: TextStyle(color: iconColor)),
-          ),
-        ],
-      ),
     );
   }
 
