@@ -21,25 +21,56 @@ class ThousandsFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) {
+    if (newValue.text.isEmpty) {
       return const TextEditingValue(
         text: '',
         selection: TextSelection.collapsed(offset: 0),
       );
     }
 
-    final formatted = _formatter.format(int.parse(digits));
-    final diff = formatted.length - digits.length;
-    int cursor = newValue.selection.end + diff;
-    cursor = cursor.clamp(0, formatted.length);
+    String text = newValue.text.replaceAll(',', '');
+
+    // Allow only digits and decimal
+    if (!RegExp(r'^[0-9.]*$').hasMatch(text)) {
+      return oldValue;
+    }
+
+    // Allow only one decimal point
+    if ('.'.allMatches(text).length > 1) {
+      return oldValue;
+    }
+
+    List<String> parts = text.split('.');
+    String integerPart = parts[0];
+    String decimalPart = parts.length > 1 ? parts[1] : '';
+
+    // Limit decimal to 2 digits
+    if (decimalPart.length > 2) {
+      decimalPart = decimalPart.substring(0, 2);
+    }
+
+    // Format integer part with commas
+    String formattedInteger = '';
+    if (integerPart.isNotEmpty) {
+      formattedInteger = _formatter.format(int.parse(integerPart));
+    }
+
+    String result = formattedInteger;
+
+    // VERY IMPORTANT: allow typing "120." while editing
+    if (text.endsWith('.')) {
+      result = "$formattedInteger.";
+    } else if (decimalPart.isNotEmpty) {
+      result = "$formattedInteger.$decimalPart";
+    }
 
     return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: cursor),
+      text: result,
+      selection: TextSelection.collapsed(offset: result.length),
     );
   }
 }
+
 
 class ExpensesScreen extends ConsumerWidget {
   const ExpensesScreen({super.key});
@@ -123,7 +154,9 @@ class ExpensesScreen extends ConsumerWidget {
               label: 'Presyo',
               controller: vm.amountController,
               showError: vm.showValidationErrors,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [ThousandsFormatter()],
             ),
             const SizedBox(height: 15),
