@@ -27,11 +27,13 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
+    final now = DateTime.now();
+
     final picked = await showDatePicker(
       context: context,
       initialDate: isStart ? start : end,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      lastDate: now, // Prevent future dates
     );
 
     if (picked != null) {
