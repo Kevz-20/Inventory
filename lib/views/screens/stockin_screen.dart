@@ -151,11 +151,16 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       child: TextField(
         readOnly: true,
         onTap: () async {
+          final today = DateTime.now();
+          final initialDate = vm.selectedDate.isAfter(today)
+              ? today
+              : vm.selectedDate;
+
           final picked = await showDatePicker(
             context: context,
-            initialDate: vm.selectedDate,
+            initialDate: initialDate,
             firstDate: DateTime(2020),
-            lastDate: DateTime(2100),
+            lastDate: today, // Prevent future dates
             builder: (context, child) => Theme(
               data: Theme.of(context).copyWith(
                 colorScheme: ColorScheme.light(
@@ -167,6 +172,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               child: child!,
             ),
           );
+
           if (picked != null) vm.pickDate(picked);
         },
         controller: TextEditingController(text: vm.formattedDate),

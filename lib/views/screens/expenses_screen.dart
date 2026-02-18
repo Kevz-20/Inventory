@@ -446,9 +446,11 @@ class ExpensesScreen extends ConsumerWidget {
   Future<void> _pickDate(BuildContext context, ExpensesViewModel vm) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: vm.selectedDate,
+      initialDate: vm.selectedDate.isAfter(DateTime.now())
+          ? DateTime.now()
+          : vm.selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now(), // Prevent future dates
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: ColorScheme.light(
