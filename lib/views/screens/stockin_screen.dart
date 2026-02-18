@@ -370,9 +370,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       height: 60,
       child: TextField(
         controller: controller,
-        keyboardType: TextInputType.number,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
+          FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
           ThousandsSeparatorInputFormatter(),
         ],
         style: const TextStyle(
@@ -517,21 +517,37 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    String digits = newValue.text.replaceAll(',', '');
-    if (digits.isEmpty) return const TextEditingValue();
-    final chars = digits.split('').reversed.toList();
-    final chunks = <String>[];
-    for (var i = 0; i < chars.length; i += 3) {
-      chunks.add(chars.skip(i).take(3).join());
+    String text = newValue.text.replaceAll(',', '');
+
+    // Allow only digits and a single dot
+    if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return oldValue;
+
+    if (text.isEmpty) return const TextEditingValue();
+
+    // Split into integer and decimal parts
+    final parts = text.split('.');
+    final intPart = parts[0];
+    final decPart = parts.length > 1 ? '.${parts[1]}' : '';
+
+    // Format integer part with commas
+    String formattedInt = '';
+    if (intPart.isNotEmpty) {
+      final chars = intPart.split('').reversed.toList();
+      final chunks = <String>[];
+      for (var i = 0; i < chars.length; i += 3) {
+        chunks.add(chars.skip(i).take(3).join());
+      }
+      formattedInt = chunks
+          .map((e) => e.split('').reversed.join())
+          .toList()
+          .reversed
+          .join(',');
     }
-    final formattedNumber = chunks
-        .map((e) => e.split('').reversed.join())
-        .toList()
-        .reversed
-        .join(',');
+
+    final result = '$formattedInt$decPart';
     return TextEditingValue(
-      text: formattedNumber,
-      selection: TextSelection.collapsed(offset: formattedNumber.length),
+      text: result,
+      selection: TextSelection.collapsed(offset: result.length),
     );
   }
 }
@@ -539,17 +555,25 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
 // ----------------- Number Formatter -----------------
 String _formatNumber(dynamic value) {
   if (value == null || value.toString().isEmpty) return '';
-  final digits = value.toString().replaceAll(RegExp(r'[^\d]'), '');
-  if (digits.isEmpty) return '';
-  final chars = digits.split('').reversed.toList();
+  final text = value.toString().replaceAll(',', '');
+  if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return value.toString();
+
+  final parts = text.split('.');
+  final intPart = parts[0];
+  final decPart = parts.length > 1 ? '.${parts[1]}' : '';
+
+  if (intPart.isEmpty) return text;
+
+  final chars = intPart.split('').reversed.toList();
   final chunks = <String>[];
   for (var i = 0; i < chars.length; i += 3) {
     chunks.add(chars.skip(i).take(3).join());
   }
-  final formattedNumber = chunks
+  final formattedInt = chunks
       .map((e) => e.split('').reversed.join())
       .toList()
       .reversed
       .join(',');
-  return formattedNumber;
+
+  return '$formattedInt$decPart';
 }
