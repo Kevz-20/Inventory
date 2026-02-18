@@ -456,6 +456,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: displayedProducts.length,
+      // Disable automatic keep-alives and repaint boundaries for offscreen
+      // items — reduces memory and layout overhead when the list is long.
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: false,
       itemBuilder: (context, index) =>
           _productCard(displayedProducts[index], vm),
     );
@@ -521,26 +525,45 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   );
 
   Widget _productImage(ProductModel product) {
+    const double size = 60;
+
+    final Widget placeholder = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 30,
+        color: Colors.grey,
+      ),
+    );
+
     if (product.image == null || product.image!.isEmpty) {
-      return Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(
-          Icons.image_not_supported,
-          size: 30,
-          color: Colors.grey,
-        ),
-      );
+      return placeholder;
     }
-    return Image.file(
-      File(product.image!),
-      width: 60,
-      height: 60,
-      fit: BoxFit.cover,
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.file(
+        File(product.image!),
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        // Decode at display resolution — avoids loading a full-res image into
+        // memory for every card in the list.
+        cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).toInt(),
+        cacheHeight: (size * MediaQuery.devicePixelRatioOf(context)).toInt(),
+        // Show placeholder until the first image frame is ready (lazy feel).
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) return child;
+          return placeholder;
+        },
+        // Gracefully fall back to placeholder if the file is missing/corrupt.
+        errorBuilder: (context, _, _) => placeholder,
+      ),
     );
   }
 

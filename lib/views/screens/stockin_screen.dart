@@ -15,9 +15,49 @@ class StockInScreen extends ConsumerStatefulWidget {
 }
 
 class _StockInScreenState extends ConsumerState<StockInScreen> {
+  // FIX #3: Persistent controller so it's never leaked or recreated on each build
+  late final TextEditingController _dateController;
+
+  @override
+  void initState() {
+    super.initState();
+    _dateController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _dateController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(stockInViewModelProvider);
+
+    // FIX #6: Listen for error/success messages and show SnackBars
+    ref.listen<StockInViewModel>(stockInViewModelProvider, (prev, next) {
+      if (next.errorMessage != null &&
+          next.errorMessage != prev?.errorMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      if (next.successMessage != null &&
+          next.successMessage != prev?.successMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    });
+
+    // FIX #3: Keep the persistent controller in sync with vm.formattedDate
+    _dateController.text = vm.formattedDate;
 
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
@@ -66,6 +106,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               controller: vm.quantityController,
               showError: vm.showValidationErrors,
               icon: Icons.shopping_cart,
+              // isPeso defaults to false → integer-only formatter used
             ),
             const SizedBox(height: 15),
             _imagePicker(vm, context),
@@ -86,7 +127,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ? null
               : () {
                   vm.triggerValidation();
-                  vm.saveProduct(context); // ✅ pass context
+                  // FIX #1: saveProduct() takes no arguments — removed context param
+                  vm.saveProduct();
                 },
           child: vm.isLoading
               ? const CircularProgressIndicator(color: Colors.white)
@@ -126,7 +168,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
           if (picked != null) vm.pickDate(picked);
         },
-        controller: TextEditingController(text: vm.formattedDate),
+        // FIX #3: Use the persistent controller instead of creating a new one each build
+        controller: _dateController,
         style: const TextStyle(
           color: Colors.black,
           fontWeight: FontWeight.bold,
@@ -228,6 +271,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     onTap: () async {
                       FocusScope.of(context).unfocus();
                       await Future.delayed(const Duration(milliseconds: 50));
+                      // FIX #2: Guard against widget being disposed after async gap
+                      if (!context.mounted) return;
                       onSelected(option);
                     },
                     child: Padding(
@@ -293,6 +338,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         FocusScope.of(context).unfocus();
         await Future.delayed(const Duration(milliseconds: 50));
 
+        // FIX #2: Guard against widget being disposed after async gap
+        if (!mounted) return;
+
         vm.productController.text = product.name;
         vm.autocompleteFieldController?.text = product.name;
 
@@ -312,20 +360,20 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     IconData? icon,
     bool isPeso = false,
   }) {
-    final allowDecimal = isPeso;
-
     return SizedBox(
       height: 60,
       child: TextField(
         controller: controller,
-        keyboardType: allowDecimal
+        // FIX #4: Decimal keyboard only for peso fields; integer keyboard for quantity
+        keyboardType: isPeso
             ? const TextInputType.numberWithOptions(decimal: true)
             : TextInputType.number,
         inputFormatters: [
-          if (allowDecimal) ...[
+          if (isPeso) ...[
             FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
             DecimalThousandsSeparatorInputFormatter(),
           ] else ...[
+            // FIX #4: Strictly digits-only formatter for integer (quantity) field
             FilteringTextInputFormatter.digitsOnly,
             ThousandsSeparatorInputFormatter(),
           ],
@@ -477,38 +525,22 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 }
 
 // ----------------- Thousands Separator Formatters -----------------
+
+/// FIX #4: Integer-only formatter — no decimal handling
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    String text = newValue.text.replaceAll(',', '');
-    if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return oldValue;
+    final text = newValue.text.replaceAll(',', '');
+    if (!RegExp(r'^\d*$').hasMatch(text)) return oldValue;
     if (text.isEmpty) return const TextEditingValue();
 
-    final parts = text.split('.');
-    final intPart = parts[0];
-    final decPart = parts.length > 1 ? '.${parts[1]}' : '';
-
-    String formattedInt = '';
-    if (intPart.isNotEmpty) {
-      final chars = intPart.split('').reversed.toList();
-      final chunks = <String>[];
-      for (var i = 0; i < chars.length; i += 3) {
-        chunks.add(chars.skip(i).take(3).join());
-      }
-      formattedInt = chunks
-          .map((e) => e.split('').reversed.join())
-          .toList()
-          .reversed
-          .join(',');
-    }
-
-    final result = '$formattedInt$decPart';
+    final formatted = _formatIntegerWithComma(text);
     return TextEditingValue(
-      text: result,
-      selection: TextSelection.collapsed(offset: result.length),
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

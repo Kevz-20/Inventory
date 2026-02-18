@@ -66,19 +66,27 @@ class StockInViewModel extends ChangeNotifier {
   ];
 
   bool isLoading = false;
+  String? errorMessage;
+  String? successMessage;
 
   StockInViewModel() {
     _init();
   }
 
+  /// -------------------- SAFE DISPOSE --------------------
   @override
   void dispose() {
     _isDisposed = true;
-    productController.dispose();
-    purchasePriceController.dispose();
-    sellingPriceController.dispose();
-    quantityController.dispose();
-    autocompleteFieldController?.dispose();
+
+    // Clear regular controllers
+    productController.clear();
+    purchasePriceController.clear();
+    sellingPriceController.clear();
+    quantityController.clear();
+
+    // Detach the autocomplete controller to prevent 'used after dispose' errors
+    autocompleteFieldController = null;
+
     super.dispose();
   }
 
@@ -90,6 +98,7 @@ class StockInViewModel extends ChangeNotifier {
     final db = await DBService.instance.database;
     _repository = StockInRepository(db);
     await loadProductNames();
+    if (_isDisposed) return; // ✅ prevent use after dispose
     isInitialized = true;
     safeNotifyListeners();
   }
@@ -108,12 +117,16 @@ class StockInViewModel extends ChangeNotifier {
       '${months[selectedDate.month - 1]} ${selectedDate.day}, ${selectedDate.year}';
 
   String get effectiveProductName {
-    final autoText = autocompleteFieldController?.text.trim() ?? '';
+    if (_isDisposed || autocompleteFieldController == null) {
+      return productController.text.trim();
+    }
+    final autoText = autocompleteFieldController!.text.trim();
     final manualText = productController.text.trim();
     return autoText.isNotEmpty ? autoText : manualText;
   }
 
   String? get selectedUnitType => null;
+
   void Function(String? p1)? get setUnitType => null;
 
   Future<void> pickImage(ImageSource source) async {
@@ -130,44 +143,16 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  // ------------------------
-  // SNACKBAR (same pattern as LoginViewModel)
-  // ------------------------
-  void showSnackBar(
-    BuildContext context,
-    String message, {
-    required bool success,
-  }) {
-    final color = success ? Colors.green : Colors.red;
-    final icon = success ? Icons.check_circle_outline : Icons.error_outline;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: color,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  // ------------------------
-  // MAIN SAVE FUNCTION
-  // ------------------------
-  Future<void> saveProduct(BuildContext context) async {
+  Future<void> saveProduct() async {
     debugPrint('saveProduct() called');
-
-    if (!isInitialized) return;
+    if (!isInitialized || _isDisposed) return;
 
     final productName = effectiveProductName;
 
+    // Validation: required fields
     if (productName.isEmpty || selectedCategory == null) {
-      showSnackBar(context, 'Please fill all required fields', success: false);
+      errorMessage = 'Please fill all required fields';
+      safeNotifyListeners();
       return;
     }
 
@@ -176,17 +161,16 @@ class StockInViewModel extends ChangeNotifier {
     final purchasePrice =
         double.tryParse(purchasePriceController.text.replaceAll(',', '')) ?? 0;
 
+    // Validation: selling price >= purchase price
     if (sellingPrice < purchasePrice) {
-      showSnackBar(
-        context,
-        'Selling price cannot be lower than purchase price.',
-        success: false,
-      );
+      errorMessage = 'Selling price cannot be lower than purchase price.';
+      safeNotifyListeners();
       return;
     }
 
     setLoading(true);
 
+    // Check if product already exists
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productName.toLowerCase()) {
@@ -215,46 +199,54 @@ class StockInViewModel extends ChangeNotifier {
     );
 
     try {
-      String message;
+      if (_isDisposed) return;
+
       if (selectedProduct != null) {
         await _repository.updateProduct(stock);
-        message = 'Product updated successfully';
+        if (_isDisposed) return;
+        successMessage = 'Product updated successfully';
       } else {
         await _repository.addProduct(stock);
-        message = 'Product saved successfully';
+        if (_isDisposed) return;
+        successMessage = 'Product saved successfully';
       }
 
+      // Refresh product names and clear form
       await loadProductNames();
+      if (_isDisposed) return;
       clearFields();
       selectedProduct = null;
-
-      setLoading(false);
-
-      if (context.mounted) {
-        showSnackBar(context, message, success: true);
-      }
     } catch (e) {
+      if (_isDisposed) return;
+      errorMessage = 'Failed to save product: $e';
+    } finally {
+      // ignore: control_flow_in_finally
+      if (_isDisposed) return;
       setLoading(false);
-      if (context.mounted) {
-        showSnackBar(context, 'Failed to save product: $e', success: false);
-      }
+      autoClearMessages();
     }
   }
 
   Future<List<ProductModel>> getAllStocks() async {
-    if (!isInitialized) return [];
+    if (!isInitialized || _isDisposed) return [];
     return await _repository.getProducts();
   }
 
   Future<void> deleteStock(int id) async {
     try {
       await _repository.deleteProduct(id);
+      if (_isDisposed) return;
       await loadProductNames();
-    } catch (_) {}
+    } catch (_) {
+      if (_isDisposed) return;
+      errorMessage = 'Failed to delete product';
+      safeNotifyListeners();
+    }
   }
 
   Future<void> loadProductNames() async {
     allProducts = await _repository.loadAllProducts();
+    if (_isDisposed) return;
     productNames = allProducts.map((p) => p.name).toList();
     safeNotifyListeners();
   }
@@ -269,7 +261,17 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
+  void autoClearMessages() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_isDisposed) return;
+      errorMessage = null;
+      successMessage = null;
+      safeNotifyListeners();
+    });
+  }
+
   void clearFields() {
+    if (_isDisposed) return; // ✅ prevent using disposed controllers
     productController.clear();
     purchasePriceController.clear();
     sellingPriceController.clear();
@@ -278,6 +280,7 @@ class StockInViewModel extends ChangeNotifier {
     selectedCategory = null;
     productImage = null;
     selectedProduct = null;
+    errorMessage = null;
     showValidationErrors = false;
     safeNotifyListeners();
   }
