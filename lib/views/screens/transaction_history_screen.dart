@@ -101,7 +101,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       TransactionCategory.expenses,
                       TransactionCategory.sales,
                       TransactionCategory.capitalManagement,
-                      TransactionCategory.utangCustomerPayment,
+                      TransactionCategory.customerPayment,
+                      TransactionCategory.ownerPayment,
                     ],
                     selectedCategory: vm.selectedCategory,
                     onCategorySelected: (cat) => vm.setSelectedCategory(cat),
@@ -150,17 +151,33 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final isHalin = tx.type == 'Halin';
     final isExpense = tx.type == 'Gasto';
     final isCapital = tx.type == 'Capital';
-    final isUtangCustomerPayment = tx.type == 'Utang Customer Payment';
+    final isCustomerPayment = tx.type == 'Customer Payment';
     final isOwnerPayment = tx.type == 'Owner Payment';
-    final isDownPayment = tx.type == 'Down Payment';
+    final isDownpayment = tx.type == 'Downpayment';
+    final typeLabel = isDownpayment
+        ? 'Owner Payment'
+        : isHalin
+        ? 'Halin'
+        : isExpense
+        ? 'Gasto'
+        : isCapital
+        ? 'Capital'
+        : isCustomerPayment
+        ? 'Customer Payment'
+        : isOwnerPayment
+        ? 'Owner Payment'
+        : tx.type;
+    final descriptionLabel = isDownpayment
+        ? '${tx.description ?? ''}  downpayment'
+        : (tx.description ?? '');
 
     Color typeColor = isHalin
         ? Colors.green
         : isExpense
         ? Colors.red
-        : isUtangCustomerPayment
+        : isCustomerPayment
         ? Colors.green
-        : (isOwnerPayment || isDownPayment)
+        : (isOwnerPayment || isDownpayment)
         ? Colors.red
         : Colors.blue;
 
@@ -205,17 +222,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             Row(
               children: [
                 Text(
-                  isHalin
-                      ? 'Halin'
-                      : isExpense
-                      ? 'Gasto'
-                      : isCapital
-                      ? 'Capital'
-                      : isUtangCustomerPayment
-                      ? 'Customer Payment'
-                      : isOwnerPayment
-                      ? 'Owner Payment'
-                      : 'Down Payment',
+                  typeLabel,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -224,7 +231,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  (isCapital || isHalin || isUtangCustomerPayment)
+                  (isCapital || isHalin || isCustomerPayment)
                       ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
                       : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
                   style: TextStyle(
@@ -246,10 +253,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   child: Text(
                     (isCapital ||
                             isExpense ||
-                            isUtangCustomerPayment ||
+                            isCustomerPayment ||
                             isOwnerPayment ||
-                            isDownPayment)
-                        ? (tx.description ?? '')
+                            isDownpayment)
+                        ? descriptionLabel
                         : (tx.productName ?? 'Product'),
                     style: const TextStyle(
                       fontSize: 14,
@@ -530,9 +537,10 @@ class _TransactionDetailsSheet extends StatelessWidget {
     final isExpense = transaction.type == 'Gasto';
     final isHalin = transaction.type == 'Halin';
     final isCapital = transaction.type == 'Capital';
-    final isUtangCustomerPayment = transaction.type == 'Utang Customer Payment';
+    final isCustomerPayment = transaction.type == 'Customer Payment';
     final isOwnerPayment = transaction.type == 'Owner Payment';
-    final isDownPayment = transaction.type == 'Down Payment';
+    final isDownpayment = transaction.type == 'Downpayment';
+    final detailTypeLabel = isDownpayment ? 'Owner Payment' : transaction.type;
     final NumberFormat currency = NumberFormat.currency(
       locale: 'en_PH',
       symbol: '₱',
@@ -562,7 +570,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
               ),
             ),
             Text(
-              '${transaction.type} Details',
+              '$detailTypeLabel Details',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -573,7 +581,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
               children: [
                 const Text('Amount:', style: TextStyle(fontSize: 16)),
                 Text(
-                  '${(isCapital || isHalin || isUtangCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+                  '${(isCapital || isHalin || isCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -581,9 +589,9 @@ class _TransactionDetailsSheet extends StatelessWidget {
                         ? Colors.green
                         : isExpense
                         ? Colors.red
-                        : isUtangCustomerPayment
+                        : isCustomerPayment
                         ? Colors.green
-                        : (isOwnerPayment || isDownPayment)
+                        : (isOwnerPayment || isDownpayment)
                         ? Colors.red
                         : Colors.blue,
                   ),

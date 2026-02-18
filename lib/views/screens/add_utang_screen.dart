@@ -524,6 +524,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
               keyboardType: TextInputType.number,
               icon: Icons.calendar_today,
               onChanged: (_) => calculateInstallment(),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 12),
             Row(

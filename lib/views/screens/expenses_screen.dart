@@ -262,29 +262,24 @@ class ExpensesScreen extends ConsumerWidget {
           ),
         ),
         if (vm.receiptImage != null)
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _pickReceiptImage(context, vm),
-                  icon: const Icon(Icons.camera_alt, color: AppColors.primary),
-                  label: const Text(
-                    "Retake",
-                    style: TextStyle(color: AppColors.primary),
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () => _pickReceiptImage(context, vm),
+                icon: const Icon(Icons.camera_alt, color: AppColors.primary),
+                label: const Text(
+                  "Retake",
+                  style: TextStyle(color: AppColors.primary),
                 ),
-                TextButton.icon(
-                  onPressed: vm.removeReceipt,
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text(
-                    "Remove",
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: vm.removeReceipt,
+                icon: const Icon(Icons.delete, color: Colors.red),
+                label: const Text("Remove", style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
       ],
     );
