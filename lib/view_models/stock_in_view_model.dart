@@ -66,8 +66,6 @@ class StockInViewModel extends ChangeNotifier {
   ];
 
   bool isLoading = false;
-  String? errorMessage;
-  String? successMessage;
 
   StockInViewModel() {
     _init();
@@ -109,7 +107,6 @@ class StockInViewModel extends ChangeNotifier {
   String get formattedDate =>
       '${months[selectedDate.month - 1]} ${selectedDate.day}, ${selectedDate.year}';
 
-  /// ✅ THIS FIXES YOUR ERROR
   String get effectiveProductName {
     final autoText = autocompleteFieldController?.text.trim() ?? '';
     final manualText = productController.text.trim();
@@ -117,7 +114,6 @@ class StockInViewModel extends ChangeNotifier {
   }
 
   String? get selectedUnitType => null;
-
   void Function(String? p1)? get setUnitType => null;
 
   Future<void> pickImage(ImageSource source) async {
@@ -134,17 +130,44 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  Future<void> saveProduct() async {
+  // ------------------------
+  // SNACKBAR (same pattern as LoginViewModel)
+  // ------------------------
+  void showSnackBar(
+    BuildContext context,
+    String message, {
+    required bool success,
+  }) {
+    final color = success ? Colors.green : Colors.red;
+    final icon = success ? Icons.check_circle_outline : Icons.error_outline;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: color,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // ------------------------
+  // MAIN SAVE FUNCTION
+  // ------------------------
+  Future<void> saveProduct(BuildContext context) async {
     debugPrint('saveProduct() called');
 
     if (!isInitialized) return;
 
     final productName = effectiveProductName;
 
-    // Validation: required fields
     if (productName.isEmpty || selectedCategory == null) {
-      errorMessage = 'Please fill all required fields';
-      safeNotifyListeners();
+      showSnackBar(context, 'Please fill all required fields', success: false);
       return;
     }
 
@@ -153,16 +176,17 @@ class StockInViewModel extends ChangeNotifier {
     final purchasePrice =
         double.tryParse(purchasePriceController.text.replaceAll(',', '')) ?? 0;
 
-    // Validation: selling price >= purchase price
     if (sellingPrice < purchasePrice) {
-      errorMessage = 'Selling price cannot be lower than purchase price.';
-      safeNotifyListeners();
+      showSnackBar(
+        context,
+        'Selling price cannot be lower than purchase price.',
+        success: false,
+      );
       return;
     }
 
     setLoading(true);
 
-    // Check if product already exists
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productName.toLowerCase()) {
@@ -178,14 +202,12 @@ class StockInViewModel extends ChangeNotifier {
     final int newQuantity =
         int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0;
 
-    // Build the ProductModel to save
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productName,
       category: selectedCategory!,
       sellingPrice: double.tryParse(sellingPriceText) ?? 0,
       purchasePrice: double.tryParse(purchasePriceText) ?? 0,
-      // ✅ Add new quantity to existing quantity if product exists
       quantity: (selectedProduct?.quantity ?? 0) + newQuantity,
       image: productImage?.path ?? selectedProduct?.image,
       createdAt: selectedProduct?.createdAt ?? DateTime.now(),
@@ -193,25 +215,29 @@ class StockInViewModel extends ChangeNotifier {
     );
 
     try {
+      String message;
       if (selectedProduct != null) {
-        // Update existing product with added quantity
         await _repository.updateProduct(stock);
-        successMessage = 'Product updated successfully';
+        message = 'Product updated successfully';
       } else {
-        // Add new product
         await _repository.addProduct(stock);
-        successMessage = 'Product saved successfully';
+        message = 'Product saved successfully';
       }
 
-      // Refresh product names and clear form
       await loadProductNames();
       clearFields();
       selectedProduct = null;
-    } catch (e) {
-      errorMessage = 'Failed to save product: $e';
-    } finally {
+
       setLoading(false);
-      autoClearMessages();
+
+      if (context.mounted) {
+        showSnackBar(context, message, success: true);
+      }
+    } catch (e) {
+      setLoading(false);
+      if (context.mounted) {
+        showSnackBar(context, 'Failed to save product: $e', success: false);
+      }
     }
   }
 
@@ -224,9 +250,7 @@ class StockInViewModel extends ChangeNotifier {
     try {
       await _repository.deleteProduct(id);
       await loadProductNames();
-    } catch (_) {
-      errorMessage = 'Failed to delete product';
-    }
+    } catch (_) {}
   }
 
   Future<void> loadProductNames() async {
@@ -245,15 +269,6 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  void autoClearMessages() {
-    Future.delayed(const Duration(seconds: 3), () {
-      if (_isDisposed) return;
-      errorMessage = null;
-      successMessage = null;
-      safeNotifyListeners();
-    });
-  }
-
   void clearFields() {
     productController.clear();
     purchasePriceController.clear();
@@ -263,7 +278,6 @@ class StockInViewModel extends ChangeNotifier {
     selectedCategory = null;
     productImage = null;
     selectedProduct = null;
-    errorMessage = null;
     showValidationErrors = false;
     safeNotifyListeners();
   }

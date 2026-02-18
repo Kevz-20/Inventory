@@ -19,7 +19,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(stockInViewModelProvider);
 
-    // Get system bottom padding for adaptive layout
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     if (!vm.isInitialized) {
@@ -33,21 +32,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            if (vm.successMessage != null)
-              _messageBox(
-                color: Colors.green.shade100,
-                icon: Icons.check_circle,
-                iconColor: AppColors.success,
-                text: vm.successMessage!,
-              ),
-            if (vm.errorMessage != null)
-              _messageBox(
-                color: Colors.red.shade100,
-                icon: Icons.error,
-                iconColor: AppColors.error,
-                text: vm.errorMessage!,
-              ),
-
             _inputDate(vm),
             const SizedBox(height: 15),
             _inputDropdown(
@@ -61,7 +45,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             const SizedBox(height: 15),
             _autocompleteProduct(vm),
             const SizedBox(height: 15),
-
             _inputNumberField(
               label: 'Presyo sa pagpalit',
               controller: vm.purchasePriceController,
@@ -90,12 +73,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          20 + bottomPadding, // Add system bottom padding
-        ),
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPadding),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
@@ -108,39 +86,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ? null
               : () {
                   vm.triggerValidation();
-                  vm.saveProduct();
+                  vm.saveProduct(context); // ✅ pass context
                 },
           child: vm.isLoading
               ? const CircularProgressIndicator(color: Colors.white)
               : const Text('Save', style: TextStyle(fontSize: 18)),
         ),
-      ),
-    );
-  }
-
-  // ----------------- Helper Widgets -----------------
-  Widget _messageBox({
-    required Color color,
-    required IconData icon,
-    required Color iconColor,
-    required String text,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text, style: TextStyle(color: iconColor)),
-          ),
-        ],
       ),
     );
   }
@@ -160,7 +111,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             context: context,
             initialDate: initialDate,
             firstDate: DateTime(2020),
-            lastDate: today, // Prevent future dates
+            lastDate: today,
             builder: (context, child) => Theme(
               data: Theme.of(context).copyWith(
                 colorScheme: ColorScheme.light(
@@ -301,7 +252,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         );
       },
       fieldViewBuilder: (context, fieldController, focusNode, onSubmit) {
-        // store controller reference in viewmodel (optional but recommended)
         vm.autocompleteFieldController = fieldController;
 
         return SizedBox(
@@ -309,7 +259,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: TextField(
             controller: fieldController,
             focusNode: focusNode,
-            keyboardType: TextInputType.text, // allows letters + numbers
+            keyboardType: TextInputType.text,
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               labelText: 'Pangalan sa produkto',
@@ -327,9 +277,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             ),
             onChanged: (value) {
               vm.productController.text = value;
-
-              // 🔥 If typed text does not exactly match selected product,
-              // reset selectedProduct (meaning: NEW product)
               if (vm.selectedProduct != null &&
                   vm.selectedProduct!.name.toLowerCase() !=
                       value.toLowerCase()) {
@@ -339,7 +286,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ),
         );
       },
-
       onSelected: (value) async {
         final product = vm.allProducts.firstWhere((p) => p.name == value);
         vm.selectedProduct = product;
@@ -494,10 +440,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             ),
             clipBehavior: Clip.hardEdge,
             child: vm.productImage != null
-                ? Image.file(
-                    vm.productImage!,
-                    fit: BoxFit.cover,
-                  )
+                ? Image.file(vm.productImage!, fit: BoxFit.cover)
                 : const Center(
                     child: Icon(Icons.camera_alt, size: 50, color: Colors.grey),
                   ),
@@ -533,7 +476,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 }
 
-// ----------------- Thousands Separator Formatter -----------------
+// ----------------- Thousands Separator Formatters -----------------
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -541,18 +484,13 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     String text = newValue.text.replaceAll(',', '');
-
-    // Allow only digits and a single dot
     if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return oldValue;
-
     if (text.isEmpty) return const TextEditingValue();
 
-    // Split into integer and decimal parts
     final parts = text.split('.');
     final intPart = parts[0];
     final decPart = parts.length > 1 ? '.${parts[1]}' : '';
 
-    // Format integer part with commas
     String formattedInt = '';
     if (intPart.isNotEmpty) {
       final chars = intPart.split('').reversed.toList();
@@ -609,5 +547,9 @@ String _formatIntegerWithComma(String digits) {
   for (var i = 0; i < chars.length; i += 3) {
     chunks.add(chars.skip(i).take(3).join());
   }
-  return chunks.map((e) => e.split('').reversed.join()).toList().reversed.join(',');
+  return chunks
+      .map((e) => e.split('').reversed.join())
+      .toList()
+      .reversed
+      .join(',');
 }
