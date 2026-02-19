@@ -121,12 +121,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          16 + bottomPadding, // Add system bottom padding
-        ),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         child: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(12),
@@ -134,8 +129,9 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
           child: SizedBox(
             height: 50,
             child: ElevatedButton.icon(
-              onPressed: () {
-                debugPrint("Download Balance Sheet tapped");
+              onPressed: () async {
+                final vm = ref.read(balanceSheetProvider);
+                await vm.exportPdf();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFED1C24),

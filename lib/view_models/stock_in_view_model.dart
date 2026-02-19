@@ -74,11 +74,16 @@ class StockInViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    productController.dispose();
-    purchasePriceController.dispose();
-    sellingPriceController.dispose();
-    quantityController.dispose();
-    autocompleteFieldController?.dispose();
+
+    // Clear regular controllers
+    productController.clear();
+    purchasePriceController.clear();
+    sellingPriceController.clear();
+    quantityController.clear();
+
+    // Detach the autocomplete controller to prevent 'used after dispose' errors
+    autocompleteFieldController = null;
+
     super.dispose();
   }
 
