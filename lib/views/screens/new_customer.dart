@@ -25,16 +25,16 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
 
     // Show snackbar safely
     if (vm.snackbarMessage != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(vm.snackbarMessage!),
-          backgroundColor: AppColors.error, // 🔴 RED
-        ),
-      );
-      vmNotifier.snackbarMessage = null;
-    });
-  }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.snackbarMessage!),
+            backgroundColor: AppColors.error, // 🔴 RED
+          ),
+        );
+        vmNotifier.snackbarMessage = null;
+      });
+    }
 
     // Sort cities alphabetically
     final sortedCities = List<CityModel>.from(vm.cities)
@@ -161,21 +161,23 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                         // ✅ If validation passes
                         final success = await vmNotifier.saveCustomer();
 
-                          if (!mounted) return;
+                        if (!mounted) return;
 
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Customer saved successfully!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
+                        if (success) {
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Customer saved successfully!'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
 
-                            // Clear all fields
-                            vmNotifier.resetFields();
+                          // Clear all fields
+                          vmNotifier.resetFields();
 
-                            Navigator.pop(context, true);
-                          }
+                          // ignore: use_build_context_synchronously
+                          Navigator.pop(context, true);
+                        }
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
