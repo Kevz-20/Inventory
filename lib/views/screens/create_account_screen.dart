@@ -48,40 +48,39 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 ),
               ),
               onPressed: !vm.isLoading
-                  ? () async {
-                      vmNotifier.setLoading(true);
+                ? () async {
+                    vmNotifier.setLoading(true);
 
-                      bool success = await vm.createAccount();
+                    bool success = await vm.createAccount(context);
 
-                      vmNotifier.setLoading(false);
+                    vmNotifier.setLoading(false);
 
-                      if (success) {
-                        if (!context.mounted) return;
+                    if (success) {
+                      if (!context.mounted) return;
 
-                        final account = Account(
-                          id: 0,
-                          firstName: vm.firstNameController.text.trim(),
-                          middleName:
-                              vm.middleNameController.text.trim().isEmpty
-                              ? null
-                              : vm.middleNameController.text.trim(),
-                          lastName: vm.lastNameController.text.trim(),
-                          mobileNumber: vm.mobileController.text.trim(),
-                          pin: vm.pinController.text.trim(),
-                          securityAnswer: vm.answerController.text.trim(),
-                        );
-                        await accountRepo.updateAccount(account);
+                      final account = Account(
+                        id: 0,
+                        firstName: vm.firstNameController.text.trim(),
+                        middleName: vm.middleNameController.text.trim().isEmpty
+                            ? null
+                            : vm.middleNameController.text.trim(),
+                        lastName: vm.lastNameController.text.trim(),
+                        mobileNumber: vm.mobileController.text.trim(),
+                        pin: vm.pinController.text.trim(),
+                        securityAnswer: vm.answerController.text.trim(),
+                      );
+                      await accountRepo.updateAccount(account);
 
-                        vm.clearFields();
+                      vm.clearFields();
 
-                        final loginVM = ref.read(loginViewModelProvider);
-                        await loginVM.loadSavedMobile();
+                      final loginVM = ref.read(loginViewModelProvider);
+                      await loginVM.loadSavedMobile();
 
-                        if (!context.mounted) return;
-                        context.go('/login');
-                      }
+                      if (!context.mounted) return;
+                      context.go('/login');
                     }
-                  : null,
+                  }
+                : null,
               child: vm.isLoading
                   ? const CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation(Colors.white),
