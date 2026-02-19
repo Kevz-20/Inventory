@@ -18,6 +18,25 @@ class CreateAccountRepository {
     return result.isNotEmpty;
   }
 
+  // ---------------- CHECK IF FULL NAME EXISTS ----------------
+  Future<bool> isFullNameExists(
+    String firstName,
+    String? middleName,
+    String lastName,
+  ) async {
+    final db = await _dbService.database;
+
+    // Use COALESCE to treat NULL middle names as empty string
+    final result = await db.query(
+      'account',
+      where: 'first_name = ? AND COALESCE(middle_name, "") = ? AND last_name = ?',
+      whereArgs: [firstName.trim(), middleName?.trim() ?? '', lastName.trim()],
+      limit: 1,
+    );
+
+    return result.isNotEmpty;
+  }
+
   // ---------------- CREATE NEW ACCOUNT ----------------
   Future<int> createAccount(Account account) async {
     final db = await _dbService.database;

@@ -90,70 +90,96 @@ class NewCustomerViewModel extends ChangeNotifier {
 
   /// Save customer to database
   Future<bool> saveCustomer() async {
-    if (_repo == null) {
-      _setSnackbar('Database not ready, try again later');
+  if (_repo == null) {
+    _setSnackbar('Database not ready, try again later');
+    return false;
+  }
+
+  final firstName = firstNameController.text.trim();
+  final middleName = middleNameController.text.trim();
+  final lastName = lastNameController.text.trim();
+  final contact = contactController.text.trim();
+
+  final regex = RegExp(r'^09\d{9}$');
+
+  if (firstName.isEmpty) {
+    _setSnackbar('First Name is required');
+    return false;
+  }
+
+  if (lastName.isEmpty) {
+    _setSnackbar('Last Name is required');
+    return false;
+  }
+
+  if (!regex.hasMatch(contact)) {
+    _setSnackbar('Contact number must start with 09 and be 11 digits');
+    return false;
+  }
+
+  isLoading = true;
+  notifyListeners();
+
+  try {
+    // ✅ CHECK DUPLICATES FIRST
+    final phoneExists = await _repo!.isPhoneExists(contact);
+    final nameExists =
+        await _repo!.isNameExists(firstName, middleName, lastName);
+
+    if (phoneExists && nameExists) {
+      isLoading = false;
+      _setSnackbar('Customer name and phone number already exist.');
       return false;
     }
 
-    final contact = contactController.text.trim();
-    final regex = RegExp(r'^09\d{9}$');
-
-    if (firstNameController.text.trim().isEmpty) {
-      _setSnackbar('First Name is required');
+    if (phoneExists) {
+      isLoading = false;
+      _setSnackbar('Phone number already exists.');
       return false;
     }
 
-    if (lastNameController.text.trim().isEmpty) {
-      _setSnackbar('Last Name is required');
+    if (nameExists) {
+      isLoading = false;
+      _setSnackbar('Customer name already exists.');
       return false;
     }
-
-    if (!regex.hasMatch(contact)) {
-      _setSnackbar('Contact number must start with 09 and be 11 digits');
-      return false;
-    }
-
-    isLoading = true;
-    notifyListeners();
 
     final customer = {
-      'first_name': firstNameController.text.trim(),
-      'middle_name': middleNameController.text.trim(),
-      'last_name': lastNameController.text.trim(),
+      'first_name': firstName,
+      'middle_name': middleName,
+      'last_name': lastName,
       'phone_number': contact,
       'municipality': municipalityController.text.trim(),
       'barangay': barangayController.text.trim(),
       'landmark': landmarkController.text.trim(),
     };
 
-    try {
-      await _repo!.insertCustomer(customer);
+    await _repo!.insertCustomer(customer);
 
-      // Clear fields
-      firstNameController.clear();
-      middleNameController.clear();
-      lastNameController.clear();
-      contactController.clear();
-      municipalityController.clear();
-      barangayController.clear();
-      landmarkController.clear();
-      selectedCity = null;
-      selectedBarangay = null;
-      barangays = [];
+    // Clear fields
+    firstNameController.clear();
+    middleNameController.clear();
+    lastNameController.clear();
+    contactController.clear();
+    municipalityController.clear();
+    barangayController.clear();
+    landmarkController.clear();
+    selectedCity = null;
+    selectedBarangay = null;
+    barangays = [];
 
-      isLoading = false;
-      notifyListeners();
+    isLoading = false;
+    notifyListeners();
 
-      _setSnackbar('Customer added successfully!');
-      return true;
-    } catch (e) {
-      debugPrint('Error saving customer: $e');
-      isLoading = false;
-      _setSnackbar('Failed to add customer!');
-      notifyListeners();
-      return false;
-    }
+    return true;
+  } catch (e) {
+    debugPrint('Error saving customer: $e');
+    isLoading = false;
+    _setSnackbar('Unexpected error occurred.');
+    return false;
   }
+}
+
 
   @override
   void dispose() {

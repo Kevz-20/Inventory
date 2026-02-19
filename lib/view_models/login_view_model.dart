@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/app_colors.dart';
 import '../providers/current_mobile_number_provider.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
@@ -165,35 +166,101 @@ class LoginViewModel extends ChangeNotifier {
   }
 
   Future<void> changeMobileNumber(BuildContext context, {WidgetRef? ref}) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Change Mobile Number"),
-        content: TextField(
-          controller: controller,
-          maxLength: 11,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(hintText: "09XXXXXXXXX"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final number = controller.text.trim();
-              if (number.length == 11) {
-                Navigator.pop(context, number);
-              }
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      ),
-    );
+  final controller = TextEditingController(text: mobileNumber);
+  String? validationError;
 
-    if (result != null) await saveMobileNumber(result, ref: ref);
-  }
+  final result = await showDialog<String>(
+    context: context,
+    barrierDismissible: false, // User must tap Save or Cancel
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.white,
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          title: const Text(
+            "Change Mobile Number",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Enter your new mobile number below:",
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLength: 11,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  hintText: "09XXXXXXXXX",
+                  counterText: "",
+                  errorText: validationError,
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: const TextStyle(fontSize: 16, letterSpacing: 1),
+                onChanged: (_) {
+                  if (validationError != null) {
+                    setState(() {
+                      validationError = null;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryLight,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                final number = controller.text.trim();
+                if (number.length != 11 || !RegExp(r'^09\d{9}$').hasMatch(number)) {
+                  setState(() {
+                    validationError = "Enter a valid 11-digit mobile number";
+                  });
+                  return;
+                }
+                Navigator.pop(context, number);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+
+  if (result != null) await saveMobileNumber(result, ref: ref);
+}
+
 }

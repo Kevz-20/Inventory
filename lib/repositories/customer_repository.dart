@@ -18,7 +18,7 @@ class CustomerRepository {
     return await _db.insert(
       'customer',
       customerWithDefaults,
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      conflictAlgorithm: ConflictAlgorithm.abort,
     );
   }
 
@@ -101,5 +101,35 @@ class CustomerRepository {
     );
     if (result.isNotEmpty) return result.first;
     return null;
+  }
+
+  /// Check if phone number already exists
+  Future<bool> isPhoneExists(String phone) async {
+    final result = await _db.query(
+      'customer',
+      where: 'phone_number = ?',
+      whereArgs: [phone],
+      limit: 1,
+    );
+    return result.isNotEmpty;
+  }
+
+/// Check if full name already exists
+  Future<bool> isNameExists(
+    String firstName,
+    String? middleName,
+    String lastName,
+  ) async {
+    final result = await _db.query(
+      'customer',
+      where: 'first_name = ? AND middle_name = ? AND last_name = ?',
+      whereArgs: [
+        firstName.trim(),
+        middleName?.trim() ?? '',
+        lastName.trim(),
+      ],
+      limit: 1,
+    );
+    return result.isNotEmpty;
   }
 }

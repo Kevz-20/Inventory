@@ -7,14 +7,36 @@ import '../services/db_service.dart';
 
 final createAccountProvider =
     ChangeNotifierProvider.autoDispose<CreateAccountViewModel>((ref) {
-      final dbService = DBService.instance;
-      final repository = CreateAccountRepository(dbService);
-      return CreateAccountViewModel(repository);
-    });
+  final dbService = DBService.instance;
+  final repository = CreateAccountRepository(dbService);
+  return CreateAccountViewModel(repository);
+});
 
 class CreateAccountViewModel extends ChangeNotifier {
   final CreateAccountRepository _repository;
 
+  // -------------------- Dispose Safety --------------------
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    // Dispose controllers
+    mobileController.dispose();
+    pinController.dispose();
+    confirmPinController.dispose();
+    firstNameController.dispose();
+    middleNameController.dispose();
+    lastNameController.dispose();
+    answerController.dispose();
+    super.dispose();
+  }
+
+  void safeNotifyListeners() {
+    if (!_disposed) notifyListeners();
+  }
+
+  // ========================================================
   CreateAccountViewModel(this._repository) {
     loadSecurityQuestions();
 
@@ -88,72 +110,77 @@ class CreateAccountViewModel extends ChangeNotifier {
   void setSelectedQuestion(String? value) {
     selectedQuestion = value;
     questionError = null;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   // ================== CREATE ACCOUNT ==================
-  Future<bool> createAccount() async {
-    submitted = true;
-    if (!_validateForm()) return false;
+  Future<bool> createAccount(BuildContext context) async {
+  submitted = true;
+  if (!_validateForm()) return false;
 
-    final mobile = mobileController.text.trim();
+  final mobile = mobileController.text.trim();
+  final firstName = firstNameController.text.trim();
+  final middleName = middleNameController.text.trim().isEmpty
+      ? null
+      : middleNameController.text.trim();
+  final lastName = lastNameController.text.trim();
 
-    if (await _repository.isPhoneNumberExists(mobile)) {
-      showResponseMessage('Mobile Number Already Exist');
-      return false;
-    }
-
-    setLoading(true);
-    errorMessage = null;
-
-    try {
-      final account = Account(
-        mobileNumber: mobile,
-        pin: pinController.text.trim(),
-        firstName: firstNameController.text.trim(),
-        middleName: middleNameController.text.trim().isEmpty
-            ? null
-            : middleNameController.text.trim(),
-        lastName: lastNameController.text.trim(),
-        securityQuestionId: selectedQuestion != null
-            ? questions.indexOf(selectedQuestion!) + 1
-            : null,
-        securityAnswer: answerController.text.trim(),
-      );
-
-      await _repository.createAccount(account);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('mobileNumber', account.mobileNumber);
-      final fullNameParts = [
-        account.firstName,
-        if ((account.middleName ?? '').isNotEmpty) account.middleName!,
-        account.lastName,
-      ];
-      await prefs.setString('fullName', fullNameParts.join(' '));
-
-      clearFields();
-      showResponseMessage("Account created successfully!", success: true);
-      return true;
-    } catch (e) {
-      final error = e.toString().toLowerCase();
-      final isDuplicateMobile =
-          error.contains('mobile number already exists') ||
-          error.contains('mobile number already exist') ||
-          (error.contains('unique constraint failed') &&
-              error.contains('account.mobile_number'));
-
-      showResponseMessage(
-        isDuplicateMobile
-            ? 'Mobile Number Already Exist'
-            : 'Failed to create account',
-      );
-
-      return false;
-    } finally {
-      setLoading(false);
-    }
+  if (await _repository.isPhoneNumberExists(mobile)) {
+    showSnackBar(context, 'Mobile Number Already Exist');
+    return false;
   }
+
+  if (await _repository.isFullNameExists(firstName, middleName, lastName)) {
+    showSnackBar(context, 'Full Name Already Exist');
+    return false;
+  }
+
+  setLoading(true);
+
+  try {
+    final account = Account(
+      mobileNumber: mobile,
+      pin: pinController.text.trim(),
+      firstName: firstName,
+      middleName: middleName,
+      lastName: lastName,
+      securityQuestionId: selectedQuestion != null
+          ? questions.indexOf(selectedQuestion!) + 1
+          : null,
+      securityAnswer: answerController.text.trim(),
+    );
+
+    await _repository.createAccount(account);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('mobileNumber', account.mobileNumber);
+    final fullNameParts = [
+      account.firstName,
+      if ((account.middleName ?? '').isNotEmpty) account.middleName!,
+      account.lastName,
+    ];
+    await prefs.setString('fullName', fullNameParts.join(' '));
+
+    clearFields();
+    showSnackBar(context, "Account created successfully!", success: true);
+    return true;
+  } catch (e) {
+    final error = e.toString().toLowerCase();
+    final isDuplicateMobile =
+        error.contains('mobile number already exists') ||
+        error.contains('mobile number already exist') ||
+        (error.contains('unique constraint failed') &&
+            error.contains('account.mobile_number'));
+
+    showSnackBar(
+      context,
+      isDuplicateMobile ? 'Mobile Number Already Exist' : 'Failed to create account',
+    );
+    return false;
+  } finally {
+    setLoading(false);
+  }
+}
 
   // ================== VALIDATION ==================
   bool _validateForm() {
@@ -165,14 +192,14 @@ class CreateAccountViewModel extends ChangeNotifier {
 
     bool valid =
         mobileError == null &&
-        pinError == null &&
-        confirmPinError == null &&
-        firstNameError == null &&
-        lastNameError == null &&
-        answerError == null &&
-        questionError == null;
+            pinError == null &&
+            confirmPinError == null &&
+            firstNameError == null &&
+            lastNameError == null &&
+            answerError == null &&
+            questionError == null;
 
-    notifyListeners();
+    safeNotifyListeners();
     return valid;
   }
 
@@ -185,7 +212,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     } else {
       mobileError = null;
     }
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void _validatePin() {
@@ -205,7 +232,7 @@ class CreateAccountViewModel extends ChangeNotifier {
     } else {
       confirmPinError = null;
     }
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void _validateNameFields() {
@@ -216,27 +243,27 @@ class CreateAccountViewModel extends ChangeNotifier {
     lastNameError = lastNameController.text.isEmpty
         ? 'Please enter last name'
         : null;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void _validateAnswer() {
     answerError = answerController.text.isEmpty
         ? 'Please enter your answer'
         : null;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void _validateQuestion() {
     questionError = (selectedQuestion == null || selectedQuestion!.isEmpty)
         ? 'Please select a question'
         : null;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   // ================== HELPERS ==================
   void setLoading(bool value) {
     isLoading = value;
-    notifyListeners();
+    safeNotifyListeners();
   }
 
   void clearFieldError(TextEditingController controller) {
@@ -247,8 +274,27 @@ class CreateAccountViewModel extends ChangeNotifier {
     if (controller == middleNameController) middleNameError = null;
     if (controller == lastNameController) lastNameError = null;
     if (controller == answerController) answerError = null;
-    notifyListeners();
+    safeNotifyListeners();
   }
+
+  void showSnackBar(BuildContext context, String message, {bool success = false}) {
+  final color = success ? Colors.green : Colors.red;
+  final icon = success ? Icons.check_circle_outline : Icons.error_outline;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message)),
+        ],
+      ),
+      backgroundColor: color,
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
 
   void showResponseMessage(
     String message, {
@@ -257,12 +303,13 @@ class CreateAccountViewModel extends ChangeNotifier {
   }) {
     errorMessage = message;
     isSuccessMessage = success;
-    notifyListeners();
+    safeNotifyListeners();
 
     Future.delayed(Duration(seconds: durationSeconds), () {
+      if (_disposed) return;
       errorMessage = null;
       isSuccessMessage = false;
-      notifyListeners();
+      safeNotifyListeners();
     });
   }
 
@@ -288,6 +335,6 @@ class CreateAccountViewModel extends ChangeNotifier {
     isSuccessMessage = false;
 
     formKey.currentState?.reset();
-    notifyListeners();
+    safeNotifyListeners();
   }
 }

@@ -90,7 +90,8 @@ class DBService {
         pin TEXT NOT NULL,
         security_question_id INTEGER,
         security_answer TEXT,
-        profile_image TEXT
+        profile_image TEXT,
+        UNIQUE(first_name, middle_name, last_name)
       )
     ''');
 
@@ -164,15 +165,16 @@ class DBService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         first_name TEXT NOT NULL,
         middle_name TEXT,
-        last_name TEXT,
-        phone_number TEXT NOT NULL,
-        municipality TEXT,
+        last_name TEXT NOT NULL,
+        phone_number TEXT NOT NULL UNIQUE,
+        municipality TEXT NOT NULL,
         barangay TEXT,
         landmark TEXT,
         credit_limit REAL DEFAULT 1000,
         available_credit REAL DEFAULT 1000,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        UNIQUE(first_name, middle_name, last_name, municipality)
       )
     ''');
 
