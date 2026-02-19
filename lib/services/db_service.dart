@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import '../core/product_seed.dart';
+
 class DBService {
   static final DBService instance = DBService._init();
   static Database? _database;
@@ -156,7 +158,6 @@ class DBService {
 
       )
     ''');
-    
 
     // Customer
     await db.execute('''
@@ -378,7 +379,6 @@ class DBService {
       )
     ''');
 
-
     // Payable
     await db.execute('''
       CREATE TABLE payable (
@@ -463,6 +463,9 @@ class DBService {
 
     // Insert predefined data
     await _insertDefaultData(db);
+
+    // for testing
+    await _seedProducts(db);
   }
 
   // Seed initial reference data
@@ -513,6 +516,19 @@ class DBService {
     ];
     for (final c in categoryChoices) {
       await db.insert('category_choices', {'name': c});
+    }
+  }
+
+  // for testing
+  Future<void> _seedProducts(Database db) async {
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM product'),
+    );
+
+    if (count == 0) {
+      for (final product in productSeeds) {
+        await db.insert('product', product.toMap());
+      }
     }
   }
 
