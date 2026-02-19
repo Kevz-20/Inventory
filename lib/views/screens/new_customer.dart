@@ -112,11 +112,65 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                 onPressed: vm.isLoading
                     ? null
                     : () async {
+                        // ✅ BASIC VALIDATION
+                        if (vmNotifier.firstNameController.text
+                            .trim()
+                            .isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('First Name is required'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (vmNotifier.lastNameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Last Name is required'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (vmNotifier.cityController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Municipality is required'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (vmNotifier.barangayController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Barangay is required'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
+
+                        // ✅ If validation passes
                         final success = await vmNotifier.saveCustomer();
-                        // ignore: use_build_context_synchronously
-                        if (success && Navigator.of(context).mounted) {
+
+                        if (!mounted) return;
+
+                        if (success) {
                           // ignore: use_build_context_synchronously
-                          Navigator.of(context).pop(true);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Customer saved successfully!'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+
+                          // ignore: use_build_context_synchronously
+                          Navigator.pop(context, true);
                         }
                       },
                 style: ElevatedButton.styleFrom(
