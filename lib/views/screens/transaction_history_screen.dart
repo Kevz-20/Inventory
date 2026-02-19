@@ -378,27 +378,32 @@ class _DatePickerBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date,
-          firstDate: DateTime(2000),
-          lastDate: DateTime(2100),
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-                onSurface: AppColors.textPrimary,
-              ),
-              dialogTheme: DialogThemeData(
-                backgroundColor: Colors.grey.shade100,
-              ),
-            ),
-            child: child!,
-          ),
-        );
-        if (picked != null) onDateSelected(picked);
-      },
+  final now = DateTime.now();
+
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: date.isAfter(now) ? now : date,
+    firstDate: DateTime(2000),
+    lastDate: now, // 🚫 Prevent future dates
+    builder: (context, child) => Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.light(
+          primary: AppColors.primary,
+          onPrimary: Colors.white,
+          onSurface: AppColors.textPrimary,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.grey.shade100,
+        ),
+      ),
+      child: child!,
+    ),
+  );
+
+  if (picked != null && !picked.isAfter(now)) {
+    onDateSelected(picked);
+  }
+},
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
