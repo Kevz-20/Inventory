@@ -20,7 +20,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   void initState() {
     super.initState();
     Future.microtask(() {
-      ref.read(loginViewModelProvider).loadSavedMobile();
+      final vm = ref.read(loginViewModelProvider);
+      vm.loadSavedMobile();
+      vm.clearPin(); // ✅ Reset PIN when page loads
     });
     _shakeController = AnimationController(
       vsync: this,
@@ -196,7 +198,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () => context.push('/create_account'),
+                    onTap: () {
+                      ref.read(loginViewModelProvider).clearPin(); // ✅ Reset PIN before leaving
+                      context.push('/create_account');
+                    },
                     child: const Text(
                       "BAG-ONG ACCOUNT",
                       style: TextStyle(
@@ -207,16 +212,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => context.push('/forgot_pin'),
-                    child: const Text(
-                      "NAKALIMOT SA PIN?",
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
+                      onTap: () {
+                        ref.read(loginViewModelProvider).clearPin(); // ✅ Clear PIN before leaving
+                        context.push('/forgot_pin');
+                      },
+                      child: const Text(
+                        "NAKALIMOT SA PIN?",
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             );

@@ -161,20 +161,21 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                         // ✅ If validation passes
                         final success = await vmNotifier.saveCustomer();
 
-                        if (!mounted) return;
+                          if (!mounted) return;
 
-                        if (success) {
-                          // ignore: use_build_context_synchronously
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Customer saved successfully!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Customer saved successfully!'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
 
-                          // ignore: use_build_context_synchronously
-                          Navigator.pop(context, true);
-                        }
+                            // Clear all fields
+                            vmNotifier.resetFields();
+
+                            Navigator.pop(context, true);
+                          }
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

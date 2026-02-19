@@ -6,7 +6,7 @@ import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
 
 final newCustomerViewModelProvider =
-    ChangeNotifierProvider<NewCustomerViewModel>(
+    ChangeNotifierProvider.autoDispose<NewCustomerViewModel>(
       (ref) => NewCustomerViewModel(),
     );
 
@@ -191,5 +191,21 @@ class NewCustomerViewModel extends ChangeNotifier {
     barangayController.dispose();
     landmarkController.dispose();
     super.dispose();
+  }
+
+    void resetFields() {
+    firstNameController.clear();
+    middleNameController.clear();
+    lastNameController.clear();
+    contactController.clear();
+    municipalityController.clear();
+    barangayController.clear();
+    landmarkController.clear();
+
+    selectedCity = null;
+    selectedBarangay = null;
+    barangays = [];
+
+    notifyListeners();
   }
 }
