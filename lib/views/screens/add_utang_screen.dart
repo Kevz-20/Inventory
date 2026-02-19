@@ -88,9 +88,34 @@ class _AddUtangPageState extends State<AddUtangPage> {
   // SAVE UTANG
   // ==============================
   Future<void> saveUtang() async {
-    if (itemController.text.isEmpty || totalCostController.text.isEmpty) {
+    final item = itemController.text.trim();
+    final totalCost = totalCostController.text.trim();
+    final downpayment = downpaymentController.text.trim();
+    final duration = durationController.text.trim();
+    final startDate = startDateController.text.trim();
+    final notes = notesController.text.trim();
+    final paymentMethod = paymentMethodController.text.trim();
+    final datePaid = datePaidController.text.trim();
+
+    final missingFields = <String>[];
+    if (item.isEmpty) missingFields.add("Item / Description");
+    if (totalCost.isEmpty) missingFields.add("Total Cost");
+
+    if (selectedTab == 0) {
+      if (downpayment.isEmpty) missingFields.add("Downpayment");
+      if (duration.isEmpty) missingFields.add("Duration (months)");
+      if (startDate.isEmpty) missingFields.add("Start Date");
+      if (notes.isEmpty) missingFields.add("Notes");
+    } else {
+      if (paymentMethod.isEmpty) missingFields.add("Payment Method");
+      if (datePaid.isEmpty) missingFields.add("Date Paid");
+      if (notes.isEmpty) missingFields.add("Notes");
+    }
+
+    if (missingFields.isNotEmpty) {
+      final fields = missingFields.join(", ");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill item and total cost")),
+        SnackBar(content: Text("Please fill all details: $fields")),
       );
       return;
     }
@@ -112,6 +137,14 @@ class _AddUtangPageState extends State<AddUtangPage> {
           ) ??
           0;
 
+      if (total <= 0) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Total Cost must be greater than 0")),
+        );
+        return;
+      }
+
       // -----------------------------
       // FETCH CASH ON HAND (SHARED DB)
       // -----------------------------
@@ -126,6 +159,27 @@ class _AddUtangPageState extends State<AddUtangPage> {
       // -----------------------------
       if (selectedTab == 0) {
         final months = int.tryParse(durationController.text) ?? 1;
+
+        if (months <= 0) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Duration (months) must be greater than 0"),
+            ),
+          );
+          return;
+        }
+
+        if (down < 0 || down > total) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Downpayment must be between 0 and Total Cost"),
+            ),
+          );
+          return;
+        }
+
         final remaining = total - down;
         final monthly = months > 0 ? remaining / months : remaining;
         final firstDueDate = startDateController.text.isNotEmpty
@@ -510,7 +564,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
             ),
             const SizedBox(height: 12),
             buildTextField(
-              "Downpayment (optional)",
+              "Downpayment",
               downpaymentController,
               keyboardType: TextInputType.number,
               icon: Icons.money_off,
@@ -590,11 +644,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
               },
             ),
             const SizedBox(height: 12),
-            buildTextField(
-              "Notes / Optional Attachments",
-              notesController,
-              icon: Icons.note,
-            ),
+            buildTextField("Notes", notesController, icon: Icons.note),
           ],
         ),
       ),
@@ -712,11 +762,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: buildTextField(
-          "Notes / Optional Attachments",
-          notesController,
-          icon: Icons.note,
-        ),
+        child: buildTextField("Notes", notesController, icon: Icons.note),
       ),
     );
   }
