@@ -1071,7 +1071,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
 
         if (!isFullyPaid) {
-          final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
+          final daysLeft = _dateOnly(
+            due,
+          ).difference(_dateOnly(DateTime.now())).inDays;
           if (daysLeft < 0) {
             status = "Overdue";
           } else if (daysLeft <= 7) {

@@ -199,7 +199,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
               await vm.exportPdf();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFED1C24),
+              backgroundColor: AppColors.info,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

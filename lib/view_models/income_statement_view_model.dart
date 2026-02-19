@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // <-- For rootBundle
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
@@ -25,11 +26,11 @@ final incomeStatementViewModelProvider =
 
       return dbAsync.when(
         data: (_) {
-          final repository = IncomeStatementRepository(); // NO AccountRepository
+          final repository = IncomeStatementRepository();
           return IncomeStatementViewModel(repository);
         },
         loading: () {
-          final repository = IncomeStatementRepository(); // NO AccountRepository
+          final repository = IncomeStatementRepository();
           return IncomeStatementViewModel(repository);
         },
         error: (error, stackTrace) =>
@@ -47,7 +48,20 @@ class IncomeStatementViewModel
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
 
+  // Load Roboto font once
+  pw.Font? _ttfFont;
+
   IncomeStatementViewModel(this.repository) : super(const AsyncValue.loading());
+
+  /// Load Roboto TTF font from assets
+  Future<void> _loadFont() async {
+    if (_ttfFont == null) {
+      final fontData = await rootBundle.load(
+        'lib/assets/fonts/Roboto-Regular.ttf',
+      );
+      _ttfFont = pw.Font.ttf(fontData);
+    }
+  }
 
   /// Load income statement for a given date range
   Future<void> load({
@@ -75,6 +89,8 @@ class IncomeStatementViewModel
     final data = state.value;
     if (data == null) return;
 
+    await _loadFont(); // Load font once
+
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -85,11 +101,16 @@ class IncomeStatementViewModel
           children: [
             pw.Text(
               "Income Statement",
-              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+                font: _ttfFont,
+              ),
             ),
             pw.SizedBox(height: 8),
             pw.Text(
               "Period: ${DateFormat('yyyy-MM-dd').format(startDate)} - ${DateFormat('yyyy-MM-dd').format(endDate)}",
+              style: pw.TextStyle(font: _ttfFont),
             ),
             pw.Divider(),
             pw.SizedBox(height: 8),
@@ -97,7 +118,10 @@ class IncomeStatementViewModel
             // SALES
             pw.Text(
               "Sales",
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                font: _ttfFont,
+              ),
             ),
             _pdfLeaderRow(
               "Merchandise Sales",
@@ -110,7 +134,10 @@ class IncomeStatementViewModel
             // EXPENSES
             pw.Text(
               "Expenses",
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                font: _ttfFont,
+              ),
             ),
             _pdfLeaderRow("Kompra", data.kompra, indent: true),
             _pdfLeaderRow("Kuryente / Tubig", data.electricity, indent: true),
@@ -150,6 +177,7 @@ class IncomeStatementViewModel
             title,
             style: pw.TextStyle(
               fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              font: _ttfFont,
             ),
           ),
           pw.SizedBox(width: 6),
@@ -157,12 +185,13 @@ class IncomeStatementViewModel
             child: pw.Text(
               '.' * 80,
               maxLines: 1,
-              style: pw.TextStyle(color: PdfColors.grey),
+              style: pw.TextStyle(color: PdfColors.grey, font: _ttfFont),
             ),
           ),
           pw.SizedBox(width: 6),
           pw.Text(
             NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(value),
+            style: pw.TextStyle(font: _ttfFont),
           ),
         ],
       ),
