@@ -467,7 +467,8 @@ class DBService {
     await _insertDefaultData(db);
 
     // for testing
-    await _seedProducts(db);
+    const bool seedProducts = true; // set to false to disable seeding
+    if (seedProducts) await _seedProducts(db);
   }
 
   // Seed initial reference data
