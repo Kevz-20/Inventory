@@ -330,8 +330,18 @@ class _AddUtangPageState extends State<AddUtangPage> {
       // -----------------------------
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bayronon saved successfully")),
-      );
+      SnackBar(
+        content: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text("Bayronon saved successfully"),
+          ],
+        ),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 
       // CLEAR FIELDS
       itemController.clear();
