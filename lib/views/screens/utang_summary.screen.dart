@@ -436,26 +436,52 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ? null
                                 : () async {
                                     Navigator.pop(context);
-
-                                    final db =
-                                        await DBService.instance.database;
                                     final amountToAdd = selectedAmount;
 
-                                    await db.rawUpdate(
-                                      '''
+                                    try {
+                                      final db =
+                                          await DBService.instance.database;
+
+                                      await db.rawUpdate(
+                                        '''
                                   UPDATE customer
                                   SET credit_limit = credit_limit + ?,
                                       available_credit = available_credit + ?
                                   WHERE id = ?
                                   ''',
-                                      [
-                                        amountToAdd,
-                                        amountToAdd,
-                                        widget.customer.id,
-                                      ],
-                                    );
+                                        [
+                                          amountToAdd,
+                                          amountToAdd,
+                                          widget.customer.id,
+                                        ],
+                                      );
 
-                                    await fetchCustomerData();
+                                      await fetchCustomerData();
+                                      if (!mounted) return;
+
+                                      ScaffoldMessenger.of(
+                                        this.context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Credit limit increased by ₱${currencyFormat.format(amountToAdd)}',
+                                          ),
+                                          backgroundColor: AppColors.success,
+                                        ),
+                                      );
+                                    } catch (_) {
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(
+                                        this.context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Failed to update credit limit',
+                                          ),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
                                   },
                             child: const Text("Add"),
                           ),

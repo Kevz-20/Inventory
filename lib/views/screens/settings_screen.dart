@@ -18,6 +18,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  static const double _screenPadding = 16;
+  static const double _sectionSpacing = 24;
+  static const double _itemSpacing = 8;
+
   late final SettingsViewModel settingsVM;
 
   @override
@@ -42,7 +46,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         backgroundColor: AppColors.primary,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(_screenPadding),
         children: [
           /// PROFILE HEADER
           AnimatedBuilder(
@@ -100,22 +104,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: _sectionSpacing),
           _sectionTitle("General Settings"),
+          const SizedBox(height: _itemSpacing),
 
           _settingsTile(
             title: "Profile",
             icon: Icons.person,
             onTap: () => GoRouter.of(context).push('/profile'),
           ),
+          const SizedBox(height: _itemSpacing),
           _settingsTile(
             title: "Change PIN",
             icon: Icons.lock,
             onTap: () => GoRouter.of(context).push('/change_pin'),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: _sectionSpacing),
           _sectionTitle("About"),
+          const SizedBox(height: _itemSpacing),
 
           _settingsTile(
             title: "About App",
@@ -123,7 +130,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => GoRouter.of(context).push('/about_app'),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: _itemSpacing),
           _settingsTile(
             title: "Logout",
             icon: Icons.logout,
@@ -137,15 +144,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _sectionTitle(String title) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: Colors.grey,
-      ),
+  Widget _sectionTitle(String title) => Text(
+    title,
+    style: const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      color: Colors.grey,
     ),
   );
 
@@ -156,7 +160,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     Color? textColor,
     Color? iconColor,
   }) => Container(
-    margin: const EdgeInsets.only(bottom: 4),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
