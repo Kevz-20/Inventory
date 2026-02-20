@@ -18,8 +18,7 @@ class BalanceSheetScreen extends ConsumerStatefulWidget {
       _BalanceSheetScreenState();
 }
 
-class _BalanceSheetScreenState
-    extends ConsumerState<BalanceSheetScreen> {
+class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
   bool _isLoading = true;
 
   @override
@@ -64,9 +63,10 @@ class _BalanceSheetScreenState
               style: const TextStyle(
                 fontSize: 14,
                 color: Colors.black54,
+                fontStyle: FontStyle.italic,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Assets
             _buildFinancialSection(
@@ -75,7 +75,7 @@ class _BalanceSheetScreenState
               total: vm.totalAssets,
               vm: vm,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Liabilities
             _buildFinancialSection(
@@ -84,7 +84,7 @@ class _BalanceSheetScreenState
               total: vm.totalLiabilities,
               vm: vm,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Equity
             _buildFinancialSection(
@@ -93,7 +93,7 @@ class _BalanceSheetScreenState
               total: vm.totalEquity,
               vm: vm,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Total Liabilities + Equity
             _buildTotalRow(
@@ -107,13 +107,11 @@ class _BalanceSheetScreenState
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-            16, 16, 16, 16 + bottomPadding),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
         child: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(12),
-          shadowColor:
-              Colors.black.withAlpha((0.3 * 255).round()),
+          shadowColor: Colors.black.withAlpha((0.3 * 255).round()),
           child: SizedBox(
             height: 50,
             child: ElevatedButton.icon(
@@ -122,18 +120,15 @@ class _BalanceSheetScreenState
                 await vm.exportPdf();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.info,
+                backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                   side: BorderSide.none,
                 ),
-                elevation: 0,
+                elevation: 4,
+                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              icon: const Icon(
-                Icons.download,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.download, color: Colors.white),
               label: const Text(
                 'Download PDF',
                 style: TextStyle(
@@ -157,72 +152,94 @@ class _BalanceSheetScreenState
     required BalanceSheetViewModel vm,
   }) {
     return Card(
-      color: Colors.white,
+      color: Colors.grey[50], // softer background
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      elevation: 4,
+      shadowColor: Colors.black12,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.black87,
-              ),
+            // Section Header with icon
+            Row(
+              children: [
+                Icon(
+                  title == 'Assets'
+                      ? Icons.account_balance_wallet
+                      : title == 'Liabilities'
+                          ? Icons.money_off
+                          : Icons.account_balance,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 19,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
 
-            ...items.entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 4),
+            // Rows with alternate background
+            ...items.entries.toList().asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return Container(
+                color: index.isEven ? Colors.transparent : Colors.grey[100],
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
-                        entry.key,
+                        item.key,
                         style: const TextStyle(
-                            fontSize: 16),
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
                     Text(
-                      vm.formatCurrency(entry.value),
+                      vm.formatCurrency(item.value),
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight:
-                            FontWeight.w500,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
+              );
+            }).toList(),
 
-            const Divider(thickness: 1),
+            const SizedBox(height: 10),
+            Divider(color: Colors.grey[300], thickness: 1),
+            const SizedBox(height: 6),
 
+            // Total Row
             Row(
               children: [
                 const Expanded(
                   child: Text(
                     'Total',
                     style: TextStyle(
-                      fontWeight:
-                          FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                       fontSize: 17,
                     ),
                   ),
                 ),
                 Text(
                   vm.formatCurrency(total),
-                  style: const TextStyle(
-                    fontWeight:
-                        FontWeight.bold,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
                     fontSize: 17,
+                    color: AppColors.primary, // highlight total
                   ),
                 ),
               ],
@@ -240,16 +257,14 @@ class _BalanceSheetScreenState
     required BalanceSheetViewModel vm,
   }) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
           Expanded(
             child: Text(
               title,
               style: const TextStyle(
-                fontWeight:
-                    FontWeight.bold,
+                fontWeight: FontWeight.bold,
                 fontSize: 17,
               ),
             ),

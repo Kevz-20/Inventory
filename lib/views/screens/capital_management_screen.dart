@@ -25,13 +25,9 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final raw = newValue.text.replaceAll(',', '');
-    if (raw.isEmpty) {
-      return const TextEditingValue(text: '');
-    }
+    if (raw.isEmpty) return const TextEditingValue(text: '');
 
-    if (!_amountPattern.hasMatch(raw)) {
-      return oldValue;
-    }
+    if (!_amountPattern.hasMatch(raw)) return oldValue;
 
     final hasDot = raw.contains('.');
     final parts = raw.split('.');
@@ -71,7 +67,6 @@ class _CapitalManagementScreenState
   @override
   void initState() {
     super.initState();
-
     Future.microtask(() {
       ref.read(capitalManagementViewModelProvider).loadCapitals();
     });
@@ -85,17 +80,11 @@ class _CapitalManagementScreenState
       data: (_) {
         final vm = ref.watch(capitalManagementViewModelProvider);
 
-        final totalCashOnHand = vm.capitals.fold(
-          0.0,
-          (sum, e) => sum + e.cashOnHand,
-        );
-
+        final totalCashOnHand = vm.capitals.fold(0.0, (sum, e) => sum + e.cashOnHand);
         final totalCapital = vm.capitals.fold(0.0, (sum, e) => sum + e.capital);
 
         final DateTime? lastAddedDate = vm.capitals.isNotEmpty
-            ? vm.capitals
-                  .map((e) => e.createdAt)
-                  .reduce((a, b) => a.isAfter(b) ? a : b)
+            ? vm.capitals.map((e) => e.createdAt).reduce((a, b) => a.isAfter(b) ? a : b)
             : null;
 
         final enteredAmount = _parseAmount();
@@ -107,7 +96,7 @@ class _CapitalManagementScreenState
             showBackButton: true,
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -118,18 +107,10 @@ class _CapitalManagementScreenState
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
-                _miniBalanceCard(
-                  title: "Cash on Hand",
-                  value: totalCashOnHand,
-                  icon: Icons.money,
-                ),
-                const SizedBox(height: 15),
-                _miniBalanceCard(
-                  title: "Capital",
-                  value: totalCapital,
-                  icon: Icons.account_balance,
-                ),
-                const SizedBox(height: 30),
+                _miniBalanceCard(title: "Cash on Hand", value: totalCashOnHand, icon: Icons.money),
+                const SizedBox(height: 12),
+                _miniBalanceCard(title: "Capital", value: totalCapital, icon: Icons.account_balance),
+                const SizedBox(height: 24),
                 _addCapitalCard(),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -142,29 +123,24 @@ class _CapitalManagementScreenState
                               capitalAmount: enteredAmount,
                               remarks: _remarksController.text,
                             );
-
                             _amountController.clear();
                             _remarksController.clear();
                             setState(() {});
                           },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: vm.isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text(
                             "Add Capital",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
@@ -173,32 +149,21 @@ class _CapitalManagementScreenState
           ),
         );
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 
   /// ================= UI HELPERS =================
 
-  Widget _miniBalanceCard({
-    required String title,
-    required double value,
-    IconData? icon,
-  }) {
+  Widget _miniBalanceCard({required String title, required double value, IconData? icon}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(50),
-            blurRadius: 2,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,10 +171,10 @@ class _CapitalManagementScreenState
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 20, color: Colors.grey[700]),
+                Icon(icon, size: 20, color: AppColors.primary),
                 const SizedBox(width: 6),
               ],
-              Text(title, style: TextStyle(color: Colors.grey[600])),
+              Text(title, style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 6),
@@ -225,32 +190,20 @@ class _CapitalManagementScreenState
   Widget _addCapitalCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(40),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Add New Capital',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text('Add Capital', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           _amountInput(),
           const SizedBox(height: 6),
-          Text(
-            'Enter the amount you want to add',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
+          Text('Enter the amount you want to add', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -275,10 +228,13 @@ class _CapitalManagementScreenState
         final currentAmount = double.tryParse(current) ?? 0;
         final chipAmount = double.tryParse(value) ?? 0;
         final newAmount = currentAmount + chipAmount;
-
         _amountController.text = NumberFormat('#,##0.##').format(newAmount);
         setState(() {});
       },
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: AppColors.primary),
+        foregroundColor: AppColors.primary,
+      ),
       child: Text('₱${NumberFormat('#,##0').format(int.parse(value))}'),
     );
   }
@@ -296,12 +252,12 @@ class _CapitalManagementScreenState
         hintText: '0.00',
         prefixText: '₱ ',
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade400),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.info),
         ),
       ),
     );
@@ -313,12 +269,12 @@ class _CapitalManagementScreenState
       decoration: InputDecoration(
         hintText: 'Optional note',
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade400),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.info),
         ),
       ),
     );

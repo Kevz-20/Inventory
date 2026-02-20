@@ -22,6 +22,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool confirmPinVisible = false;
 
   final accountRepo = AccountRepository();
+  final nameFormatter = FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.-]'));
 
   @override
   Widget build(BuildContext context) {
@@ -194,14 +195,15 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               ),
               const SizedBox(height: 15),
 
+        
               // ==================== FIRST NAME ====================
               buildLabel("First Name"),
               buildTextField(
                 controller: vm.firstNameController,
                 hint: "Juan",
                 errorText: vm.firstNameError,
-                onChanged: (_) =>
-                    vmNotifier.clearFieldError(vm.firstNameController),
+                inputFormatters: [nameFormatter],
+                onChanged: (_) => vmNotifier.clearFieldError(vm.firstNameController),
               ),
               const SizedBox(height: 15),
 
@@ -211,8 +213,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 controller: vm.middleNameController,
                 hint: "Dela",
                 errorText: vm.middleNameError,
-                onChanged: (_) =>
-                    vmNotifier.clearFieldError(vm.middleNameController),
+                inputFormatters: [nameFormatter],
+                onChanged: (_) => vmNotifier.clearFieldError(vm.middleNameController),
               ),
               const SizedBox(height: 15),
 
@@ -220,10 +222,10 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               buildLabel("Last Name"),
               buildTextField(
                 controller: vm.lastNameController,
-                hint: "Cruz",
+                hint: "Cruz Jr.",
                 errorText: vm.lastNameError,
-                onChanged: (_) =>
-                    vmNotifier.clearFieldError(vm.lastNameController),
+                inputFormatters: [nameFormatter],
+                onChanged: (_) => vmNotifier.clearFieldError(vm.lastNameController),
               ),
               const SizedBox(height: 15),
 

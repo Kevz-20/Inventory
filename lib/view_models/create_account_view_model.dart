@@ -242,13 +242,35 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void _validateNameFields() {
-    firstNameError = firstNameController.text.isEmpty
-        ? 'Please enter first name'
-        : null;
-    middleNameError = null;
-    lastNameError = lastNameController.text.isEmpty
-        ? 'Please enter last name'
-        : null;
+  // Allow letters, spaces, hyphens, and dots (for Jr., Sr., etc.)
+    final nameRegex = RegExp(r'^[a-zA-Z\s\.-]+$'); 
+
+    // First Name
+    if (firstNameController.text.isEmpty) {
+      firstNameError = 'Please enter first name';
+    } else if (!nameRegex.hasMatch(firstNameController.text)) {
+      firstNameError = 'Only letters, spaces, hyphens, or dots allowed';
+    } else {
+      firstNameError = null;
+    }
+
+    // Middle Name (optional)
+    if (middleNameController.text.isNotEmpty &&
+        !nameRegex.hasMatch(middleNameController.text)) {
+      middleNameError = 'Only letters, spaces, hyphens, or dots allowed';
+    } else {
+      middleNameError = null;
+    }
+
+    // Last Name
+    if (lastNameController.text.isEmpty) {
+      lastNameError = 'Please enter last name';
+    } else if (!nameRegex.hasMatch(lastNameController.text)) {
+      lastNameError = 'Only letters, spaces, hyphens, or dots allowed';
+    } else {
+      lastNameError = null;
+    }
+
     safeNotifyListeners();
   }
 
