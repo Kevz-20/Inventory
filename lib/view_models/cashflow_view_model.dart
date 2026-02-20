@@ -16,12 +16,15 @@ class CashflowViewModel extends ChangeNotifier {
   DateTime? endDate;
 
   List<CashflowRecord> get filteredRecords {
-    return _records.where((r) {
-      final afterStart = startDate == null || !r.date.isBefore(startDate!);
-      final beforeEnd = endDate == null || !r.date.isAfter(endDate!);
-      return afterStart && beforeEnd;
-    }).toList();
-  }
+  final filtered = _records.where((r) {
+    final afterStart = startDate == null || !r.date.isBefore(startDate!);
+    final beforeEnd = endDate == null || !r.date.isAfter(endDate!);
+    return afterStart && beforeEnd;
+  }).toList();
+
+  // Show newest first (UI only)
+  return filtered.reversed.toList();
+}
 
   void setRecords(List<CashflowRecord> records) {
     _records

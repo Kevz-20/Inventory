@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
 import '../../services/db_service.dart';
+import '../../models/current_user.dart';
 
 class AddUtangPage extends StatefulWidget {
   const AddUtangPage({super.key});
@@ -223,9 +224,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'next_due_date': DateFormat('yyyy-MM-dd').format(nextDueDate),
           'is_asset': 1,
           'asset_category': 'Installment Purchase',
-          'created_by_first_name': 'Kevin',
-          'created_by_middle_name': 'R.',
-          'created_by_last_name': 'Mejares',
+          'created_by_first_name': CurrentUser.firstName ?? '',
+          'created_by_middle_name': CurrentUser.middleName ?? '',
+          'created_by_last_name': CurrentUser.lastName ?? '',
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });

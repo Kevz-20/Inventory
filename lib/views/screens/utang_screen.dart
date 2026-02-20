@@ -288,8 +288,21 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     double remaining, {
     double? suggested,
   }) async {
-    final controller = TextEditingController();
-    double? value;
+    double? initialAmount;
+
+    if (suggested != null && suggested > 0) {
+      initialAmount = suggested > remaining ? remaining : suggested;
+    } else {
+      initialAmount = null;
+    }
+
+    final controller = TextEditingController(
+      text: initialAmount != null
+          ? currencyFormat.format(initialAmount).replaceAll('.00', '')
+          : '',
+    );
+
+    double? value = initialAmount;
 
     await showDialog(
       context: context,
@@ -343,24 +356,13 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
-                ),
-                if (suggested != null && suggested > 0)
-                  TextButton(
                     onPressed: () {
-                      final capped = suggested > remaining
-                          ? remaining
-                          : suggested;
-                      controller.text = currencyFormat
-                          .format(capped)
-                          .replaceAll('.00', '');
-                      setState(() {
-                        value = capped;
-                      });
+                      value = null;
+                      Navigator.pop(context);
                     },
-                    child: const Text("Use Monthly"),
+                    child: const Text("Cancel"),
                   ),
+                if (suggested != null && suggested > 0)
                 ElevatedButton(
                   onPressed: isValid
                       ? () {
@@ -658,52 +660,70 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                       if (!isFullyPaid)
                         if (!isFullyPaid)
                           Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    double? amount = await promptPartialAmount(
-                                      remaining,
-                                      suggested: item.planMonthly,
-                                    );
-                                    if (amount != null) {
-                                      await applyPayment(item, amount);
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                      }
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text("Partial Pay"),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    await applyPayment(
-                                      item,
-                                      remaining,
-                                      isFullPay: true,
-                                    );
+                          children: [
+                            // ---------------- Partial Pay Button ----------------
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  double? amount = await promptPartialAmount(
+                                    remaining,
+                                    suggested: item.planMonthly,
+                                  );
+                                  if (amount != null) {
+                                    await applyPayment(item, amount);
                                     if (context.mounted) Navigator.pop(context);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Text("Full Pay"),
                                 ),
+                                child: const Text("Partial Pay"),
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 16),
+                            // ---------------- Full Pay Button with Confirmation ----------------
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text("Confirm Full Payment"),
+                                      content: Text(
+                                        "Are you sure you want to record the full payment of ₱${currencyFormat.format(remaining)}?"
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: const Text("Cancel"),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: const Text("Confirm"),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    await applyPayment(item, remaining, isFullPay: true);
+                                    if (context.mounted) Navigator.pop(context);
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text("Full Pay"),
+                              ),
+                            ),
+                          ],
+                        )
                     ],
                   ),
                 ),

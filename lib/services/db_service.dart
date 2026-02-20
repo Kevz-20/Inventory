@@ -1,8 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-import '../core/product_seed.dart';
-
 class DBService {
   static final DBService instance = DBService._init();
   static Database? _database;
@@ -466,9 +464,9 @@ class DBService {
     // Insert predefined data
     await _insertDefaultData(db);
 
-    // for testing
-    const bool seedProducts = true; // set to false to disable seeding
-    if (seedProducts) await _seedProducts(db);
+    // // for testing
+    // const bool seedProducts = true; // set to false to disable seeding
+    // if (seedProducts) await _seedProducts(db);
   }
 
   // Seed initial reference data
@@ -523,17 +521,17 @@ class DBService {
   }
 
   // for testing
-  Future<void> _seedProducts(Database db) async {
-    final count = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM product'),
-    );
+  // Future<void> _seedProducts(Database db) async {
+  //   final count = Sqflite.firstIntValue(
+  //     await db.rawQuery('SELECT COUNT(*) FROM product'),
+  //   );
 
-    if (count == 0) {
-      for (final product in productSeeds) {
-        await db.insert('product', product.toMap());
-      }
-    }
-  }
+  //   if (count == 0) {
+  //     for (final product in productSeeds) {
+  //       await db.insert('product', product.toMap());
+  //     }
+  //   }
+  // }
 
   // Close database safely
   Future<void> close() async {
