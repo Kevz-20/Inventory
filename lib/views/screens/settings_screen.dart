@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
 import '../../providers/profile_view_model_provider.dart';
+import '../../services/db_service.dart';
 import '../../view_models/settings_view_model.dart';
 import '../../repositories/account_repository.dart';
 import '../widgets/nav_bar.dart';
@@ -128,6 +129,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: "About App",
             icon: Icons.info,
             onTap: () => GoRouter.of(context).push('/about_app'),
+          ),
+
+          const SizedBox(height: _sectionSpacing),
+          _sectionTitle("Data"),
+          const SizedBox(height: _itemSpacing),
+
+          _settingsTile(
+            title: "Clear Data (for testing)",
+            icon: Icons.delete_forever,
+            textColor: Colors.red,
+            iconColor: Colors.red,
+            onTap: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text("Clear data"),
+                  content: const Text("This will clear ALL data.\n\nContinue?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancel"),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Reset"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await DBService.instance.clearData();
+
+                if (!mounted) return;
+
+                // ignore: use_build_context_synchronously
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text("Clear data complete"),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            },
           ),
 
           const SizedBox(height: _itemSpacing),

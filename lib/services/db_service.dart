@@ -533,6 +533,39 @@ class DBService {
   //   }
   // }
 
+  Future<void> clearData() async {
+    final db = await database;
+
+    await db.transaction((txn) async {
+      await txn.execute('PRAGMA foreign_keys = OFF');
+
+      final tables = await txn.rawQuery(
+        "SELECT name FROM sqlite_master "
+        "WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+      );
+
+      const keepTables = {
+        'account',
+        'security_questions',
+        'transaction_type_choices',
+        'credit_status',
+        'type_choices',
+        'source_choices',
+        'category_choices',
+      };
+
+      for (final table in tables) {
+        final tableName = table['name'] as String;
+
+        if (!keepTables.contains(tableName)) {
+          await txn.delete(tableName);
+        }
+      }
+
+      await txn.execute('PRAGMA foreign_keys = ON');
+    });
+  }
+
   // Close database safely
   Future<void> close() async {
     final db = _database;
