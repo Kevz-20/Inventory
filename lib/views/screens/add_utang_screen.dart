@@ -36,6 +36,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
   double remainingBalance = 0.0;
   double monthlyPayment = 0.0;
+  String? downpaymentErrorText;
 
   void showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -89,6 +90,33 @@ class _AddUtangPageState extends State<AddUtangPage> {
           ? remainingBalance / months
           : remainingBalance;
     });
+  }
+
+  double parseAmount(String text) {
+    return double.tryParse(text.replaceAll(',', '').trim()) ?? 0;
+  }
+
+  void validateDownpaymentAgainstTotal() {
+    final total = parseAmount(totalCostController.text);
+    final down = parseAmount(downpaymentController.text);
+
+    final nextError = (total > 0 && down > total)
+        ? "Downpayment exceeds Total Cost"
+        : null;
+    if (downpaymentErrorText == nextError) return;
+    setState(() {
+      downpaymentErrorText = nextError;
+    });
+  }
+
+  void onTotalCostChanged() {
+    validateDownpaymentAgainstTotal();
+    calculateInstallment();
+  }
+
+  void onDownpaymentChanged() {
+    validateDownpaymentAgainstTotal();
+    calculateInstallment();
   }
 
   // ==============================
@@ -473,6 +501,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     ValueChanged<String>? onChanged,
     IconData? icon,
     List<TextInputFormatter>? inputFormatters,
+    String? errorText,
   }) {
     return TextField(
       controller: controller,
@@ -484,6 +513,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.grey),
+        errorText: errorText,
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
                   ? const Padding(
@@ -550,7 +580,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
               totalCostController,
               keyboardType: TextInputType.number,
               icon: Icons.attach_money,
-              onChanged: (_) => calculateInstallment(),
+              onChanged: (_) => onTotalCostChanged(),
               inputFormatters: [ThousandsFormatter()],
             ),
             const SizedBox(height: 12),
@@ -559,8 +589,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
               downpaymentController,
               keyboardType: TextInputType.number,
               icon: Icons.money_off,
-              onChanged: (_) => calculateInstallment(),
+              onChanged: (_) => onDownpaymentChanged(),
               inputFormatters: [ThousandsFormatter()],
+              errorText: downpaymentErrorText,
             ),
             const SizedBox(height: 12),
             buildTextField(
