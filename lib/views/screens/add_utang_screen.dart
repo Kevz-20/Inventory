@@ -21,6 +21,7 @@ final NumberFormat currencyFormat = NumberFormat('#,##0');
 
 class _AddUtangPageState extends State<AddUtangPage> {
   int selectedTab = 0; // 0 = Installment, 1 = Non-Installment
+  final Set<TextEditingController> _invalidControllers = {};
 
   // ==============================
   // CONTROLLERS
@@ -36,6 +37,21 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
   double remainingBalance = 0.0;
   double monthlyPayment = 0.0;
+
+  void _showErrorSnackBar(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
+    );
+  }
+
+  void _clearInvalidController(TextEditingController? controller) {
+    if (controller == null) return;
+    if (_invalidControllers.remove(controller)) {
+      setState(() {});
+    }
+  }
 
   @override
   void dispose() {
@@ -94,32 +110,55 @@ class _AddUtangPageState extends State<AddUtangPage> {
     final downpayment = downpaymentController.text.trim();
     final duration = durationController.text.trim();
     final startDate = startDateController.text.trim();
-    final notes = notesController.text.trim();
     final paymentMethod = paymentMethodController.text.trim();
     final datePaid = datePaidController.text.trim();
 
     final missingFields = <String>[];
-    if (item.isEmpty) missingFields.add("Item / Description");
-    if (totalCost.isEmpty) missingFields.add("Total Cost");
+    final invalidControllers = <TextEditingController>{};
+    if (item.isEmpty) {
+      missingFields.add("Item / Description");
+      invalidControllers.add(itemController);
+    }
+    if (totalCost.isEmpty) {
+      missingFields.add("Total Cost");
+      invalidControllers.add(totalCostController);
+    }
 
     if (selectedTab == 0) {
-      if (downpayment.isEmpty) missingFields.add("Downpayment");
-      if (duration.isEmpty) missingFields.add("Duration (months)");
-      if (startDate.isEmpty) missingFields.add("Start Date");
-      if (notes.isEmpty) missingFields.add("Notes");
+      if (downpayment.isEmpty) {
+        missingFields.add("Downpayment");
+        invalidControllers.add(downpaymentController);
+      }
+      if (duration.isEmpty) {
+        missingFields.add("Duration (months)");
+        invalidControllers.add(durationController);
+      }
+      if (startDate.isEmpty) {
+        missingFields.add("Start Date");
+        invalidControllers.add(startDateController);
+      }
     } else {
-      if (paymentMethod.isEmpty) missingFields.add("Payment Method");
-      if (datePaid.isEmpty) missingFields.add("Date Paid");
-      if (notes.isEmpty) missingFields.add("Notes");
+      if (paymentMethod.isEmpty) {
+        missingFields.add("Payment Method");
+        invalidControllers.add(paymentMethodController);
+      }
+      if (datePaid.isEmpty) {
+        missingFields.add("Date Paid");
+        invalidControllers.add(datePaidController);
+      }
     }
 
     if (missingFields.isNotEmpty) {
       final fields = missingFields.join(", ");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill all details: $fields")),
-      );
+      setState(() {
+        _invalidControllers
+          ..clear()
+          ..addAll(invalidControllers);
+      });
+      _showErrorSnackBar("Please fill all details: $fields");
       return;
     }
+    setState(() => _invalidControllers.clear());
 
     final db = await DBService.instance.database;
 
@@ -140,9 +179,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
       if (total <= 0) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Total Cost must be greater than 0")),
-        );
+        _showErrorSnackBar("Total Cost must be greater than 0");
         return;
       }
 
@@ -163,21 +200,13 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
         if (months <= 0) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Duration (months) must be greater than 0"),
-            ),
-          );
+          _showErrorSnackBar("Duration (months) must be greater than 0");
           return;
         }
 
         if (down < 0 || down > total) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Downpayment must be between 0 and Total Cost"),
-            ),
-          );
+          _showErrorSnackBar("Downpayment must be between 0 and Total Cost");
           return;
         }
 
@@ -194,12 +223,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
         // -----------------------------
         if (down > cashOnHand) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
-              ),
-            ),
+          _showErrorSnackBar(
+            "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
           );
           return;
         }
@@ -273,12 +298,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
         if (total > cashOnHand) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "Total cost of ₱${currencyFormat.format(total)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
-              ),
-            ),
+          _showErrorSnackBar(
+            "Total cost of ₱${currencyFormat.format(total)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
           );
           return;
         }
@@ -331,18 +352,18 @@ class _AddUtangPageState extends State<AddUtangPage> {
       // -----------------------------
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text("Bayronon saved successfully"),
-          ],
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text("Bayronon saved successfully"),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
         ),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
 
       // CLEAR FIELDS
       itemController.clear();
@@ -364,9 +385,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed to save: $e")));
+      _showErrorSnackBar("Failed to save: $e");
     }
   }
 
@@ -497,33 +516,63 @@ class _AddUtangPageState extends State<AddUtangPage> {
     IconData? icon,
     List<TextInputFormatter>? inputFormatters,
   }) {
+    final isInvalid =
+        controller != null &&
+        controller != notesController &&
+        _invalidControllers.contains(controller);
+    final borderColor = isInvalid ? AppColors.error : Colors.grey.shade400;
+
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       readOnly: readOnly,
-      onTap: onTap,
-      onChanged: onChanged,
+      onTap: () {
+        _clearInvalidController(controller);
+        onTap?.call();
+      },
+      onChanged: (value) {
+        if (value.trim().isNotEmpty) {
+          _clearInvalidController(controller);
+        }
+        onChanged?.call(value);
+      },
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
+        labelStyle: TextStyle(color: isInvalid ? AppColors.error : Colors.grey),
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
-                  ? const Padding(
-                      padding: EdgeInsets.all(14),
+                  ? Padding(
+                      padding: const EdgeInsets.all(14),
                       child: Text(
                         "₱",
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                          color: isInvalid ? AppColors.error : Colors.grey,
                         ),
                       ),
                     )
-                  : Icon(icon, color: Colors.grey))
+                  : Icon(
+                      icon,
+                      color: isInvalid ? AppColors.error : Colors.grey,
+                    ))
             : null,
-
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isInvalid ? AppColors.error : AppColors.info,
+            width: 1.5,
+          ),
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,
@@ -658,7 +707,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
               },
             ),
             const SizedBox(height: 12),
-            buildTextField("Notes", notesController, icon: Icons.note),
+            buildTextField(
+              "Notes(Optional)",
+              notesController,
+              icon: Icons.note,
+            ),
           ],
         ),
       ),
@@ -776,7 +829,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
       color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: buildTextField("Notes", notesController, icon: Icons.note),
+        child: buildTextField(
+          "Notes(Optional)",
+          notesController,
+          icon: Icons.note,
+        ),
       ),
     );
   }

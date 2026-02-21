@@ -80,11 +80,16 @@ class _CapitalManagementScreenState
       data: (_) {
         final vm = ref.watch(capitalManagementViewModelProvider);
 
-        final totalCashOnHand = vm.capitals.fold(0.0, (sum, e) => sum + e.cashOnHand);
+        final totalCashOnHand = vm.capitals.fold(
+          0.0,
+          (sum, e) => sum + e.cashOnHand,
+        );
         final totalCapital = vm.capitals.fold(0.0, (sum, e) => sum + e.capital);
 
         final DateTime? lastAddedDate = vm.capitals.isNotEmpty
-            ? vm.capitals.map((e) => e.createdAt).reduce((a, b) => a.isAfter(b) ? a : b)
+            ? vm.capitals
+                  .map((e) => e.createdAt)
+                  .reduce((a, b) => a.isAfter(b) ? a : b)
             : null;
 
         final enteredAmount = _parseAmount();
@@ -107,9 +112,17 @@ class _CapitalManagementScreenState
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
-                _miniBalanceCard(title: "Cash on Hand", value: totalCashOnHand, icon: Icons.money),
+                _miniBalanceCard(
+                  title: "Cash on Hand",
+                  value: totalCashOnHand,
+                  icon: Icons.money,
+                ),
                 const SizedBox(height: 12),
-                _miniBalanceCard(title: "Capital", value: totalCapital, icon: Icons.account_balance),
+                _miniBalanceCard(
+                  title: "Capital",
+                  value: totalCapital,
+                  icon: Icons.account_balance,
+                ),
                 const SizedBox(height: 24),
                 _addCapitalCard(),
                 const SizedBox(height: 24),
@@ -119,28 +132,59 @@ class _CapitalManagementScreenState
                     onPressed: vm.isLoading || enteredAmount <= 0
                         ? null
                         : () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            messenger.hideCurrentSnackBar();
+
                             await vm.addCapital(
                               capitalAmount: enteredAmount,
                               remarks: _remarksController.text,
                             );
-                            _amountController.clear();
-                            _remarksController.clear();
-                            setState(() {});
+
+                            if (!mounted) return;
+
+                            if (vm.error == null) {
+                              _amountController.clear();
+                              _remarksController.clear();
+                              setState(() {});
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Capital added successfully!'),
+                                  backgroundColor: AppColors.success,
+                                ),
+                              );
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Failed to add capital: ${vm.error}',
+                                  ),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
                           },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: vm.isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text(
                             "Add Capital",
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                   ),
                 ),
@@ -149,21 +193,32 @@ class _CapitalManagementScreenState
           ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 
   /// ================= UI HELPERS =================
 
-  Widget _miniBalanceCard({required String title, required double value, IconData? icon}) {
+  Widget _miniBalanceCard({
+    required String title,
+    required double value,
+    IconData? icon,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +229,13 @@ class _CapitalManagementScreenState
                 Icon(icon, size: 20, color: AppColors.primary),
                 const SizedBox(width: 6),
               ],
-              Text(title, style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600)),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -194,16 +255,28 @@ class _CapitalManagementScreenState
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Add Capital', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Add Capital',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           _amountInput(),
           const SizedBox(height: 6),
-          Text('Enter the amount you want to add', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          Text(
+            'Enter the amount you want to add',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
