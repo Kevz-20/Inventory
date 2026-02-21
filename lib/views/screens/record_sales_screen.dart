@@ -31,6 +31,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   bool isProductMode = false;
 
   final ScrollController _categoryScrollController = ScrollController();
+  final PageController _categoryPageController = PageController();
   final TextEditingController searchController = TextEditingController();
   String searchQuery = '';
   DateTime? dueDate;
@@ -55,14 +56,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   @override
   void didPopNext() async {
     final vm = ref.read(salesViewModelProvider);
-    await vm.loadCustomers(); // 🔥 refresh credit limits
+    await vm.loadProducts();
+    await vm.loadCustomers(); // refresh credit limits
   }
 
   @override
   void dispose() {
-    routeObserver.unsubscribe(this); // 🔥 YOU ARE MISSING THIS
+    routeObserver.unsubscribe(this);
     searchController.dispose();
     _categoryScrollController.dispose();
+    _categoryPageController.dispose();
     super.dispose();
   }
 
@@ -141,7 +144,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       ),
                       Expanded(
                         child: isCash || isProductMode
-                            ? _productList(vm)
+                            ? _categoryProductView(vm)
                             : _utangList(),
                       ),
                     ],
@@ -383,7 +386,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             itemBuilder: (context, index) {
               final selected = index == vm.selectedCategoryIndex;
               return GestureDetector(
-                onTap: () => vm.selectCategory(index),
+                onTap: () {
+                  vm.selectCategory(index);
+                  _categoryPageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
                 child: Container(
                   height: chipHeight,
                   margin: EdgeInsets.symmetric(vertical: verticalPadding),
@@ -433,6 +443,35 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           }),
         ),
       ],
+    );
+  }
+
+  Widget _categoryProductView(SalesViewModel vm) {
+    return PageView.builder(
+      controller: _categoryPageController,
+      itemCount: SalesViewModel.categories.length,
+      onPageChanged: (index) => vm.selectCategory(index),
+      itemBuilder: (context, index) {
+        final query = searchQuery.toLowerCase();
+        final categoryName = SalesViewModel.categories[index].toLowerCase();
+
+        final filteredProducts = vm.products.where((p) {
+          final matchesCategory =
+              index == 0 || p.category.toLowerCase() == categoryName;
+          final matchesSearch = p.name.toLowerCase().contains(query);
+          return matchesCategory && matchesSearch;
+        }).toList();
+
+        if (filteredProducts.isEmpty) {
+          return const Center(child: Text("No products in this category"));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: filteredProducts.length,
+          itemBuilder: (_, i) => _productCard(filteredProducts[i], vm),
+        );
+      },
     );
   }
 

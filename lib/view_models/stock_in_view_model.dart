@@ -24,13 +24,11 @@ class StockInViewModel extends ChangeNotifier {
   List<ProductModel> allProducts = [];
   ProductModel? selectedProduct;
 
-  /// 🔹 used by autocomplete
   TextEditingController? autocompleteFieldController;
-
   final TextEditingController productController = TextEditingController();
-  final purchasePriceController = TextEditingController();
-  final sellingPriceController = TextEditingController();
-  final quantityController = TextEditingController();
+  final TextEditingController purchasePriceController = TextEditingController();
+  final TextEditingController sellingPriceController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
 
   bool get hasUnsavedData =>
       productController.text.isNotEmpty ||
@@ -74,16 +72,11 @@ class StockInViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-
-    // Clear regular controllers
     productController.clear();
     purchasePriceController.clear();
     sellingPriceController.clear();
     quantityController.clear();
-
-    // Detach the autocomplete controller to prevent 'used after dispose' errors
     autocompleteFieldController = null;
-
     super.dispose();
   }
 
@@ -118,9 +111,6 @@ class StockInViewModel extends ChangeNotifier {
     return autoText.isNotEmpty ? autoText : manualText;
   }
 
-  String? get selectedUnitType => null;
-  void Function(String? p1)? get setUnitType => null;
-
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
@@ -135,9 +125,6 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  // ------------------------
-  // SNACKBAR (same pattern as LoginViewModel)
-  // ------------------------
   void showSnackBar(
     BuildContext context,
     String message, {
@@ -161,16 +148,16 @@ class StockInViewModel extends ChangeNotifier {
     );
   }
 
-  // ------------------------
-  // MAIN SAVE FUNCTION
-  // ------------------------
-  Future<void> saveProduct(BuildContext context) async {
-    debugPrint('saveProduct() called');
+  List<ProductModel> get filteredProducts {
+    if (selectedCategory == null) return allProducts;
+    final categoryIndex = categories.indexOf(selectedCategory!);
+    return allProducts.where((p) => p.categoryIndex == categoryIndex).toList();
+  }
 
+  Future<void> saveProduct(BuildContext context) async {
     if (!isInitialized) return;
 
     final productName = effectiveProductName;
-
     if (productName.isEmpty || selectedCategory == null) {
       showSnackBar(context, 'Please fill all required fields', success: false);
       return;
@@ -180,11 +167,17 @@ class StockInViewModel extends ChangeNotifier {
         double.tryParse(sellingPriceController.text.replaceAll(',', '')) ?? 0;
     final purchasePrice =
         double.tryParse(purchasePriceController.text.replaceAll(',', '')) ?? 0;
+    final newQuantity =
+        int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0;
 
+    if (newQuantity <= 0) {
+      showSnackBar(context, 'Quantity must be greater than 0', success: false);
+      return;
+    }
     if (sellingPrice < purchasePrice) {
       showSnackBar(
         context,
-        'Selling price cannot be lower than purchase price.',
+        'Selling price cannot be lower than purchase price',
         success: false,
       );
       return;
@@ -202,17 +195,12 @@ class StockInViewModel extends ChangeNotifier {
 
     selectedProduct ??= existingProduct;
 
-    final sellingPriceText = sellingPriceController.text.replaceAll(',', '');
-    final purchasePriceText = purchasePriceController.text.replaceAll(',', '');
-    final int newQuantity =
-        int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0;
-
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productName,
       category: selectedCategory!,
-      sellingPrice: double.tryParse(sellingPriceText) ?? 0,
-      purchasePrice: double.tryParse(purchasePriceText) ?? 0,
+      sellingPrice: sellingPrice,
+      purchasePrice: purchasePrice,
       quantity: (selectedProduct?.quantity ?? 0) + newQuantity,
       image: productImage?.path ?? selectedProduct?.image,
       createdAt: selectedProduct?.createdAt ?? DateTime.now(),
@@ -225,13 +213,15 @@ class StockInViewModel extends ChangeNotifier {
         await _repository.updateProduct(stock);
         message = 'Product updated successfully';
       } else {
-        await _repository.addProduct(stock);
+        final newId = await _repository.addProduct(stock);
+        stock.id = newId;
+        allProducts.add(stock); // live update
         message = 'Product saved successfully';
       }
 
-      await loadProductNames();
       clearFields();
       selectedProduct = null;
+      safeNotifyListeners(); // <-- live update the UI
 
       setLoading(false);
 
@@ -246,9 +236,10 @@ class StockInViewModel extends ChangeNotifier {
     }
   }
 
-  Future<List<ProductModel>> getAllStocks() async {
-    if (!isInitialized) return [];
-    return await _repository.getProducts();
+  Future<void> loadProductNames() async {
+    allProducts = await _repository.loadAllProducts();
+    productNames = allProducts.map((p) => p.name).toList();
+    safeNotifyListeners();
   }
 
   Future<void> deleteStock(int id) async {
@@ -256,12 +247,6 @@ class StockInViewModel extends ChangeNotifier {
       await _repository.deleteProduct(id);
       await loadProductNames();
     } catch (_) {}
-  }
-
-  Future<void> loadProductNames() async {
-    allProducts = await _repository.loadAllProducts();
-    productNames = allProducts.map((p) => p.name).toList();
-    safeNotifyListeners();
   }
 
   void triggerValidation() {

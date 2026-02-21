@@ -48,4 +48,6 @@ class ProductModel {
       updatedAt: DateTime.parse(map['updated_at']),
     );
   }
+
+  Null get categoryIndex => null;
 }
