@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/app_colors.dart';
+import '../../models/region7_psgc_model.dart';
 import '../../view_models/new_customer_view_model.dart';
 import '../widgets/header.dart';
-import '../../models/region7_psgc_model.dart';
 
 class NewCustomerPage extends ConsumerStatefulWidget {
   const NewCustomerPage({super.key});
@@ -17,30 +18,27 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   List<String> filteredCities = [];
   List<String> filteredBarangays = [];
   List<BarangayModel> currentBarangays = [];
+  bool _showValidationErrors = false;
 
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(newCustomerViewModelProvider);
     final vmNotifier = ref.read(newCustomerViewModelProvider);
 
-    // Show snackbar safely
     if (vm.snackbarMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(vm.snackbarMessage!),
-            backgroundColor: AppColors.error, // 🔴 RED
+            backgroundColor: AppColors.error,
           ),
         );
         vmNotifier.snackbarMessage = null;
       });
     }
 
-    // Sort cities alphabetically
     final sortedCities = List<CityModel>.from(vm.cities)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
-    // Sort barangays alphabetically
     final sortedBarangays = List<BarangayModel>.from(vm.barangays)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
@@ -51,26 +49,34 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildTextField('First Name', vmNotifier.firstNameController),
+            _buildTextField(
+              'First Name',
+              vmNotifier.firstNameController,
+              isRequired: true,
+            ),
             _buildTextField(
               'Middle Name (optional)',
               vmNotifier.middleNameController,
             ),
-            _buildTextField('Last Name', vmNotifier.lastNameController),
+            _buildTextField(
+              'Last Name',
+              vmNotifier.lastNameController,
+              isRequired: true,
+            ),
             _buildTextField(
               'Contact Number',
               vmNotifier.contactController,
+              isRequired: true,
               keyboardType: TextInputType.number,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(11),
               ],
             ),
-
-            /// Municipality autocomplete
             _buildSearchField(
               label: 'Municipality',
               controller: vm.cityController,
+              isRequired: true,
               items: sortedCities.map((c) => c.name).toList(),
               filteredItems: filteredCities,
               onChangedFiltered: (list) =>
@@ -78,8 +84,6 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
               onItemSelected: (value) {
                 final selected = vm.cities.firstWhere((c) => c.name == value);
                 vmNotifier.selectCity(selected);
-
-                // Update current Barangays based on selected Municipality
                 setState(() {
                   currentBarangays = sortedBarangays
                       .where((b) => b.cityCode == selected.code)
@@ -89,11 +93,10 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                 });
               },
             ),
-
-            /// Barangay autocomplete (independent)
             _buildSearchField(
               label: 'Barangay',
               controller: vm.barangayController,
+              isRequired: true,
               items: sortedBarangays.map((b) => b.name).toList(),
               filteredItems: filteredBarangays,
               onChangedFiltered: (list) =>
@@ -105,8 +108,11 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                 vmNotifier.selectBarangay(selected);
               },
             ),
-
-            _buildTextField('Landmark / Street', vmNotifier.landmarkController),
+            _buildTextField(
+              'Landmark / Street',
+              vmNotifier.landmarkController,
+              isRequired: true,
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -115,7 +121,8 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                 onPressed: vm.isLoading
                     ? null
                     : () async {
-                        // ✅ BASIC VALIDATION
+                        setState(() => _showValidationErrors = true);
+
                         if (vmNotifier.firstNameController.text
                             .trim()
                             .isEmpty) {
@@ -127,7 +134,6 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           );
                           return;
                         }
-
                         if (vmNotifier.lastNameController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -137,7 +143,15 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           );
                           return;
                         }
-
+                        if (vmNotifier.contactController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Contact Number is required'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
                         if (vmNotifier.cityController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -147,7 +161,6 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           );
                           return;
                         }
-
                         if (vmNotifier.barangayController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -157,25 +170,28 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           );
                           return;
                         }
+                        if (vmNotifier.landmarkController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Landmark / Street is required'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                          return;
+                        }
 
-                        // ✅ If validation passes
                         final success = await vmNotifier.saveCustomer();
-
-                        if (!mounted) return;
+                        if (!context.mounted) return;
 
                         if (success) {
-                          // ignore: use_build_context_synchronously
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Customer saved successfully!'),
                               backgroundColor: AppColors.success,
                             ),
                           );
-
-                          // Clear all fields
                           vmNotifier.resetFields();
-
-                          // ignore: use_build_context_synchronously
+                          setState(() => _showValidationErrors = false);
                           Navigator.pop(context, true);
                         }
                       },
@@ -202,22 +218,47 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
+    bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
   }) {
+    final showError =
+        _showValidationErrors && isRequired && controller.text.trim().isEmpty;
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.grey),
+      borderSide: BorderSide(
+        color: showError ? AppColors.error : Colors.grey,
+        width: showError ? 1.4 : 1,
+      ),
+    );
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: showError ? AppColors.error : AppColors.textPrimary,
+        width: 1.4,
+      ),
     );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextField(
         controller: controller,
+        cursorColor: AppColors.textPrimary,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
+        onChanged: (_) {
+          if (_showValidationErrors) setState(() {});
+        },
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+          floatingLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(
@@ -226,24 +267,36 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
           ),
           border: border,
           enabledBorder: border,
-          focusedBorder: border,
+          focusedBorder: focusedBorder,
         ),
       ),
     );
   }
 
-  /// Google-style autocomplete field
   Widget _buildSearchField({
     required String label,
     required TextEditingController controller,
+    bool isRequired = false,
     required List<String> items,
     required List<String> filteredItems,
     required Function(List<String>) onChangedFiltered,
     required Function(String) onItemSelected,
   }) {
+    final showError =
+        _showValidationErrors && isRequired && controller.text.trim().isEmpty;
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.grey),
+      borderSide: BorderSide(
+        color: showError ? AppColors.error : Colors.grey,
+        width: showError ? 1.4 : 1,
+      ),
+    );
+    final focusedBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: showError ? AppColors.error : AppColors.textPrimary,
+        width: 1.4,
+      ),
     );
 
     return Padding(
@@ -253,13 +306,22 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
         children: [
           TextField(
             controller: controller,
+            cursorColor: AppColors.textPrimary,
             decoration: InputDecoration(
               labelText: label,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+              floatingLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
               filled: true,
               fillColor: Colors.white,
               border: border,
               enabledBorder: border,
-              focusedBorder: border,
+              focusedBorder: focusedBorder,
             ),
             onChanged: (value) {
               final matches = items
@@ -269,6 +331,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                   )
                   .toList();
               onChangedFiltered(matches);
+              if (_showValidationErrors) setState(() {});
             },
           ),
           if (controller.text.isNotEmpty && filteredItems.isNotEmpty)
@@ -290,6 +353,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           controller.text = item;
                           onItemSelected(item);
                           onChangedFiltered([]);
+                          if (_showValidationErrors) setState(() {});
                           FocusScope.of(context).unfocus();
                         },
                       ),
