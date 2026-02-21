@@ -37,8 +37,11 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
 
     if (picked != null) {
       setState(() {
-        if (isStart) start = picked;
-        else end = picked;
+        if (isStart) {
+          start = picked;
+        } else {
+          end = picked;
+        }
       });
       _loadData();
     }

@@ -216,7 +216,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 10),
             Divider(color: Colors.grey[300], thickness: 1),
