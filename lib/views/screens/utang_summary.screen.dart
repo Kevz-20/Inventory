@@ -98,15 +98,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
   bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
 
-  String _buildDueStatusText(DateTime dueDate) {
-    final daysLeft = _daysUntil(dueDate);
-    final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
-
-    if (daysLeft < 0) return "Overdue • Due: $formattedDueDate";
-    if (daysLeft == 0) return "Due today • Due: $formattedDueDate";
-    return "Due: $formattedDueDate • $daysLeft days left";
-  }
-
   @override
   void initState() {
     super.initState();
@@ -738,29 +729,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               ),
                             ),
                           )
-                        else if (widget.customer.dueDate != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _isOverdue(widget.customer.dueDate!)
-                                  ? Colors.red[100]
-                                  : Colors.green[100],
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Text(
-                              _buildDueStatusText(widget.customer.dueDate!),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: _isOverdue(widget.customer.dueDate!)
-                                    ? Colors.red
-                                    : Colors.green[800],
-                              ),
-                            ),
-                          ),
+                        else
+                          const SizedBox.shrink(),
                       ],
                     ),
                     const SizedBox(height: 18),
