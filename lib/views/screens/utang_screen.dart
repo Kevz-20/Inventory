@@ -1068,7 +1068,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         children: [
           _buildFilterButton(0, "Tanan"),
           _buildFilterButton(1, "Overdue"),
-          _buildFilterButton(2, "Nabayran"),
+          _buildFilterButton(2, "Paid"),
         ],
       ),
     );
