@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
@@ -253,10 +254,29 @@ class _AddUtangPageState extends State<AddUtangPage> {
         // INSERT OWNER INSTALLMENT AND DEDUCT CASH
         // -----------------------------
         if (down > 0) {
+          final prefs = await SharedPreferences.getInstance();
+          final mobileNumber = prefs.getString('mobileNumber') ?? '';
+          final accountRows = await db.query(
+            'account',
+            columns: ['id', 'first_name', 'middle_name', 'last_name'],
+            where: 'mobile_number = ?',
+            whereArgs: [mobileNumber],
+            limit: 1,
+          );
+          final accountId = accountRows.isNotEmpty
+              ? accountRows.first['id']
+              : 1;
+          final account = accountRows.isNotEmpty
+              ? accountRows.first
+              : <String, Object?>{};
+
           await db.insert('owner_installments', {
-            'account_id': 1, // static account id used by current data model
+            'account_id': accountId,
             'item': itemController.text,
             'downpayment': down,
+            'created_by_first_name': account['first_name'] ?? '',
+            'created_by_middle_name': account['middle_name'] ?? '',
+            'created_by_last_name': account['last_name'] ?? '',
             'created_at': DateTime.now().toIso8601String(),
           });
 

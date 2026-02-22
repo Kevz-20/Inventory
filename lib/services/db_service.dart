@@ -19,9 +19,23 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 5,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
+        Future<void> addColumnIfMissing(
+          String table,
+          String column,
+          String definition,
+        ) async {
+          final cols = await db.rawQuery('PRAGMA table_info($table)');
+          final exists = cols.any((c) => c['name'] == column);
+          if (!exists) {
+            await db.execute(
+              'ALTER TABLE $table ADD COLUMN $column $definition',
+            );
+          }
+        }
+
         if (oldVersion < 4) {
           // your existing upgrade logic...
         }
@@ -68,6 +82,43 @@ class DBService {
 
           await db.execute('DROP TABLE payable;');
           await db.execute('ALTER TABLE payable_new RENAME TO payable;');
+        }
+
+        if (oldVersion < 6) {
+          await addColumnIfMissing('customer_payment', 'account_id', 'INTEGER');
+          await addColumnIfMissing(
+            'customer_payment',
+            'created_by_first_name',
+            'TEXT',
+          );
+          await addColumnIfMissing(
+            'customer_payment',
+            'created_by_middle_name',
+            'TEXT',
+          );
+          await addColumnIfMissing(
+            'customer_payment',
+            'created_by_last_name',
+            'TEXT',
+          );
+        }
+
+        if (oldVersion < 7) {
+          await addColumnIfMissing(
+            'owner_installments',
+            'created_by_first_name',
+            'TEXT',
+          );
+          await addColumnIfMissing(
+            'owner_installments',
+            'created_by_middle_name',
+            'TEXT',
+          );
+          await addColumnIfMissing(
+            'owner_installments',
+            'created_by_last_name',
+            'TEXT',
+          );
         }
       },
 
@@ -266,8 +317,13 @@ class DBService {
       CREATE TABLE IF NOT EXISTS customer_payment (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customer_id INTEGER NOT NULL,
+        account_id INTEGER,
         amount REAL NOT NULL,
         paid_at TEXT NOT NULL,
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
+        FOREIGN KEY (account_id) REFERENCES account(id),
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
@@ -456,6 +512,9 @@ class DBService {
         downpayment REAL NOT NULL,   -- DP amount
         total_amount REAL,           -- full installment price
         installment_months INTEGER,  -- optional
+        created_by_first_name TEXT,
+        created_by_middle_name TEXT,
+        created_by_last_name TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (account_id) REFERENCES account(id)
       )
