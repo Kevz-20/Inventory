@@ -10,7 +10,8 @@ import '../repositories/account_repository.dart';
 import '../providers/database_provider.dart';
 import '../models/current_user.dart';
 
-final expensesViewModelProvider = ChangeNotifierProvider<ExpensesViewModel>((
+final expensesViewModelProvider =
+    ChangeNotifierProvider.autoDispose<ExpensesViewModel>((
   ref,
 ) {
   final repoFuture = ref.watch(expenseRepositoryProvider.future);
@@ -227,5 +228,12 @@ class ExpensesViewModel extends ChangeNotifier {
     selectedDate = DateTime.now();
     showValidationErrors = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    amountController.dispose();
+    descriptionController.dispose();
+    super.dispose();
   }
 }
