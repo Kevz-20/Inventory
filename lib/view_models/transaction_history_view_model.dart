@@ -64,9 +64,9 @@ class TransactionItem {
 
     return TransactionItem(
       type: map['type'] ?? fallbackType,
-      description: map['description']?.toString(), // Keep description clean
+      description: (map['description'] ?? map['remarks'] ?? map['note'])?.toString(),
       amount: value,
-      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      createdAt: _parseCreatedAt(map),
       paymentType: paymentType,
       productName: map['product_name'],
       quantity: (map['quantity'] as num?)?.toInt(),
@@ -74,6 +74,24 @@ class TransactionItem {
       category: map['category'],
       recordedBy: recordedBy.isNotEmpty ? recordedBy : null, // <-- set here
     );
+  }
+
+  static DateTime _parseCreatedAt(Map<String, dynamic> map) {
+    final rawCandidates = [
+      map['created_at'],
+      map['paid_at'],
+      map['date'],
+      map['credit_date'],
+    ];
+
+    for (final raw in rawCandidates) {
+      if (raw == null) continue;
+      final parsed = DateTime.tryParse(raw.toString());
+      if (parsed != null) return parsed;
+    }
+
+    // Oldest fallback so invalid timestamps never jump to the top.
+    return DateTime.fromMillisecondsSinceEpoch(0);
   }
 }
 
@@ -184,6 +202,12 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
   TransactionItem transactionAt(int index) => pagedTransactions[index];
 
+  List<TransactionItem> _sortNewestFirst(Iterable<TransactionItem> items) {
+    final sorted = items.toList();
+    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  }
+
   // ---------------- Computed transactions with caching ----------------
   Iterable<TransactionItem> get transactions {
     if (_cache.containsKey(selectedCategory)) return _cache[selectedCategory]!;
@@ -241,8 +265,8 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
 
-    _cache[selectedCategory] = result.toList();
-    return result;
+    _cache[selectedCategory] = _sortNewestFirst(result);
+    return _cache[selectedCategory]!;
   }
 
   // ---------------- Constructor ----------------
@@ -289,8 +313,7 @@ class TransactionHistoryViewModel extends ChangeNotifier {
     if (_startDate == null && _endDate == null) return data;
 
     return data.where((item) {
-      final createdAt = DateTime.tryParse(item['created_at'] ?? '');
-      if (createdAt == null) return false;
+      final createdAt = TransactionItem._parseCreatedAt(item);
       if (_startDate != null && createdAt.isBefore(_startDate!)) return false;
       if (_endDate != null && createdAt.isAfter(_endDate!)) return false;
       return true;

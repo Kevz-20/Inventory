@@ -252,7 +252,7 @@ class SalesViewModel extends ChangeNotifier {
               cashOnHand: updatedCash,
               bankCash: latest.bankCash,
               remarks: 'Cash sale added',
-              createdAt: DateTime.now(),
+              createdAt: latest.createdAt,
             );
 
             await _capitalRepository!.updateCapital(updatedModel);

@@ -1,4 +1,4 @@
-// ignore_for_file: unnecessary_to_list_in_spreads, deprecated_member_use
+﻿// ignore_for_file: unnecessary_to_list_in_spreads, deprecated_member_use
 
 import 'dart:io' show File;
 
@@ -82,37 +82,24 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 // Date pickers
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final startBox = _DatePickerBox(
-                        title: 'Start Date',
-                        date: vm.startDate ?? DateTime.now(),
-                        onDateSelected: vm.setStartDate,
-                      );
-                      final endBox = _DatePickerBox(
-                        title: 'End Date',
-                        date: vm.endDate ?? DateTime.now(),
-                        onDateSelected: vm.setEndDate,
-                      );
-
-                      if (constraints.maxWidth < 380) {
-                        return Column(
-                          children: [
-                            startBox,
-                            const SizedBox(height: 12),
-                            endBox,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: startBox),
-                          const SizedBox(width: 12),
-                          Expanded(child: endBox),
-                        ],
-                      );
-                    },
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _DatePickerBox(
+                          title: 'Start Date',
+                          date: vm.startDate ?? DateTime.now(),
+                          onDateSelected: vm.setStartDate,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _DatePickerBox(
+                          title: 'End Date',
+                          date: vm.endDate ?? DateTime.now(),
+                          onDateSelected: vm.setEndDate,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -165,7 +152,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       return Center(
         child: Text(
           vm.emptyStateMessage,
-          style: const TextStyle(fontSize: 16, color: Colors.black45),
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.black45,
+          ),
         ),
       );
     }
@@ -206,6 +196,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final descriptionLabel = isDownpayment
         ? '${tx.description ?? ''}  downpayment'
         : (tx.description ?? '');
+    final capitalNote = (tx.description ?? '').trim().isEmpty
+        ? 'N/A'
+        : tx.description!.trim();
 
     Color typeColor = isHalin
         ? Colors.green
@@ -264,6 +257,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     fontWeight: FontWeight.w600,
                     color: typeColor,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const Spacer(),
                 Text(
@@ -287,12 +281,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    (isCapital ||
-                            isExpense ||
+                    (isExpense ||
                             isCustomerPayment ||
                             isOwnerPayment ||
                             isDownpayment)
                         ? descriptionLabel
+                        : isCapital
+                        ? ''
                         : (tx.productName ?? 'Product'),
                     style: const TextStyle(
                       fontSize: 14,
@@ -343,31 +338,36 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
             // Third row: category / qty + time
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: (isHalin || isCapital)
-                      ? (tx.quantity != null
-                            ? Text(
-                                'Qty: ${tx.quantity}',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black54,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : const SizedBox())
-                      : (isExpense && tx.category != null
-                            ? Text(
-                                'Category: ${tx.category}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            : const SizedBox()),
-                ),
-                const SizedBox(width: 8),
+                if (isCapital)
+                  Text(
+                    'Note: $capitalNote',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  )
+                else if (isHalin)
+                  tx.quantity != null
+                      ? Text(
+                          'Qty: ${tx.quantity}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        )
+                      : const SizedBox()
+                else if (isExpense)
+                  tx.category != null
+                      ? Text(
+                          'Category: ${tx.category}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        )
+                      : const SizedBox(),
                 Text(
                   DateFormat('hh:mm a').format(tx.createdAt),
                   style: const TextStyle(fontSize: 13, color: Colors.black45),
@@ -417,32 +417,32 @@ class _DatePickerBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final now = DateTime.now();
+  final now = DateTime.now();
 
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date.isAfter(now) ? now : date,
-          firstDate: DateTime(2000),
-          lastDate: now, // 🚫 Prevent future dates
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-                onSurface: AppColors.textPrimary,
-              ),
-              dialogTheme: DialogThemeData(
-                backgroundColor: Colors.grey.shade100,
-              ),
-            ),
-            child: child!,
-          ),
-        );
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: date.isAfter(now) ? now : date,
+    firstDate: DateTime(2000),
+    lastDate: now, // 🚫 Prevent future dates
+    builder: (context, child) => Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: ColorScheme.light(
+          primary: AppColors.primary,
+          onPrimary: Colors.white,
+          onSurface: AppColors.textPrimary,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.grey.shade100,
+        ),
+      ),
+      child: child!,
+    ),
+  );
 
-        if (picked != null && !picked.isAfter(now)) {
-          onDateSelected(picked);
-        }
-      },
+  if (picked != null && !picked.isAfter(now)) {
+    onDateSelected(picked);
+  }
+},
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
@@ -582,33 +582,20 @@ class _TransactionDetailsSheet extends StatelessWidget {
     final isHalin = transaction.type == 'Halin';
     final isCapital = transaction.type == 'Capital';
     final isCustomerPayment = transaction.type == 'Customer Payment';
+    final isOwnerPayment = transaction.type == 'Owner Payment';
     final isDownpayment = transaction.type == 'Downpayment';
     final detailTypeLabel = isDownpayment ? 'Owner Payment' : transaction.type;
+    final capitalAddedBy = (transaction.recordedBy ?? '').trim().isEmpty
+        ? 'N/A'
+        : transaction.recordedBy!.trim();
     final NumberFormat currency = NumberFormat.currency(
       locale: 'en_PH',
-      symbol: '?',
+      symbol: '₱',
       decimalDigits: 2,
     );
 
-    Widget detailRow(String label, String value) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      );
-    }
-
     return SafeArea(
-      top: false,
+      top: false, // keeps drag handle closer to top
       child: Padding(
         padding: EdgeInsets.only(
           left: 16,
@@ -634,29 +621,91 @@ class _TransactionDetailsSheet extends StatelessWidget {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            detailRow(
-              'Amount:',
-              '${(isCapital || isHalin || isCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+
+            // Amount
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isCapital ? 'Amount Added:' : 'Amount:',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Text(
+                  isCapital
+                      ? currency.format(transaction.amount ?? 0)
+                      : '${(isCapital || isHalin || isCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isHalin
+                        ? Colors.green
+                        : isExpense
+                        ? Colors.red
+                        : isCustomerPayment
+                        ? Colors.green
+                        : (isOwnerPayment || isDownpayment)
+                        ? Colors.red
+                        : Colors.blue,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            detailRow(
-              'Date:',
-              DateFormat('MMMM d, y � hh:mm a').format(transaction.createdAt),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Date:', style: TextStyle(fontSize: 16)),
+                Text(
+                  DateFormat(
+                    isCapital ? 'MMMM d, y' : 'MMMM d, y • hh:mm a',
+                  ).format(transaction.createdAt),
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            if (isExpense && transaction.category != null) ...[
-              detailRow('Category:', transaction.category!),
-              const SizedBox(height: 8),
-            ],
-            if ((isHalin || isCapital) && transaction.quantity != null) ...[
-              detailRow('Quantity:', transaction.quantity.toString()),
-              const SizedBox(height: 8),
-            ],
-            if (transaction.recordedBy != null) ...[
-              detailRow('Recorded By:', transaction.recordedBy!),
-              const SizedBox(height: 16),
-            ] else
-              const SizedBox(height: 16),
+
+            if (isExpense && transaction.category != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Category:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.category!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            if ((isHalin || isCapital) && transaction.quantity != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Quantity:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.quantity.toString(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 8),
+
+            if (isCapital)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Added By:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    capitalAddedBy,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 16),
+
             if (isExpense && transaction.receiptImagePath != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -685,6 +734,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
                   ),
                 ],
               ),
+
             const SizedBox(height: 20),
           ],
         ),
