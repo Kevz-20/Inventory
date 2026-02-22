@@ -140,11 +140,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
       if (downpayment.isEmpty) missingFields.add("Downpayment");
       if (duration.isEmpty) missingFields.add("Duration (months)");
       if (startDate.isEmpty) missingFields.add("Start Date");
-      if (notes.isEmpty) missingFields.add("Notes");
     } else {
       if (paymentMethod.isEmpty) missingFields.add("Payment Method");
       if (datePaid.isEmpty) missingFields.add("Date Paid");
-      if (notes.isEmpty) missingFields.add("Notes");
     }
 
     if (missingFields.isNotEmpty) {
@@ -233,7 +231,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'original_amount': total,
           'remaining_amount': remaining,
           'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate),
-          'note': notesController.text,
+          'note': notes,
           'is_paid': 0,
           'has_plan': 1,
           'plan_months': months,
@@ -303,7 +301,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'original_amount': total,
           'remaining_amount': 0,
           'due_date': datePaid,
-          'note': notesController.text,
+          'note': notes,
           'is_paid': 1,
           'has_plan': 0,
           'plan_months': null,
@@ -312,9 +310,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'next_due_date': null,
           'is_asset': 1,
           'asset_category': 'Direct Purchase',
-          'created_by_first_name': 'Kevin',
-          'created_by_middle_name': 'R.',
-          'created_by_last_name': 'Mejares',
+          'created_by_first_name': CurrentUser.firstName ?? '',
+          'created_by_middle_name': CurrentUser.middleName ?? '',
+          'created_by_last_name': CurrentUser.lastName ?? '',
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });
