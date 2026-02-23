@@ -20,14 +20,6 @@ class AddUtangPage extends StatefulWidget {
 final NumberFormat currencyFormat = NumberFormat('#,##0');
 
 class _AddUtangPageState extends State<AddUtangPage> {
-  static const String _itemField = 'item';
-  static const String _totalCostField = 'total_cost';
-  static const String _downpaymentField = 'downpayment';
-  static const String _durationField = 'duration';
-  static const String _startDateField = 'start_date';
-  static const String _paymentMethodField = 'payment_method';
-  static const String _datePaidField = 'date_paid';
-
   int selectedTab = 0; // 0 = Installment, 1 = Non-Installment
 
   // ==============================
@@ -45,7 +37,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
   double remainingBalance = 0.0;
   double monthlyPayment = 0.0;
   String? downpaymentErrorText;
-  final Map<String, String> fieldErrors = {};
 
   void showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -128,50 +119,35 @@ class _AddUtangPageState extends State<AddUtangPage> {
     calculateInstallment();
   }
 
-  bool validateRequiredFields() {
-    final errors = <String, String>{};
-
-    if (itemController.text.trim().isEmpty) {
-      errors[_itemField] = "This field is required";
-    }
-    if (totalCostController.text.trim().isEmpty) {
-      errors[_totalCostField] = "This field is required";
-    }
-
-    if (selectedTab == 0) {
-      if (downpaymentController.text.trim().isEmpty) {
-        errors[_downpaymentField] = "This field is required";
-      }
-      if (durationController.text.trim().isEmpty) {
-        errors[_durationField] = "This field is required";
-      }
-      if (startDateController.text.trim().isEmpty) {
-        errors[_startDateField] = "This field is required";
-      }
-    } else {
-      if (paymentMethodController.text.trim().isEmpty) {
-        errors[_paymentMethodField] = "This field is required";
-      }
-      if (datePaidController.text.trim().isEmpty) {
-        errors[_datePaidField] = "This field is required";
-      }
-    }
-
-    setState(() {
-      fieldErrors
-        ..clear()
-        ..addAll(errors);
-    });
-
-    return errors.isEmpty;
-  }
-
   // ==============================
   // SAVE UTANG
   // ==============================
   Future<void> saveUtang() async {
-    if (!validateRequiredFields()) {
-      showErrorSnackBar("Please Fill out all the required fields");
+    final item = itemController.text.trim();
+    final totalCost = totalCostController.text.trim();
+    final downpayment = downpaymentController.text.trim();
+    final duration = durationController.text.trim();
+    final startDate = startDateController.text.trim();
+    final notes = notesController.text.trim();
+    final paymentMethod = paymentMethodController.text.trim();
+    final datePaid = datePaidController.text.trim();
+
+    final missingFields = <String>[];
+    if (item.isEmpty) missingFields.add("Item / Description");
+    if (totalCost.isEmpty) missingFields.add("Total Cost");
+
+    if (selectedTab == 0) {
+      if (downpayment.isEmpty) missingFields.add("Downpayment");
+      if (duration.isEmpty) missingFields.add("Duration (months)");
+      if (startDate.isEmpty) missingFields.add("Start Date");
+    } else {
+      if (paymentMethod.isEmpty) missingFields.add("Payment Method");
+      if (datePaid.isEmpty) missingFields.add("Date Paid");
+    }
+
+    if (missingFields.isNotEmpty) {
+      final fields = missingFields.join(", ");
+      showErrorSnackBar("Please fill all details: $fields");
       return;
     }
 
@@ -255,7 +231,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'original_amount': total,
           'remaining_amount': remaining,
           'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate),
-          'note': notesController.text,
+          'note': notes,
           'is_paid': 0,
           'has_plan': 1,
           'plan_months': months,
@@ -325,7 +301,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'original_amount': total,
           'remaining_amount': 0,
           'due_date': datePaid,
-          'note': notesController.text,
+          'note': notes,
           'is_paid': 1,
           'has_plan': 0,
           'plan_months': null,
@@ -334,9 +310,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'next_due_date': null,
           'is_asset': 1,
           'asset_category': 'Direct Purchase',
-          'created_by_first_name': 'Kevin',
-          'created_by_middle_name': 'R.',
-          'created_by_last_name': 'Mejares',
+          'created_by_first_name': CurrentUser.firstName ?? '',
+          'created_by_middle_name': CurrentUser.middleName ?? '',
+          'created_by_last_name': CurrentUser.lastName ?? '',
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });
@@ -385,8 +361,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
       setState(() {
         remainingBalance = 0.0;
         monthlyPayment = 0.0;
-        fieldErrors.clear();
-        downpaymentErrorText = null;
       });
 
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -438,10 +412,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() {
-                selectedTab = 0;
-                fieldErrors.clear();
-              }),
+              onTap: () => setState(() => selectedTab = 0),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -463,10 +434,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           const SizedBox(width: 12),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() {
-                selectedTab = 1;
-                fieldErrors.clear();
-              }),
+              onTap: () => setState(() => selectedTab = 1),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -525,7 +493,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
   Widget buildTextField(
     String label,
     TextEditingController? controller, {
-    String? fieldKey,
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
     VoidCallback? onTap,
@@ -534,30 +501,17 @@ class _AddUtangPageState extends State<AddUtangPage> {
     List<TextInputFormatter>? inputFormatters,
     String? errorText,
   }) {
-    final effectiveErrorText = fieldKey != null
-        ? fieldErrors[fieldKey] ?? errorText
-        : errorText;
-
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       readOnly: readOnly,
       onTap: onTap,
-      onChanged: (value) {
-        if (fieldKey != null &&
-            value.trim().isNotEmpty &&
-            fieldErrors.containsKey(fieldKey)) {
-          setState(() {
-            fieldErrors.remove(fieldKey);
-          });
-        }
-        onChanged?.call(value);
-      },
+      onChanged: onChanged,
       inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.grey),
-        errorText: effectiveErrorText,
+        errorText: errorText,
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
                   ? const Padding(
@@ -593,7 +547,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
         buildTextField(
           "Item / Description",
           itemController,
-          fieldKey: _itemField,
           icon: Icons.description,
         ),
         const SizedBox(height: 16),
@@ -623,7 +576,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
             buildTextField(
               "Total Cost",
               totalCostController,
-              fieldKey: _totalCostField,
               keyboardType: TextInputType.number,
               icon: Icons.attach_money,
               onChanged: (_) => onTotalCostChanged(),
@@ -633,7 +585,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
             buildTextField(
               "Downpayment",
               downpaymentController,
-              fieldKey: _downpaymentField,
               keyboardType: TextInputType.number,
               icon: Icons.money_off,
               onChanged: (_) => onDownpaymentChanged(),
@@ -644,7 +595,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
             buildTextField(
               "Duration (months)",
               durationController,
-              fieldKey: _durationField,
               keyboardType: TextInputType.number,
               icon: Icons.calendar_today,
               onChanged: (_) => calculateInstallment(),
@@ -694,7 +644,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
             buildTextField(
               "Start Date",
               startDateController,
-              fieldKey: _startDateField,
               readOnly: true,
               icon: Icons.date_range,
               onTap: () async {
@@ -710,17 +659,12 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     startDateController.text = DateFormat(
                       'yyyy-MM-dd',
                     ).format(date);
-                    fieldErrors.remove(_startDateField);
                   });
                 }
               },
             ),
             const SizedBox(height: 12),
-            buildTextField(
-              "Notes(Optional)",
-              notesController,
-              icon: Icons.note,
-            ),
+            buildTextField("Notes", notesController, icon: Icons.note),
           ],
         ),
       ),
@@ -763,7 +707,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
         buildTextField(
           "Item / Description",
           itemController,
-          fieldKey: _itemField,
           icon: Icons.description,
         ),
         const SizedBox(height: 16),
@@ -793,7 +736,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
             buildTextField(
               "Total Cost",
               totalCostController,
-              fieldKey: _totalCostField,
               keyboardType: TextInputType.number,
               inputFormatters: [ThousandsFormatter()],
               icon: Icons.attach_money,
@@ -802,14 +744,12 @@ class _AddUtangPageState extends State<AddUtangPage> {
             buildTextField(
               "Payment Method (Cash / Owner Paid / Bank Transfer)",
               paymentMethodController,
-              fieldKey: _paymentMethodField,
               icon: Icons.payment,
             ),
             const SizedBox(height: 12),
             buildTextField(
               "Date Paid",
               datePaidController,
-              fieldKey: _datePaidField,
               readOnly: true,
               icon: Icons.date_range,
               onTap: () async {
@@ -825,7 +765,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
                     datePaidController.text = DateFormat(
                       'yyyy-MM-dd',
                     ).format(date);
-                    fieldErrors.remove(_datePaidField);
                   });
                 }
               },
@@ -843,11 +782,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: buildTextField(
-          "Notes(Optional)",
-          notesController,
-          icon: Icons.note,
-        ),
+        child: buildTextField("Notes", notesController, icon: Icons.note),
       ),
     );
   }
