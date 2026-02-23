@@ -319,7 +319,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
         if (total > 0) {
           await db.rawUpdate(
-            '''
+            '''s
           UPDATE capital_management
           SET cash_on_hand = cash_on_hand - ?
           ''',
