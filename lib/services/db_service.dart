@@ -596,32 +596,37 @@ class DBService {
     final db = await database;
 
     await db.transaction((txn) async {
-      await txn.execute('PRAGMA foreign_keys = OFF');
+      // Delete from child tables first to respect foreign keys
+      final tablesToClear = [
+        'transaction_history',
+        'sales_credit_payment',
+        'customer_payment',
+        'sales_cash',
+        'sales_credit',
+        'sale_item',
+        'sales',
+        'capital_transaction',
+        'bank_transaction',
+        'payable_payment',
+        'payable',
+        'owner_installments',
+        'fixed_asset',
+        'stock_in',
+        'balance_assets',
+        'expenses',
+        'capital_management',
+        'customer',
+        'product',
+      ];
 
-      final tables = await txn.rawQuery(
-        "SELECT name FROM sqlite_master "
-        "WHERE type='table' AND name NOT LIKE 'sqlite_%'",
-      );
-
-      const keepTables = {
-        'account',
-        'security_questions',
-        'transaction_type_choices',
-        'credit_status',
-        'type_choices',
-        'source_choices',
-        'category_choices',
-      };
-
-      for (final table in tables) {
-        final tableName = table['name'] as String;
-
-        if (!keepTables.contains(tableName)) {
-          await txn.delete(tableName);
-        }
+      for (final table in tablesToClear) {
+        await txn.delete(table);
       }
 
-      await txn.execute('PRAGMA foreign_keys = ON');
+      // Optionally reset AUTOINCREMENT counters
+      for (final table in tablesToClear) {
+        await txn.execute('DELETE FROM sqlite_sequence WHERE name="$table"');
+      }
     });
   }
 
