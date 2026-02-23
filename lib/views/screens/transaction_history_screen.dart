@@ -82,37 +82,24 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 // Date pickers
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final startBox = _DatePickerBox(
-                        title: 'Start Date',
-                        date: vm.startDate ?? DateTime.now(),
-                        onDateSelected: vm.setStartDate,
-                      );
-                      final endBox = _DatePickerBox(
-                        title: 'End Date',
-                        date: vm.endDate ?? DateTime.now(),
-                        onDateSelected: vm.setEndDate,
-                      );
-
-                      if (constraints.maxWidth < 380) {
-                        return Column(
-                          children: [
-                            startBox,
-                            const SizedBox(height: 12),
-                            endBox,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        children: [
-                          Expanded(child: startBox),
-                          const SizedBox(width: 12),
-                          Expanded(child: endBox),
-                        ],
-                      );
-                    },
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _DatePickerBox(
+                          title: 'Start Date',
+                          date: vm.startDate ?? DateTime.now(),
+                          onDateSelected: vm.setStartDate,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _DatePickerBox(
+                          title: 'End Date',
+                          date: vm.endDate ?? DateTime.now(),
+                          onDateSelected: vm.setEndDate,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
