@@ -517,7 +517,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         'payable_id': item.id,
         'amount': payAmount,
         'date': DateTime.now().toIso8601String(),
-        'note': 'Owner payment',
+        'note': isFullPay ? 'Full payment' : 'Partial payment',
         'created_at': DateTime.now().toIso8601String(),
       });
 
@@ -773,11 +773,8 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                           final paidLabel = DateFormat('MMM dd, yyyy • hh:mm a')
                               .format(payment.paidAt);
 
-                          final leftLabel = !item.isInstallment
-                              ? 'Full payment ₱${currencyFormat.format(payment.amount)}'
-                              : (payment.note?.isNotEmpty == true
-                                  ? payment.note!
-                                  : 'Owner payment');
+                          final note = (payment.note?.isNotEmpty == true) ? payment.note! : 'Payment';
+                          final leftLabel = '$note ₱${currencyFormat.format(payment.amount)}';
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),

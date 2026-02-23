@@ -175,204 +175,217 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   // Build single transaction card
   // ------------------------
   Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
-    final isHalin = tx.type == 'Halin';
-    final isExpense = tx.type == 'Gasto';
-    final isCapital = tx.type == 'Capital';
-    final isCustomerPayment = tx.type == 'Customer Payment';
-    final isOwnerPayment = tx.type == 'Owner Payment';
-    final isDownpayment = tx.type == 'Downpayment';
-    final typeLabel = isDownpayment
-        ? 'Owner Payment'
-        : isHalin
-        ? 'Halin'
-        : isExpense
-        ? 'Gasto'
-        : isCapital
-        ? 'Capital'
-        : isCustomerPayment
-        ? 'Customer Payment'
-        : isOwnerPayment
-        ? 'Owner Payment'
-        : tx.type;
-    final descriptionLabel = isDownpayment
-        ? '${tx.description ?? ''}  downpayment'
-        : (tx.description ?? '');
-    final capitalNote = (tx.description ?? '').trim().isEmpty
-        ? 'N/A'
-        : tx.description!.trim();
+  final isHalin = tx.type == 'Halin';
+  final isHalinUtang = isHalin && (tx.isUtangSale == true);
 
-    Color amountColor = (isCapital || isHalin || isCustomerPayment)
-    ? Colors.green
-    : Colors.red;
+  final isExpense = tx.type == 'Gasto';
+  final isCapital = tx.type == 'Capital';
+  final isCustomerPayment = tx.type == 'Customer Payment';
+  final isOwnerPayment = tx.type == 'Owner Payment';
+  final isDownpayment = tx.type == 'Downpayment';
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: () {
-        // Show BottomSheet
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (_) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: _TransactionDetailsSheet(transaction: tx),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha(25),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  // ✅ Updated label (Halin vs Halin (Utang))
+  final typeLabel = isDownpayment
+      ? 'Owner Payment'
+      : isHalinUtang
+          ? 'Halin (Utang)'
+          : isHalin
+              ? 'Halin'
+              : isExpense
+                  ? 'Gasto'
+                  : isCapital
+                      ? 'Capital'
+                      : isCustomerPayment
+                          ? 'Customer Payment'
+                          : isOwnerPayment
+                              ? 'Owner Payment'
+                              : tx.type;
+
+  final descriptionLabel = isDownpayment
+      ? '${tx.description ?? ''}  downpayment'
+      : (tx.description ?? '');
+
+  final capitalNote = (tx.description ?? '').trim().isEmpty
+      ? 'N/A'
+      : tx.description!.trim();
+
+  // ✅ Income types in green, outgoing in red
+  final isIncome = isCapital || isHalin || isCustomerPayment;
+  final amountColor = isIncome ? Colors.green : Colors.red;
+
+  return InkWell(
+    borderRadius: BorderRadius.circular(10),
+    onTap: () {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Top row: type + amount
-            Row(
-              children: [
-                Text(
-                    typeLabel,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black54, // dark gray
-                    ),
-                  ),
-                const Spacer(),
-                Text(
-                  (isCapital || isHalin || isCustomerPayment)
-                      ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                      : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-                  style: TextStyle(
+        builder: (_) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: _TransactionDetailsSheet(transaction: tx),
+        ),
+      );
+    },
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(25),
+            blurRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top row: type + amount
+          Row(
+            children: [
+              // ✅ Type text dark gray
+              Text(
+                typeLabel,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+
+
+              const Spacer(),
+
+              // ✅ Amount + sign
+              Text(
+                isIncome
+                    ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                    : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: amountColor,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          // Second row: note / product + view receipt
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  (isExpense ||
+                          isCustomerPayment ||
+                          isOwnerPayment ||
+                          isDownpayment)
+                      ? descriptionLabel
+                      : isCapital
+                          ? ''
+                          : (tx.productName ?? 'Product'),
+                  style: const TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: amountColor,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
                   ),
                 ),
-              ],
-            ),
-
-            const SizedBox(height: 4),
-
-            // Second row: Note + View Receipt (Gasto)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    (isExpense ||
-                            isCustomerPayment ||
-                            isOwnerPayment ||
-                            isDownpayment)
-                        ? descriptionLabel
-                        : isCapital
-                        ? ''
-                        : (tx.productName ?? 'Product'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+              ),
+              if (isExpense && tx.receiptImagePath != null)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade50,
+                    foregroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      side: BorderSide(color: Colors.green.shade200),
                     ),
                   ),
-                ),
-                if (isExpense && tx.receiptImagePath != null)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade50,
-                      foregroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        side: BorderSide(color: Colors.green.shade200),
-                      ),
-                    ),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => Dialog(
-                          child: InteractiveViewer(
-                            child: Image.file(
-                              File(tx.receiptImagePath!),
-                              fit: BoxFit.contain,
-                            ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => Dialog(
+                        child: InteractiveViewer(
+                          child: Image.file(
+                            File(tx.receiptImagePath!),
+                            fit: BoxFit.contain,
                           ),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'View Receipt',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'View Receipt',
+                    style: TextStyle(fontSize: 13),
                   ),
-              ],
-            ),
-
-            const SizedBox(height: 2),
-
-            // Third row: category / qty + time
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (isCapital)
-                  Text(
-                    'Note: $capitalNote',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
-                  )
-                else if (isHalin)
-                  tx.quantity != null
-                      ? Text(
-                          'Qty: ${tx.quantity}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : const SizedBox()
-                else if (isExpense)
-                  tx.category != null
-                      ? Text(
-                          'Category: ${tx.category}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : const SizedBox(),
-                Text(
-                  DateFormat('hh:mm a').format(tx.createdAt),
-                  style: const TextStyle(fontSize: 13, color: Colors.black45),
                 ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+
+          const SizedBox(height: 2),
+
+          // Third row: extra info + time
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (isCapital)
+                Text(
+                  'Note: $capitalNote',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                  ),
+                )
+              else if (isHalin)
+                tx.quantity != null
+                    ? Text(
+                        'Qty: ${tx.quantity}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      )
+                    : const SizedBox()
+              else if (isExpense)
+                tx.category != null
+                    ? Text(
+                        'Category: ${tx.category}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      )
+                    : const SizedBox(),
+
+              Text(
+                DateFormat('hh:mm a').format(tx.createdAt),
+                style: const TextStyle(fontSize: 13, color: Colors.black45),
+              ),
+            ],
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // Build a section (grouped by date)
   Widget _buildSection(TransactionSection section) {
@@ -647,7 +660,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
                         ? Colors.green
                         : (isOwnerPayment || isDownpayment)
                         ? Colors.red
-                        : Colors.blue,
+                        : Colors.green,
                   ),
                 ),
               ],
@@ -706,18 +719,14 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 ],
               ),
 
-            if (isCustomerPayment || isOwnerPayment || isDownpayment)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Recorded By:', style: TextStyle(fontSize: 16)),
-                  Text(
-                    recordedByValue,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-
+            if (isHalin || isExpense || isCustomerPayment || isOwnerPayment || isDownpayment)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Recorded By:', style: TextStyle(fontSize: 16)),
+                Text(recordedByValue, style: const TextStyle(fontSize: 16)),
+              ],
+            ),
             const SizedBox(height: 16),
 
             if (isExpense && transaction.receiptImagePath != null)

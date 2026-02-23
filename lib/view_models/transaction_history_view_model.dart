@@ -14,9 +14,12 @@ class TransactionItem {
   final int? quantity;
   final String? receiptImagePath;
   final String? category;
+  
 
   // NEW FIELD
   final String? recordedBy;
+  final bool isUtangSale;
+
 
   TransactionItem({
     required this.type,
@@ -28,13 +31,15 @@ class TransactionItem {
     this.quantity,
     this.receiptImagePath,
     this.category,
-    this.recordedBy, // <-- add here
+    this.recordedBy, 
+    this.isUtangSale = false, 
   });
 
   factory TransactionItem.fromMap(
     Map<String, dynamic> map, {
     String fallbackType = '',
     bool isCapital = false,
+    bool isUtangSale = false,
   }) {
     double value;
     String? paymentType;
@@ -62,18 +67,19 @@ class TransactionItem {
     final recordedBy =
         [createdByFirst, createdByMiddle, createdByLast].where((s) => s.isNotEmpty).join(' ');
 
-    return TransactionItem(
-      type: map['type'] ?? fallbackType,
-      description: (map['description'] ?? map['remarks'] ?? map['note'])?.toString(),
-      amount: value,
-      createdAt: _parseCreatedAt(map),
-      paymentType: paymentType,
-      productName: map['product_name'],
-      quantity: (map['quantity'] as num?)?.toInt(),
-      receiptImagePath: receiptImagePath,
-      category: map['category'],
-      recordedBy: recordedBy.isNotEmpty ? recordedBy : null, // <-- set here
-    );
+        return TransactionItem(
+        type: map['type'] ?? fallbackType,
+        description: (map['description'] ?? map['remarks'] ?? map['note'])?.toString(),
+        amount: value,
+        createdAt: _parseCreatedAt(map),
+        paymentType: paymentType,
+        productName: map['product_name'],
+        quantity: (map['quantity'] as num?)?.toInt(),
+        receiptImagePath: receiptImagePath,
+        category: map['category'],
+        recordedBy: recordedBy.isNotEmpty ? recordedBy : null,
+        isUtangSale: isUtangSale, // NEW
+      );
   }
 
   static DateTime _parseCreatedAt(Map<String, dynamic> map) {
@@ -220,7 +226,11 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         yield TransactionItem.fromMap(map, fallbackType: 'Halin');
       }
       for (var map in _filteredHistory.salesCredit) {
-        yield TransactionItem.fromMap(map, fallbackType: 'Halin');
+        yield TransactionItem.fromMap(
+          map,
+          fallbackType: 'Halin',
+          isUtangSale: true,
+        );
       }
       for (var map in _filteredHistory.capitalManagement) {
         yield TransactionItem.fromMap(map,
