@@ -65,10 +65,11 @@ class TransactionHistoryRepository {
         cm.bank_cash,
         cm.created_at,
         cm.remarks,
-        cm.created_by_first_name,
-        cm.created_by_middle_name,
-        cm.created_by_last_name
+        COALESCE(NULLIF(cm.created_by_first_name, ''), a.first_name, '') AS created_by_first_name,
+        COALESCE(NULLIF(cm.created_by_middle_name, ''), a.middle_name, '') AS created_by_middle_name,
+        COALESCE(NULLIF(cm.created_by_last_name, ''), a.last_name, '') AS created_by_last_name
       FROM capital_management cm
+      LEFT JOIN account a ON a.id = cm.account_id
       ORDER BY cm.created_at DESC
     ''');
 

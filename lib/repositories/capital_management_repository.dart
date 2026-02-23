@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:math' as math;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/capital_management_model.dart';
 
 class CapitalManagementRepository {
@@ -12,9 +13,31 @@ class CapitalManagementRepository {
   Future<int> insertCapital(CapitalManagementModel model) async {
     final map = model.toMap();
     map['created_at'] = model.createdAt.toIso8601String();
+    await _attachCreatorInfo(map);
 
     debugPrint('>> Inserting capital globally: $map');
     return await database.insert('capital_management', map);
+  }
+
+  Future<void> _attachCreatorInfo(Map<String, dynamic> map) async {
+    final prefs = await SharedPreferences.getInstance();
+    final mobileNumber = prefs.getString('mobileNumber');
+    if (mobileNumber == null || mobileNumber.trim().isEmpty) return;
+
+    final userRows = await database.query(
+      'account',
+      columns: ['id', 'first_name', 'middle_name', 'last_name'],
+      where: 'mobile_number = ?',
+      whereArgs: [mobileNumber.trim()],
+      limit: 1,
+    );
+    if (userRows.isEmpty) return;
+
+    final user = userRows.first;
+    map['account_id'] = user['id'];
+    map['created_by_first_name'] = user['first_name'] ?? '';
+    map['created_by_middle_name'] = user['middle_name'] ?? '';
+    map['created_by_last_name'] = user['last_name'] ?? '';
   }
 
   // ---------------- GET ALL CAPITAL RECORDS ----------------
@@ -44,9 +67,10 @@ class CapitalManagementRepository {
     if (model.id == null) {
       throw Exception('Cannot update a record without ID');
     }
+    final data = model.toMap()..remove('created_at');
     return await database.update(
       'capital_management',
-      model.toMap(),
+      data,
       where: 'id = ?',
       whereArgs: [model.id],
     );
