@@ -201,15 +201,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         ? 'N/A'
         : tx.description!.trim();
 
-    Color typeColor = isHalin
-        ? Colors.green
-        : isExpense
-        ? Colors.red
-        : isCustomerPayment
-        ? Colors.green
-        : (isOwnerPayment || isDownpayment)
-        ? Colors.red
-        : Colors.blue;
+    Color amountColor = (isCapital || isHalin || isCustomerPayment)
+    ? Colors.green
+    : Colors.red;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -252,14 +246,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             Row(
               children: [
                 Text(
-                  typeLabel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: typeColor,
+                    typeLabel,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54, // dark gray
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
                 const Spacer(),
                 Text(
                   (isCapital || isHalin || isCustomerPayment)
@@ -268,7 +261,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: typeColor,
+                    color: amountColor,
                   ),
                 ),
               ],

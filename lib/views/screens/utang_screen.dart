@@ -53,8 +53,7 @@ class OwnerPayablePayment {
     return OwnerPayablePayment(
       id: map['id'] as int,
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      paidAt:
-          DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+      paidAt: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
       note: map['note']?.toString(),
     );
   }
@@ -84,8 +83,10 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   List<Payable> ownerPayables = [];
   List<Payable> filteredOwnerPayables = [];
 
-  DateTime _dateOnly(DateTime date) =>
-      DateTime(date.year, date.month, date.day);
+  // ✅ FIX: prevent double refresh from didChangeDependencies
+  bool _loadedOnce = false;
+
+  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 
   int _daysUntil(DateTime dueDate) {
     final today = _dateOnly(DateTime.now());
@@ -94,6 +95,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   }
 
   bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
+
   bool _isPastDueDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return false;
     final due = DateTime.tryParse(isoDate);
@@ -105,12 +107,8 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     final daysLeft = _daysUntil(dueDate);
     final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
 
-    if (daysLeft < 0) {
-      return "Overdue • Due: $formattedDueDate";
-    }
-    if (daysLeft == 0) {
-      return "Due today • Due: $formattedDueDate";
-    }
+    if (daysLeft < 0) return "Overdue • Due: $formattedDueDate";
+    if (daysLeft == 0) return "Due today • Due: $formattedDueDate";
     return "Due: $formattedDueDate • $daysLeft day${daysLeft != 1 ? 's' : ''} left";
   }
 
@@ -128,7 +126,10 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _refreshData();
+
+    // ✅ FIX: do NOT call _refreshData twice
+    if (_loadedOnce) return;
+    _loadedOnce = true;
   }
 
   @override
@@ -157,39 +158,63 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   Future<void> fetchUtangan() async {
     final db = await DBService.instance.database;
 
-    final result = await db.rawQuery('''
-        SELECT c.id, c.first_name, c.middle_name, c.last_name,
-              c.municipality,
-              c.barangay,
-              c.phone_number,
-              MAX(0, IFNULL(sc.total_amount, 0) - IFNULL(cp.total_paid, 0)) as total_amount,
-              sc.min_due_date as due_date
-        FROM customer c
-        LEFT JOIN (
-          SELECT customer_id,
-                 SUM(amount) as total_amount,
-                 MIN(due_date) as min_due_date
-          FROM sales_credit
-          GROUP BY customer_id
-        ) sc ON sc.customer_id = c.id
-        LEFT JOIN (
-          SELECT customer_id,
-                 SUM(amount) as total_paid
-          FROM customer_payment
-          GROUP BY customer_id
-        ) cp ON cp.customer_id = c.id
-        WHERE sc.customer_id IS NOT NULL
-        ORDER BY total_amount DESC
-      ''');
+    const sql = '''
+      SELECT
+        c.id,
+        c.first_name,
+        c.middle_name,
+        c.last_name,
+        c.municipality,
+        c.barangay,
+        c.phone_number,
+        MAX(0, COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) AS total_amount,
+        sc.min_due_date AS due_date
+      FROM customer c
+      LEFT JOIN (
+        SELECT
+          customer_id,
+          SUM(amount) AS total_amount,
+          MIN(due_date) AS min_due_date
+        FROM sales_credit
+        GROUP BY customer_id
+      ) sc ON sc.customer_id = c.id
+      LEFT JOIN (
+        SELECT
+          customer_id,
+          SUM(amount) AS total_paid
+        FROM customer_payment
+        GROUP BY customer_id
+      ) cp ON cp.customer_id = c.id
+      WHERE sc.customer_id IS NOT NULL
+      ORDER BY total_amount DESC
+    ''';
 
-    setState(() {
-      utangan = result.map((e) => UtangCustomer.fromMap(e)).toList();
-      filteredUtangan = List.from(utangan);
-    });
+    try {
+      debugPrint('fetchUtangan SQL:\n$sql');
+      final result = await db.rawQuery(sql);
+
+      if (!mounted) return;
+      setState(() {
+        utangan = result.map((e) => UtangCustomer.fromMap(e)).toList();
+        filteredUtangan = List.from(utangan);
+      });
+    } catch (e) {
+      debugPrint('fetchUtangan ERROR: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('fetchUtangan failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> fetchOwnerPayables() async {
     final payables = await PayableRepository().getAllPayables();
+
+    // ✅ FIX: avoid setState if screen is already disposed
+    if (!mounted) return;
 
     setState(() {
       ownerPayables = payables;
@@ -197,9 +222,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     });
   }
 
-  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(
-    int payableId,
-  ) async {
+  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(int payableId) async {
     final db = await DBService.instance.database;
     final result = await db.query(
       'payable_payment',
@@ -226,19 +249,17 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     selectedFilter = filterIndex;
 
     switch (filterIndex) {
-      case 0: // Tanan (All)
+      case 0:
         filteredOwnerPayables = List.from(ownerPayables);
         break;
-      case 1: // Overdue
+      case 1:
         filteredOwnerPayables = ownerPayables
-            .where(
-              (p) =>
-                  !p.isPaid &&
-                  _isPastDueDate(p.isInstallment ? p.nextDueDate : p.dueDate),
-            )
+            .where((p) =>
+                !p.isPaid &&
+                _isPastDueDate(p.isInstallment ? p.nextDueDate : p.dueDate))
             .toList();
         break;
-      case 2: // Nabayran (Paid)
+      case 2:
         filteredOwnerPayables = ownerPayables.where((p) => p.isPaid).toList();
         break;
       default:
@@ -284,109 +305,176 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     return DateTime(year, month, day);
   }
 
-  Future<double?> promptPartialAmount(
-    double remaining, {
-    double? suggested,
-  }) async {
-    double? initialAmount;
+  Future<double?> promptPartialAmount(double remaining, {double? suggested}) async {
+  double? initialAmount;
+  if (suggested != null && suggested > 0) {
+    initialAmount = suggested > remaining ? remaining : suggested;
+  }
 
-    if (suggested != null && suggested > 0) {
-      initialAmount = suggested > remaining ? remaining : suggested;
-    } else {
-      initialAmount = null;
-    }
+  final controller = TextEditingController(
+    text: initialAmount != null
+        ? currencyFormat.format(initialAmount).replaceAll('.00', '')
+        : '',
+  );
 
-    final controller = TextEditingController(
-      text: initialAmount != null
-          ? currencyFormat.format(initialAmount).replaceAll('.00', '')
-          : '',
-    );
+  double? value = initialAmount;
+  bool didConfirm = false;
 
-    double? value = initialAmount;
-    bool didConfirm = false;
+  double _parseAmount(String v) =>
+      double.tryParse(v.replaceAll(',', '')) ?? 0.0;
 
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final current = value ?? 0.0;
-            final isValid =
-                current > 0 && current <= remaining && remaining > 0;
+  String _money(double v) => "₱${currencyFormat.format(v)}";
 
-            return AlertDialog(
-              title: const Text("Partial Payment"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (suggested != null && suggested > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        "Monthly: ₱${currencyFormat.format(suggested)}",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54,
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (dialogContext, setState) {
+          final current = value ?? 0.0;
+          final hasSuggested = (suggested != null && suggested > 0);
+          final isValid = current > 0 && current <= remaining && remaining > 0;
+          final overLimit = current > remaining && remaining > 0;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+            contentPadding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+            actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+
+            title: const Text(
+              "Partial Payment",
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Remaining (important)
+                Text(
+                  "Remaining: ${_money(remaining)}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+
+                // Monthly suggestion (only if installment)
+                if (hasSuggested) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Monthly: ${_money(suggested!)}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange.shade900,
+                          ),
                         ),
                       ),
-                    ),
-                  TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [ThousandsFormatter()],
-                    decoration: InputDecoration(
-                      hintText: "Enter amount",
-                      helperText:
-                          "Remaining: ₱${currencyFormat.format(remaining)}",
-                    ),
-                    onChanged: (v) => setState(() {
-                      value = double.tryParse(v.replaceAll(',', ''));
-                    }),
+                      TextButton(
+                        onPressed: () {
+                          final fill =
+                              (suggested! > remaining) ? remaining : suggested!;
+                          controller.text =
+                              currencyFormat.format(fill).replaceAll('.00', '');
+                          value = fill;
+                          setState(() {});
+                        },
+                        child: const Text("Use"),
+                      ),
+                    ],
                   ),
-                  if ((value ?? 0) > remaining && remaining > 0)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text(
-                        "Amount exceeds remaining balance",
-                        style: TextStyle(color: Colors.red, fontSize: 12),
+                ],
+
+                const SizedBox(height: 12),
+
+                // Amount input (big + clear)
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsFormatter()],
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  decoration: InputDecoration(
+                    prefixText: "₱ ",
+                    hintText: "Enter amount",
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.grey.shade500),
+                    ),
+                  ),
+                  onChanged: (v) => setState(() {
+                    value = _parseAmount(v);
+                  }),
+                ),
+
+                if (overLimit)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      "Too high (exceeds remaining).",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    value = null;
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Cancel"),
-                ),
-                ElevatedButton(
-                  onPressed: isValid
-                      ? () {
-                          value =
-                              double.tryParse(
-                                controller.text.replaceAll(',', ''),
-                              ) ??
-                              0.0;
-                          didConfirm = true;
-                          Navigator.pop(context);
-                        }
-                      : null,
-                  child: const Text("OK"),
-                ),
+                  ),
               ],
-            );
-          },
-        );
-      },
-    );
+            ),
 
+            actions: [
+              TextButton(
+                onPressed: () {
+                  value = null;
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: isValid
+                    ? () {
+                        value = _parseAmount(controller.text);
+                        didConfirm = true;
+                        Navigator.pop(dialogContext);
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                ),
+                child: const Text("Confirm"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     controller.dispose();
-    return didConfirm ? value : null;
-  }
+  });
+
+  return didConfirm ? value : null;
+}
 
   Future<void> applyPayment(
     Payable item,
@@ -402,12 +490,10 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
 
       if (payAmount <= 0) return;
 
-      // Verify sufficient cash on hand (global pool, same as other screens)
       final cashRes = await db.rawQuery(
         'SELECT IFNULL(SUM(cash_on_hand), 0) AS total_cash FROM capital_management',
       );
-      final cashOnHand =
-          (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
+      final cashOnHand = (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
 
       if (cashOnHand < payAmount) {
         if (!mounted) return;
@@ -424,7 +510,6 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         return;
       }
 
-      // Deduct cash and record payment
       final capitalRepo = CapitalManagementRepository(db);
       await capitalRepo.deductCash(amount: payAmount);
 
@@ -436,7 +521,6 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      // Update payable status
       final newRemaining = (remaining - payAmount).clamp(0.0, remaining);
       final updateMap = <String, dynamic>{
         'remaining_amount': newRemaining,
@@ -444,11 +528,9 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      // Update next due date for installments
       if (item.isInstallment && newRemaining > 0) {
         final baseDate =
-            DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ??
-            DateTime.now();
+            DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ?? DateTime.now();
         final nextDue = addMonths(baseDate, 1);
         updateMap['next_due_date'] = DateFormat('yyyy-MM-dd').format(nextDue);
       }
@@ -476,9 +558,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
       if (!mounted) return;
 
       final isInsufficientCash = e.toString().contains('Insufficient cash');
-      final msg = isInsufficientCash
-          ? 'Insufficient cash on hand'
-          : 'Failed to process payment';
+      final msg = isInsufficientCash ? 'Insufficient cash on hand' : 'Failed to process payment';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -495,186 +575,268 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   // ============================================================
 
   Future<void> showOwnerUtangModal(Payable item) async {
-    final paymentHistory = await fetchOwnerPaymentHistory(item.id);
-    if (!mounted) return;
+  final paymentHistory = await fetchOwnerPaymentHistory(item.id);
+  if (!mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final double remaining = (item.remainingAmount ?? item.amount)
-            .clamp(0.0, item.amount.toDouble())
-            .toDouble();
-        final bool isFullyPaid =
-            item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
-        final nextDateStr = item.isInstallment
-            ? item.nextDueDate
-            : item.dueDate;
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent, // ✅ makes rounded corners look clean
+    builder: (context) {
+      final double remaining = (item.remainingAmount ?? item.amount)
+          .clamp(0.0, item.amount.toDouble())
+          .toDouble();
 
-        DateTime? displayNextDue;
-        String nextDueLabel = "Next Due";
+      final bool isFullyPaid =
+          item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
 
-        if (item.isInstallment) {
-          final baseDate = DateTime.tryParse(nextDateStr ?? '');
-          if (baseDate != null) {
-            displayNextDue = addMonths(baseDate, 1);
-            nextDueLabel = "Next Due (after payment)";
-          }
-        } else if (nextDateStr != null) {
-          displayNextDue = DateTime.tryParse(nextDateStr);
+      final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
+
+      DateTime? displayNextDue;
+      String nextDueLabel = "Next Due";
+
+      if (item.isInstallment) {
+        final baseDate = DateTime.tryParse(nextDateStr ?? '');
+        if (baseDate != null) {
+          displayNextDue = addMonths(baseDate, 1);
+          nextDueLabel = "Next Due (after payment)";
         }
+      } else if (nextDateStr != null) {
+        displayNextDue = DateTime.tryParse(nextDateStr);
+      }
 
-        return DraggableScrollableSheet(
+      return SafeArea(
+        top: false,
+        child: DraggableScrollableSheet(
           expand: false,
-          initialChildSize: 0.5,
-          minChildSize: 0.5,
-          maxChildSize: 0.6,
+          initialChildSize: 0.55, // ✅ better default height
+          minChildSize: 0.45,
+          maxChildSize: 0.92, // ✅ allows scrolling taller for long history
           builder: (context, scrollController) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 24,
-                bottom:
-                    MediaQuery.of(context).viewInsets.bottom +
-                    MediaQuery.of(context).viewPadding.bottom +
-                    12,
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF7F7F7),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
               ),
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.item,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              "Amount: ?${currencyFormat.format(item.amount)}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "Remaining: ?${currencyFormat.format(remaining)}",
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.red,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            if (item.createdAtDate != null)
-                              Text(
-                                "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            if (displayNextDue != null)
-                              Text(
-                                "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.isInstallment
-                                  ? "Installment"
-                                  : "Non-installment",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: item.isInstallment
-                                    ? Colors.orange.shade800
-                                    : Colors.blue.shade800,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              "Payment Trace",
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (paymentHistory.isEmpty)
-                              const Text(
-                                "No payments recorded yet.",
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ...paymentHistory.map((payment) {
-                              final paidLabel = DateFormat(
-                                'MMM dd, yyyy hh:mm a',
-                              ).format(payment.paidAt);
-                              final leftLabel = !item.isInstallment
-                                  ? 'Full payment ?${currencyFormat.format(payment.amount)}'
-                                  : (payment.note?.isNotEmpty == true
-                                        ? payment.note!
-                                        : 'Owner payment');
-                              return Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        leftLabel,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      paidLabel,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black54,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
+              child: Column(
+                children: [
+                  // ✅ Drag handle
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 8),
+                    child: Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(999),
                       ),
                     ),
-                    if (!isFullyPaid) ...[
-                      const SizedBox(height: 10),
-                      Row(
+                  ),
+
+                  // ✅ Title
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.item,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: item.isInstallment
+                                ? Colors.orange.shade100
+                                : Colors.blue.shade100,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            item.isInstallment ? "Installment" : "Non-installment",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              color: item.isInstallment
+                                  ? Colors.orange.shade800
+                                  : Colors.blue.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // ✅ Scrollable content
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      children: [
+                        // ✅ Summary card
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _rowLabelValue(
+                                "Amount",
+                                "₱${currencyFormat.format(item.amount)}",
+                                valueStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _rowLabelValue(
+                                "Remaining",
+                                "₱${currencyFormat.format(remaining)}",
+                                valueStyle: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: remaining <= 0
+                                      ? Colors.green.shade700
+                                      : Colors.red.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              if (item.createdAtDate != null)
+                                Text(
+                                  "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              if (displayNextDue != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // ✅ Payment trace section
+                        const Text(
+                          "Payment Trace",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        if (paymentHistory.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Text(
+                              "No payments recorded yet.",
+                              style: TextStyle(color: Colors.black54),
+                            ),
+                          ),
+
+                        ...paymentHistory.map((payment) {
+                          final paidLabel = DateFormat('MMM dd, yyyy • hh:mm a')
+                              .format(payment.paidAt);
+
+                          final leftLabel = !item.isInstallment
+                              ? 'Full payment ₱${currencyFormat.format(payment.amount)}'
+                              : (payment.note?.isNotEmpty == true
+                                  ? payment.note!
+                                  : 'Owner payment');
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    leftLabel,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  paidLabel,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+
+                  // ✅ Bottom action bar (buttons feel “attached” + not floating awkwardly)
+                  if (!isFullyPaid)
+                    Container(
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        top: 12,
+                        bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 16,
+                            offset: const Offset(0, -6),
+                          )
+                        ],
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
+                      ),
+                      child: Row(
                         children: [
                           Expanded(
                             child: ElevatedButton(
@@ -685,21 +847,26 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                                 );
                                 if (amount != null) {
                                   await applyPayment(item, amount);
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                  }
+                                  if (context.mounted) Navigator.pop(context);
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.orange,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
-                              child: const Text("Partial Pay"),
+                              child: const Text(
+                                "Partial Pay",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () async {
@@ -708,7 +875,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                                   builder: (context) => AlertDialog(
                                     title: const Text("Confirm Full Payment"),
                                     content: Text(
-                                      "Are you sure you want to record the full payment of ?${currencyFormat.format(remaining)}?",
+                                      "Are you sure you want to record the full payment of ₱${currencyFormat.format(remaining)}?",
                                     ),
                                     actions: [
                                       TextButton(
@@ -731,32 +898,66 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                                     remaining,
                                     isFullPay: true,
                                   );
-                                  if (context.mounted) {
-                                    Navigator.pop(context);
-                                  }
+                                  if (context.mounted) Navigator.pop(context);
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
-                              child: const Text("Full Pay"),
+                              child: const Text(
+                                "Full Pay",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                ],
               ),
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
+// ✅ small UI helper (does NOT affect logic)
+Widget _rowLabelValue(
+  String label,
+  String value, {
+  TextStyle? valueStyle,
+}) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          color: Colors.black54,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      Text(
+        value,
+        style: valueStyle ??
+            const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    ],
+  );
+}
 
   // ============================================================
   // UI - BUILD
@@ -795,12 +996,8 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
-              left: selectedTab == 0
-                  ? 0
-                  : MediaQuery.of(context).size.width / 2 - 30,
-              right: selectedTab == 0
-                  ? MediaQuery.of(context).size.width / 2 - 30
-                  : 0,
+              left: selectedTab == 0 ? 0 : MediaQuery.of(context).size.width / 2 - 30,
+              right: selectedTab == 0 ? MediaQuery.of(context).size.width / 2 - 30 : 0,
               top: 0,
               bottom: 0,
               child: Container(
@@ -873,10 +1070,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
-                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               ),
               onChanged: filterUtangan,
             ),
@@ -926,10 +1120,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                   Expanded(
                     child: Text(
                       item.fullName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Column(
@@ -937,18 +1128,12 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                     children: [
                       Text(
                         "₱${currencyFormat.format(item.totalAmount)}",
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                       if (item.totalAmount <= 0)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.green[100],
                             borderRadius: BorderRadius.circular(12),
@@ -968,43 +1153,28 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 4),
               if (item.municipality != null && item.municipality!.isNotEmpty)
-                Text(
-                  item.municipality!,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+                Text(item.municipality!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 2),
               if (item.barangay != null && item.barangay!.isNotEmpty)
-                Text(
-                  "Barangay ${item.barangay!}",
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+                Text("Barangay ${item.barangay!}",
+                    style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 2),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (item.phoneNumber != null && item.phoneNumber!.isNotEmpty)
-                    Text(
-                      item.phoneNumber!,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
+                    Text(item.phoneNumber!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
                   if (item.dueDate != null && item.totalAmount > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _isOverdue(item.dueDate!)
-                            ? Colors.red[100]
-                            : Colors.green[100],
+                        color: _isOverdue(item.dueDate!) ? Colors.red[100] : Colors.green[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         _buildDueStatusText(item.dueDate!),
                         style: TextStyle(
-                          color: _isOverdue(item.dueDate!)
-                              ? Colors.red
-                              : Colors.green[800],
+                          color: _isOverdue(item.dueDate!) ? Colors.red : Colors.green[800],
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1024,7 +1194,6 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   // ============================================================
 
   Widget _buildOwnerPage() {
-    // Get system bottom padding for adaptive layout
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Stack(
@@ -1046,9 +1215,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                       padding: EdgeInsets.zero,
                       itemCount: filteredOwnerPayables.length,
                       itemBuilder: (context, index) {
-                        return _buildOwnerPayableCard(
-                          filteredOwnerPayables[index],
-                        );
+                        return _buildOwnerPayableCard(filteredOwnerPayables[index]);
                       },
                     ),
             ),
@@ -1103,8 +1270,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
 
   Widget _buildOwnerPayableCard(Payable item) {
     String? nextDueDisplay;
-    final isFullyPaid =
-        item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
+    final isFullyPaid = item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
     String status = isFullyPaid ? "Paid" : "";
     final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
 
@@ -1114,9 +1280,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
 
         if (!isFullyPaid) {
-          final daysLeft = _dateOnly(
-            due,
-          ).difference(_dateOnly(DateTime.now())).inDays;
+          final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
           if (daysLeft < 0) {
             status = "Overdue";
           } else if (daysLeft <= 7) {
@@ -1133,9 +1297,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
         child: Card(
           color: Colors.white,
           elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Stack(
             children: [
               Padding(
@@ -1145,18 +1307,12 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                   children: [
                     Text(
                       item.item,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     if (nextDueDisplay != null)
                       Text(
                         nextDueDisplay,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                   ],
                 ),
@@ -1166,10 +1322,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                   top: 12,
                   right: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: _getStatusColor(status),
                       borderRadius: BorderRadius.circular(12),
@@ -1193,7 +1346,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
 
   Widget _buildAddButton(double bottomPadding) {
     return Positioned(
-      bottom: 20 + bottomPadding, // Add system bottom padding
+      bottom: 20 + bottomPadding,
       left: 20,
       right: 20,
       child: SizedBox(
@@ -1206,18 +1359,12 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 2,
           ),
           child: const Text(
             "Pagdugang og Bayronon",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
       ),
@@ -1231,12 +1378,12 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Overdue':
-        return Colors.red.shade100;
+        return const Color(0xFFFFEBEE);
       case 'Due Soon':
-        return Colors.orange.shade100;
+         return const Color(0xFFFFF3E0); // softer orange background
       case 'Paid':
-        return Colors.green.shade100;
-      default:
+           return const Color(0xFFE8F5E9); 
+          default:
         return Colors.grey.shade200;
     }
   }
@@ -1244,13 +1391,13 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   Color _getStatusTextColor(String status) {
     switch (status) {
       case 'Overdue':
-        return Colors.red.shade800;
+        return const Color(0xFFC62828);
       case 'Due Soon':
-        return Colors.orange.shade800;
+        return const Color(0xFFEF6C00);
       case 'Paid':
-        return Colors.green.shade800;
+        return const Color(0xFF2E7D32);
       default:
-        return Colors.grey.shade800;
+        return Colors.black54;
     }
   }
 }
