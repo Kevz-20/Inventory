@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_colors.dart';
 import '../../models/utang_customer_model.dart';
 import '../../repositories/capital_management_repository.dart';
@@ -247,12 +248,38 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 : () async {
                                     final db =
                                         await DBService.instance.database;
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    final mobileNumber =
+                                        prefs.getString('mobileNumber') ?? '';
+                                    final accountRows = await db.query(
+                                      'account',
+                                      columns: [
+                                        'id',
+                                        'first_name',
+                                        'middle_name',
+                                        'last_name',
+                                      ],
+                                      where: 'mobile_number = ?',
+                                      whereArgs: [mobileNumber],
+                                      limit: 1,
+                                    );
+                                    final account = accountRows.isNotEmpty
+                                        ? accountRows.first
+                                        : <String, Object?>{};
 
                                     await db.insert('customer_payment', {
                                       'customer_id': widget.customer.id,
+                                      'account_id': account['id'],
                                       'amount': enteredAmount,
                                       'paid_at': DateTime.now()
                                           .toIso8601String(),
+                                      'created_by_first_name':
+                                          account['first_name'] ?? '',
+                                      'created_by_middle_name':
+                                          account['middle_name'] ?? '',
+                                      'created_by_last_name':
+                                          account['last_name'] ?? '',
                                     });
 
                                     final customerRepo = CustomerRepository(db);

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
+import '../../models/current_user.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../widgets/nav_bar.dart';
 
@@ -585,8 +586,16 @@ class _TransactionDetailsSheet extends StatelessWidget {
     final isOwnerPayment = transaction.type == 'Owner Payment';
     final isDownpayment = transaction.type == 'Downpayment';
     final detailTypeLabel = isDownpayment ? 'Owner Payment' : transaction.type;
+    final currentUserName = [
+      CurrentUser.firstName ?? '',
+      CurrentUser.middleName ?? '',
+      CurrentUser.lastName ?? '',
+    ].where((s) => s.trim().isNotEmpty).join(' ').trim();
     final capitalAddedBy = (transaction.recordedBy ?? '').trim().isEmpty
-        ? 'N/A'
+        ? currentUserName
+        : transaction.recordedBy!.trim();
+    final recordedByValue = (transaction.recordedBy ?? '').trim().isEmpty
+        ? currentUserName
         : transaction.recordedBy!.trim();
     final NumberFormat currency = NumberFormat.currency(
       locale: 'en_PH',
@@ -699,6 +708,18 @@ class _TransactionDetailsSheet extends StatelessWidget {
                   const Text('Added By:', style: TextStyle(fontSize: 16)),
                   Text(
                     capitalAddedBy,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+
+            if (isCustomerPayment || isOwnerPayment || isDownpayment)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Recorded By:', style: TextStyle(fontSize: 16)),
+                  Text(
+                    recordedByValue,
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],
