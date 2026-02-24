@@ -19,15 +19,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      final vm = ref.read(loginViewModelProvider);
-      vm.loadSavedMobile();
-      vm.clearPin(); // ✅ Reset PIN when page loads
-    });
+
     _shakeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
+
     _shakeAnimation = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
       TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
@@ -35,6 +32,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
       TweenSequenceItem(tween: Tween(begin: 10.0, end: 0.0), weight: 1),
     ]).animate(_shakeController);
+
+    // ✅ Auto-biometric login after first frame with delay
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final vm = ref.read(loginViewModelProvider);
+      await vm.loadSavedMobile();
+      vm.clearPin(); // Reset PIN when page loads
+
+      if (vm.mobileNumber.isNotEmpty) {
+        // Delay slightly to ensure activity is attached
+        await Future.delayed(const Duration(milliseconds: 300));
+        try {
+          await vm.loginWithBiometric(context, ref);
+        } catch (_) {
+          // ignore errors for now; will show Biometric failed message inside VM
+        }
+      }
+    });
   }
 
   @override
@@ -78,7 +92,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                   /// MOBILE NUMBER
                   GestureDetector(
-                    onTap: () => viewModel.changeMobileNumber(context),
+                    onTap: () =>
+                        viewModel.changeMobileNumber(context, ref: ref),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 25,
@@ -124,8 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   const SizedBox(height: 12),
                   AnimatedBuilder(
                     animation: _shakeAnimation,
-                    // ignore: unnecessary_underscores
-                    builder: (_, __) {
+                    builder: (_, _) {
                       return Transform.translate(
                         offset: Offset(_shakeAnimation.value, 0),
                         child: Row(
@@ -188,6 +202,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  // 🔹 Fingerprint icon removed for auto login
                 ],
               ),
             );
@@ -199,7 +215,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 children: [
                   GestureDetector(
                     onTap: () {
-                      ref.read(loginViewModelProvider).clearPin(); // ✅ Reset PIN before leaving
+                      ref.read(loginViewModelProvider).clearPin();
                       context.push('/create_account');
                     },
                     child: const Text(
@@ -212,32 +228,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                   ),
                   GestureDetector(
-                      onTap: () {
-                        ref.read(loginViewModelProvider).clearPin(); // ✅ Clear PIN before leaving
-                        context.push('/forgot_pin');
-                      },
-                      child: const Text(
-                        "NAKALIMOT SA PIN?",
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
-                        ),
+                    onTap: () {
+                      ref.read(loginViewModelProvider).clearPin();
+                      context.push('/forgot_pin');
+                    },
+                    child: const Text(
+                      "NAKALIMOT SA PIN?",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
+                  ),
                 ],
               ),
             );
 
             if (isSmallHeight) {
-              // On small screens: everything scrolls together
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
                 child: Column(children: [mainContent, bottomLinks]),
               );
             }
 
-            // Normal screens: links pinned to bottom
             return Column(
               children: [
                 Expanded(child: Center(child: mainContent)),
