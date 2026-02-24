@@ -14,12 +14,10 @@ class TransactionItem {
   final int? quantity;
   final String? receiptImagePath;
   final String? category;
-  
 
   // NEW FIELD
   final String? recordedBy;
   final bool isUtangSale;
-
 
   TransactionItem({
     required this.type,
@@ -31,8 +29,8 @@ class TransactionItem {
     this.quantity,
     this.receiptImagePath,
     this.category,
-    this.recordedBy, 
-    this.isUtangSale = false, 
+    this.recordedBy,
+    this.isUtangSale = false,
   });
 
   factory TransactionItem.fromMap(
@@ -44,7 +42,8 @@ class TransactionItem {
     double value;
     String? paymentType;
 
-    String? receiptImagePath = map['receipt'] ??
+    String? receiptImagePath =
+        map['receipt'] ??
         map['receipt_image_path'] ??
         map['resibo'] ??
         map['image_path'];
@@ -64,22 +63,26 @@ class TransactionItem {
     final createdByFirst = map['created_by_first_name'] ?? '';
     final createdByMiddle = map['created_by_middle_name'] ?? '';
     final createdByLast = map['created_by_last_name'] ?? '';
-    final recordedBy =
-        [createdByFirst, createdByMiddle, createdByLast].where((s) => s.isNotEmpty).join(' ');
+    final recordedBy = [
+      createdByFirst,
+      createdByMiddle,
+      createdByLast,
+    ].where((s) => s.isNotEmpty).join(' ');
 
-        return TransactionItem(
-        type: map['type'] ?? fallbackType,
-        description: (map['description'] ?? map['remarks'] ?? map['note'])?.toString(),
-        amount: value,
-        createdAt: _parseCreatedAt(map),
-        paymentType: paymentType,
-        productName: map['product_name'],
-        quantity: (map['quantity'] as num?)?.toInt(),
-        receiptImagePath: receiptImagePath,
-        category: map['category'],
-        recordedBy: recordedBy.isNotEmpty ? recordedBy : null,
-        isUtangSale: isUtangSale, // NEW
-      );
+    return TransactionItem(
+      type: map['type'] ?? fallbackType,
+      description: (map['description'] ?? map['remarks'] ?? map['note'])
+          ?.toString(),
+      amount: value,
+      createdAt: _parseCreatedAt(map),
+      paymentType: paymentType,
+      productName: map['product_name'],
+      quantity: (map['quantity'] as num?)?.toInt(),
+      receiptImagePath: receiptImagePath,
+      category: map['category'],
+      recordedBy: recordedBy.isNotEmpty ? recordedBy : null,
+      isUtangSale: isUtangSale, // NEW
+    );
   }
 
   static DateTime _parseCreatedAt(Map<String, dynamic> map) {
@@ -101,16 +104,12 @@ class TransactionItem {
   }
 }
 
-
 // Transaction section (grouped by date)
 class TransactionSection {
   final String title;
   final List<TransactionItem> items;
 
-  TransactionSection({
-    required this.title,
-    required this.items,
-  });
+  TransactionSection({required this.title, required this.items});
 }
 
 // Transaction categories
@@ -163,6 +162,13 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   TransactionCategory selectedCategory = TransactionCategory.all;
   DateTime? _startDate;
   DateTime? _endDate;
+
+  /// Returns the current date in Philippine Time (UTC+8).
+  static DateTime _todayInPHT() {
+    final nowUtc = DateTime.now().toUtc();
+    final pht = nowUtc.add(const Duration(hours: 8));
+    return DateTime(pht.year, pht.month, pht.day);
+  }
 
   // Pagination
   static const int pageSize = 20;
@@ -233,14 +239,14 @@ class TransactionHistoryViewModel extends ChangeNotifier {
         );
       }
       for (var map in _filteredHistory.capitalManagement) {
-        yield TransactionItem.fromMap(map,
-            fallbackType: 'Capital', isCapital: true);
-      }
-      for (var map in _filteredHistory.customerPayments) {
         yield TransactionItem.fromMap(
           map,
-          fallbackType: 'Customer Payment',
+          fallbackType: 'Capital',
+          isCapital: true,
         );
+      }
+      for (var map in _filteredHistory.customerPayments) {
+        yield TransactionItem.fromMap(map, fallbackType: 'Customer Payment');
       }
       for (var map in _filteredHistory.utangPayments) {
         yield TransactionItem.fromMap(map, fallbackType: 'Owner Payment');
@@ -260,14 +266,15 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       } else if (selectedCategory == TransactionCategory.customerPayment) {
         result = items().where((tx) => tx.type == 'Customer Payment');
       } else if (selectedCategory == TransactionCategory.ownerPayment) {
-        result =
-            items().where((tx) => tx.type == 'Owner Payment' || tx.type == 'Downpayment');
+        result = items().where(
+          (tx) => tx.type == 'Owner Payment' || tx.type == 'Downpayment',
+        );
       } else {
         final type = selectedCategory == TransactionCategory.expenses
             ? 'Gasto'
             : selectedCategory == TransactionCategory.capitalManagement
-                    ? 'Capital'
-                    : '';
+            ? 'Capital'
+            : '';
         result = items().where((tx) => tx.type == type);
       }
     } else {
@@ -281,6 +288,9 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
   // ---------------- Constructor ----------------
   TransactionHistoryViewModel() {
+    final today = _todayInPHT();
+    _startDate = today;
+    _endDate = today;
     _loadFullHistory();
   }
 
@@ -322,10 +332,30 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _filterByDate(List<Map<String, dynamic>> data) {
     if (_startDate == null && _endDate == null) return data;
 
+    // Extend end date to the very end of the selected day (23:59:59.999) so
+    // that transactions recorded at any time on that day are included.
+    final endOfDay = _endDate != null
+        ? DateTime(
+            _endDate!.year,
+            _endDate!.month,
+            _endDate!.day,
+            23,
+            59,
+            59,
+            999,
+          )
+        : null;
+
+    // Normalize start date to the very beginning of the selected day so that
+    // the comparison is purely date-based (ignoring time on the picker value).
+    final startOfDay = _startDate != null
+        ? DateTime(_startDate!.year, _startDate!.month, _startDate!.day)
+        : null;
+
     return data.where((item) {
       final createdAt = TransactionItem._parseCreatedAt(item);
-      if (_startDate != null && createdAt.isBefore(_startDate!)) return false;
-      if (_endDate != null && createdAt.isAfter(_endDate!)) return false;
+      if (startOfDay != null && createdAt.isBefore(startOfDay)) return false;
+      if (endOfDay != null && createdAt.isAfter(endOfDay)) return false;
       return true;
     }).toList();
   }
@@ -351,23 +381,29 @@ class TransactionHistoryViewModel extends ChangeNotifier {
       // Sort items by time descending within the section
       entry.value.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      return TransactionSection(
-        title: title,
-        items: entry.value,
-      );
-    }).toList()
-      ..sort((a, b) => b.items.first.createdAt.compareTo(a.items.first.createdAt));
+      return TransactionSection(title: title, items: entry.value);
+    }).toList()..sort(
+      (a, b) => b.items.first.createdAt.compareTo(a.items.first.createdAt),
+    );
   }
 
   // ---------------- Setters ----------------
   void setSelectedCategory(TransactionCategory category) {
-    selectedCategory = category;
+    selectedCategory =
+        category; // must be set BEFORE _applyFilters so the cache is keyed correctly
     _applyFilters();
-    notifyListeners();
+    // _applyFilters already calls notifyListeners(); no extra call needed.
   }
 
   void setStartDate(DateTime? date) {
     _startDate = date;
+    // If the existing end date is now before the new start date, clear it so
+    // the filter range is never start > end (which would yield no results).
+    if (_startDate != null &&
+        _endDate != null &&
+        _endDate!.isBefore(_startDate!)) {
+      _endDate = null;
+    }
     _applyFilters();
     notifyListeners();
   }

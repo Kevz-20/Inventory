@@ -88,7 +88,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Expanded(
                         child: _DatePickerBox(
                           title: 'Start Date',
-                          date: vm.startDate ?? DateTime.now(),
+                          date: vm.startDate,
                           onDateSelected: vm.setStartDate,
                         ),
                       ),
@@ -96,8 +96,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Expanded(
                         child: _DatePickerBox(
                           title: 'End Date',
-                          date: vm.endDate ?? DateTime.now(),
+                          date: vm.endDate,
                           onDateSelected: vm.setEndDate,
+                          // Constrain the end date to be >= start date.
+                          firstDate: vm.startDate,
                         ),
                       ),
                     ],
@@ -153,10 +155,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       return Center(
         child: Text(
           vm.emptyStateMessage,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.black45,
-          ),
+          style: const TextStyle(fontSize: 16, color: Colors.black45),
         ),
       );
     }
@@ -175,217 +174,213 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   // Build single transaction card
   // ------------------------
   Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
-  final isHalin = tx.type == 'Halin';
-  final isHalinUtang = isHalin && (tx.isUtangSale == true);
+    final isHalin = tx.type == 'Halin';
+    final isHalinUtang = isHalin && (tx.isUtangSale == true);
 
-  final isExpense = tx.type == 'Gasto';
-  final isCapital = tx.type == 'Capital';
-  final isCustomerPayment = tx.type == 'Customer Payment';
-  final isOwnerPayment = tx.type == 'Owner Payment';
-  final isDownpayment = tx.type == 'Downpayment';
+    final isExpense = tx.type == 'Gasto';
+    final isCapital = tx.type == 'Capital';
+    final isCustomerPayment = tx.type == 'Customer Payment';
+    final isOwnerPayment = tx.type == 'Owner Payment';
+    final isDownpayment = tx.type == 'Downpayment';
 
-  // ✅ Updated label (Halin vs Halin (Utang))
-  final typeLabel = isDownpayment
-      ? 'Owner Payment'
-      : isHalinUtang
-          ? 'Halin (Utang)'
-          : isHalin
-              ? 'Halin'
-              : isExpense
-                  ? 'Gasto'
-                  : isCapital
-                      ? 'Capital'
-                      : isCustomerPayment
-                          ? 'Customer Payment'
-                          : isOwnerPayment
-                              ? 'Owner Payment'
-                              : tx.type;
+    // ✅ Updated label (Halin vs Halin (Utang))
+    final typeLabel = isDownpayment
+        ? 'Owner Payment'
+        : isHalinUtang
+        ? 'Halin (Utang)'
+        : isHalin
+        ? 'Halin'
+        : isExpense
+        ? 'Gasto'
+        : isCapital
+        ? 'Capital'
+        : isCustomerPayment
+        ? 'Customer Payment'
+        : isOwnerPayment
+        ? 'Owner Payment'
+        : tx.type;
 
-  final descriptionLabel = isDownpayment
-      ? '${tx.description ?? ''}  downpayment'
-      : (tx.description ?? '');
+    final descriptionLabel = isDownpayment
+        ? '${tx.description ?? ''}  downpayment'
+        : (tx.description ?? '');
 
-  final capitalNote = (tx.description ?? '').trim().isEmpty
-      ? 'N/A'
-      : tx.description!.trim();
+    final capitalNote = (tx.description ?? '').trim().isEmpty
+        ? 'N/A'
+        : tx.description!.trim();
 
-  // ✅ Income types in green, outgoing in red
-  final isIncome = isCapital || isHalin || isCustomerPayment;
-  final amountColor = isIncome ? Colors.green : Colors.red;
+    // ✅ Income types in green, outgoing in red
+    final isIncome = isCapital || isHalin || isCustomerPayment;
+    final amountColor = isIncome ? Colors.green : Colors.red;
 
-  return InkWell(
-    borderRadius: BorderRadius.circular(10),
-    onTap: () {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: _TransactionDetailsSheet(transaction: tx),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha(25),
+              blurRadius: 2,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        builder: (_) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: _TransactionDetailsSheet(transaction: tx),
-        ),
-      );
-    },
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(25),
-            blurRadius: 2,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Top row: type + amount
-          Row(
-            children: [
-              // ✅ Type text dark gray
-              Text(
-                typeLabel,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-
-
-              const Spacer(),
-
-              // ✅ Amount + sign
-              Text(
-                isIncome
-                    ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                    : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: amountColor,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 4),
-
-          // Second row: note / product + view receipt
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  (isExpense ||
-                          isCustomerPayment ||
-                          isOwnerPayment ||
-                          isDownpayment)
-                      ? descriptionLabel
-                      : isCapital
-                          ? ''
-                          : (tx.productName ?? 'Product'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-              if (isExpense && tx.receiptImagePath != null)
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade50,
-                    foregroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      side: BorderSide(color: Colors.green.shade200),
-                    ),
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => Dialog(
-                        child: InteractiveViewer(
-                          child: Image.file(
-                            File(tx.receiptImagePath!),
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'View Receipt',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 2),
-
-          // Third row: extra info + time
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (isCapital)
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top row: type + amount
+            Row(
+              children: [
+                // ✅ Type text dark gray
                 Text(
-                  'Note: $capitalNote',
+                  typeLabel,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: Colors.black54,
                   ),
-                )
-              else if (isHalin)
-                tx.quantity != null
-                    ? Text(
-                        'Qty: ${tx.quantity}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      )
-                    : const SizedBox()
-              else if (isExpense)
-                tx.category != null
-                    ? Text(
-                        'Category: ${tx.category}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      )
-                    : const SizedBox(),
+                ),
 
-              Text(
-                DateFormat('hh:mm a').format(tx.createdAt),
-                style: const TextStyle(fontSize: 13, color: Colors.black45),
-              ),
-            ],
-          ),
-        ],
+                const Spacer(),
+
+                // ✅ Amount + sign
+                Text(
+                  isIncome
+                      ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+                      : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: amountColor,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 4),
+
+            // Second row: note / product + view receipt
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    (isExpense ||
+                            isCustomerPayment ||
+                            isOwnerPayment ||
+                            isDownpayment)
+                        ? descriptionLabel
+                        : isCapital
+                        ? ''
+                        : (tx.productName ?? 'Product'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                if (isExpense && tx.receiptImagePath != null)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade50,
+                      foregroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        side: BorderSide(color: Colors.green.shade200),
+                      ),
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          child: InteractiveViewer(
+                            child: Image.file(
+                              File(tx.receiptImagePath!),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'View Receipt',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 2),
+
+            // Third row: extra info + time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (isCapital)
+                  Text(
+                    'Note: $capitalNote',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  )
+                else if (isHalin)
+                  tx.quantity != null
+                      ? Text(
+                          'Qty: ${tx.quantity}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        )
+                      : const SizedBox()
+                else if (isExpense)
+                  tx.category != null
+                      ? Text(
+                          'Category: ${tx.category}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                          ),
+                        )
+                      : const SizedBox(),
+
+                Text(
+                  DateFormat('hh:mm a').format(tx.createdAt),
+                  style: const TextStyle(fontSize: 13, color: Colors.black45),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // Build a section (grouped by date)
   Widget _buildSection(TransactionSection section) {
@@ -411,45 +406,61 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 // ---------------- Date Picker Box ----------------
 class _DatePickerBox extends StatelessWidget {
   final String title;
-  final DateTime date;
+  // Nullable: null means "no filter applied" — shows "Any date" placeholder.
+  final DateTime? date;
   final ValueChanged<DateTime?> onDateSelected;
+  // When set, the picker will not allow selecting a date before this value.
+  // Used by the End Date picker to enforce: end >= start.
+  final DateTime? firstDate;
 
   const _DatePickerBox({
     required this.title,
     required this.date,
     required this.onDateSelected,
+    this.firstDate,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasDate = date != null;
+
     return GestureDetector(
       onTap: () async {
-  final now = DateTime.now();
+        final now = DateTime.now();
+        final earliest = firstDate ?? DateTime(2000);
 
-  final picked = await showDatePicker(
-    context: context,
-    initialDate: date.isAfter(now) ? now : date,
-    firstDate: DateTime(2000),
-    lastDate: now, // 🚫 Prevent future dates
-    builder: (context, child) => Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.light(
-          primary: AppColors.primary,
-          onPrimary: Colors.white,
-          onSurface: AppColors.textPrimary,
-        ),
-        dialogTheme: DialogThemeData(
-          backgroundColor: Colors.grey.shade100,
-        ),
-      ),
-      child: child!,
-    ),
-  );
+        // If the current selection is before the new earliest (e.g. start date
+        // was moved forward after an end date was already chosen), snap the
+        // initial calendar page to the earliest allowed date instead.
+        final initial =
+            (date != null && !date!.isAfter(now) && !date!.isBefore(earliest))
+            ? date!
+            : (earliest.isAfter(now) ? now : earliest);
 
-  if (picked != null && !picked.isAfter(now)) {
-    onDateSelected(picked);
-  }
-},
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: earliest,
+          lastDate: now, // 🚫 Prevent future dates
+          builder: (context, child) => Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: AppColors.primary,
+                onPrimary: Colors.white,
+                onSurface: AppColors.textPrimary,
+              ),
+              dialogTheme: DialogThemeData(
+                backgroundColor: Colors.grey.shade100,
+              ),
+            ),
+            child: child!,
+          ),
+        );
+
+        if (picked != null && !picked.isAfter(now)) {
+          onDateSelected(picked);
+        }
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
@@ -481,7 +492,7 @@ class _DatePickerBox extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              DateFormat('MMMM d, y').format(date),
+              hasDate ? DateFormat('MMMM d, y').format(date!) : 'Any date',
               style: const TextStyle(fontSize: 15, color: Colors.black),
             ),
           ],
@@ -712,21 +723,22 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Added By:', style: TextStyle(fontSize: 16)),
-                  Text(
-                    capitalAddedBy,
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                  Text(capitalAddedBy, style: const TextStyle(fontSize: 16)),
                 ],
               ),
 
-            if (isHalin || isExpense || isCustomerPayment || isOwnerPayment || isDownpayment)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Recorded By:', style: TextStyle(fontSize: 16)),
-                Text(recordedByValue, style: const TextStyle(fontSize: 16)),
-              ],
-            ),
+            if (isHalin ||
+                isExpense ||
+                isCustomerPayment ||
+                isOwnerPayment ||
+                isDownpayment)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Recorded By:', style: TextStyle(fontSize: 16)),
+                  Text(recordedByValue, style: const TextStyle(fontSize: 16)),
+                ],
+              ),
             const SizedBox(height: 16),
 
             if (isExpense && transaction.receiptImagePath != null)
