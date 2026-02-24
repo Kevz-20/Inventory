@@ -158,7 +158,10 @@ class StockInViewModel extends ChangeNotifier {
     if (!isInitialized) return;
 
     final productName = effectiveProductName;
-    if (productName.isEmpty || selectedCategory == null) {
+    if (productName.isEmpty ||
+        selectedCategory == null ||
+        purchasePriceController.text.trim().isEmpty ||
+        sellingPriceController.text.trim().isEmpty) {
       showSnackBar(context, 'Please fill all required fields', success: false);
       return;
     }
@@ -174,6 +177,24 @@ class StockInViewModel extends ChangeNotifier {
       showSnackBar(context, 'Quantity must be greater than 0', success: false);
       return;
     }
+    if (purchasePrice <= 0) {
+      showSnackBar(
+        context,
+        'Purchase price must be greater than 0',
+        success: false,
+      );
+      return;
+    }
+
+    if (sellingPrice <= 0) {
+      showSnackBar(
+        context,
+        'Selling price must be greater than 0',
+        success: false,
+      );
+      return;
+    }
+
     if (sellingPrice < purchasePrice) {
       showSnackBar(
         context,

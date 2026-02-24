@@ -450,7 +450,21 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     return PageView.builder(
       controller: _categoryPageController,
       itemCount: SalesViewModel.categories.length,
-      onPageChanged: (index) => vm.selectCategory(index),
+
+      onPageChanged: (index) {
+        vm.selectCategory(index);
+
+        // Auto scroll chips to selected index
+        final screenWidth = MediaQuery.of(context).size.width;
+        final scrollTo = (index * 110) - (screenWidth / 2) + 55;
+
+        _categoryScrollController.animateTo(
+          scrollTo.clamp(0, _categoryScrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      },
+
       itemBuilder: (context, index) {
         final query = searchQuery.toLowerCase();
         final categoryName = SalesViewModel.categories[index].toLowerCase();
