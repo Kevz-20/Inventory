@@ -21,12 +21,15 @@ class TransactionHistoryScreen extends StatefulWidget {
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   late final TransactionHistoryViewModel viewModel;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _categoryScrollController = ScrollController();
   late final PageController _categoryPageController;
+
   final NumberFormat _currencyFormatter = NumberFormat.currency(
     locale: 'en_PH',
     symbol: '₱',
     decimalDigits: 2,
   );
+
   static const List<TransactionCategory> _historyCategories = [
     TransactionCategory.all,
     TransactionCategory.expenses,
@@ -44,10 +47,25 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     _scrollController.addListener(_onScroll);
   }
 
+  void _autoScrollChips(int index) {
+    if (!_categoryScrollController.hasClients) return;
+
+    const chipWidth = 110.0; // approx width including spacing
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scrollTo = (index * chipWidth) - (screenWidth / 2) + (chipWidth / 2);
+
+    _categoryScrollController.animateTo(
+      scrollTo.clamp(0, _categoryScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   @override
   void dispose() {
     _categoryPageController.dispose();
     _scrollController.dispose();
+    _categoryScrollController.dispose();
     super.dispose();
   }
 
@@ -64,8 +82,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       value: viewModel,
       child: Consumer<TransactionHistoryViewModel>(
         builder: (_, vm, _) {
-          final _ = vm.sections;
-
           return Scaffold(
             appBar: AppBar(
               backgroundColor: AppColors.primary,
@@ -88,7 +104,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Expanded(
                         child: _DatePickerBox(
                           title: 'Start Date',
-                          date: vm.startDate,
+                          date: vm.startDate ?? DateTime.now(),
                           onDateSelected: vm.setStartDate,
                         ),
                       ),
@@ -96,10 +112,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                       Expanded(
                         child: _DatePickerBox(
                           title: 'End Date',
-                          date: vm.endDate,
+                          date: vm.endDate ?? DateTime.now(),
                           onDateSelected: vm.setEndDate,
-                          // Constrain the end date to be >= start date.
-                          firstDate: vm.startDate,
                         ),
                       ),
                     ],
@@ -110,6 +124,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: CategoryChipsWithDots(
+                    scrollController: _categoryScrollController,
                     categories: _historyCategories,
                     selectedCategory: vm.selectedCategory,
                     onCategorySelected: (cat) {
@@ -121,6 +136,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           duration: const Duration(milliseconds: 280),
                           curve: Curves.easeInOut,
                         );
+                        _autoScrollChips(index);
                       }
                     },
                   ),
@@ -133,6 +149,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     itemCount: _historyCategories.length,
                     onPageChanged: (index) {
                       vm.setSelectedCategory(_historyCategories[index]);
+                      _autoScrollChips(index);
                     },
                     itemBuilder: (context, index) => _buildHistoryList(vm),
                   ),
@@ -161,6 +178,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: vm.sections.length,
       itemBuilder: (context, sectionIndex) {
@@ -170,9 +188,22 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     );
   }
 
-  // ------------------------
-  // Build single transaction card
-  // ------------------------
+  Widget _buildSection(TransactionSection section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            section.title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ...section.items.map((tx) => _buildTransactionCard(tx, context)),
+      ],
+    );
+  }
+
   Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
     final isHalin = tx.type == 'Halin';
     final isHalinUtang = isHalin && (tx.isUtangSale == true);
@@ -183,7 +214,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final isOwnerPayment = tx.type == 'Owner Payment';
     final isDownpayment = tx.type == 'Downpayment';
 
-    // ✅ Updated label (Halin vs Halin (Utang))
     final typeLabel = isDownpayment
         ? 'Owner Payment'
         : isHalinUtang
@@ -201,14 +231,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         : tx.type;
 
     final descriptionLabel = isDownpayment
-        ? '${tx.description ?? ''}  downpayment'
+        ? '${tx.description ?? ''} downpayment'
         : (tx.description ?? '');
 
     final capitalNote = (tx.description ?? '').trim().isEmpty
         ? 'N/A'
         : tx.description!.trim();
 
-    // ✅ Income types in green, outgoing in red
     final isIncome = isCapital || isHalin || isCustomerPayment;
     final amountColor = isIncome ? Colors.green : Colors.red;
 
@@ -248,10 +277,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Top row: type + amount
             Row(
               children: [
-                // ✅ Type text dark gray
                 Text(
                   typeLabel,
                   style: const TextStyle(
@@ -260,10 +287,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     color: Colors.black54,
                   ),
                 ),
-
                 const Spacer(),
-
-                // ✅ Amount + sign
                 Text(
                   isIncome
                       ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
@@ -276,10 +300,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 4),
-
-            // Second row: note / product + view receipt
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -337,10 +358,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   ),
               ],
             ),
-
             const SizedBox(height: 2),
-
-            // Third row: extra info + time
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -349,27 +367,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     'Note: $capitalNote',
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   )
-                else if (isHalin)
-                  tx.quantity != null
-                      ? Text(
-                          'Qty: ${tx.quantity}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : const SizedBox()
-                else if (isExpense)
-                  tx.category != null
-                      ? Text(
-                          'Category: ${tx.category}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        )
-                      : const SizedBox(),
-
+                else if (isHalin && tx.quantity != null)
+                  Text(
+                    'Qty: ${tx.quantity}',
+                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  )
+                else if (isExpense && tx.category != null)
+                  Text(
+                    'Category: ${tx.category}',
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
                 Text(
                   DateFormat('hh:mm a').format(tx.createdAt),
                   style: const TextStyle(fontSize: 13, color: Colors.black45),
@@ -381,67 +388,30 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       ),
     );
   }
-
-  // Build a section (grouped by date)
-  Widget _buildSection(TransactionSection section) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section title (Today / Date)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            section.title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-
-        // Transactions in this section
-        ...section.items.map((tx) => _buildTransactionCard(tx, context)),
-      ],
-    );
-  }
 }
 
-// ---------------- Date Picker Box ----------------
+// ---------------- Date Picker ----------------
 class _DatePickerBox extends StatelessWidget {
   final String title;
-  // Nullable: null means "no filter applied" — shows "Any date" placeholder.
-  final DateTime? date;
+  final DateTime date;
   final ValueChanged<DateTime?> onDateSelected;
-  // When set, the picker will not allow selecting a date before this value.
-  // Used by the End Date picker to enforce: end >= start.
-  final DateTime? firstDate;
 
   const _DatePickerBox({
     required this.title,
     required this.date,
     required this.onDateSelected,
-    this.firstDate,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasDate = date != null;
-
     return GestureDetector(
       onTap: () async {
         final now = DateTime.now();
-        final earliest = firstDate ?? DateTime(2000);
-
-        // If the current selection is before the new earliest (e.g. start date
-        // was moved forward after an end date was already chosen), snap the
-        // initial calendar page to the earliest allowed date instead.
-        final initial =
-            (date != null && !date!.isAfter(now) && !date!.isBefore(earliest))
-            ? date!
-            : (earliest.isAfter(now) ? now : earliest);
-
         final picked = await showDatePicker(
           context: context,
-          initialDate: initial,
-          firstDate: earliest,
-          lastDate: now, // 🚫 Prevent future dates
+          initialDate: date.isAfter(now) ? now : date,
+          firstDate: DateTime(2000),
+          lastDate: now,
           builder: (context, child) => Theme(
             data: Theme.of(context).copyWith(
               colorScheme: ColorScheme.light(
@@ -456,7 +426,6 @@ class _DatePickerBox extends StatelessWidget {
             child: child!,
           ),
         );
-
         if (picked != null && !picked.isAfter(now)) {
           onDateSelected(picked);
         }
@@ -492,7 +461,7 @@ class _DatePickerBox extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              hasDate ? DateFormat('MMMM d, y').format(date!) : 'Any date',
+              DateFormat('MMMM d, y').format(date),
               style: const TextStyle(fontSize: 15, color: Colors.black),
             ),
           ],
@@ -507,12 +476,14 @@ class CategoryChipsWithDots extends StatelessWidget {
   final List<TransactionCategory> categories;
   final TransactionCategory selectedCategory;
   final Function(TransactionCategory) onCategorySelected;
+  final ScrollController scrollController;
 
   const CategoryChipsWithDots({
     super.key,
     required this.categories,
     required this.selectedCategory,
     required this.onCategorySelected,
+    required this.scrollController,
   });
 
   @override
@@ -522,6 +493,7 @@ class CategoryChipsWithDots extends StatelessWidget {
         SizedBox(
           height: 45,
           child: ListView.separated(
+            controller: scrollController, // ✅ FIX
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
             itemCount: categories.length,
@@ -566,7 +538,9 @@ class CategoryChipsWithDots extends StatelessWidget {
             },
           ),
         ),
+
         const SizedBox(height: 10),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: categories.map((category) {
@@ -582,6 +556,7 @@ class CategoryChipsWithDots extends StatelessWidget {
             );
           }).toList(),
         ),
+
         const SizedBox(height: 5),
       ],
     );
