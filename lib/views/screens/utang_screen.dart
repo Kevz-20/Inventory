@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -161,35 +163,36 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     final db = await DBService.instance.database;
 
     const sql = '''
-      SELECT
-        c.id,
-        c.first_name,
-        c.middle_name,
-        c.last_name,
-        c.municipality,
-        c.barangay,
-        c.phone_number,
-        MAX(0, COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) AS total_amount,
-        sc.min_due_date AS due_date
-      FROM customer c
-      LEFT JOIN (
-        SELECT
-          customer_id,
-          SUM(amount) AS total_amount,
-          MIN(due_date) AS min_due_date
-        FROM sales_credit
-        GROUP BY customer_id
-      ) sc ON sc.customer_id = c.id
-      LEFT JOIN (
-        SELECT
-          customer_id,
-          SUM(amount) AS total_paid
-        FROM customer_payment
-        GROUP BY customer_id
-      ) cp ON cp.customer_id = c.id
-      WHERE sc.customer_id IS NOT NULL
-      ORDER BY total_amount DESC
-    ''';
+  SELECT
+    c.id,
+    c.first_name,
+    c.middle_name,
+    c.last_name,
+    c.municipality,
+    c.barangay,
+    c.phone_number,
+    MAX(0, COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) AS total_amount,
+    sc.min_due_date AS due_date
+  FROM customer c
+  LEFT JOIN (
+    SELECT
+      customer_id,
+      SUM(amount) AS total_amount,
+      MIN(due_date) AS min_due_date
+    FROM sales_credit
+    GROUP BY customer_id
+  ) sc ON sc.customer_id = c.id
+  LEFT JOIN (
+    SELECT
+      customer_id,
+      SUM(amount) AS total_paid
+    FROM customer_payment
+    GROUP BY customer_id
+  ) cp ON cp.customer_id = c.id
+  -- ❌ REMOVE THIS so new customers appear
+  -- WHERE sc.customer_id IS NOT NULL
+  ORDER BY total_amount DESC, c.last_name ASC, c.first_name ASC
+''';
 
     try {
       debugPrint('fetchUtangan SQL:\n$sql');
@@ -723,7 +726,6 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  // ignore: deprecated_member_use
                                   color: Colors.black.withOpacity(0.04),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
@@ -862,7 +864,6 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                           color: Colors.white,
                           boxShadow: [
                             BoxShadow(
-                              // ignore: deprecated_member_use
                               color: Colors.black.withOpacity(0.06),
                               blurRadius: 16,
                               offset: const Offset(0, -6),
@@ -995,7 +996,26 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Utang', showBackButton: true),
+      appBar: AppHeader(
+        title: 'Utang',
+        showBackButton: true,
+        action: selectedTab == 0
+            ? IconButton(
+                tooltip: 'Add Customer',
+                onPressed: () async {
+                  final result = await context.push<bool>('/new_customer');
+                  if (result == true) {
+                    await fetchUtangan();
+                  }
+                },
+                icon: const Icon(
+                  Icons.person_add_alt_1,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              )
+            : null,
+      ),
       body: Column(
         children: [
           const SizedBox(height: 20),
@@ -1171,7 +1191,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (item.totalAmount <= 0)
+                      if (item.dueDate != null && item.totalAmount <= 0)
                         Container(
                           margin: const EdgeInsets.only(top: 4),
                           padding: const EdgeInsets.symmetric(

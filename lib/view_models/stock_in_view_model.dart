@@ -158,25 +158,27 @@ class StockInViewModel extends ChangeNotifier {
     if (!isInitialized) return;
 
     final productName = effectiveProductName;
+
+    // ✅ REQUIRED FIELDS CHECK (ADDED)
+    final purchaseText = purchasePriceController.text.trim();
+    final sellingText = sellingPriceController.text.trim();
+    final qtyText = quantityController.text.trim();
+
     if (productName.isEmpty ||
         selectedCategory == null ||
-        purchasePriceController.text.trim().isEmpty ||
-        sellingPriceController.text.trim().isEmpty) {
+        purchaseText.isEmpty ||
+        sellingText.isEmpty ||
+        qtyText.isEmpty) {
       showSnackBar(context, 'Please fill all required fields', success: false);
       return;
     }
 
-    final sellingPrice =
-        double.tryParse(sellingPriceController.text.replaceAll(',', '')) ?? 0;
+    final sellingPrice = double.tryParse(sellingText.replaceAll(',', '')) ?? 0;
     final purchasePrice =
-        double.tryParse(purchasePriceController.text.replaceAll(',', '')) ?? 0;
-    final newQuantity =
-        int.tryParse(quantityController.text.replaceAll(',', '')) ?? 0;
+        double.tryParse(purchaseText.replaceAll(',', '')) ?? 0;
+    final newQuantity = int.tryParse(qtyText.replaceAll(',', '')) ?? 0;
 
-    if (newQuantity <= 0) {
-      showSnackBar(context, 'Quantity must be greater than 0', success: false);
-      return;
-    }
+    // ✅ Prevent 0 or negative prices (ADDED)
     if (purchasePrice <= 0) {
       showSnackBar(
         context,
@@ -185,7 +187,6 @@ class StockInViewModel extends ChangeNotifier {
       );
       return;
     }
-
     if (sellingPrice <= 0) {
       showSnackBar(
         context,
@@ -195,10 +196,14 @@ class StockInViewModel extends ChangeNotifier {
       return;
     }
 
-    if (sellingPrice < purchasePrice) {
+    if (newQuantity <= 0) {
+      showSnackBar(context, 'Quantity must be greater than 0', success: false);
+      return;
+    }
+    if (sellingPrice <= purchasePrice) {
       showSnackBar(
         context,
-        'Selling price cannot be lower than purchase price',
+        'Selling price must be greater than purchase price',
         success: false,
       );
       return;
@@ -206,6 +211,7 @@ class StockInViewModel extends ChangeNotifier {
 
     setLoading(true);
 
+    // ✅ keep the rest of your existing code below unchanged
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productName.toLowerCase()) {
@@ -242,7 +248,7 @@ class StockInViewModel extends ChangeNotifier {
 
       clearFields();
       selectedProduct = null;
-      safeNotifyListeners(); // <-- live update the UI
+      safeNotifyListeners();
 
       setLoading(false);
 

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
@@ -21,26 +23,38 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final now = DateTime.now();
+
     final picked = await showDatePicker(
       context: context,
       initialDate: isStart ? start : end,
       firstDate: DateTime(2020),
       lastDate: now,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
     );
 
     if (picked != null) {
       setState(() {
         if (isStart) {
           start = picked;
+          // ✅ keep range valid
+          if (start.isAfter(end)) end = start;
         } else {
           end = picked;
+          if (end.isBefore(start)) start = end;
         }
       });
       _loadData();
@@ -63,107 +77,138 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Income Statement', showBackButton: true),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date Range Selection
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectDate(context, true),
-                    child: _DateBox(title: 'Start Date', dateLabel: _format(start)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectDate(context, false),
-                    child: _DateBox(title: 'End Date', dateLabel: _format(end)),
-                  ),
-                ),
-              ],
+            // ==================== DATE RANGE CARD ====================
+            _dateRangeCard(
+              startLabel: _format(start),
+              endLabel: _format(end),
+              onStartTap: () => _selectDate(context, true),
+              onEndTap: () => _selectDate(context, false),
             ),
-            const SizedBox(height: 16),
 
-            // Async Data Handling
+            const SizedBox(height: 14),
+
+            // ==================== DATA ====================
             incomeState.when(
               loading: () => const Padding(
                 padding: EdgeInsets.only(top: 40),
-                child: CircularProgressIndicator(),
+                child: Center(child: CircularProgressIndicator()),
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.only(top: 40),
-                child: Text(e.toString(), style: const TextStyle(color: Colors.red)),
+                child: Text(
+                  e.toString(),
+                  style: const TextStyle(color: Colors.red),
+                ),
               ),
               data: (income) {
-                return Card(
-                  color: Colors.grey[50], // softer background
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 4,
-                  shadowColor: Colors.black12,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Sales Section
-                        Row(
-                          children: const [
-                            Icon(Icons.point_of_sale, color: AppColors.primary, size: 22),
-                            SizedBox(width: 8),
-                            Text(
-                              'Sales',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ..._buildRows([
-                          MapEntry('Merchandise Sales', income.merchandiseSales),
-                          MapEntry('TOTAL SALES', income.sales),
-                        ], highlightLast: true),
+                final currency = NumberFormat.currency(
+                  symbol: '₱',
+                  decimalDigits: 2,
+                );
 
-                        const SizedBox(height: 20),
+                // optional empty-state check
+                final isEmpty =
+                    income.sales == 0 &&
+                    income.kompra == 0 &&
+                    income.electricity == 0 &&
+                    income.transportation == 0 &&
+                    income.rentPayment == 0 &&
+                    income.miscExpenses == 0;
 
-                        // Expenses Section
-                        Row(
-                          children: const [
-                            Icon(Icons.payments, color: AppColors.primary, size: 22),
-                            SizedBox(width: 8),
-                            Text(
-                              'Expenses',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ..._buildRows([
-                          MapEntry('Kompra', income.kompra),
-                          MapEntry('Kuryente / Tubig', income.electricity),
-                          MapEntry('Transportation', income.transportation),
-                          MapEntry('Mga Bayronon', income.rentPayment),
-                          MapEntry('Uban Pa', income.miscExpenses),
-                        ]),
-
-                        const Divider(height: 24),
-
-                        // NET INCOME
-                        _leaderRow('NET INCOME', income.netIncome, bold: true, highlight: true),
-                      ],
+                return Column(
+                  children: [
+                    // ==================== SUMMARY CARD ====================
+                    _summaryCard(
+                      rangeText: '${_format(start)}  •  ${_format(end)}',
+                      sales: income.sales,
+                      totalExpenses:
+                          (income.kompra +
+                          income.electricity +
+                          income.transportation +
+                          income.rentPayment +
+                          income.miscExpenses),
+                      netIncome: income.netIncome,
+                      currency: currency,
                     ),
-                  ),
+
+                    const SizedBox(height: 14),
+
+                    if (isEmpty)
+                      _emptyCard()
+                    else ...[
+                      // ==================== SALES SECTION ====================
+                      _buildFinancialSection(
+                        title: 'Sales',
+                        icon: Icons.point_of_sale_rounded,
+                        totalText: currency.format(income.sales),
+                        children: [
+                          _itemRow(
+                            label: 'Merchandise Sales',
+                            value: income.merchandiseSales,
+                            currency: currency,
+                          ),
+                          const SizedBox(height: 8),
+                          Divider(color: Colors.grey.shade200, height: 1),
+                          const SizedBox(height: 10),
+                          _totalRow(
+                            label: 'TOTAL SALES',
+                            amountText: currency.format(income.sales),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // ==================== EXPENSES SECTION ====================
+                      _buildFinancialSection(
+                        title: 'Expenses',
+                        icon: Icons.payments_rounded,
+                        totalText: currency.format(
+                          income.kompra +
+                              income.electricity +
+                              income.transportation +
+                              income.rentPayment +
+                              income.miscExpenses,
+                        ),
+                        children: [
+                          _itemRow(
+                            label: 'Kompra',
+                            value: income.kompra,
+                            currency: currency,
+                          ),
+                          _itemRow(
+                            label: 'Kuryente / Tubig',
+                            value: income.electricity,
+                            currency: currency,
+                          ),
+                          _itemRow(
+                            label: 'Transportation',
+                            value: income.transportation,
+                            currency: currency,
+                          ),
+                          _itemRow(
+                            label: 'Mga Bayronon',
+                            value: income.rentPayment,
+                            currency: currency,
+                          ),
+                          _itemRow(
+                            label: 'Uban Pa',
+                            value: income.miscExpenses,
+                            currency: currency,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+                    ],
+
+                    const SizedBox(height: 90),
+                  ],
                 );
               },
             ),
@@ -171,32 +216,38 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
         ),
       ),
 
-      // Bottom Download Button
+      // ==================== BOTTOM BUTTON ====================
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
-        child: SizedBox(
-          height: 50,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              final vm = ref.read(incomeStatementViewModelProvider.notifier);
-              final state = ref.read(incomeStatementViewModelProvider);
-              if (state.asData?.value == null) return;
-              await vm.exportPdf();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
+        child: Material(
+          elevation: 10,
+          borderRadius: BorderRadius.circular(14),
+          shadowColor: Colors.black.withOpacity(0.15),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final vm = ref.read(incomeStatementViewModelProvider.notifier);
+                final state = ref.read(incomeStatementViewModelProvider);
+                if (state.asData?.value == null) return;
+                await vm.exportPdf();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              elevation: 4,
-            ),
-            icon: const Icon(Icons.download, color: Colors.white),
-            label: const Text(
-              'Download PDF',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+              icon: const Icon(Icons.download_rounded, color: Colors.white),
+              label: const Text(
+                'Download PDF',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -205,111 +256,400 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     );
   }
 
-  // ---------------- Build Rows with alternate shading ----------------
-  List<Widget> _buildRows(List<MapEntry<String, double>> items,
-      {bool highlightLast = false}) {
-    return items.asMap().entries.map((entry) {
-      final index = entry.key;
-      final item = entry.value;
-      final isLast = highlightLast && index == items.length - 1;
-      return _leaderRow(item.key, item.value,
-          bold: isLast, highlight: isLast, indent: true, alternate: true, index: index);
-    }).toList();
-  }
-
-  // ---------------- Leader Row ----------------
-  Widget _leaderRow(
-    String title,
-    double value, {
-    bool bold = false,
-    bool indent = false,
-    bool highlight = false,
-    bool alternate = false,
-    int index = 0,
+  // ==================== DATE RANGE CARD ====================
+  Widget _dateRangeCard({
+    required String startLabel,
+    required String endLabel,
+    required VoidCallback onStartTap,
+    required VoidCallback onEndTap,
   }) {
-    final bgColor =
-        alternate ? (index.isEven ? Colors.transparent : Colors.grey[100]) : Colors.transparent;
-
     return Container(
-      color: bgColor,
-      padding: EdgeInsets.only(left: indent ? 16 : 0, top: 6, bottom: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-              color: highlight ? AppColors.primary : Colors.black87,
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
-            child: LayoutBuilder(
-              builder: (_, constraints) {
-                final dotCount = (constraints.maxWidth / 6).floor();
-                return Text(
-                  '.' * dotCount,
-                  maxLines: 1,
-                  overflow: TextOverflow.clip,
-                  style: const TextStyle(color: Colors.black26),
-                );
-              },
+            child: _dateBox(
+              title: 'Start Date',
+              dateLabel: startLabel,
+              onTap: onStartTap,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(value),
-            style: TextStyle(
-              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-              color: highlight ? AppColors.primary : Colors.black87,
+          const SizedBox(width: 12),
+          Expanded(
+            child: _dateBox(
+              title: 'End Date',
+              dateLabel: endLabel,
+              onTap: onEndTap,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _DateBox extends StatelessWidget {
-  final String title;
-  final String dateLabel;
+  Widget _dateBox({
+    required String title,
+    required String dateLabel,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    dateLabel,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.calendar_today_rounded,
+                  size: 18,
+                  color: Colors.grey.shade700,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-  const _DateBox({required this.title, required this.dateLabel});
-
-  @override
-  Widget build(BuildContext context) {
+  // ==================== SUMMARY CARD ====================
+  Widget _summaryCard({
+    required String rangeText,
+    required double sales,
+    required double totalExpenses,
+    required double netIncome,
+    required NumberFormat currency,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withAlpha(51),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_month_rounded,
+                size: 18,
+                color: Colors.grey.shade700,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  rangeText,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _miniStat(
+                  label: 'Sales',
+                  value: currency.format(sales),
+                  icon: Icons.trending_up_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _miniStat(
+                  label: 'Expenses',
+                  value: currency.format(totalExpenses),
+                  icon: Icons.trending_down_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _miniStat(
+            label: 'Net Income',
+            value: currency.format(netIncome),
+            icon: Icons.calculate_rounded,
+            highlight: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat({
+    required String label,
+    required String value,
+    required IconData icon,
+    bool highlight = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: highlight
+            ? AppColors.primary.withOpacity(0.08)
+            : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: highlight
+              ? AppColors.primary.withOpacity(0.18)
+              : Colors.grey.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 36,
+            width: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: highlight ? AppColors.primary : Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  // ==================== SECTION CARD (LIKE BALANCE SHEET) ====================
+  Widget _buildFinancialSection({
+    required String title,
+    required IconData icon,
+    required String totalText,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(dateLabel, style: const TextStyle(fontSize: 14)),
-              const Icon(Icons.calendar_today, size: 18),
+              Container(
+                height: 36,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Text(
+                totalText,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  color: AppColors.primary,
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Divider(color: Colors.grey.shade200, height: 1),
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _itemRow({
+    required String label,
+    required double value,
+    required NumberFormat currency,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            currency.format(value),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _totalRow({required String label, required String amountText}) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+          ),
+        ),
+        Text(
+          amountText,
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+            color: AppColors.primary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== EMPTY CARD ====================
+  Widget _emptyCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 42,
+            width: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.info_outline_rounded,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No records found for the selected date range.',
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

@@ -136,7 +136,7 @@ class ExpensesScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              label: 'Presyo',
+              label: 'Gasto',
               controller: vm.amountController,
               showError: vm.showValidationErrors,
               keyboardType: const TextInputType.numberWithOptions(

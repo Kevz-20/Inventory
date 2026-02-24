@@ -210,14 +210,16 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void _validateMobile() {
-    if (mobileController.text.isEmpty) {
+    final mobile = mobileController.text.trim();
+
+    if (mobile.isEmpty) {
       mobileError = 'Please enter mobile number';
-    } else if (mobileController.text.length != 11 ||
-        !RegExp(r'^[0-9]+$').hasMatch(mobileController.text)) {
-      mobileError = 'Invalid mobile number format';
+    } else if (!RegExp(r'^09\d{9}$').hasMatch(mobile)) {
+      mobileError = 'Mobile number must start with 09 and be 11 digits';
     } else {
       mobileError = null;
     }
+
     safeNotifyListeners();
   }
 
@@ -242,8 +244,8 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void _validateNameFields() {
-  // Allow letters, spaces, hyphens, and dots (for Jr., Sr., etc.)
-    final nameRegex = RegExp(r'^[a-zA-Z\s\.-]+$'); 
+    // Allow letters, spaces, hyphens, and dots (for Jr., Sr., etc.)
+    final nameRegex = RegExp(r'^[a-zA-Z\s\.-]+$');
 
     // First Name
     if (firstNameController.text.isEmpty) {

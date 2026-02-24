@@ -36,12 +36,38 @@ class NewCustomerViewModel extends ChangeNotifier {
   NewCustomerViewModel() {
     _initRepository();
     _loadRegion7();
+    _setupListeners(); // ✅ NEW: make button reactive
+  }
+
+  // ✅ NEW: reactive updates while typing/selecting
+  void _setupListeners() {
+    firstNameController.addListener(notifyListeners);
+    lastNameController.addListener(notifyListeners);
+    contactController.addListener(notifyListeners);
+    municipalityController.addListener(notifyListeners);
+    barangayController.addListener(notifyListeners);
+    landmarkController.addListener(notifyListeners);
+    cityController.addListener(notifyListeners);
+  }
+
+  /// ✅ NEW: used by UI to enable/disable Save button
+  bool get isFormValid {
+    final contact = contactController.text.trim();
+    final regex = RegExp(r'^09\d{9}$');
+
+    return firstNameController.text.trim().isNotEmpty &&
+        lastNameController.text.trim().isNotEmpty &&
+        contact.isNotEmpty &&
+        regex.hasMatch(contact) &&
+        cityController.text.trim().isNotEmpty &&
+        barangayController.text.trim().isNotEmpty &&
+        landmarkController.text.trim().isNotEmpty;
   }
 
   /// Initialize database repository
   Future<void> _initRepository() async {
-  final db = await DBService.instance.database;
-  _repo = CustomerRepository(db); // ✅ only pass DB, no AccountRepository
+    final db = await DBService.instance.database;
+    _repo = CustomerRepository(db); // ✅ only pass DB, no AccountRepository
   }
 
   /// Load Region VII data and flatten cities
@@ -72,7 +98,7 @@ class NewCustomerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Validate customer form
+  /// Validate customer form (kept, not removed)
   bool validateForm() {
     final contact = contactController.text.trim();
     final regex = RegExp(r'^09\d{9}$');
@@ -88,98 +114,100 @@ class NewCustomerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save customer to database
+  /// Save customer to database (UNCHANGED)
   Future<bool> saveCustomer() async {
-  if (_repo == null) {
-    _setSnackbar('Database not ready, try again later');
-    return false;
-  }
-
-  final firstName = firstNameController.text.trim();
-  final middleName = middleNameController.text.trim();
-  final lastName = lastNameController.text.trim();
-  final contact = contactController.text.trim();
-
-  final regex = RegExp(r'^09\d{9}$');
-
-  if (firstName.isEmpty) {
-    _setSnackbar('First Name is required');
-    return false;
-  }
-
-  if (lastName.isEmpty) {
-    _setSnackbar('Last Name is required');
-    return false;
-  }
-
-  if (!regex.hasMatch(contact)) {
-    _setSnackbar('Contact number must start with 09 and be 11 digits');
-    return false;
-  }
-
-  isLoading = true;
-  notifyListeners();
-
-  try {
-    // ✅ CHECK DUPLICATES FIRST
-    final phoneExists = await _repo!.isPhoneExists(contact);
-    final nameExists =
-        await _repo!.isNameExists(firstName, middleName, lastName);
-
-    if (phoneExists && nameExists) {
-      isLoading = false;
-      _setSnackbar('Customer name and phone number already exist.');
+    if (_repo == null) {
+      _setSnackbar('Database not ready, try again later');
       return false;
     }
 
-    if (phoneExists) {
-      isLoading = false;
-      _setSnackbar('Phone number already exists.');
+    final firstName = firstNameController.text.trim();
+    final middleName = middleNameController.text.trim();
+    final lastName = lastNameController.text.trim();
+    final contact = contactController.text.trim();
+
+    final regex = RegExp(r'^09\d{9}$');
+
+    if (firstName.isEmpty) {
+      _setSnackbar('First Name is required');
       return false;
     }
 
-    if (nameExists) {
-      isLoading = false;
-      _setSnackbar('Customer name already exists.');
+    if (lastName.isEmpty) {
+      _setSnackbar('Last Name is required');
       return false;
     }
 
-    final customer = {
-      'first_name': firstName,
-      'middle_name': middleName,
-      'last_name': lastName,
-      'phone_number': contact,
-      'municipality': municipalityController.text.trim(),
-      'barangay': barangayController.text.trim(),
-      'landmark': landmarkController.text.trim(),
-    };
+    if (!regex.hasMatch(contact)) {
+      _setSnackbar('Contact number must start with 09 and be 11 digits');
+      return false;
+    }
 
-    await _repo!.insertCustomer(customer);
-
-    // Clear fields
-    firstNameController.clear();
-    middleNameController.clear();
-    lastNameController.clear();
-    contactController.clear();
-    municipalityController.clear();
-    barangayController.clear();
-    landmarkController.clear();
-    selectedCity = null;
-    selectedBarangay = null;
-    barangays = [];
-
-    isLoading = false;
+    isLoading = true;
     notifyListeners();
 
-    return true;
-  } catch (e) {
-    debugPrint('Error saving customer: $e');
-    isLoading = false;
-    _setSnackbar('Unexpected error occurred.');
-    return false;
-  }
-}
+    try {
+      // ✅ CHECK DUPLICATES FIRST
+      final phoneExists = await _repo!.isPhoneExists(contact);
+      final nameExists = await _repo!.isNameExists(
+        firstName,
+        middleName,
+        lastName,
+      );
 
+      if (phoneExists && nameExists) {
+        isLoading = false;
+        _setSnackbar('Customer name and phone number already exist.');
+        return false;
+      }
+
+      if (phoneExists) {
+        isLoading = false;
+        _setSnackbar('Phone number already exists.');
+        return false;
+      }
+
+      if (nameExists) {
+        isLoading = false;
+        _setSnackbar('Customer name already exists.');
+        return false;
+      }
+
+      final customer = {
+        'first_name': firstName,
+        'middle_name': middleName,
+        'last_name': lastName,
+        'phone_number': contact,
+        'municipality': municipalityController.text.trim(),
+        'barangay': barangayController.text.trim(),
+        'landmark': landmarkController.text.trim(),
+      };
+
+      await _repo!.insertCustomer(customer);
+
+      // Clear fields
+      firstNameController.clear();
+      middleNameController.clear();
+      lastNameController.clear();
+      contactController.clear();
+      municipalityController.clear();
+      barangayController.clear();
+      landmarkController.clear();
+      selectedCity = null;
+      selectedBarangay = null;
+      barangays = [];
+
+      isLoading = false;
+      notifyListeners();
+
+      return true;
+    } catch (e) {
+      debugPrint('Error saving customer: $e');
+      isLoading = false;
+      _setSnackbar('Unexpected error occurred.');
+      return false;
+    }
+  }
 
   @override
   void dispose() {
@@ -190,10 +218,11 @@ class NewCustomerViewModel extends ChangeNotifier {
     municipalityController.dispose();
     barangayController.dispose();
     landmarkController.dispose();
+    cityController.dispose();
     super.dispose();
   }
 
-    void resetFields() {
+  void resetFields() {
     firstNameController.clear();
     middleNameController.clear();
     lastNameController.clear();

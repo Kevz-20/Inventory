@@ -268,11 +268,23 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               fillColor: Colors.white,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade400),
+                borderSide: BorderSide(
+                  color:
+                      (vm.showValidationErrors &&
+                          vm.effectiveProductName.trim().isEmpty)
+                      ? Colors.red
+                      : Colors.grey.shade400,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.primary),
+                borderSide: BorderSide(
+                  color:
+                      (vm.showValidationErrors &&
+                          vm.effectiveProductName.trim().isEmpty)
+                      ? Colors.red
+                      : AppColors.primary,
+                ),
               ),
             ),
             onChanged: (value) {

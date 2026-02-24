@@ -88,6 +88,10 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   double? creditLimit;
   double? availableCredit;
 
+  // ✅ NEW: history checker to prevent showing "Paid" for brand-new customer
+  bool get _hasUtangHistory =>
+      customerItems.isNotEmpty || customerPayments.isNotEmpty;
+
   DateTime _dateOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 
@@ -197,7 +201,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
+                    const Text(
                       "Add Payment",
                       style: TextStyle(
                         fontSize: 20,
@@ -394,7 +398,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     ),
                     const SizedBox(height: 10),
 
-                    /// Presets
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -419,7 +422,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
                     const SizedBox(height: 16),
 
-                    /// Custom Amount
                     TextField(
                       controller: customController,
                       keyboardType: TextInputType.number,
@@ -438,7 +440,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
                     const SizedBox(height: 20),
 
-                    /// Buttons
                     Row(
                       children: [
                         Expanded(
@@ -595,7 +596,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white, // White background
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -737,7 +738,9 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             color: Color(0xFF555555),
                           ),
                         ),
-                        if (totalUtang <= 0)
+
+                        // ✅ UPDATED: show "Paid" only if has history AND totalUtang <= 0
+                        if (_hasUtangHistory && totalUtang <= 0)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -868,7 +871,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               onPressed: totalUtang > 0
                                   ? addPartialPayment
                                   : null,
-
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0C4B3E),
                                 padding: const EdgeInsets.symmetric(
@@ -916,7 +918,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
               ),
               const SizedBox(height: 12),
 
-              // ================= ITEMIZED UTANG =================
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -932,7 +933,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                         itemBuilder: (context, index) {
                           final dateKey = sortedDates[index];
                           final items = groupedItems[dateKey]!;
-
                           final date = DateTime.parse(dateKey);
                           final dateLabel = DateFormat(
                             'MMM dd, yyyy',
@@ -976,7 +976,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // Credit date (date they owed)
                                       Text(
                                         dateLabel,
                                         style: const TextStyle(
@@ -984,7 +983,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                           fontSize: 16,
                                         ),
                                       ),
-                                      // Due date
                                       if (items.first.dueDate != null)
                                         Text(
                                           "Due: ${DateFormat('MMM dd, yyyy').format(items.first.dueDate!)}",
@@ -996,7 +994,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                 : Colors.green,
                                           ),
                                         ),
-                                      // Total for that date
                                       Text(
                                         "Total: ₱${currencyFormat.format(totalPerDate)}",
                                         style: const TextStyle(
@@ -1022,8 +1019,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               ),
                               children: [
                                 const SizedBox(height: 8),
-
-                                // ================= ITEMIZED LIST =================
                                 ...items.map((item) {
                                   return Container(
                                     margin: const EdgeInsets.symmetric(
