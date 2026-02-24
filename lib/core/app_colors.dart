@@ -5,6 +5,7 @@ class AppColors {
   static const Color primary = Color(0xFF0C4B3E); // dark emerald
   static const Color primaryLight = Color(0xFF38A484); // lighter emerald
   static const Color primaryDark = Color(0xFF05291F); // darkest emerald
+  static const Color scrollbar = Color(0xFF424242); 
 
   // Backgrounds
   static const Color background = Color(0xFF1F1F1F);
@@ -27,5 +28,6 @@ class AppColors {
 
   // Shadows
   static const Color shadow = Color.fromRGBO(0, 0, 0, 0.08);
+  
   
 }

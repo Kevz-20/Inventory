@@ -59,11 +59,30 @@ class ThousandsFormatter extends TextInputFormatter {
   }
 }
 
-class ExpensesScreen extends ConsumerWidget {
+class ExpensesScreen extends ConsumerStatefulWidget {
   const ExpensesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExpensesScreen> createState() => _ExpensesScreenState();
+}
+
+class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final vm = ref.watch(expensesViewModelProvider);
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
@@ -85,76 +104,91 @@ class ExpensesScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _cleanCard(
-                child: Column(
-                children: [
-                  _readOnlyField(
-                    controller: dateTextController,
-                    icon: Icons.calendar_month_rounded,
-                    label: 'Petsa',
-                    onTap: () => _pickDate(context, vm),
-                  ),
-                  const SizedBox(height: 12),
-                  _inputDropdown(
-                    icon: Icons.category_rounded,
-                    label: 'Kategorya',
-                    value: vm.selectedCategory,
-                    items: vm.categories,
-                    showError: vm.showValidationErrors,
-                    onChanged: vm.setCategory,
-                  ),
-                  const SizedBox(height: 12),
-                  _inputTextField(
-                    prefix: const SizedBox(
-                      width: 48,
-                      child: Center(
-                        child: Text(
-                          '₱',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
+
+      // ✅ Scrollbar hint (BLACK) at right side
+      body: ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),// ✅ black
+          thickness: WidgetStateProperty.all(5), // visible for 40–60 y/o users
+          radius: const Radius.circular(8),
+        ),
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true, // ✅ always visible as a hint
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _cleanCard(
+                  child: Column(
+                    children: [
+                      _readOnlyField(
+                        controller: dateTextController,
+                        icon: Icons.calendar_month_rounded,
+                        label: 'Petsa',
+                        onTap: () => _pickDate(context, vm),
+                      ),
+                      const SizedBox(height: 12),
+                      _inputDropdown(
+                        icon: Icons.category_rounded,
+                        label: 'Kategorya',
+                        value: vm.selectedCategory,
+                        items: vm.categories,
+                        showError: vm.showValidationErrors,
+                        onChanged: vm.setCategory,
+                      ),
+                      const SizedBox(height: 12),
+                      _inputTextField(
+                        prefix: const SizedBox(
+                          width: 48,
+                          child: Center(
+                            child: Text(
+                              '₱',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
+                        label: 'Gasto',
+                        controller: vm.amountController,
+                        showError: vm.showValidationErrors,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [ThousandsFormatter()],
+                        hintText: "0.00",
                       ),
-                    ),
-                    label: 'Gasto',
-                    controller: vm.amountController,
-                    showError: vm.showValidationErrors,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [ThousandsFormatter()],
-                    hintText: "0.00",
+                      const SizedBox(height: 12),
+                      _inputTextField(
+                        prefix: const Icon(
+                          Icons.description_rounded,
+                          color: AppColors.primary,
+                        ),
+                        label: 'Deskripsyon',
+                        controller: vm.descriptionController,
+                        showError: vm.showValidationErrors,
+                        hintText: "Unsa ni nga gasto?",
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _inputTextField(
-                    prefix: const Icon(
-                      Icons.description_rounded,
-                      color: AppColors.primary,
-                    ),
-                    label: 'Deskripsyon',
-                    controller: vm.descriptionController,
-                    showError: vm.showValidationErrors,
-                    hintText: "Unsa ni nga gasto?",
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 14),
+                _sectionCard(
+                  title: "Resibo (Opsyonal)",
+                  icon: Icons.camera_alt_rounded,
+                  child: _receiptSection(context, vm),
+                ),
+                const SizedBox(height: 90),
+              ],
             ),
-            const SizedBox(height: 14),
-            _sectionCard(
-              title: "Resibo (Opsyonal)",
-              icon: Icons.camera_alt_rounded,
-              child: _receiptSection(context, vm),
-            ),
-            const SizedBox(height: 90),
-          ],
+          ),
         ),
       ),
+
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
         child: Material(
@@ -199,7 +233,8 @@ class ExpensesScreen extends ConsumerWidget {
                     )
                   : const Text(
                       'Rekord',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                     ),
             ),
           ),
@@ -210,80 +245,80 @@ class ExpensesScreen extends ConsumerWidget {
 
   // ===================== CARD WRAPPER =====================
   Widget _sectionCard({
-  required String title,
-  required IconData icon,
-  required Widget child,
-}) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [
-        BoxShadow(
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-          color: Colors.black.withOpacity(0.04),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              height: 36,
-              width: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 36,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  color: Colors.black87,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        child,
-      ],
-    ),
-  );
-}
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
 
   Widget _cleanCard({
-  required Widget child,
-}) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [
-        BoxShadow(
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-          color: Colors.black.withOpacity(0.04),
-        ),
-      ],
-    ),
-    child: child,
-  );
-}
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
 
   // ===================== READONLY DATE FIELD =====================
   Widget _readOnlyField({
@@ -369,7 +404,6 @@ class ExpensesScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      
                     ],
                   ),
           ),
@@ -495,7 +529,8 @@ class ExpensesScreen extends ConsumerWidget {
           prefixIcon: prefix,
           labelText: label,
           hintText: hintText,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
@@ -519,9 +554,8 @@ class ExpensesScreen extends ConsumerWidget {
   Future<void> _pickDate(BuildContext context, ExpensesViewModel vm) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: vm.selectedDate.isAfter(DateTime.now())
-          ? DateTime.now()
-          : vm.selectedDate,
+      initialDate:
+          vm.selectedDate.isAfter(DateTime.now()) ? DateTime.now() : vm.selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       builder: (context, child) => Theme(
@@ -541,7 +575,8 @@ class ExpensesScreen extends ConsumerWidget {
   }
 
   // ===================== RECEIPT PICKER =====================
-  Future<void> _pickReceiptImage(BuildContext context, ExpensesViewModel vm) async {
+  Future<void> _pickReceiptImage(
+      BuildContext context, ExpensesViewModel vm) async {
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -553,8 +588,10 @@ class ExpensesScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextButton.icon(
-                icon: const Icon(Icons.photo_library, size: 28, color: AppColors.primary),
-                label: const Text("Gallery", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                icon: const Icon(Icons.photo_library,
+                    size: 28, color: AppColors.primary),
+                label: const Text("Gallery",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 onPressed: () {
                   vm.pickReceipt(ImageSource.gallery);
                   Navigator.pop(context);
@@ -562,8 +599,10 @@ class ExpensesScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               TextButton.icon(
-                icon: const Icon(Icons.camera_alt, size: 28, color: AppColors.primary),
-                label: const Text("Camera", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                icon: const Icon(Icons.camera_alt,
+                    size: 28, color: AppColors.primary),
+                label: const Text("Camera",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 onPressed: () {
                   vm.pickReceipt(ImageSource.camera);
                   Navigator.pop(context);

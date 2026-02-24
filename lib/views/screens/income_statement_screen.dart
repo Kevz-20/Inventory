@@ -20,10 +20,19 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   DateTime start = DateTime.now();
   DateTime end = DateTime.now();
 
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -77,140 +86,153 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Income Statement', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ==================== DATE RANGE CARD ====================
-            _dateRangeCard(
-              startLabel: _format(start),
-              endLabel: _format(end),
-              onStartTap: () => _selectDate(context, true),
-              onEndTap: () => _selectDate(context, false),
-            ),
 
-            const SizedBox(height: 14),
-
-            // ==================== DATA ====================
-            incomeState.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.only(top: 40),
-                child: Text(
-                  e.toString(),
-                  style: const TextStyle(color: Colors.red),
+      // ✅ Scrollbar hint (same styling as other screens)
+      body: ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+          thickness: WidgetStateProperty.all(5),
+          radius: const Radius.circular(8),
+        ),
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ==================== DATE RANGE CARD ====================
+                _dateRangeCard(
+                  startLabel: _format(start),
+                  endLabel: _format(end),
+                  onStartTap: () => _selectDate(context, true),
+                  onEndTap: () => _selectDate(context, false),
                 ),
-              ),
-              data: (income) {
-                final currency = NumberFormat.currency(
-                  symbol: '₱',
-                  decimalDigits: 2,
-                );
 
-                // optional empty-state check
-                final isEmpty =
-                    income.sales == 0 &&
-                    income.kompra == 0 &&
-                    income.electricity == 0 &&
-                    income.transportation == 0 &&
-                    income.rentPayment == 0 &&
-                    income.miscExpenses == 0;
+                const SizedBox(height: 14),
 
-                return Column(
-                  children: [
-                    // ==================== SUMMARY CARD ====================
-                    _summaryCard(
-                    sales: income.sales,
-                    totalExpenses: (income.kompra +
-                        income.electricity +
-                        income.transportation +
-                        income.rentPayment +
-                        income.miscExpenses),
-                    netIncome: income.netIncome,
-                    currency: currency,
+                // ==================== DATA ====================
+                incomeState.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Text(
+                      e.toString(),
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                  data: (income) {
+                    final currency = NumberFormat.currency(
+                      symbol: '₱',
+                      decimalDigits: 2,
+                    );
 
-                    const SizedBox(height: 14),
+                    // optional empty-state check
+                    final isEmpty = income.sales == 0 &&
+                        income.kompra == 0 &&
+                        income.electricity == 0 &&
+                        income.transportation == 0 &&
+                        income.rentPayment == 0 &&
+                        income.miscExpenses == 0;
 
-                    if (isEmpty)
-                      _emptyCard()
-                    else ...[
-                      // ==================== SALES SECTION ====================
-                      _buildFinancialSection(
-                        title: 'Sales',
-                        icon: Icons.point_of_sale_rounded,
-                        totalText: currency.format(income.sales),
-                        children: [
-                          _itemRow(
-                            label: 'Merchandise Sales',
-                            value: income.merchandiseSales,
-                            currency: currency,
-                          ),
-                          const SizedBox(height: 8),
-                          Divider(color: Colors.grey.shade200, height: 1),
-                          const SizedBox(height: 10),
-                          _totalRow(
-                            label: 'TOTAL SALES',
-                            amountText: currency.format(income.sales),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // ==================== EXPENSES SECTION ====================
-                      _buildFinancialSection(
-                        title: 'Expenses',
-                        icon: Icons.payments_rounded,
-                        totalText: currency.format(
-                          income.kompra +
+                    return Column(
+                      children: [
+                        // ==================== SUMMARY CARD ====================
+                        _summaryCard(
+                          sales: income.sales,
+                          totalExpenses: (income.kompra +
                               income.electricity +
                               income.transportation +
                               income.rentPayment +
-                              income.miscExpenses,
+                              income.miscExpenses),
+                          netIncome: income.netIncome,
+                          currency: currency,
                         ),
-                        children: [
-                          _itemRow(
-                            label: 'Kompra',
-                            value: income.kompra,
-                            currency: currency,
+
+                        const SizedBox(height: 14),
+
+                        if (isEmpty)
+                          _emptyCard()
+                        else ...[
+                          // ==================== SALES SECTION ====================
+                          _buildFinancialSection(
+                            title: 'Sales',
+                            icon: Icons.point_of_sale_rounded,
+                            totalText: currency.format(income.sales),
+                            children: [
+                              _itemRow(
+                                label: 'Merchandise Sales',
+                                value: income.merchandiseSales,
+                                currency: currency,
+                              ),
+                              const SizedBox(height: 8),
+                              Divider(color: Colors.grey.shade200, height: 1),
+                              const SizedBox(height: 10),
+                              _totalRow(
+                                label: 'TOTAL SALES',
+                                amountText: currency.format(income.sales),
+                              ),
+                            ],
                           ),
-                          _itemRow(
-                            label: 'Kuryente / Tubig',
-                            value: income.electricity,
-                            currency: currency,
+
+                          const SizedBox(height: 14),
+
+                          // ==================== EXPENSES SECTION ====================
+                          _buildFinancialSection(
+                            title: 'Expenses',
+                            icon: Icons.payments_rounded,
+                            totalText: currency.format(
+                              income.kompra +
+                                  income.electricity +
+                                  income.transportation +
+                                  income.rentPayment +
+                                  income.miscExpenses,
+                            ),
+                            children: [
+                              _itemRow(
+                                label: 'Kompra',
+                                value: income.kompra,
+                                currency: currency,
+                              ),
+                              _itemRow(
+                                label: 'Kuryente / Tubig',
+                                value: income.electricity,
+                                currency: currency,
+                              ),
+                              _itemRow(
+                                label: 'Transportation',
+                                value: income.transportation,
+                                currency: currency,
+                              ),
+                              _itemRow(
+                                label: 'Mga Bayronon',
+                                value: income.rentPayment,
+                                currency: currency,
+                              ),
+                              _itemRow(
+                                label: 'Uban Pa',
+                                value: income.miscExpenses,
+                                currency: currency,
+                              ),
+                            ],
                           ),
-                          _itemRow(
-                            label: 'Transportation',
-                            value: income.transportation,
-                            currency: currency,
-                          ),
-                          _itemRow(
-                            label: 'Mga Bayronon',
-                            value: income.rentPayment,
-                            currency: currency,
-                          ),
-                          _itemRow(
-                            label: 'Uban Pa',
-                            value: income.miscExpenses,
-                            currency: currency,
-                          ),
+
+                          const SizedBox(height: 14),
                         ],
-                      ),
 
-                      const SizedBox(height: 14),
-                    ],
-
-                    const SizedBox(height: 90),
-                  ],
-                );
-              },
+                        const SizedBox(height: 90),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
 
@@ -354,10 +376,10 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
 
   // ==================== SUMMARY CARD ====================
   Widget _summaryCard({
-  required double sales,
-  required double totalExpenses,
-  required double netIncome,
-  required NumberFormat currency,
+    required double sales,
+    required double totalExpenses,
+    required double netIncome,
+    required NumberFormat currency,
   }) {
     return Container(
       width: double.infinity,
@@ -377,7 +399,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           Row(
             children: [
               Expanded(
@@ -418,14 +439,10 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: highlight
-            ? AppColors.primary.withOpacity(0.08)
-            : Colors.grey.shade50,
+        color: highlight ? AppColors.primary.withOpacity(0.08) : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: highlight
-              ? AppColors.primary.withOpacity(0.18)
-              : Colors.grey.shade200,
+          color: highlight ? AppColors.primary.withOpacity(0.18) : Colors.grey.shade200,
         ),
       ),
       child: Row(

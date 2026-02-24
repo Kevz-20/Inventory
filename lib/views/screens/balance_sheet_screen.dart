@@ -3,7 +3,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 
-
 import '../../view_models/balance_sheet_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
@@ -22,10 +21,19 @@ class BalanceSheetScreen extends ConsumerStatefulWidget {
 class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
   bool _isLoading = true;
 
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _loadBalanceSheet();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadBalanceSheet() async {
@@ -50,54 +58,68 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Balance Sheet', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ==================== SUMMARY CARD ====================
-            _summaryCard(vm: vm),
-            const SizedBox(height: 14),
 
-            // ==================== ASSETS ====================
-            _buildFinancialSection(
-              title: 'Assets',
-              icon: Icons.account_balance_wallet_rounded,
-              items: vm.assets,
-              total: vm.totalAssets,
-              vm: vm,
+      // ✅ Scrollbar hint (same color/style as others)
+      body: ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+          thickness: WidgetStateProperty.all(5),
+          radius: const Radius.circular(8),
+        ),
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ==================== SUMMARY CARD ====================
+                _summaryCard(vm: vm),
+                const SizedBox(height: 14),
+
+                // ==================== ASSETS ====================
+                _buildFinancialSection(
+                  title: 'Assets',
+                  icon: Icons.account_balance_wallet_rounded,
+                  items: vm.assets,
+                  total: vm.totalAssets,
+                  vm: vm,
+                ),
+                const SizedBox(height: 14),
+
+                // ==================== LIABILITIES ====================
+                _buildFinancialSection(
+                  title: 'Liabilities',
+                  icon: Icons.payments_rounded,
+                  items: vm.liabilities,
+                  total: vm.totalLiabilities,
+                  vm: vm,
+                ),
+                const SizedBox(height: 14),
+
+                // ==================== EQUITY ====================
+                _buildFinancialSection(
+                  title: "Owner's Equity",
+                  icon: Icons.account_balance_rounded,
+                  items: vm.equity,
+                  total: vm.totalEquity,
+                  vm: vm,
+                ),
+                const SizedBox(height: 14),
+
+                // ==================== TOTAL L + E ====================
+                _totalHighlightCard(
+                  title: 'Total Liabilities + Equity',
+                  amount: totalLE,
+                  vm: vm,
+                ),
+
+                const SizedBox(height: 90),
+              ],
             ),
-            const SizedBox(height: 14),
-
-            // ==================== LIABILITIES ====================
-            _buildFinancialSection(
-              title: 'Liabilities',
-              icon: Icons.payments_rounded,
-              items: vm.liabilities,
-              total: vm.totalLiabilities,
-              vm: vm,
-            ),
-            const SizedBox(height: 14),
-
-            // ==================== EQUITY ====================
-            _buildFinancialSection(
-              title: "Owner's Equity",
-              icon: Icons.account_balance_rounded,
-              items: vm.equity,
-              total: vm.totalEquity,
-              vm: vm,
-            ),
-            const SizedBox(height: 14),
-
-            // ==================== TOTAL L + E ====================
-            _totalHighlightCard(
-              title: 'Total Liabilities + Equity',
-              amount: totalLE,
-              vm: vm,
-            ),
-
-            const SizedBox(height: 90),
-          ],
+          ),
         ),
       ),
 
@@ -161,7 +183,6 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           Row(
             children: [
               Expanded(

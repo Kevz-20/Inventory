@@ -15,6 +15,20 @@ class StockInScreen extends ConsumerStatefulWidget {
 }
 
 class _StockInScreenState extends ConsumerState<StockInScreen> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(stockInViewModelProvider);
@@ -27,73 +41,87 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Stock In', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ===================== CARD: BASIC INFO =====================
-            _card(
-              child: Column(
-                children: [
-                  _inputDate(vm),
-                  const SizedBox(height: 12),
-                  _inputDropdown(
-                    icon: Icons.category,
-                    label: 'Kategorya',
-                    value: vm.selectedCategory,
-                    items: vm.categories,
-                    showError: vm.showValidationErrors,
-                    onChanged: vm.setCategory,
+
+      // ✅ Scrollbar hint (BLACK) at right side
+      body: ScrollbarTheme(
+        data: ScrollbarThemeData(
+          thumbColor: WidgetStateProperty.all(AppColors.scrollbar), // ✅ black
+          thickness: WidgetStateProperty.all(5), // visible for 40–60 y/o users
+          radius: const Radius.circular(8),
+        ),
+        child: Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true, // always visible hint
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ===================== CARD: BASIC INFO =====================
+                _card(
+                  child: Column(
+                    children: [
+                      _inputDate(vm),
+                      const SizedBox(height: 12),
+                      _inputDropdown(
+                        icon: Icons.category,
+                        label: 'Kategorya',
+                        value: vm.selectedCategory,
+                        items: vm.categories,
+                        showError: vm.showValidationErrors,
+                        onChanged: vm.setCategory,
+                      ),
+                      const SizedBox(height: 12),
+                      _autocompleteProduct(vm),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _autocompleteProduct(vm),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ===================== CARD: PRICING & QUANTITY =====================
+                _card(
+                  child: Column(
+                    children: [
+                      _inputNumberField(
+                        label: 'Presyo sa pagpalit',
+                        controller: vm.purchasePriceController,
+                        showError: vm.showValidationErrors,
+                        isPeso: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _inputNumberField(
+                        label: 'Presyo sa pagbaligya',
+                        controller: vm.sellingPriceController,
+                        showError: vm.showValidationErrors,
+                        isPeso: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _inputNumberField(
+                        label: 'Gidaghanon',
+                        controller: vm.quantityController,
+                        showError: vm.showValidationErrors,
+                        icon: Icons.shopping_cart_rounded,
+                        isPeso: false,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ===================== CARD: IMAGE =====================
+                _sectionCard(
+                  title: "Product Image (Opsyonal)",
+                  icon: Icons.camera_alt_rounded,
+                  child: _imagePicker(vm, context),
+                ),
+
+                const SizedBox(height: 90),
+              ],
             ),
-
-            const SizedBox(height: 14),
-
-            // ===================== CARD: PRICING & QUANTITY =====================
-            _card(
-              child: Column(
-                children: [
-                  _inputNumberField(
-                    label: 'Presyo sa pagpalit',
-                    controller: vm.purchasePriceController,
-                    showError: vm.showValidationErrors,
-                    isPeso: true,
-                  ),
-                  const SizedBox(height: 12),
-                  _inputNumberField(
-                    label: 'Presyo sa pagbaligya',
-                    controller: vm.sellingPriceController,
-                    showError: vm.showValidationErrors,
-                    isPeso: true,
-                  ),
-                  const SizedBox(height: 12),
-                  _inputNumberField(
-                    label: 'Gidaghanon',
-                    controller: vm.quantityController,
-                    showError: vm.showValidationErrors,
-                    icon: Icons.shopping_cart_rounded,
-                    isPeso: false,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // ===================== CARD: IMAGE =====================
-            _sectionCard(
-              title: "Product Image (Opsyonal)",
-              icon: Icons.camera_alt_rounded,
-              child: _imagePicker(vm, context),
-            ),
-
-            const SizedBox(height: 90),
-          ],
+          ),
         ),
       ),
 
@@ -292,8 +320,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           labelText: label,
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color: isError ? Colors.red : Colors.grey.shade300),
+            borderSide:
+                BorderSide(color: isError ? Colors.red : Colors.grey.shade300),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

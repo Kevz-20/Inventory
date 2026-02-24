@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,8 +36,9 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
     final intPartRaw = parts.first;
     final fracPart = hasDot ? (parts.length > 1 ? parts[1] : '') : '';
 
-    final formattedInt =
-        intPartRaw.isEmpty ? '' : _intFormatter.format(int.parse(intPartRaw));
+    final formattedInt = intPartRaw.isEmpty
+        ? ''
+        : _intFormatter.format(int.parse(intPartRaw));
     final formatted = hasDot ? '$formattedInt.$fracPart' : formattedInt;
 
     return TextEditingValue(
@@ -98,22 +101,18 @@ class _CapitalManagementScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ===================== SUMMARY (better layout) =====================
-                Row(
+                Column(
                   children: [
-                    Expanded(
-                      child: _miniBalanceCard(
-                        title: "Cash on Hand",
-                        value: totalCashOnHand,
-                        icon: Icons.money_rounded,
-                      ),
+                    _miniBalanceCard(
+                      title: "Cash on Hand",
+                      value: totalCashOnHand,
+                      icon: Icons.money_rounded,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _miniBalanceCard(
-                        title: "Capital",
-                        value: totalCapital,
-                        icon: Icons.account_balance_rounded,
-                      ),
+                    const SizedBox(height: 12),
+                    _miniBalanceCard(
+                      title: "Capital",
+                      value: totalCapital,
+                      icon: Icons.account_balance_rounded,
                     ),
                   ],
                 ),
