@@ -1,12 +1,14 @@
+import 'dart:math' as math;
+
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:auto_size_text/auto_size_text.dart';
+
+import '../../core/app_colors.dart';
 import '../../models/cashflow_model.dart';
 import '../../view_models/cashflow_view_model.dart';
-import '../../core/app_colors.dart';
-import '../widgets/header.dart'; // Ensure this matches your project structure
-import 'dart:math' as math; // Used to calculate the wider width
+import '../widgets/header.dart';
 
 class CashFlowScreen extends ConsumerStatefulWidget {
   const CashFlowScreen({super.key});
@@ -17,6 +19,7 @@ class CashFlowScreen extends ConsumerStatefulWidget {
 
 class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   bool _loading = true;
+  final ScrollController _horizontalController = ScrollController();
 
   @override
   void initState() {
@@ -24,15 +27,20 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     _loadCashflows();
   }
 
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadCashflows() async {
     final vm = ref.read(cashflowViewModelProvider);
     try {
       await vm.loadCashflows();
     } catch (e) {
-      // ignore: avoid_print
-      print('Error fetching cashflows: $e');
+      debugPrint('Error fetching cashflows: $e');
     }
-    // Check if the widget is still on screen before calling setState
+
     if (mounted) {
       setState(() => _loading = false);
     }
@@ -48,8 +56,67 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     return formatter.format(value);
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final vm = ref.watch(cashflowViewModelProvider);
+    final records = vm.filteredRecords;
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: const AppHeader(title: 'Cash Flow', showBackButton: true),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double finalWidth = math.max(constraints.maxWidth, 500.0);
+
+          return Scrollbar(
+            controller: _horizontalController,
+            thumbVisibility: false,
+            interactive: true,
+            thickness: 8,
+            radius: const Radius.circular(8),
+            child: SingleChildScrollView(
+              controller: _horizontalController,
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: SizedBox(
+                  width: finalWidth,
+                  height: constraints.maxHeight,
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      Expanded(
+                        child: _loading
+                            ? const Center(child: CircularProgressIndicator())
+                            : records.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'No cashflow records yet',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: records.length,
+                                itemBuilder: (_, i) => _buildRow(records[i]),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showCashflowDetails(CashflowRecord record) {
     final isInstallment = record.item.toLowerCase().contains('downpayment');
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -104,6 +171,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          const Text(''),
           Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
           Text(
             value,
@@ -117,56 +185,6 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final vm = ref.watch(cashflowViewModelProvider);
-    final records = vm.filteredRecords;
-
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Cash Flow', showBackButton: true),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // LOGIC:
-          // If screen is wider than 800 (e.g. Tablet), use screen width.
-          // If screen is smaller than 800 (e.g. Phone), use 800 and scroll.
-          final double finalWidth = math.max(constraints.maxWidth, 500.0);
-
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: finalWidth,
-              height: constraints.maxHeight,
-              child: Column(
-                children: [
-                  _buildHeader(),
-                  Expanded(
-                    child: _loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : records.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No cashflow records yet',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: records.length,
-                            itemBuilder: (_, i) => _buildRow(records[i]),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -174,7 +192,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       child: Row(
         children: const [
           _HeaderCell('Date', flex: 2, align: TextAlign.left),
-          _HeaderCell('Item', flex: 3, align: TextAlign.center),
+          _HeaderCell('Item', flex: 3),
           _HeaderCell('In', flex: 2, align: TextAlign.right),
           _HeaderCell('Out', flex: 2, align: TextAlign.right),
           _HeaderCell('Balance', flex: 2, align: TextAlign.right),
@@ -185,7 +203,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Widget _buildRow(CashflowRecord r) {
     final isInstallment = r.item.toLowerCase().contains('downpayment');
-    
+
     return GestureDetector(
       onTap: () => _showCashflowDetails(r),
       child: Container(
@@ -204,66 +222,43 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         ),
         child: Row(
           children: [
-            // ---------------------------------------------------
-            // ✅ COLUMN 1: DATE & TIME STACKED
-            // ---------------------------------------------------
             Expanded(
               flex: 2,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, // Align text to left
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. DATE (Bold, Dark)
                   Text(
                     r.formattedDate,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 2), // Small gap
-                  // 2. TIME (Smaller, Grey)
+                  const SizedBox(height: 2),
                   Text(
                     r.formattedTime,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Colors.grey[600], // Lighter color distinguishes it
+                      color: Colors.grey[600],
                     ),
                   ),
                 ],
               ),
             ),
-
-            // ---------------------------------------------------
-            // COLUMN 2: ITEM
-            // ---------------------------------------------------
-            _buildCell(r.item, flex: 3, align: TextAlign.center),
-
-            // ---------------------------------------------------
-            // COLUMN 3: IN (Green/Blue)
-            // ---------------------------------------------------
+            _buildCell(r.item, flex: 3),
             _buildCell(
               r.cashIn == 0 ? '-' : _formatCurrency(r.cashIn),
               flex: 2,
               color: isInstallment ? Colors.blue : Colors.green,
               align: TextAlign.right,
             ),
-
-            // ---------------------------------------------------
-            // COLUMN 4: OUT (Red)
-            // ---------------------------------------------------
             _buildCell(
               r.cashOut == 0 ? '-' : _formatCurrency(r.cashOut),
               flex: 2,
               color: Colors.red,
               align: TextAlign.right,
             ),
-
-            // ---------------------------------------------------
-            // COLUMN 5: BALANCE (Bold)
-            // ---------------------------------------------------
             _buildCell(
               _formatCurrency(r.balance),
               flex: 2,
@@ -275,6 +270,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       ),
     );
   }
+
   Widget _buildCell(
     String text, {
     int flex = 1,
