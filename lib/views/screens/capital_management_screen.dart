@@ -34,9 +34,8 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
     final intPartRaw = parts.first;
     final fracPart = hasDot ? (parts.length > 1 ? parts[1] : '') : '';
 
-    final formattedInt = intPartRaw.isEmpty
-        ? ''
-        : _intFormatter.format(int.parse(intPartRaw));
+    final formattedInt =
+        intPartRaw.isEmpty ? '' : _intFormatter.format(int.parse(intPartRaw));
     final formatted = hasDot ? '$formattedInt.$fracPart' : formattedInt;
 
     return TextEditingValue(
@@ -62,8 +61,6 @@ class _CapitalManagementScreenState
     return double.tryParse(raw) ?? 0;
   }
 
-  final DateFormat _dateFormatter = DateFormat('MMM dd, yyyy • hh:mm a');
-
   @override
   void initState() {
     super.initState();
@@ -75,6 +72,7 @@ class _CapitalManagementScreenState
   @override
   Widget build(BuildContext context) {
     final repoAsync = ref.watch(capitalManagementRepositoryProvider);
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return repoAsync.when(
       data: (_) {
@@ -86,12 +84,6 @@ class _CapitalManagementScreenState
         );
         final totalCapital = vm.capitals.fold(0.0, (sum, e) => sum + e.capital);
 
-        final DateTime? lastAddedDate = vm.capitals.isNotEmpty
-            ? vm.capitals
-                  .map((e) => e.createdAt)
-                  .reduce((a, b) => a.isAfter(b) ? a : b)
-            : null;
-
         final enteredAmount = _parseAmount();
 
         return Scaffold(
@@ -101,94 +93,143 @@ class _CapitalManagementScreenState
             showBackButton: true,
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  lastAddedDate == null
-                      ? 'Last capital added: —'
-                      : 'Last capital added: ${_dateFormatter.format(lastAddedDate)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 16),
-                _miniBalanceCard(
-                  title: "Cash on Hand",
-                  value: totalCashOnHand,
-                  icon: Icons.money,
-                ),
-                const SizedBox(height: 12),
-                _miniBalanceCard(
-                  title: "Capital",
-                  value: totalCapital,
-                  icon: Icons.account_balance,
-                ),
-                const SizedBox(height: 24),
-                _addCapitalCard(),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: vm.isLoading || enteredAmount <= 0
-                        ? null
-                        : () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            messenger.hideCurrentSnackBar();
-
-                            await vm.addCapital(
-                              capitalAmount: enteredAmount,
-                              remarks: _remarksController.text,
-                            );
-
-                            if (!mounted) return;
-
-                            if (vm.error == null) {
-                              _amountController.clear();
-                              _remarksController.clear();
-                              setState(() {});
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Capital added successfully!'),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            } else {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Failed to add capital: ${vm.error}',
-                                  ),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // ===================== SUMMARY (better layout) =====================
+                Row(
+                  children: [
+                    Expanded(
+                      child: _miniBalanceCard(
+                        title: "Cash on Hand",
+                        value: totalCashOnHand,
+                        icon: Icons.money_rounded,
                       ),
                     ),
-                    child: vm.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            "Add Capital",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _miniBalanceCard(
+                        title: "Capital",
+                        value: totalCapital,
+                        icon: Icons.account_balance_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // ===================== ADD CAPITAL =====================
+                _sectionCard(
+                  title: 'Add Capital',
+                  icon: Icons.add_circle_outline_rounded,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _amountInput(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enter the amount you want to add',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Chips responsive
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _quickAmountChip('500'),
+                          _quickAmountChip('1000'),
+                          _quickAmountChip('5000'),
+                        ],
+                      ),
+
+                      const SizedBox(height: 14),
+                      _remarksInput(),
+                    ],
                   ),
                 ),
+
+                const SizedBox(height: 90),
               ],
+            ),
+          ),
+
+          // ===================== BOTTOM BUTTON (same behavior) =====================
+          bottomNavigationBar: Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
+            child: Material(
+              elevation: 10,
+              borderRadius: BorderRadius.circular(14),
+              shadowColor: Colors.black.withOpacity(0.15),
+              child: SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: vm.isLoading || enteredAmount <= 0
+                      ? null
+                      : () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.hideCurrentSnackBar();
+
+                          await vm.addCapital(
+                            capitalAmount: enteredAmount,
+                            remarks: _remarksController.text,
+                          );
+
+                          if (!mounted) return;
+
+                          if (vm.error == null) {
+                            _amountController.clear();
+                            _remarksController.clear();
+                            setState(() {});
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Capital added successfully!'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          } else {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Failed to add capital: ${vm.error}',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: vm.isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Add Capital",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
+              ),
             ),
           ),
         );
@@ -199,7 +240,69 @@ class _CapitalManagementScreenState
     );
   }
 
-  /// ================= UI HELPERS =================
+  // ================= UI HELPERS =================
+
+  Widget _card({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _sectionCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 36,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(color: Colors.grey.shade200, height: 1),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
 
   Widget _miniBalanceCard({
     required String title,
@@ -207,88 +310,57 @@ class _CapitalManagementScreenState
     IconData? icon,
   }) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20, color: AppColors.primary),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w600,
-                ),
+          if (icon != null)
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
+              child: Icon(icon, size: 22, color: AppColors.primary),
+            ),
+          if (icon != null) const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _currencyFormatter.format(value),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            _currencyFormatter.format(value),
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _addCapitalCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Add Capital',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          _amountInput(),
-          const SizedBox(height: 6),
-          Text(
-            'Enter the amount you want to add',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _quickAmountChip('500'),
-              const SizedBox(width: 8),
-              _quickAmountChip('1000'),
-              const SizedBox(width: 8),
-              _quickAmountChip('5000'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _remarksInput(),
         ],
       ),
     );
@@ -305,49 +377,80 @@ class _CapitalManagementScreenState
         setState(() {});
       },
       style: OutlinedButton.styleFrom(
-        side: BorderSide(color: AppColors.primary),
         foregroundColor: AppColors.primary,
+        side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
       child: Text('₱${NumberFormat('#,##0').format(int.parse(value))}'),
     );
   }
 
   Widget _amountInput() {
-    return TextField(
-      controller: _amountController,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-        ThousandDecimalInputFormatter(),
-      ],
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        hintText: '0.00',
-        prefixText: '₱ ',
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade400),
+    return SizedBox(
+      height: 58,
+      child: TextField(
+        controller: _amountController,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+          ThousandDecimalInputFormatter(),
+        ],
+        onChanged: (_) => setState(() {}),
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w800,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.info),
+        decoration: InputDecoration(
+          hintText: '0.00',
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          prefixIcon: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              '₱',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+          ),
         ),
       ),
     );
   }
 
   Widget _remarksInput() {
-    return TextField(
-      controller: _remarksController,
-      decoration: InputDecoration(
-        hintText: 'Optional note',
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade400),
+    return SizedBox(
+      height: 58,
+      child: TextField(
+        controller: _remarksController,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w700,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.info),
+        decoration: InputDecoration(
+          hintText: 'Optional note',
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          prefixIcon: const Icon(Icons.notes_rounded, color: AppColors.primary),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+          ),
         ),
       ),
     );

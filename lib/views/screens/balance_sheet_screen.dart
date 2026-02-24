@@ -2,7 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 
 import '../../view_models/balance_sheet_view_model.dart';
 import '../../core/app_colors.dart';
@@ -45,7 +45,6 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final asOfText = DateFormat('MMMM dd, yyyy').format(DateTime.now());
     final totalLE = vm.totalLiabilities + vm.totalEquity;
 
     return Scaffold(
@@ -57,7 +56,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ==================== SUMMARY CARD ====================
-            _summaryCard(asOfText: asOfText, vm: vm),
+            _summaryCard(vm: vm),
             const SizedBox(height: 14),
 
             // ==================== ASSETS ====================
@@ -142,7 +141,6 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
 
   // ==================== SUMMARY CARD ====================
   Widget _summaryCard({
-    required String asOfText,
     required BalanceSheetViewModel vm,
   }) {
     return Container(
@@ -163,26 +161,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_month_rounded,
-                size: 18,
-                color: Colors.grey.shade700,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'As of $asOfText',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade700,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
+          
           Row(
             children: [
               Expanded(

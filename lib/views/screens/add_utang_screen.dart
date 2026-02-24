@@ -311,9 +311,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'updated_at': DateTime.now().toIso8601String(),
         });
 
-        // ❌ do NOT insert payable_payment here
-        // ❌ do NOT deduct cash here
-        // ✅ payment + cash deduction happens when user pays it in Utang screen
+       
       }
 
       // -----------------------------

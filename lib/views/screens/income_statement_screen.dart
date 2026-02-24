@@ -124,17 +124,15 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                   children: [
                     // ==================== SUMMARY CARD ====================
                     _summaryCard(
-                      rangeText: '${_format(start)}  •  ${_format(end)}',
-                      sales: income.sales,
-                      totalExpenses:
-                          (income.kompra +
-                          income.electricity +
-                          income.transportation +
-                          income.rentPayment +
-                          income.miscExpenses),
-                      netIncome: income.netIncome,
-                      currency: currency,
-                    ),
+                    sales: income.sales,
+                    totalExpenses: (income.kompra +
+                        income.electricity +
+                        income.transportation +
+                        income.rentPayment +
+                        income.miscExpenses),
+                    netIncome: income.netIncome,
+                    currency: currency,
+                  ),
 
                     const SizedBox(height: 14),
 
@@ -356,11 +354,10 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
 
   // ==================== SUMMARY CARD ====================
   Widget _summaryCard({
-    required String rangeText,
-    required double sales,
-    required double totalExpenses,
-    required double netIncome,
-    required NumberFormat currency,
+  required double sales,
+  required double totalExpenses,
+  required double netIncome,
+  required NumberFormat currency,
   }) {
     return Container(
       width: double.infinity,
@@ -380,28 +377,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_month_rounded,
-                size: 18,
-                color: Colors.grey.shade700,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  rangeText,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade700,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          
           Row(
             children: [
               Expanded(
