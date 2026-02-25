@@ -5,7 +5,7 @@ class AppColors {
   static const Color primary = Color(0xFF0C4B3E); // dark emerald
   static const Color primaryLight = Color(0xFF38A484); // lighter emerald
   static const Color primaryDark = Color(0xFF05291F); // darkest emerald
-  static const Color scrollbar = Color(0xFF424242); 
+  static const Color scrollbar = Color(0xFF424242);
 
   // Backgrounds
   static const Color background = Color(0xFF1F1F1F);
@@ -14,7 +14,7 @@ class AppColors {
   // Text colors
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
-  static const Color textOnPrimary = Colors.white;  
+  static const Color textOnPrimary = Colors.white;
 
   // Status colors
   static const Color success = Color(0xFF4CAF50);
@@ -28,6 +28,17 @@ class AppColors {
 
   // Shadows
   static const Color shadow = Color.fromRGBO(0, 0, 0, 0.08);
-  
-  
+
+  // ============================================================
+  // Home / Dashboard specific (ADD ONLY)
+  // ============================================================
+
+  /// Gradient top color for Home header
+  static const Color headerTop = Color(0xFF115242);
+
+  /// Gradient bottom color for Home header
+  static const Color headerBottom = Color(0xFF0B3A2D);
+
+  /// Soft background for icons/cards
+  static const Color primarySoft = Color(0xFFE6F2EE);
 }

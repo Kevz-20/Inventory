@@ -1,108 +1,165 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/database_provider.dart';
-import '../repositories/capital_management_repository.dart';
-import '../repositories/account_repository.dart';
 
-/// Provider for HomeViewModel
-final homeViewModelProvider = StateNotifierProvider<HomeViewModel, HomeState>(
-  (ref) => HomeViewModel(ref),
-);
+import '../repositories/home_repository.dart';
+import '../services/db_service.dart';
 
+/// ✅ Graph mode selector
+enum HomeGraphMode { net, income, expense }
+
+/// ------------------------------
+/// MODEL FOR GRAPH POINTS
+/// ------------------------------
+class CashflowPoint {
+  final DateTime day;
+  final double net; // reused for net/income/expense series values
+
+  const CashflowPoint({required this.day, required this.net});
+}
+
+/// ------------------------------
+/// STATE
+/// ------------------------------
+class HomeState {
+  final double cashOnHand;
+  final bool isMoneyVisible;
+  final String? mobileNumber;
+  final String? error;
+  final int selectedIndex;
+
+  // Graph mode + series
+  final HomeGraphMode graphMode;
+
+  final List<CashflowPoint> net7Days;     // net = income - expense
+  final List<CashflowPoint> income7Days;  // income trend
+  final List<CashflowPoint> expense7Days; // expense trend
+
+  final bool isGraphLoading;
+  final String? graphError;
+
+  const HomeState({
+    this.cashOnHand = 0.0,
+    this.isMoneyVisible = true,
+    this.mobileNumber,
+    this.error,
+    this.selectedIndex = 0,
+    this.graphMode = HomeGraphMode.net,
+    this.net7Days = const [],
+    this.income7Days = const [],
+    this.expense7Days = const [],
+    this.isGraphLoading = false,
+    this.graphError,
+  });
+
+  HomeState copyWith({
+    double? cashOnHand,
+    bool? isMoneyVisible,
+    String? mobileNumber,
+    String? error,
+    int? selectedIndex,
+    HomeGraphMode? graphMode,
+    List<CashflowPoint>? net7Days,
+    List<CashflowPoint>? income7Days,
+    List<CashflowPoint>? expense7Days,
+    bool? isGraphLoading,
+    String? graphError,
+  }) {
+    return HomeState(
+      cashOnHand: cashOnHand ?? this.cashOnHand,
+      isMoneyVisible: isMoneyVisible ?? this.isMoneyVisible,
+      mobileNumber: mobileNumber ?? this.mobileNumber,
+      error: error ?? this.error,
+      selectedIndex: selectedIndex ?? this.selectedIndex,
+      graphMode: graphMode ?? this.graphMode,
+      net7Days: net7Days ?? this.net7Days,
+      income7Days: income7Days ?? this.income7Days,
+      expense7Days: expense7Days ?? this.expense7Days,
+      isGraphLoading: isGraphLoading ?? this.isGraphLoading,
+      graphError: graphError,
+    );
+  }
+}
+
+/// ------------------------------
+/// VIEWMODEL
+/// ------------------------------
 class HomeViewModel extends StateNotifier<HomeState> {
-  final Ref ref;
-  CapitalManagementRepository? _capitalRepo;
-  AccountRepository? _accountRepo;
-  bool _initialized = false;
+  HomeViewModel(this._repo) : super(const HomeState());
 
-  static const _prefsKeyMoneyVisible = 'isMoneyVisible';
+  final HomeRepository _repo;
 
-  HomeViewModel(this.ref) : super(HomeState.initial()) {
-    _init();
-  }
-
-  /// Initialize repositories and load initial state
-  Future<void> _init() async {
-    final db = await ref.read(databaseProvider.future);
-    _accountRepo = AccountRepository();
-    _capitalRepo = CapitalManagementRepository(db);
-
-    // Load saved money visibility from SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final savedVisibility = prefs.getBool(_prefsKeyMoneyVisible) ?? true;
-    state = state.copyWith(isMoneyVisible: savedVisibility);
-
-    _initialized = true;
-    await fetchHomeData();
-  }
-
-  /// Fetch mobile number and total cash on hand
   Future<void> fetchHomeData() async {
-    if (!_initialized || _accountRepo == null || _capitalRepo == null) return;
-
     try {
-      final mobile = await _accountRepo!.getMobileNumber();
-
-      // Use updated repository method
-      final totalCash = await _capitalRepo!.getTotalCashOnHand();
+      // ✅ cash + mobile from repository
+      final cash = await _repo.getCashOnHand();
+      final mobile = await _repo.getMobileNumber();
 
       state = state.copyWith(
-        mobileNumber: mobile,
-        cashOnHand: totalCash,
+        cashOnHand: cash,
+        mobileNumber: mobile ?? "Not set",
         error: null,
       );
+
+      // ✅ graph from repository
+      await fetchGraph7Days();
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
   }
 
-  /// Handle bottom navigation tap
-  void onNavTap(int index) {
+  Future<void> fetchGraph7Days() async {
+    state = state.copyWith(isGraphLoading: true, graphError: null);
+
+    try {
+      final result = await _repo.getIncomeExpenseLast7Days();
+      final income = result.income;
+      final expense = result.expense;
+
+      // ✅ compute net = income - expense
+      final net = List.generate(7, (i) {
+        final day = income[i].day;
+        final value = income[i].net - expense[i].net;
+        return CashflowPoint(day: day, net: value);
+      });
+
+      state = state.copyWith(
+        income7Days: income,
+        expense7Days: expense,
+        net7Days: net,
+        isGraphLoading: false,
+        graphError: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isGraphLoading: false,
+        graphError: e.toString(),
+      );
+    }
+  }
+
+  void toggleMoneyVisibility() {
+    state = state.copyWith(isMoneyVisible: !state.isMoneyVisible);
+  }
+
+  void setSelectedIndex(int index) {
     state = state.copyWith(selectedIndex: index);
   }
 
-  /// Toggle visibility of money
-  Future<void> toggleMoneyVisibility() async {
-    final newVisibility = !state.isMoneyVisible;
-    state = state.copyWith(isMoneyVisible: newVisibility);
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefsKeyMoneyVisible, newVisibility);
+  void setGraphMode(HomeGraphMode mode) {
+    state = state.copyWith(graphMode: mode);
   }
 }
 
-/// Home state class
-class HomeState {
-  final int selectedIndex;
-  final String? mobileNumber;
-  final double cashOnHand;
-  final String? error;
-  final bool isMoneyVisible;
+/// ------------------------------
+/// PROVIDERS
+/// ------------------------------
 
-  HomeState({
-    required this.selectedIndex,
-    this.mobileNumber,
-    required this.cashOnHand,
-    this.error,
-    this.isMoneyVisible = true,
-  });
+/// ✅ HomeRepository provider (inject DBService)
+final homeRepositoryProvider = Provider<HomeRepository>((ref) {
+  return HomeRepository(DBService.instance);
+});
 
-  factory HomeState.initial() =>
-      HomeState(selectedIndex: 0, cashOnHand: 0.0, isMoneyVisible: true);
-
-  HomeState copyWith({
-    int? selectedIndex,
-    String? mobileNumber,
-    double? cashOnHand,
-    String? error,
-    bool? isMoneyVisible,
-  }) {
-    return HomeState(
-      selectedIndex: selectedIndex ?? this.selectedIndex,
-      mobileNumber: mobileNumber ?? this.mobileNumber,
-      cashOnHand: cashOnHand ?? this.cashOnHand,
-      error: error ?? this.error,
-      isMoneyVisible: isMoneyVisible ?? this.isMoneyVisible,
-    );
-  }
-}
+/// ✅ HomeViewModel provider (inject repository)
+final homeViewModelProvider =
+    StateNotifierProvider<HomeViewModel, HomeState>((ref) {
+  return HomeViewModel(ref.read(homeRepositoryProvider));
+});

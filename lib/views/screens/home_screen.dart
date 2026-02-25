@@ -1,11 +1,12 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
-import '../../app_router.dart'; // import for routeObserver
-import 'package:intl/intl.dart'; // for currency formatting
+import '../../app_router.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -20,7 +21,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     super.didChangeDependencies();
     routeObserver.subscribe(this, ModalRoute.of(context)!);
 
-    // Initial fetch
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(homeViewModelProvider.notifier).fetchHomeData();
     });
@@ -34,248 +34,566 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    // Called when user comes back to this screen (e.g., using back button)
     ref.read(homeViewModelProvider.notifier).fetchHomeData();
-  }
-
-  /// Responsive menu card
-  Widget _menuCard(String title, String iconPath, {VoidCallback? onTap}) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    // Scale for tablets
-    final iconSize = screenWidth > 600 ? 72.0 : 48.0;
-    final fontSize = screenWidth > 600 ? 18.0 : 15.0;
-    final cardHeight = screenWidth > 600 ? 120.0 : 80.0;
-
-    bool isPressed = false;
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return GestureDetector(
-          onTapDown: (_) => setState(() => isPressed = true),
-          onTapUp: (_) {
-            setState(() => isPressed = false);
-            if (onTap != null) onTap();
-          },
-          onTapCancel: () => setState(() => isPressed = false),
-          child: AnimatedScale(
-            scale: isPressed ? 0.95 : 1.0,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            child: Container(
-              height: cardHeight,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withAlpha(51),
-                    blurRadius: 2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(iconPath, height: iconSize),
-                  const SizedBox(height: 4),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
 
+    final pesoFormatter = NumberFormat.currency(
+        locale: 'en_PH',
+        symbol: '₱ ',
+        decimalDigits: 2,
+      );
+
+final balanceText = pesoFormatter.format(homeState.cashOnHand);
+    final mobileText = homeState.mobileNumber ?? "Not set";
+
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: const Text(
-          'Home',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _HeroHeader(
+              title: "Home",
+              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+              mobileNumber: mobileText,
+              onBellTap: () {
+                // TODO: context.push('/notifications');
+              },
+              onEyeTap: () =>
+                  ref.read(homeViewModelProvider.notifier).toggleMoneyVisibility(),
+            ),
+
+            const SizedBox(height: 14),
+
+            // ✅ CUSTOMER & NEGOSYO AT THE TOP
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Column(
+                    children: [
+                      _bigActionTile(
+                        label: "CUSTOMER",
+                        subtitle: "Manage customers",
+                        icon: Icons.people_alt_outlined,
+                        onTap: () => context.push('/customer_menu'),
+                      ),
+                      const SizedBox(height: 18),
+                      _bigActionTile(
+                        label: "NEGOSYO",
+                        subtitle: "Store & inventory",
+                        icon: Icons.storefront_outlined,
+                        onTap: () => context.push('/negosyo_menu'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // ✅ STRETCHED GRAPH AT BOTTOM
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: _FinanceGraphCard(
+                  mode: homeState.graphMode,
+                  netPoints: homeState.net7Days,
+                  incomePoints: homeState.income7Days,
+                  expensePoints: homeState.expense7Days,
+                  loading: homeState.isGraphLoading,
+                  error: homeState.graphError,
+                  onModeChanged: (m) =>
+                      ref.read(homeViewModelProvider.notifier).setGraphMode(m),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withAlpha(51),
-                  blurRadius: 2,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      bottomNavigationBar: BottomNavBar(currentIndex: homeState.selectedIndex),
+    );
+  }
+
+  Widget _bigActionTile({
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: Container(
+        height: 112,
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
-            child: Column(
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 34),
+            ),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: Colors.black.withOpacity(0.55),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.chevron_right, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroHeader extends StatelessWidget {
+  final String title;
+  final String balance;
+  final String mobileNumber;
+  final VoidCallback onBellTap;
+  final VoidCallback onEyeTap;
+
+  const _HeroHeader({
+    required this.title,
+    required this.balance,
+    required this.mobileNumber,
+    required this.onBellTap,
+    required this.onEyeTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 52, 16, 18),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.headerTop, AppColors.headerBottom],
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              InkWell(
+                onTap: onBellTap,
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.white.withOpacity(0.95),
+                    size: 26,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.14)),
+            ),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Cash on Hand',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color.fromARGB(255, 219, 219, 219),
-                    fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Cash on Hand",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        balance,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Mobile Number: $mobileNumber",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.80),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      homeState.isMoneyVisible
-                          ? 'PHP ${NumberFormat.currency(locale: 'en_PH', symbol: '', decimalDigits: 2).format(homeState.cashOnHand)}'
-                          : 'PHP ****',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        fontSize: 28,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => ref
-                          .read(homeViewModelProvider.notifier)
-                          .toggleMoneyVisibility(),
-                      child: Icon(
-                        homeState.isMoneyVisible
-                            ? Icons.remove_red_eye
-                            : Icons.visibility_off,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Mobile Number: ${homeState.mobileNumber ?? "Not set"}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: Color.fromARGB(255, 219, 219, 219),
-                    fontSize: 13,
-                  ),
-                ),
-                if (homeState.error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Error: ${homeState.error}',
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 12,
-                      ),
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: onEyeTap,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Icon(
+                      Icons.visibility_outlined,
+                      color: Colors.white.withOpacity(0.9),
+                      size: 24,
                     ),
                   ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                const SizedBox(height: 8),
-                const Text(
-                  'Transactions',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 8),
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _menuCard(
-                      'Halin',
-                      'lib/assets/record.png',
-                      onTap: () => GoRouter.of(context).push('/record_sales'),
-                    ),
-                    _menuCard(
-                      'Utang',
-                      'lib/assets/utang.png',
-                      onTap: () => GoRouter.of(context).push('/utang'),
-                    ),
-                    _menuCard(
-                      'Gasto',
-                      'lib/assets/gasto.png',
-                      onTap: () => GoRouter.of(context).push('/expenses'),
-                    ),
-                    _menuCard(
-                      'Stock In',
-                      'lib/assets/stockin.png',
-                      onTap: () => GoRouter.of(context).push('/stockin'),
-                    ),
-                    _menuCard(
-                      'Capital\nManagement',
-                      'lib/assets/cash.png',
-                      onTap: () =>
-                          GoRouter.of(context).push('/capital_management'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Reports',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _menuCard(
-                      'Balance\nSheet',
-                      'lib/assets/balance_sheet.png',
-                      onTap: () => GoRouter.of(context).push('/balance_sheet'),
-                    ),
-                    _menuCard(
-                      'Income\nStatement',
-                      'lib/assets/income_statement.png',
-                      onTap: () =>
-                          GoRouter.of(context).push('/income_statement'),
-                    ),
-                    _menuCard(
-                      'Cash\nFlow',
-                      'lib/assets/cashflow.png',
-                      onTap: () => GoRouter.of(context).push('/cashflow'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavBar(currentIndex: homeState.selectedIndex),
+    );
+  }
+}
+
+/// ✅ Graph card with mode toggle (NET / INCOME / EXPENSE)
+/// ✅ Graph card with mode toggle (NET / INCOME / EXPENSE)
+/// - NOT clickable (no InkWell)
+/// - No chevron/right arrow
+/// - Only pills are tappable
+class _FinanceGraphCard extends StatelessWidget {
+  final HomeGraphMode mode;
+  final List<CashflowPoint> netPoints;
+  final List<CashflowPoint> incomePoints;
+  final List<CashflowPoint> expensePoints;
+
+  final bool loading;
+  final String? error;
+  final ValueChanged<HomeGraphMode> onModeChanged;
+
+  const _FinanceGraphCard({
+    required this.mode,
+    required this.netPoints,
+    required this.incomePoints,
+    required this.expensePoints,
+    required this.loading,
+    required this.error,
+    required this.onModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String title;
+    if (mode == HomeGraphMode.net) {
+      title = 'Net (Income - Expense)';
+    } else if (mode == HomeGraphMode.income) {
+      title = 'Income (Last 7 Days)';
+    } else {
+      title = 'Expenses (Last 7 Days)';
+    }
+
+    final List<CashflowPoint> points;
+    if (mode == HomeGraphMode.net) {
+      points = netPoints;
+    } else if (mode == HomeGraphMode.income) {
+      points = incomePoints;
+    } else {
+      points = expensePoints;
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ✅ Title only (no arrow, no tap)
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Colors.black.withOpacity(0.78),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          const SizedBox(height: 10),
+
+          // ✅ Pills are the only interactive controls
+          _ModePills(mode: mode, onChanged: onModeChanged),
+
+          const SizedBox(height: 10),
+
+          // ✅ Chart fills remaining space (since parent uses Expanded)
+          Expanded(child: _buildChart(points)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChart(List<CashflowPoint> points) {
+    if (loading) {
+      return const Center(
+        child: SizedBox(
+          height: 22,
+          width: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Center(
+        child: Text(
+          'Unable to load graph',
+          style: TextStyle(
+            color: Colors.black.withOpacity(0.55),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    if (points.isEmpty) {
+      return Center(
+        child: Text(
+          'No data yet.',
+          style: TextStyle(
+            color: Colors.black.withOpacity(0.55),
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    final minY = points.map((e) => e.net).reduce((a, b) => a < b ? a : b);
+    final maxY = points.map((e) => e.net).reduce((a, b) => a > b ? a : b);
+
+    final pad = (maxY - minY).abs() * 0.2;
+    final low = minY - (pad == 0 ? 10 : pad);
+    final high = maxY + (pad == 0 ? 10 : pad);
+
+    final spots = <FlSpot>[];
+    for (int i = 0; i < points.length; i++) {
+      spots.add(FlSpot(i.toDouble(), points[i].net));
+    }
+
+    // ✅ color logic
+    Color lineColor;
+    if (mode == HomeGraphMode.expense) {
+      lineColor = AppColors.error; // expenses = red
+    } else if (mode == HomeGraphMode.income) {
+      lineColor = AppColors.primary; // income = primary
+    } else {
+      final mostlyNegative = points.where((p) => p.net < 0).length > 3;
+      lineColor = mostlyNegative ? AppColors.error : AppColors.primary;
+    }
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: 6,
+        minY: low,
+        maxY: high,
+        gridData: const FlGridData(show: false),
+        titlesData: FlTitlesData(
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 18,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final i = value.toInt();
+                if (i < 0 || i >= points.length) return const SizedBox.shrink();
+                final d = points[i].day;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    '${d.day}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black.withOpacity(0.45),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(show: false),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: lineColor,
+            barWidth: 3,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: lineColor.withOpacity(0.14),
+            ),
+          ),
+        ],
+      ),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+}
+
+class _ModePills extends StatelessWidget {
+  final HomeGraphMode mode;
+  final ValueChanged<HomeGraphMode> onChanged;
+
+  const _ModePills({
+    required this.mode,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _pill('NET', HomeGraphMode.net)),
+          Expanded(child: _pill('INCOME', HomeGraphMode.income)),
+          Expanded(child: _pill('EXPENSE', HomeGraphMode.expense)),
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(String label, HomeGraphMode value) {
+    final selected = mode == value;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => onChanged(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: selected ? AppColors.primary : Colors.black.withOpacity(0.55),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

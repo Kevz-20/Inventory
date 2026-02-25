@@ -24,6 +24,8 @@ import 'views/screens/capital_management_screen.dart';
 import 'views/screens/utang_screen.dart';
 import 'views/screens/record_sales_screen.dart';
 import 'views/screens/utang_summary.screen.dart';
+import 'views/screens/customer_menu_screen.dart';
+import 'views/screens/negosyo_menu_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
@@ -128,6 +130,24 @@ final router = GoRouter(
         transition: PageTransitionType.forward,
       ),
     ),
+
+    GoRoute(
+    path: '/customer_menu',
+    pageBuilder: (context, state) => customPage(
+      state,
+      const CustomerMenuScreen(),
+      transition: PageTransitionType.forward,
+    ),
+  ),
+
+  GoRoute(
+    path: '/negosyo_menu',
+    pageBuilder: (context, state) => customPage(
+      state,
+      const NegosyoMenuScreen(),
+      transition: PageTransitionType.forward,
+    ),
+  ),
     GoRoute(
       path: '/balance_sheet',
       pageBuilder: (context, state) => customPage(
