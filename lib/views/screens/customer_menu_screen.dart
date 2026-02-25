@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app_router.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
-import '../widgets/header_info_row.dart';
+import '../widgets/hero_header.dart';
 
 
 class CustomerMenuScreen extends ConsumerStatefulWidget {
@@ -39,23 +40,34 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text(
-          'Customer',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: Column(
+Widget build(BuildContext context) {
+  final homeState = ref.watch(homeViewModelProvider);
+
+  final pesoFormatter = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱ ',
+    decimalDigits: 2,
+  );
+
+  final balanceText = pesoFormatter.format(homeState.cashOnHand);
+  final mobileText = homeState.mobileNumber ?? "Not set";
+
+  return Scaffold(
+    backgroundColor: AppColors.surface,
+    body: SafeArea(
+      top: false,
+      child: Column(
         children: [
-          HomeInfoHeader(onBellTap: () {}),
+          HeroHeader(
+            title: "Customer",
+            balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+            mobileNumber: mobileText,
+            onBellTap: () {},
+            onEyeTap: () => ref
+                .read(homeViewModelProvider.notifier)
+                .toggleMoneyVisibility(),
+          ),
+
           Expanded(
             child: Center(
               child: ConstrainedBox(
@@ -84,8 +96,9 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _menuBtn({
     required String label,

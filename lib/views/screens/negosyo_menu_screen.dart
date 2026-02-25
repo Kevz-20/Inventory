@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app_router.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
-import '../widgets/header_info_row.dart';
-
+import '../widgets/hero_header.dart';
 
 class NegosyoMenuScreen extends ConsumerStatefulWidget {
   const NegosyoMenuScreen({super.key});
@@ -40,50 +40,62 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
 
   @override
   Widget build(BuildContext context) {
+    final homeState = ref.watch(homeViewModelProvider);
+
+    final pesoFormatter = NumberFormat.currency(
+      locale: 'en_PH',
+      symbol: '₱ ',
+      decimalDigits: 2,
+    );
+
+    final balanceText = pesoFormatter.format(homeState.cashOnHand);
+    final mobileText = homeState.mobileNumber ?? "Not set";
+
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text(
-          'Negosyo',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: Column(
-        children: [
-          HomeInfoHeader(onBellTap: () {}),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _tile("GASTO", Icons.payments_outlined,
-                    onTap: () => context.push('/expenses')),
-                _tile("STOCK IN", Icons.inventory_2_outlined,
-                    onTap: () => context.push('/stockin')),
-                _tile("CAPITAL", Icons.savings_outlined,
-                    onTap: () => context.push('/capital_management')),
-
-                const SizedBox(height: 14),
-                const Text(
-                  "REPORTS",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
-
-                _tile("INCOME STATEMENT", Icons.receipt_long_outlined,
-                    onTap: () => context.push('/income_statement')),
-                _tile("BALANCE SHEET", Icons.account_balance_outlined,
-                    onTap: () => context.push('/balance_sheet')),
-                _tile("CASH FLOW", Icons.bar_chart_outlined,
-                    onTap: () => context.push('/cashflow')),
-              ],
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            HeroHeader(
+              title: "Negosyo",
+              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+              mobileNumber: mobileText,
+              onBellTap: () {},
+              onEyeTap: () => ref
+                  .read(homeViewModelProvider.notifier)
+                  .toggleMoneyVisibility(),
             ),
-          ),
-        ],
+
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _tile("GASTO", Icons.payments_outlined,
+                      onTap: () => context.push('/expenses')),
+                  _tile("STOCK IN", Icons.inventory_2_outlined,
+                      onTap: () => context.push('/stockin')),
+                  _tile("CAPITAL", Icons.savings_outlined,
+                      onTap: () => context.push('/capital_management')),
+
+                  const SizedBox(height: 14),
+                  const Text(
+                    "REPORTS",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+
+                  _tile("INCOME STATEMENT", Icons.receipt_long_outlined,
+                      onTap: () => context.push('/income_statement')),
+                  _tile("BALANCE SHEET", Icons.account_balance_outlined,
+                      onTap: () => context.push('/balance_sheet')),
+                  _tile("CASH FLOW", Icons.bar_chart_outlined,
+                      onTap: () => context.push('/cashflow')),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

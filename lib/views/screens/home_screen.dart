@@ -7,6 +7,7 @@ import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
 import '../../app_router.dart';
+import '../widgets/hero_header.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -42,12 +43,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final homeState = ref.watch(homeViewModelProvider);
 
     final pesoFormatter = NumberFormat.currency(
-        locale: 'en_PH',
-        symbol: '₱ ',
-        decimalDigits: 2,
-      );
+      locale: 'en_PH',
+      symbol: '₱ ',
+      decimalDigits: 2,
+    );
 
-final balanceText = pesoFormatter.format(homeState.cashOnHand);
+    final balanceText = pesoFormatter.format(homeState.cashOnHand);
     final mobileText = homeState.mobileNumber ?? "Not set";
 
     return Scaffold(
@@ -57,15 +58,17 @@ final balanceText = pesoFormatter.format(homeState.cashOnHand);
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _HeroHeader(
+            // ✅ UPDATED: use reusable HeroHeader
+            HeroHeader(
               title: "Home",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
               onBellTap: () {
                 // TODO: context.push('/notifications');
               },
-              onEyeTap: () =>
-                  ref.read(homeViewModelProvider.notifier).toggleMoneyVisibility(),
+              onEyeTap: () => ref
+                  .read(homeViewModelProvider.notifier)
+                  .toggleMoneyVisibility(),
             ),
 
             const SizedBox(height: 14),
@@ -205,132 +208,6 @@ final balanceText = pesoFormatter.format(homeState.cashOnHand);
   }
 }
 
-class _HeroHeader extends StatelessWidget {
-  final String title;
-  final String balance;
-  final String mobileNumber;
-  final VoidCallback onBellTap;
-  final VoidCallback onEyeTap;
-
-  const _HeroHeader({
-    required this.title,
-    required this.balance,
-    required this.mobileNumber,
-    required this.onBellTap,
-    required this.onEyeTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 52, 16, 18),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.headerTop, AppColors.headerBottom],
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              InkWell(
-                onTap: onBellTap,
-                borderRadius: BorderRadius.circular(14),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Icon(
-                    Icons.notifications_none_rounded,
-                    color: Colors.white.withOpacity(0.95),
-                    size: 26,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.14)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Cash on Hand",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        balance,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "Mobile Number: $mobileNumber",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.80),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                InkWell(
-                  onTap: onEyeTap,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.visibility_outlined,
-                      color: Colors.white.withOpacity(0.9),
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ✅ Graph card with mode toggle (NET / INCOME / EXPENSE)
 /// ✅ Graph card with mode toggle (NET / INCOME / EXPENSE)
 /// - NOT clickable (no InkWell)
 /// - No chevron/right arrow
@@ -391,7 +268,6 @@ class _FinanceGraphCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ Title only (no arrow, no tap)
           Text(
             title,
             style: TextStyle(
@@ -401,15 +277,9 @@ class _FinanceGraphCard extends StatelessWidget {
             ),
             overflow: TextOverflow.ellipsis,
           ),
-
           const SizedBox(height: 10),
-
-          // ✅ Pills are the only interactive controls
           _ModePills(mode: mode, onChanged: onModeChanged),
-
           const SizedBox(height: 10),
-
-          // ✅ Chart fills remaining space (since parent uses Expanded)
           Expanded(child: _buildChart(points)),
         ],
       ),
@@ -464,12 +334,11 @@ class _FinanceGraphCard extends StatelessWidget {
       spots.add(FlSpot(i.toDouble(), points[i].net));
     }
 
-    // ✅ color logic
     Color lineColor;
     if (mode == HomeGraphMode.expense) {
-      lineColor = AppColors.error; // expenses = red
+      lineColor = AppColors.error;
     } else if (mode == HomeGraphMode.income) {
-      lineColor = AppColors.primary; // income = primary
+      lineColor = AppColors.primary;
     } else {
       final mostlyNegative = points.where((p) => p.net < 0).length > 3;
       lineColor = mostlyNegative ? AppColors.error : AppColors.primary;
@@ -483,12 +352,12 @@ class _FinanceGraphCard extends StatelessWidget {
         maxY: high,
         gridData: const FlGridData(show: false),
         titlesData: FlTitlesData(
-          leftTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -589,7 +458,9 @@ class _ModePills extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w900,
-              color: selected ? AppColors.primary : Colors.black.withOpacity(0.55),
+              color: selected
+                  ? AppColors.primary
+                  : Colors.black.withOpacity(0.55),
             ),
           ),
         ),
