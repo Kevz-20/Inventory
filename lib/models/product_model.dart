@@ -2,6 +2,7 @@ class ProductModel {
   int? id;
   String name;
   String category;
+  int? categoryId; // ✅ keep this
   double purchasePrice;
   double sellingPrice;
   int quantity;
@@ -13,6 +14,7 @@ class ProductModel {
     this.id,
     required this.name,
     required this.category,
+    this.categoryId, // ✅ add in constructor
     required this.purchasePrice,
     required this.sellingPrice,
     required this.quantity,
@@ -26,6 +28,7 @@ class ProductModel {
       'id': id,
       'name': name,
       'category': category,
+      'category_id': categoryId, // ✅ NEW
       'purchase_price': purchasePrice,
       'selling_price': sellingPrice,
       'quantity': quantity,
@@ -37,17 +40,19 @@ class ProductModel {
 
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
-      id: map['id'],
-      name: map['name'],
-      category: map['category'],
-      purchasePrice: map['purchase_price']?.toDouble() ?? 0.0,
-      sellingPrice: map['selling_price']?.toDouble() ?? 0.0,
-      quantity: map['quantity'] ?? 0,
-      image: map['image'],
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      id: map['id'] as int?,
+      name: (map['name'] ?? '') as String,
+      category: (map['category'] ?? '') as String,
+      categoryId: map['category_id'] as int?, // ✅ NEW
+      purchasePrice: (map['purchase_price'] as num?)?.toDouble() ?? 0.0,
+      sellingPrice: (map['selling_price'] as num?)?.toDouble() ?? 0.0,
+      quantity: (map['quantity'] as int?) ?? 0,
+      image: map['image'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
     );
   }
 
-  Null get categoryIndex => null;
+  // If you need this for old UI filters, make it safe (optional):
+  // int get categoryIndex => 0;
 }

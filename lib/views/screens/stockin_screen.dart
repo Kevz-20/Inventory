@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../core/app_colors.dart';
 import '../../view_models/stock_in_view_model.dart';
 import '../widgets/header.dart';
@@ -42,16 +43,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Stock In', showBackButton: true),
 
-      // ✅ Scrollbar hint (BLACK) at right side
       body: ScrollbarTheme(
         data: ScrollbarThemeData(
-          thumbColor: WidgetStateProperty.all(AppColors.scrollbar), // ✅ black
-          thickness: WidgetStateProperty.all(5), // visible for 40–60 y/o users
+          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+          thickness: WidgetStateProperty.all(5),
           radius: const Radius.circular(8),
         ),
         child: Scrollbar(
           controller: _scrollController,
-          thumbVisibility: true, // always visible hint
+          thumbVisibility: true,
           child: SingleChildScrollView(
             controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -64,14 +64,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     children: [
                       _inputDate(vm),
                       const SizedBox(height: 12),
-                      _inputDropdown(
-                        icon: Icons.category,
-                        label: 'Kategorya',
-                        value: vm.selectedCategory,
-                        items: vm.categories,
-                        showError: vm.showValidationErrors,
-                        onChanged: vm.setCategory,
-                      ),
+
+                      // ✅ Category Picker (Bottom Sheet)
+                      _categoryPickerField(vm),
+
                       const SizedBox(height: 12),
                       _autocompleteProduct(vm),
                     ],
@@ -146,7 +142,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   ? null
                   : () {
                       vm.triggerValidation();
-                      vm.saveProduct(context); // ✅ same functionality
+                      vm.saveProduct(context);
                     },
               child: vm.isLoading
                   ? const SizedBox(
@@ -159,8 +155,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     )
                   : const Text(
                       'Save',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
             ),
           ),
@@ -169,6 +164,509 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  // ============================================================
+  // ✅ CATEGORY PICKER FIELD (BOTTOM SHEET)
+  // ============================================================
+  Widget _categoryPickerField(StockInViewModel vm) {
+    final isError = vm.showValidationErrors && (vm.selectedCategory == null);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        final selected = await _showCategoryBottomSheet(
+          context: context,
+          categories: vm.categoryNames,
+          selected: vm.selectedCategory,
+        );
+
+        if (selected == null) return;
+
+        if (selected == '__add_new__') {
+          await _showAddCategoryDialog(context, vm);
+          return;
+        }
+
+        vm.setCategoryByName(selected);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          prefixIcon: const Icon(Icons.category, color: AppColors.primary),
+          labelText: 'Kategorya',
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide:
+                BorderSide(color: isError ? Colors.red : Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+                color: isError ? Colors.red : AppColors.primary),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                vm.selectedCategory ?? 'Pili ug category',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: vm.selectedCategory == null
+                      ? Colors.grey.shade600
+                      : Colors.black,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black54),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // ✅ CATEGORY BOTTOM SHEET (UPDATED: removed left icon)
+  // ============================================================
+  Future<String?> _showCategoryBottomSheet({
+    required BuildContext context,
+    required List<String> categories,
+    required String? selected,
+  }) async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (sheetCtx) {
+        final search = ValueNotifier('');
+        final maxHeight = MediaQuery.of(sheetCtx).size.height * 0.78;
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                  color: Colors.black.withOpacity(0.10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 10,
+                bottom: 16 + MediaQuery.of(sheetCtx).viewInsets.bottom,
+              ),
+              child: Column(
+                children: [
+                  // Drag handle
+                  Container(
+                    height: 5,
+                    width: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        height: 36,
+                        width: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.category_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Pili ug Kategorya',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+
+                      // Add button
+                      InkWell(
+                        onTap: () => Navigator.pop(sheetCtx, '__add_new__'),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.primary.withOpacity(0.25),
+                            ),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.add, size: 18, color: AppColors.primary),
+                              SizedBox(width: 6),
+                              Text(
+                                'Add Kategorya',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Search
+                  ValueListenableBuilder<String>(
+                    valueListenable: search,
+                    builder: (_, value, __) => TextField(
+                      onChanged: (v) => search.value = v,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Search category...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: value.trim().isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () => search.value = '',
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // List
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: search,
+                      builder: (_, value, __) {
+                        final q = value.trim().toLowerCase();
+                        final filtered = q.isEmpty
+                            ? categories
+                            : categories
+                                .where((e) => e.toLowerCase().contains(q))
+                                .toList();
+
+                        if (filtered.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    height: 56,
+                                    width: 56,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: const Icon(
+                                      Icons.search_off_rounded,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'Walay match nga category.',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Try lain nga keyword or add new category.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (_, i) {
+                            final item = filtered[i];
+                            final isSelected = item == selected;
+
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () => Navigator.pop(sheetCtx, item),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withOpacity(0.10)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary.withOpacity(0.35)
+                                        : Colors.grey.shade200,
+                                  ),
+                                ),
+
+                                // ✅ UPDATED HERE: NO LEFT ICON ANYMORE
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: AppColors.primary,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // ✅ ADD CATEGORY DIALOG
+  // ============================================================
+  Future<void> _showAddCategoryDialog(
+    BuildContext context,
+    StockInViewModel vm,
+  ) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final value = ValueNotifier<String>('');
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Add New Category",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogCtx),
+                        icon: const Icon(Icons.close_rounded),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Example: Snacks, Inomnon, Pagkaon",
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  ValueListenableBuilder<String>(
+                    valueListenable: value,
+                    builder: (_, text, __) {
+                      return TextFormField(
+                        controller: controller,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        maxLength: 30,
+                        decoration: InputDecoration(
+                          counterText: "",
+                          prefixIcon: const Icon(Icons.category_rounded),
+                          labelText: "Category name",
+                          hintText: "e.g. Frozen Foods",
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                        onChanged: (v) => value.value = v,
+                        onFieldSubmitted: (_) {
+                          if (formKey.currentState?.validate() != true) return;
+                          Navigator.pop(dialogCtx, controller.text);
+                        },
+                        validator: (v) {
+                          final name = (v ?? '').trim();
+                          if (name.isEmpty) return "Please enter a category name.";
+
+                          final exists = vm.categoryNames.any(
+                            (c) => c.trim().toLowerCase() == name.toLowerCase(),
+                          );
+                          if (exists) return "Category already exists.";
+
+                          return null;
+                        },
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogCtx),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black87,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            "Cancel",
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ValueListenableBuilder<String>(
+                          valueListenable: value,
+                          builder: (_, text, __) {
+                            final canAdd = text.trim().isNotEmpty;
+                            return ElevatedButton(
+                              onPressed: canAdd
+                                  ? () {
+                                      if (formKey.currentState?.validate() != true) {
+                                        return;
+                                      }
+                                      Navigator.pop(dialogCtx, controller.text);
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                disabledBackgroundColor:
+                                    AppColors.primary.withOpacity(0.30),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                "Add",
+                                style: TextStyle(fontWeight: FontWeight.w900),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    final name = (result ?? '').trim();
+    if (name.isEmpty) return;
+
+    await vm.addNewCategory(name);
+    vm.setCategoryByName(name);
+  }
+
+  // ============================================================
+  // UI CARDS
+  // ============================================================
   Widget _sectionCard({
     required String title,
     required IconData icon,
@@ -223,8 +721,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
-  // ===================== UI HELPERS =====================
-
   Widget _card({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -245,7 +741,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
-  // ✅ ONLY UPDATED PART: no TextEditingController created on rebuild
+  // ============================================================
+  // INPUTS
+  // ============================================================
   Widget _inputDate(StockInViewModel vm) {
     return SizedBox(
       height: 58,
@@ -298,57 +796,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
-  Widget _inputDropdown({
-    required IconData icon,
-    required String label,
-    required String? value,
-    required List<String> items,
-    required bool showError,
-    required void Function(String?) onChanged,
-  }) {
-    final isError = showError && value == null;
-
-    return SizedBox(
-      height: 58,
-      child: DropdownButtonFormField<String>(
-        initialValue: value,
-        isExpanded: true,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          prefixIcon: Icon(icon, color: AppColors.primary),
-          labelText: label,
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: isError ? Colors.red : Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: isError ? Colors.red : AppColors.primary),
-          ),
-        ),
-        dropdownColor: Colors.white,
-        items: items
-            .map(
-              (e) => DropdownMenuItem(
-                value: e,
-                child: Text(
-                  e,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            )
-            .toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
-
   Widget _autocompleteProduct(StockInViewModel vm) {
     return Autocomplete<String>(
       optionsBuilder: (value) {
@@ -385,7 +832,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 14),
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
                       child: Text(
                         option,
                         style: const TextStyle(
@@ -439,8 +888,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             onChanged: (value) {
               vm.productController.text = value;
               if (vm.selectedProduct != null &&
-                  vm.selectedProduct!.name.toLowerCase() !=
-                      value.toLowerCase()) {
+                  vm.selectedProduct!.name.toLowerCase() != value.toLowerCase()) {
                 vm.selectedProduct = null;
               }
             },
@@ -457,7 +905,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         vm.productController.text = product.name;
         vm.autocompleteFieldController?.text = product.name;
 
-        vm.setCategory(product.category);
+        vm.setCategoryByName(product.category);
+
         vm.purchasePriceController.text = product.purchasePrice.toString();
         vm.sellingPriceController.text = product.sellingPrice.toString();
         vm.quantityController.text = product.quantity.toString();
@@ -535,25 +984,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  // ============================================================
+  // IMAGE PICKER
+  // ============================================================
   Widget _imagePicker(StockInViewModel vm, BuildContext context) {
     Future<void> pickImage() async {
       showDialog(
         context: context,
         builder: (_) => Dialog(
           backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextButton.icon(
-                  icon: const Icon(
-                    Icons.photo_library,
-                    size: 28,
-                    color: AppColors.primary,
-                  ),
+                  icon: const Icon(Icons.photo_library,
+                      size: 28, color: AppColors.primary),
                   label: const Text(
                     "Gallery",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -565,11 +1013,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  icon: const Icon(
-                    Icons.camera_alt,
-                    size: 28,
-                    color: AppColors.primary,
-                  ),
+                  icon: const Icon(Icons.camera_alt,
+                      size: 28, color: AppColors.primary),
                   label: const Text(
                     "Camera",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -602,10 +1047,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             child: vm.productImage != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.file(
-                      vm.productImage!,
-                      fit: BoxFit.cover,
-                    ),
+                    child: Image.file(vm.productImage!, fit: BoxFit.cover),
                   )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -617,11 +1059,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           color: AppColors.primary.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          color: AppColors.primary,
-                          size: 28,
-                        ),
+                        child: const Icon(Icons.camera_alt_rounded,
+                            color: AppColors.primary, size: 28),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -676,7 +1115,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 }
 
-// ----------------- Thousands Separator Formatters -----------------
+// ============================================================
+// FORMATTERS
+// ============================================================
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(

@@ -20,9 +20,28 @@ class ProductRepository {
   }
 
   Future<List<ProductModel>> getProducts() async {
-    final result = await db.query('product'); // all accounts
-    return result.map((e) => ProductModel.fromMap(e)).toList();
-  }
+  final result = await db.rawQuery('''
+    SELECT 
+      p.*,
+      c.name AS category_name
+    FROM product p
+    LEFT JOIN product_category c ON c.id = p.category_id
+    ORDER BY p.id DESC
+  ''');
+
+  return result.map((e) {
+    final map = Map<String, dynamic>.from(e);
+
+    // ✅ If your ProductModel expects `category` string
+    // but DB uses category_id, inject readable name:
+    if ((map['category'] == null || (map['category'] as String).isEmpty) &&
+        map['category_name'] != null) {
+      map['category'] = map['category_name'];
+    }
+
+    return ProductModel.fromMap(map);
+  }).toList();
+}
 
   Future<int> updateProduct(ProductModel product) async {
     final fullName = await accountRepo.getFullName();

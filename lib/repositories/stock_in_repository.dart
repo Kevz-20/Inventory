@@ -21,7 +21,8 @@ class StockInRepository {
 
     final data = {
       'name': product.name,
-      'category': product.category,
+      'category': product.category, // keep existing
+      'category_id': product.categoryId, // ✅ NEW (supports product_category table)
       'purchase_price': product.purchasePrice,
       'selling_price': product.sellingPrice,
       'quantity': product.quantity,
@@ -57,7 +58,8 @@ class StockInRepository {
 
     final data = {
       'name': product.name,
-      'category': product.category,
+      'category': product.category, // keep existing
+      'category_id': product.categoryId, // ✅ NEW
       'purchase_price': product.purchasePrice,
       'selling_price': product.sellingPrice,
       'quantity': product.quantity,

@@ -1,24 +1,38 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../repositories/stock_in_repository.dart';
+import '../repositories/product_category_repository.dart';
 import '../services/db_service.dart';
 import '../models/product_model.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 final stockInViewModelProvider =
     ChangeNotifierProvider.autoDispose<StockInViewModel>((ref) {
-      return StockInViewModel();
-    });
+  return StockInViewModel();
+});
 
 class StockInViewModel extends ChangeNotifier {
   late final StockInRepository _repository;
+  late final ProductCategoryRepository _categoryRepo;
+
   bool isInitialized = false;
   bool showValidationErrors = false;
   bool _isDisposed = false;
 
   DateTime selectedDate = DateTime.now();
-  String? selectedCategory;
+
+  // ✅ Categories from DB
+  List<Map<String, dynamic>> categoryRows = []; // [{id:1,name:"Imnonon"}]
+  String? selectedCategory; // name (UI)
+  int? selectedCategoryId; // id (DB)
+
+  // ✅ THIS FIXES YOUR ERROR
+  List<String> get categoryNames =>
+      categoryRows.map((e) => (e['name'] ?? '').toString()).toList();
+
   File? productImage;
   List<String> productNames = [];
   List<ProductModel> allProducts = [];
@@ -37,16 +51,6 @@ class StockInViewModel extends ChangeNotifier {
       quantityController.text.isNotEmpty ||
       selectedCategory != null ||
       productImage != null;
-
-  final List<String> categories = [
-    'Imnonon',
-    'Alak',
-    'Pagkaon',
-    'Panglimpyo',
-    'Gamit sa Panimalay',
-    'Gamit sa Eskwelahan',
-    'Uban Pa',
-  ];
 
   final List<String> months = [
     'January',
@@ -87,18 +91,79 @@ class StockInViewModel extends ChangeNotifier {
   Future<void> _init() async {
     final db = await DBService.instance.database;
     _repository = StockInRepository(db);
+    _categoryRepo = ProductCategoryRepository(db);
+
+    await loadCategories();
     await loadProductNames();
+
     isInitialized = true;
     safeNotifyListeners();
   }
 
-  void pickDate(DateTime date) {
-    selectedDate = date;
+  // -------------------- CATEGORY (DB) --------------------
+
+  Future<void> loadCategories() async {
+    try {
+      categoryRows = await _categoryRepo.getAllCategories(); // [{id,name}]
+    } catch (_) {
+      categoryRows = [];
+    }
+
+    // keep selection consistent
+    if (selectedCategoryId != null) {
+      final row =
+          categoryRows.where((c) => c['id'] == selectedCategoryId).toList();
+      if (row.isNotEmpty) {
+        selectedCategory = row.first['name'] as String?;
+      } else {
+        selectedCategory = null;
+        selectedCategoryId = null;
+      }
+    }
+
     safeNotifyListeners();
   }
 
-  void setCategory(String? category) {
-    selectedCategory = category;
+  void setCategoryByName(String? categoryName) {
+    selectedCategory = categoryName;
+
+    if (categoryName == null) {
+      selectedCategoryId = null;
+    } else {
+      final row = categoryRows.where((c) => c['name'] == categoryName).toList();
+      selectedCategoryId = row.isNotEmpty ? row.first['id'] as int? : null;
+    }
+
+    safeNotifyListeners();
+  }
+
+  Future<void> addNewCategory(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    // if exists, just select it
+    final existing =
+        categoryRows.where((c) => (c['name'] ?? '').toString() == trimmed);
+    if (existing.isNotEmpty) {
+      selectedCategory = trimmed;
+      selectedCategoryId = existing.first['id'] as int?;
+      safeNotifyListeners();
+      return;
+    }
+
+    final id = await _categoryRepo.getOrCreateCategoryId(trimmed);
+
+    await loadCategories();
+
+    selectedCategory = trimmed;
+    selectedCategoryId = id;
+    safeNotifyListeners();
+  }
+
+  // -------------------- Date / UI --------------------
+
+  void pickDate(DateTime date) {
+    selectedDate = date;
     safeNotifyListeners();
   }
 
@@ -148,18 +213,13 @@ class StockInViewModel extends ChangeNotifier {
     );
   }
 
-  List<ProductModel> get filteredProducts {
-    if (selectedCategory == null) return allProducts;
-    final categoryIndex = categories.indexOf(selectedCategory!);
-    return allProducts.where((p) => p.categoryIndex == categoryIndex).toList();
-  }
+  // -------------------- SAVE PRODUCT --------------------
 
   Future<void> saveProduct(BuildContext context) async {
     if (!isInitialized) return;
 
     final productName = effectiveProductName;
 
-    // ✅ REQUIRED FIELDS CHECK (ADDED)
     final purchaseText = purchasePriceController.text.trim();
     final sellingText = sellingPriceController.text.trim();
     final qtyText = quantityController.text.trim();
@@ -173,12 +233,24 @@ class StockInViewModel extends ChangeNotifier {
       return;
     }
 
+    // ✅ Ensure category id exists
+    if (selectedCategoryId == null) {
+      final row =
+          categoryRows.where((c) => c['name'] == selectedCategory).toList();
+      if (row.isNotEmpty) {
+        selectedCategoryId = row.first['id'] as int?;
+      } else {
+        selectedCategoryId =
+            await _categoryRepo.getOrCreateCategoryId(selectedCategory!);
+        await loadCategories();
+      }
+    }
+
     final sellingPrice = double.tryParse(sellingText.replaceAll(',', '')) ?? 0;
     final purchasePrice =
         double.tryParse(purchaseText.replaceAll(',', '')) ?? 0;
     final newQuantity = int.tryParse(qtyText.replaceAll(',', '')) ?? 0;
 
-    // ✅ Prevent 0 or negative prices (ADDED)
     if (purchasePrice <= 0) {
       showSnackBar(
         context,
@@ -195,7 +267,6 @@ class StockInViewModel extends ChangeNotifier {
       );
       return;
     }
-
     if (newQuantity <= 0) {
       showSnackBar(context, 'Quantity must be greater than 0', success: false);
       return;
@@ -211,7 +282,6 @@ class StockInViewModel extends ChangeNotifier {
 
     setLoading(true);
 
-    // ✅ keep the rest of your existing code below unchanged
     ProductModel? existingProduct;
     for (var p in allProducts) {
       if (p.name.toLowerCase() == productName.toLowerCase()) {
@@ -225,7 +295,8 @@ class StockInViewModel extends ChangeNotifier {
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productName,
-      category: selectedCategory!,
+      category: selectedCategory!, // keep for display
+      categoryId: selectedCategoryId, // ✅ save to DB
       sellingPrice: sellingPrice,
       purchasePrice: purchasePrice,
       quantity: (selectedProduct?.quantity ?? 0) + newQuantity,
@@ -242,7 +313,7 @@ class StockInViewModel extends ChangeNotifier {
       } else {
         final newId = await _repository.addProduct(stock);
         stock.id = newId;
-        allProducts.add(stock); // live update
+        allProducts.add(stock);
         message = 'Product saved successfully';
       }
 
@@ -252,9 +323,7 @@ class StockInViewModel extends ChangeNotifier {
 
       setLoading(false);
 
-      if (context.mounted) {
-        showSnackBar(context, message, success: true);
-      }
+      if (context.mounted) showSnackBar(context, message, success: true);
     } catch (e) {
       setLoading(false);
       if (context.mounted) {
@@ -262,6 +331,8 @@ class StockInViewModel extends ChangeNotifier {
       }
     }
   }
+
+  // -------------------- LOAD PRODUCTS --------------------
 
   Future<void> loadProductNames() async {
     allProducts = await _repository.loadAllProducts();
@@ -292,10 +363,13 @@ class StockInViewModel extends ChangeNotifier {
     sellingPriceController.clear();
     quantityController.clear();
     autocompleteFieldController?.clear();
+
     selectedCategory = null;
+    selectedCategoryId = null;
     productImage = null;
     selectedProduct = null;
     showValidationErrors = false;
+
     safeNotifyListeners();
   }
 }

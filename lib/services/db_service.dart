@@ -19,7 +19,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 7,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -120,6 +120,58 @@ class DBService {
             'TEXT',
           );
         }
+
+        if (oldVersion < 8) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS product_category (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL UNIQUE,
+              created_at TEXT NOT NULL
+            )
+          ''');
+
+          await addColumnIfMissing('product', 'category_id', 'INTEGER');
+
+          const defaultCats = [
+            'Imnonon',
+            'Alak',
+            'Pagkaon',
+            'Panglimpyo',
+            'Gamit sa Panimalay',
+            'Gamit sa Eskwelahan',
+          ];
+
+          for (final c in defaultCats) {
+            await db.rawInsert(
+              'INSERT OR IGNORE INTO product_category(name, created_at) VALUES(?, ?)',
+              [c, DateTime.now().toIso8601String()],
+            );
+          }
+        }
+
+        if (oldVersion < 9) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS expense_category (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL UNIQUE,
+              created_at TEXT NOT NULL
+            )
+          ''');
+
+          const defaultExpenseCats = [
+            'Kumpra',
+            'Tubig / Kuryente',
+            'Transportasyon',
+            'Mga Bayronon',
+          ];
+
+          for (final c in defaultExpenseCats) {
+            await db.rawInsert(
+              'INSERT OR IGNORE INTO expense_category(name, created_at) VALUES(?, ?)',
+              [c, DateTime.now().toIso8601String()],
+            );
+          }
+        }
       },
 
       onConfigure: (db) async {
@@ -156,12 +208,30 @@ class DBService {
     ''');
 
     await db.execute('''
+    CREATE TABLE product_category (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    )
+  ''');
+
+  await db.execute('''
+  CREATE TABLE expense_category (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+  )
+''');
+
+    await db.execute('''
       CREATE TABLE credit_status (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         code INTEGER NOT NULL
       )
     ''');
+
+    
 
     await db.execute('''
       CREATE TABLE type_choices (
@@ -234,12 +304,14 @@ class DBService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         category TEXT,
+        category_id INTEGER,
         purchase_price REAL,
         selling_price REAL,
         quantity INTEGER,
         image TEXT,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        FOREIGN KEY (category_id) REFERENCES product_category(id)
       )
     ''');
 
@@ -577,6 +649,36 @@ class DBService {
     for (final c in categoryChoices) {
       await db.insert('category_choices', {'name': c});
     }
+    const defaultProductCats = [
+      'Imnonon',
+      'Alak',
+      'Pagkaon',
+      'Panglimpyo',
+      'Gamit sa Panimalay',
+      'Gamit sa Eskwelahan',
+    ];
+
+    const defaultExpenseCats = [
+        'Kumpra',
+        'Tubig / Kuryente',
+        'Transportasyon',
+        'Mga Bayronon',
+      ];
+
+      for (final c in defaultExpenseCats) {
+        await db.rawInsert(
+          'INSERT OR IGNORE INTO expense_category(name, created_at) VALUES(?, ?)',
+          [c, DateTime.now().toIso8601String()],
+        );
+      }
+
+    for (final c in defaultProductCats) {
+      await db.rawInsert(
+        'INSERT OR IGNORE INTO product_category(name, created_at) VALUES(?, ?)',
+        [c, DateTime.now().toIso8601String()],
+      );
+    }
+
   }
 
   // for testing

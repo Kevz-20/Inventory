@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/capital_management_model.dart';
 import '../models/product_model.dart';
 import '../providers/capital_management_view_model_provider.dart';
@@ -9,13 +10,19 @@ import '../services/db_service.dart';
 import '../repositories/capital_management_repository.dart';
 import '../repositories/account_repository.dart';
 
+// ✅ NEW: category repository (same idea as Stock In)
+import '../repositories/product_category_repository.dart';
+
 /// SalesViewModel for shared/global cash & capital
 class SalesViewModel extends ChangeNotifier {
-  final void Function()? onCashUpdated; // callback to notify CapitalManagement
+  final void Function()? onCashUpdated;
 
   CapitalManagementRepository? _capitalRepository;
   ProductRepository? _productRepository;
   CustomerRepository? _customerRepository;
+
+  // ✅ NEW
+  ProductCategoryRepository? _categoryRepository;
 
   List<ProductModel> products = [];
   List<Map<String, dynamic>> customers = [];
@@ -27,16 +34,30 @@ class SalesViewModel extends ChangeNotifier {
   final Map<int, TextEditingController> controllers = {};
   final Map<int, VoidCallback> _controllerListeners = {};
 
-  static const List<String> categories = [
-    'All',
-    'Imnonon',
-    'Alak',
-    'Pagkaon',
-    'Panglimpyo',
-    'Gamit sa Panimalay',
-    'Gamit sa Eskwelahan',
-    'Uban Pa',
-  ];
+  // ✅ NEW: categories from DB
+  // We keep BOTH names + ids so filtering is correct.
+  // Index 0 is always "All".
+  List<Map<String, dynamic>> _dbCategories = []; // rows: {id, name}
+
+  List<String> get categoryNames {
+    final names = _dbCategories
+        .map((e) => (e['name'] ?? '').toString().trim())
+        .where((n) => n.isNotEmpty)
+        .toList();
+
+    // ensure "All" always first
+    return ['All', ...names];
+  }
+
+  int? categoryIdByIndex(int index) {
+    if (index <= 0) return null; // All
+    final rowIndex = index - 1;
+    if (rowIndex < 0 || rowIndex >= _dbCategories.length) return null;
+    final id = _dbCategories[rowIndex]['id'];
+    if (id is int) return id;
+    if (id is num) return id.toInt();
+    return int.tryParse(id?.toString() ?? '');
+  }
 
   // ------------------- Selected Customer -------------------
   Map<String, dynamic>? _selectedCustomer;
@@ -58,18 +79,47 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   Future<void> _initRepository() async {
+    try {
+      final db = await DBService.instance.database;
+      final accountRepo = AccountRepository();
+
+      _productRepository = ProductRepository(db, accountRepo);
+      _customerRepository = CustomerRepository(db);
+      _capitalRepository = CapitalManagementRepository(db);
+
+      // ✅ NEW
+      _categoryRepository = ProductCategoryRepository(db);
+
+      // ✅ NEW: load categories first
+      await loadCategories();
+
+      await loadProducts();
+      await loadCustomers();
+    } catch (_) {}
+  }
+
+  // ------------------- Categories (NEW) -------------------
+  Future<void> loadCategories() async {
+  final repo = _categoryRepository;
+  if (repo == null) return;
+
   try {
-    final db = await DBService.instance.database;
-    final accountRepo = AccountRepository(); // still needed for ProductRepository
+    _dbCategories = await repo.getAllCategories(); // ✅ from your repository
+  } catch (_) {
+    _dbCategories = [];
+  }
 
-    _productRepository = ProductRepository(db, accountRepo); // keep both arguments
-    _customerRepository = CustomerRepository(db); // CustomerRepository now only needs DB
-    _capitalRepository = CapitalManagementRepository(db);
+  // keep selected index in bounds
+  if (selectedCategoryIndex >= categoryNames.length) {
+    selectedCategoryIndex = 0;
+  }
 
-    await loadProducts();
-    await loadCustomers();
-  } catch (_) {}
+  notifyListeners();
 }
+  void selectCategory(int index) {
+    selectedCategoryIndex = index;
+    notifyListeners();
+  }
 
   // ------------------- Products -------------------
   Future<void> loadProducts() async {
@@ -115,12 +165,23 @@ class SalesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ UPDATED: filter using DB categories (id-based) + fallback name
   List<ProductModel> get filteredProducts {
     if (selectedCategoryIndex == 0) return products;
-    return products
-        .where((p) => p.category.toLowerCase() ==
-            categories[selectedCategoryIndex].toLowerCase())
-        .toList();
+
+    final selectedName = categoryNames[selectedCategoryIndex].toLowerCase();
+    final selectedId = categoryIdByIndex(selectedCategoryIndex);
+
+    return products.where((p) {
+      // Best: categoryId match (new system)
+      final bool matchesId =
+          selectedId != null && (p.categoryId != null) && p.categoryId == selectedId;
+
+      // Fallback: string category match (old system)
+      final bool matchesName = p.category.toLowerCase() == selectedName;
+
+      return matchesId || matchesName;
+    }).toList();
   }
 
   void incrementQuantity(ProductModel product) {
@@ -151,8 +212,9 @@ class SalesViewModel extends ChangeNotifier {
       }
 
       controller.text = qty.toString();
-      controller.selection =
-          TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
 
       if (_controllerListeners.containsKey(product.id!)) {
         controller.addListener(_controllerListeners[product.id!]!);
@@ -192,19 +254,14 @@ class SalesViewModel extends ChangeNotifier {
 
   // ------------------- Customers -------------------
   Future<void> loadCustomers() async {
-  if (_customerRepository == null) return;
+    if (_customerRepository == null) return;
 
-  try {
-    customers = await _customerRepository!.getCustomers(); // just get all customers
-  } catch (_) {
-    customers = [];
-  }
+    try {
+      customers = await _customerRepository!.getCustomers();
+    } catch (_) {
+      customers = [];
+    }
 
-  notifyListeners();
-  }
-
-  void selectCategory(int index) {
-    selectedCategoryIndex = index;
     notifyListeners();
   }
 
@@ -233,7 +290,6 @@ class SalesViewModel extends ChangeNotifier {
 
     try {
       if (isCash) {
-        // Cash sale
         await _productRepository!.checkoutCash(purchasedItems);
 
         if (_capitalRepository != null) {
@@ -261,30 +317,28 @@ class SalesViewModel extends ChangeNotifier {
           }
         }
       } else {
-        // Credit / Utang
         if (customerId == null || dueDate == null) {
           throw Exception('Customer and due date required for utang.');
         }
 
         await _productRepository!.checkoutCredit(
-            purchasedItems,
-            customerId,
-            dueDate: dueDate,
-          );
+          purchasedItems,
+          customerId,
+          dueDate: dueDate,
+        );
 
-          // 🔥 Reload customers from DB
-          await loadCustomers();
+        await loadCustomers();
 
-          final updatedCustomer = customers
-    .where((c) => c['id'] == customerId)
-    .cast<Map<String, dynamic>>()
-    .toList();
+        final updatedCustomer = customers
+            .where((c) => c['id'] == customerId)
+            .cast<Map<String, dynamic>>()
+            .toList();
 
-if (updatedCustomer.isNotEmpty) {
-  _selectedCustomer = updatedCustomer.first;
-}
+        if (updatedCustomer.isNotEmpty) {
+          _selectedCustomer = updatedCustomer.first;
+        }
 
-          notifyListeners();
+        notifyListeners();
       }
     } catch (_) {
       rethrow;
