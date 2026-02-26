@@ -11,7 +11,8 @@ class HeroHeader extends StatelessWidget {
   final bool showBack;
   final VoidCallback? onBackTap;
 
-  final bool centerTitle; // ✅ NEW
+  final bool centerTitle;
+  final bool showLogo;
 
   const HeroHeader({
     super.key,
@@ -22,12 +23,14 @@ class HeroHeader extends StatelessWidget {
     required this.onEyeTap,
     this.showBack = false,
     this.onBackTap,
-    this.centerTitle = false, // default: left aligned
+    this.centerTitle = false,
+    this.showLogo = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    const double _sideSlotWidth = 40;
+    const double sideSlot = 40; // space for back/bell alignment
+    const double logoSize = 50; // ✅ change this freely; title won't shift
 
     return Container(
       width: double.infinity,
@@ -43,40 +46,38 @@ class HeroHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              SizedBox(
-                width: _sideSlotWidth,
-                child: showBack
-                    ? InkWell(
-                        onTap: onBackTap,
-                        borderRadius: BorderRadius.circular(14),
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
+          // ✅ TOP AREA uses Stack so logo doesn't affect centering
+          SizedBox(
+            height: 40, // fixed height for consistent alignment
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Row keeps back + title + bell alignment
+                Row(
+                  children: [
+                    SizedBox(
+                      width: sideSlot,
+                      child: showBack
+                          ? InkWell(
+                              onTap: onBackTap,
+                              borderRadius: BorderRadius.circular(14),
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
 
-              Expanded(
-                child: centerTitle
-                    ? Center(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      )
-                    : Align(
-                        alignment: Alignment.centerLeft,
+                    Expanded(
+                      child: Align(
+                        alignment: centerTitle
+                            ? Alignment.center
+                            : Alignment.centerLeft,
                         child: Text(
                           title,
                           style: const TextStyle(
@@ -86,28 +87,44 @@ class HeroHeader extends StatelessWidget {
                           ),
                         ),
                       ),
-              ),
+                    ),
 
-              SizedBox(
-                width: _sideSlotWidth,
-                child: InkWell(
-                  onTap: onBellTap,
-                  borderRadius: BorderRadius.circular(14),
-                  child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.notifications_none_rounded,
-                      color: Colors.white,
-                      size: 26,
+                    SizedBox(
+                      width: sideSlot,
+                      child: InkWell(
+                        onTap: onBellTap,
+                        borderRadius: BorderRadius.circular(14),
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.notifications_none_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // ✅ Logo overlay (does NOT take Row space)
+                if (showLogo)
+                  Positioned(
+                    left: 8, // beside back slot area
+                    child: Image.asset(
+                      'lib/assets/logo.png',
+                      height: logoSize,
+                      width: logoSize,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           const SizedBox(height: 14),
 
+          // ✅ Balance glass card (unchanged)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),

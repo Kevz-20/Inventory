@@ -63,17 +63,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               title: "Home",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
-
-              // ✅ Home title should stay LEFT
               centerTitle: true,
-
-              // ✅ No back arrow on Home
               showBack: false,
-
-              onBellTap: () {
-                // TODO: context.push('/notifications');
-              },
-
+              showLogo: true, // ✅ ONLY HERE
+              onBellTap: () {},
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
@@ -194,20 +187,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               ),
             ),
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: AppColors.primary.withOpacity(.10),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.chevron_right, color: Colors.white),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 18,
+                color: AppColors.primary,
+              ),
             ),
           ],
         ),

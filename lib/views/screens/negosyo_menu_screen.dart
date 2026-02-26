@@ -7,6 +7,7 @@ import '../../app_router.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/hero_header.dart';
+import '../widgets/nav_bar.dart';
 
 class NegosyoMenuScreen extends ConsumerStatefulWidget {
   const NegosyoMenuScreen({super.key});
@@ -61,93 +62,189 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
               title: "Negosyo",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
-
-              // ✅ Center the title
               centerTitle: true,
-
-              // ✅ Show back arrow
               showBack: true,
-
-              // ✅ Go back to previous page
               onBackTap: () => context.go('/home'),
-              // OR if you want always go to Home:
-              // onBackTap: () => context.go('/home'),
-
               onBellTap: () {},
-
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
             ),
 
+            // ✅ Maximized space: scroll only when needed
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _tile("GASTO", Icons.payments_outlined,
-                      onTap: () => context.push('/expenses')),
-                  _tile("STOCK IN", Icons.inventory_2_outlined,
-                      onTap: () => context.push('/stockin')),
-                  _tile("CAPITAL", Icons.savings_outlined,
-                      onTap: () => context.push('/capital_management')),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionTitle("ACTIONS"),
+                    const SizedBox(height: 12),
 
-                  const SizedBox(height: 14),
-                  const Text(
-                    "REPORTS",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 10),
+                    _tile(
+                      title: "GASTO",
+                      subtitle: "Track expenses and cash out",
+                      icon: Icons.payments_outlined,
+                      onTap: () => context.push('/expenses'),
+                    ),
+                    const SizedBox(height: 14),
 
-                  _tile("INCOME STATEMENT", Icons.receipt_long_outlined,
-                      onTap: () => context.push('/income_statement')),
-                  _tile("BALANCE SHEET", Icons.account_balance_outlined,
-                      onTap: () => context.push('/balance_sheet')),
-                  _tile("CASH FLOW", Icons.bar_chart_outlined,
-                      onTap: () => context.push('/cashflow')),
-                ],
+                    _tile(
+                      title: "STOCK IN",
+                      subtitle: "Add stocks and inventory entries",
+                      icon: Icons.inventory_2_outlined,
+                      onTap: () => context.push('/stockin'),
+                    ),
+                    const SizedBox(height: 14),
+
+                    _tile(
+                      title: "CAPITAL",
+                      subtitle: "Manage capital and owner funds",
+                      icon: Icons.savings_outlined,
+                      onTap: () => context.push('/capital_management'),
+                    ),
+
+                    const SizedBox(height: 22),
+                    _sectionTitle("REPORTS"),
+                    const SizedBox(height: 12),
+
+                    _tile(
+                      title: "REPORTS",
+                      subtitle: "Income Statement, Balance Sheet, Cash Flow",
+                      icon: Icons.assessment_outlined,
+                      onTap: () => context.push('/reports'),
+                      isPrimary: false,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: homeState.selectedIndex,
+        noHighlight: true,
+      ),
     );
   }
 
-  Widget _tile(String label, IconData icon, {required VoidCallback onTap}) {
+  // -------------------------
+  // UI HELPERS
+  // -------------------------
+
+  Widget _sectionTitle(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+          color: Colors.grey.shade700,
+        ),
+      ),
+    );
+  }
+
+  Widget _tile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+  }) {
+    final radius = BorderRadius.circular(22);
+
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: radius,
         onTap: onTap,
-        child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Ink(
+          height: isPrimary ? 110 : 104, // ✅ bigger tiles
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: isPrimary ? AppColors.primary.withOpacity(.10) : Colors.white,
+            borderRadius: radius,
+            border: Border.all(
+              color: isPrimary
+                  ? AppColors.primary.withOpacity(.35)
+                  : Colors.grey.shade200,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withAlpha(40),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Row(
             children: [
-              Icon(icon, color: AppColors.primary, size: 26),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
+              // ✅ Bigger icon badge
+              Container(
+                height: 58,
+                width: 58,
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? AppColors.primary.withOpacity(.16)
+                      : AppColors.primary.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary,
+                  size: 28,
                 ),
               ),
-              const Icon(Icons.chevron_right),
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.2,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ✅ Clear action cue
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
             ],
           ),
         ),

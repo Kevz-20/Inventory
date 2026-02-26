@@ -62,26 +62,17 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             HeroHeader(
-              title: "Customer",
-              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
-              mobileNumber: mobileText,
-
-              // ✅ Center the title
-              centerTitle: true,
-
-              // ✅ Show back arrow
-              showBack: true,
-
-              // ✅ Go back properly
-              onBackTap: () => context.go('/home'),
-              // OR use: context.go('/home') if you prefer direct home
-
-              onBellTap: () {},
-
-              onEyeTap: () => ref
-                  .read(homeViewModelProvider.notifier)
-                  .toggleMoneyVisibility(),
-            ),
+                  title: "Customer",
+                  balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+                  mobileNumber: mobileText,
+                  centerTitle: true,
+                  showBack: true,
+                  onBackTap: () => context.go('/home'),
+                  onBellTap: () {},
+                  onEyeTap: () => ref
+                      .read(homeViewModelProvider.notifier)
+                      .toggleMoneyVisibility(),
+                ),
             const SizedBox(height: 14),
 
             Expanded(
@@ -184,21 +175,18 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
               ),
             ),
             Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
               ),
-              child: const Icon(Icons.chevron_right, color: Colors.white),
-            ),
           ],
         ),
       ),
