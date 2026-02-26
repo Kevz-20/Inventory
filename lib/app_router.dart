@@ -21,12 +21,13 @@ import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
 import 'views/screens/balance_sheet_screen.dart';
 import 'views/screens/capital_management_screen.dart';
-import 'views/screens/utang_screen.dart';
 import 'views/screens/record_sales_screen.dart';
 import 'views/screens/utang_summary.screen.dart';
 import 'views/screens/customer_menu_screen.dart';
 import 'views/screens/negosyo_menu_screen.dart';
 import 'views/screens/reports_screen.dart';
+import 'views/screens/customer_utang_screen.dart';
+import 'views/screens/owner_utang_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
@@ -176,11 +177,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/utang',
-      pageBuilder: (context, state) => customPage(
-        state,
-        const UtangScreen(),
-        transition: PageTransitionType.forward,
-      ),
+      redirect: (context, state) => '/customer_utang',
     ),
     GoRoute(
       path: '/record_sales',
@@ -230,6 +227,16 @@ final router = GoRouter(
         transition: PageTransitionType.forward,
       ),
     ),
+
+    GoRoute(
+      path: '/customer_utang',
+      builder: (context, state) => const CustomerUtangScreen(),
+    ),
+    GoRoute(
+      path: '/owner_utang',
+      builder: (context, state) => const OwnerUtangScreen(),
+    ),
+
     GoRoute(
       path: '/utang_summary',
       pageBuilder: (context, state) {

@@ -127,40 +127,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   }
 
   Widget _bigActionTile({
-    required String label,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
+  required String label,
+  required String subtitle,
+  required IconData icon,
+  required VoidCallback onTap,
+}) {
+  final radius = BorderRadius.circular(24);
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: radius,
       onTap: onTap,
-      child: Container(
+      child: Ink(
         height: 112,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          // ✅ SAME STYLE AS NEGOSYO BUTTONS
+          color: AppColors.primary.withOpacity(.10),
+          borderRadius: radius,
+          border: Border.all(
+            color: AppColors.primary.withOpacity(.18),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 18,
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 16,
               offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Row(
           children: [
+            // ✅ icon badge same style
             Container(
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                color: AppColors.primarySoft,
+                color: Colors.white.withOpacity(.55),
                 borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(.12),
+                ),
               ),
               child: Icon(icon, color: AppColors.primary, size: 34),
             ),
-            const SizedBox(width: 18),
+
+            const SizedBox(width: 16),
+
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -168,42 +183,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                 children: [
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 19,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 0.6,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 6),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13.5,
-                      color: Colors.black.withOpacity(0.55),
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13.2,
+                      height: 1.15,
+                      color: Colors.black.withOpacity(.55),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(.10),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 18,
-                color: AppColors.primary,
-              ),
-            ),
+
+            // ✅ ARROW REMOVED
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// ✅ Graph card with mode toggle (NET / INCOME / EXPENSE)

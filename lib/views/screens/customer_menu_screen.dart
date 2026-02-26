@@ -91,10 +91,10 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                         ),
                         const SizedBox(height: 18),
                         _bigActionTile(
-                          label: "UTANG",
+                          label: "Customer Utang",
                           subtitle: "Manage customer credit",
                           icon: Icons.receipt_long_outlined,
-                          onTap: () => context.push('/utang'),
+                          onTap: () => context.push('/customer_utang'),
                         ),
                       ],
                     ),

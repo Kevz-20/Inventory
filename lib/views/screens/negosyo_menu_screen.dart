@@ -58,62 +58,101 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
         top: false,
         child: Column(
           children: [
-            HeroHeader(
-              title: "Negosyo",
-              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
-              mobileNumber: mobileText,
-              centerTitle: true,
-              showBack: true,
-              onBackTap: () => context.go('/home'),
-              onBellTap: () {},
-              onEyeTap: () => ref
-                  .read(homeViewModelProvider.notifier)
-                  .toggleMoneyVisibility(),
+            // Header (same as your HeroHeader)
+            Stack(
+              children: [
+                HeroHeader(
+                  title: "Negosyo",
+                  balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+                  mobileNumber: mobileText,
+                  centerTitle: true,
+                  showBack: true,
+                  onBackTap: () => context.go('/home'),
+                  onBellTap: () {},
+                  onEyeTap: () => ref
+                      .read(homeViewModelProvider.notifier)
+                      .toggleMoneyVisibility(),
+                ),
+              ],
             ),
 
-            // ✅ Maximized space: scroll only when needed
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sectionTitle("ACTIONS"),
+                    _dividerTitle("ACTIONS"),
                     const SizedBox(height: 12),
 
-                    _tile(
-                      title: "GASTO",
-                      subtitle: "Track expenses and cash out",
-                      icon: Icons.payments_outlined,
-                      onTap: () => context.push('/expenses'),
+                    // ✅ 2x2 grid (fills space, no scrolling)
+                    Expanded(
+                      flex: 7,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _actionTile(
+                                    title: "GASTO",
+                                    subtitle: "Track Expenses",
+                                    icon: Icons.payments_outlined,
+                                    onTap: () => context.push('/expenses'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _actionTile(
+                                    title: "STOCK IN",
+                                    subtitle: "Add New Products",
+                                    icon: Icons.inventory_2_outlined,
+                                    onTap: () => context.push('/stockin'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _actionTile(
+                                    title: "CAPITAL",
+                                    subtitle: "Add / Withdraw Capital",
+                                    icon: Icons.savings_outlined,
+                                    onTap: () =>
+                                        context.push('/capital_management'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _actionTile(
+                                    title: "OWNER UTANG",
+                                    subtitle: "Store Payables",
+                                    icon: Icons.receipt_long_outlined,
+                                    onTap: () => context.push('/owner_utang'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+
                     const SizedBox(height: 14),
-
-                    _tile(
-                      title: "STOCK IN",
-                      subtitle: "Add stocks and inventory entries",
-                      icon: Icons.inventory_2_outlined,
-                      onTap: () => context.push('/stockin'),
-                    ),
-                    const SizedBox(height: 14),
-
-                    _tile(
-                      title: "CAPITAL",
-                      subtitle: "Manage capital and owner funds",
-                      icon: Icons.savings_outlined,
-                      onTap: () => context.push('/capital_management'),
-                    ),
-
-                    const SizedBox(height: 22),
-                    _sectionTitle("REPORTS"),
+                    _dividerTitle("REPORTS"),
                     const SizedBox(height: 12),
 
-                    _tile(
-                      title: "REPORTS",
-                      subtitle: "Income Statement, Balance Sheet, Cash Flow",
-                      icon: Icons.assessment_outlined,
-                      onTap: () => context.push('/reports'),
-                      isPrimary: false,
+                    Expanded(
+                      flex: 3,
+                      child: _reportsCard(
+                        title: "REPORTS",
+                        subtitle: "Income Statement, Balance Sheet, Cash Flow",
+                        icon: Icons.assessment_outlined,
+                        onTap: () => context.push('/reports'),
+                      ),
                     ),
                   ],
                 ),
@@ -122,7 +161,6 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
           ],
         ),
       ),
-
       bottomNavigationBar: BottomNavBar(
         currentIndex: homeState.selectedIndex,
         noHighlight: true,
@@ -130,33 +168,53 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
     );
   }
 
-  // -------------------------
-  // UI HELPERS
-  // -------------------------
-
-  Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 2),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.2,
-          color: Colors.grey.shade700,
+  // ============================================================
+  // UI: Divider Title like “— ACTIONS —”
+  // ============================================================
+  Widget _dividerTitle(String text) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 1,
+            color: Colors.black.withOpacity(.10),
+          ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.6,
+            color: Colors.black.withOpacity(.55),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: Colors.black.withOpacity(.10),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _tile({
+  // ============================================================
+  // UI: Action Tile (center icon + label) like sample
+  // ============================================================
+  Widget _actionTile({
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    bool isPrimary = false,
   }) {
     final radius = BorderRadius.circular(22);
+
+    // ✅ closer to your sample: soft gray-green card + soft border
+    final cardColor = AppColors.primary.withOpacity(.10);
+    final borderColor = AppColors.primary.withOpacity(.18);
 
     return Material(
       color: Colors.transparent,
@@ -164,88 +222,154 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
         borderRadius: radius,
         onTap: onTap,
         child: Ink(
-          height: isPrimary ? 110 : 104, // ✅ bigger tiles
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            color: isPrimary ? AppColors.primary.withOpacity(.10) : Colors.white,
+            color: cardColor,
             borderRadius: radius,
-            border: Border.all(
-              color: isPrimary
-                  ? AppColors.primary.withOpacity(.35)
-                  : Colors.grey.shade200,
-            ),
+            border: Border.all(color: borderColor, width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(.05),
                 blurRadius: 16,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: Row(
-            children: [
-              // ✅ Bigger icon badge
-              Container(
-                height: 58,
-                width: 58,
-                decoration: BoxDecoration(
-                  color: isPrimary
-                      ? AppColors.primary.withOpacity(.16)
-                      : AppColors.primary.withOpacity(.10),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  icon,
-                  color: AppColors.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ✅ icon “pill”
+                Container(
+                  height: 60,
+                  width: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.60),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(.12),
+                      width: 1,
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.2,
-                        color: Colors.grey.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
+                  child: Icon(icon, color: AppColors.primary, size: 28),
                 ),
-              ),
+                const SizedBox(height: 12),
 
-              // ✅ Clear action cue
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(.10),
-                  borderRadius: BorderRadius.circular(16),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
                 ),
-                child: Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 18,
-                  color: AppColors.primary,
+                const SizedBox(height: 6),
+
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.3,
+                    height: 1.15,
+                    color: Colors.black.withOpacity(.55),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================
+  // UI: Reports long card like sample (icon left, text, no arrow)
+  // ============================================================
+  Widget _reportsCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final radius = BorderRadius.circular(24);
+
+    final cardColor = AppColors.primary.withOpacity(.10);
+    final borderColor = AppColors.primary.withOpacity(.18);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: radius,
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(.05),
+                blurRadius: 16,
+                offset: const Offset(0, 10),
               ),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              children: [
+                Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.60),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(.12),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(icon, color: AppColors.primary, size: 26),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.6,
+                          height: 1.15,
+                          color: Colors.black.withOpacity(.55),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
