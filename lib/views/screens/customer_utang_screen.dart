@@ -36,13 +36,18 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
   bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
 
-  String _buildDueStatusText(DateTime dueDate) {
+  /// ✅ Short, professional due label
+  String _dueLabel(DateTime dueDate) {
     final daysLeft = _daysUntil(dueDate);
-    final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
+    if (daysLeft < 0) return "OVERDUE";
+    if (daysLeft == 0) return "DUE TODAY";
+    return "$daysLeft DAY${daysLeft == 1 ? "" : "S"} LEFT";
+  }
 
-    if (daysLeft < 0) return "Overdue • Due: $formattedDueDate";
-    if (daysLeft == 0) return "Due today • Due: $formattedDueDate";
-    return "Due: $formattedDueDate • $daysLeft day${daysLeft != 1 ? 's' : ''} left";
+  /// ✅ Keep your detailed text, but shorter
+  String _dueSubText(DateTime dueDate) {
+    final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
+    return "Due: $formattedDueDate";
   }
 
   @override
@@ -111,7 +116,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 ''';
 
     try {
-      debugPrint('fetchUtangan SQL:\n$sql');
       final result = await db.rawQuery(sql);
 
       if (!mounted) return;
@@ -120,7 +124,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         filteredUtangan = List.from(utangan);
       });
     } catch (e) {
-      debugPrint('fetchUtangan ERROR: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -144,6 +147,8 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
   @override
   Widget build(BuildContext context) {
+
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppHeader(
@@ -164,179 +169,269 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
           ),
         ),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 15),
-          _buildCustomerPage(),
-        ],
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [          
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildSearch(),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: utangan.isEmpty
+                  ? Center(
+                      child: Text(
+                        "Walay utangan",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black.withOpacity(0.5),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                      itemCount: filteredUtangan.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredUtangan[index];
+                        return _buildCustomerCard(item);
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCustomerPage() {
-    return Expanded(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: "Pangalan sa Utangan",
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
-                ),
-                onChanged: filterUtangan,
-              ),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Expanded(
-            child: utangan.isEmpty
-                ? const Center(
-                    child: Text(
-                      "Walay utangan",
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: filteredUtangan.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredUtangan[index];
-                      return _buildCustomerCard(item);
-                    },
-                  ),
+  Widget _buildSearch() {
+    return Container(
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
           ),
         ],
+      ),
+      child: TextField(
+        controller: searchController,
+        onChanged: filterUtangan,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          prefixIcon: Icon(Icons.search, color: Colors.black.withOpacity(0.6)),
+          hintText: "Pangalan sa Utangan",
+          hintStyle: TextStyle(color: Colors.black.withOpacity(0.4)),
+          border: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          suffixIcon: searchController.text.isNotEmpty
+              ? IconButton(
+                  onPressed: () {
+                    searchController.clear();
+                    filterUtangan('');
+                  },
+                  icon: Icon(Icons.clear, color: Colors.black.withOpacity(0.5)),
+                )
+              : null,
+        ),
       ),
     );
   }
 
   Widget _buildCustomerCard(UtangCustomer item) {
+    final hasDebt = item.totalAmount > 0;
+    final due = item.dueDate;
+
+    // ✅ NEW: hide status pill for brand-new customers (no transactions)
+    final bool hidePill = (item.totalAmount <= 0) && (due == null);
+
+    final bool overdue = due != null && _isOverdue(due);
+    final bool dueToday = due != null && _daysUntil(due) == 0;
+
+    final Color pillBg = !hasDebt
+        ? Colors.green.withOpacity(0.12)
+        : overdue
+            ? Colors.red.withOpacity(0.12)
+            : dueToday
+                ? Colors.orange.withOpacity(0.14)
+                : AppColors.primary.withOpacity(0.12);
+
+    final Color pillFg = !hasDebt
+        ? Colors.green.shade700
+        : overdue
+            ? Colors.red.shade700
+            : dueToday
+                ? Colors.orange.shade800
+                : AppColors.primary;
+
     return GestureDetector(
       onTap: () async {
         await GoRouter.of(context).push('/utang_summary', extra: item);
         _refreshData();
       },
-      child: Card(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.person, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      item.fullName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    item.fullName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        "₱${currencyFormat.format(item.totalAmount)}",
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (item.dueDate != null && item.totalAmount <= 0)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "Paid",
-                            style: TextStyle(
-                              color: Colors.green[800],
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
+                  const SizedBox(height: 4),
+                  _miniLine(
+                    icon: Icons.location_on_outlined,
+                    text: _buildLocation(item),
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              if (item.municipality != null && item.municipality!.isNotEmpty)
-                Text(
-                  item.municipality!,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              const SizedBox(height: 2),
-              if (item.barangay != null && item.barangay!.isNotEmpty)
-                Text(
-                  "Barangay ${item.barangay!}",
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                  const SizedBox(height: 2),
                   if (item.phoneNumber != null && item.phoneNumber!.isNotEmpty)
+                    _miniLine(
+                      icon: Icons.call_outlined,
+                      text: item.phoneNumber!,
+                    ),
+                  if (hasDebt && due != null) ...[
+                    const SizedBox(height: 6),
                     Text(
-                      item.phoneNumber!,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  if (item.dueDate != null && item.totalAmount > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isOverdue(item.dueDate!)
-                            ? Colors.red[100]
-                            : Colors.green[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _buildDueStatusText(item.dueDate!),
-                        style: TextStyle(
-                          color: _isOverdue(item.dueDate!)
-                              ? Colors.red
-                              : Colors.green[800],
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      _dueSubText(due),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.55),
                       ),
                     ),
+                  ],
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  "₱${currencyFormat.format(item.totalAmount)}",
+                  style: const TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+
+                // ✅ NEW: only show pill when NOT brand-new customer
+                if (!hidePill) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: pillBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: pillBg.withOpacity(0.6)),
+                    ),
+                    child: Text(
+                      !hasDebt
+                          ? "PAID"
+                          : (due == null ? "NO DUE DATE" : _dueLabel(due)),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.6,
+                        color: pillFg,
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 6),
+                Icon(Icons.chevron_right,
+                    size: 20, color: Colors.black.withOpacity(0.35)),
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _miniLine({required IconData icon, required String text}) {
+    if (text.trim().isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.black.withOpacity(0.45)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12.8,
+              fontWeight: FontWeight.w600,
+              color: Colors.black.withOpacity(0.55),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _buildLocation(UtangCustomer item) {
+    final parts = <String>[];
+
+    if (item.municipality != null && item.municipality!.trim().isNotEmpty) {
+      parts.add(item.municipality!.trim());
+    }
+    if (item.barangay != null && item.barangay!.trim().isNotEmpty) {
+      parts.add("Brgy. ${item.barangay!.trim()}");
+    }
+
+    return parts.join(" • ");
   }
 }

@@ -30,8 +30,7 @@ class HeroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const double sideSlot = 40; // space for back/bell alignment
-    const double logoSize = 50; // ✅ change this freely; title won't shift
-
+    const double logoSize = 40; // ✅ change this freely; title won't shift
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 52, 16, 18),

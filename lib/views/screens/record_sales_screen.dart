@@ -12,6 +12,7 @@ import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
 import 'package:intl/intl.dart';
 
+
 class RecordSalesScreen extends ConsumerStatefulWidget {
   const RecordSalesScreen({super.key});
 
@@ -44,9 +45,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       final vm = ref.read(salesViewModelProvider);
       vm.resetQuantities();
 
-      // ✅ NEW: load categories from DB (same approach as Stock In)
       await vm.loadCategories();
-
       await vm.loadProducts();
     });
   }
@@ -61,11 +60,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   void didPopNext() async {
     final vm = ref.read(salesViewModelProvider);
 
-    // ✅ NEW: refresh categories too
     await vm.loadCategories();
-
     await vm.loadProducts();
-    await vm.loadCustomers(); // refresh credit limits
+    await vm.loadCustomers();
   }
 
   @override
@@ -103,6 +100,21 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           children: [
                             _cashUtangSwitch(vm),
 
+                            // ✅ Utang: Step guide + selected customer card
+                            if (!isCash) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                isProductMode
+                                    ? "Step 3: Add products for utang"
+                                    : "Step 1: Select Due Date • Step 2: Choose Customer",
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black.withOpacity(0.55),
+                                ),
+                              ),
+                            ],
+
                             if (!isCash && vm.selectedCustomer != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
@@ -112,11 +124,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                    ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.grey.withAlpha(51),
-                                        blurRadius: 2,
-                                        offset: const Offset(0, 2),
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 6),
                                       ),
                                     ],
                                   ),
@@ -128,36 +143,48 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                         'Customer: ${vm.selectedCustomer!['first_name']} ${vm.selectedCustomer!['last_name']}',
                                         style: const TextStyle(
                                           fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black54,
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          color: Colors.black.withOpacity(0.55),
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
+
                             const SizedBox(height: 10),
+
                             _searchBar(vm),
-                            const SizedBox(height: 8),
-                            _categoryChips(vm), // ✅ now from DB
+
+                            const SizedBox(height: 10),
+
+                            if (isCash || (!isCash && isProductMode)) ...[
+                             
+                              const SizedBox(height: 8),
+                              _categoryChips(vm),
+                            ],
                           ],
                         ),
                       ),
+
                       Expanded(
                         child: isCash || isProductMode
-                            ? _categoryProductView(vm) // ✅ now from DB
+                            ? _categoryProductView(vm)
                             : _utangList(),
                       ),
                     ],
                   ),
           ),
+
+          // ✅ Upgraded bottom bar (items + total + checkout)
           _bottomBar(vm, bottomPadding),
         ],
       ),
@@ -167,8 +194,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   // ---------------------------- Helper Widgets ----------------------------
 
   Widget _cashUtangSwitch(SalesViewModel vm) {
-    final double toggleWidth =
-        MediaQuery.of(context).size.width - 32; // account for horizontal padding
+    final double toggleWidth = MediaQuery.of(context).size.width - 32;
     final double sliderWidth = toggleWidth / 2;
 
     return Container(
@@ -177,12 +203,12 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       decoration: BoxDecoration(
         color: Colors.grey.shade300.withOpacity(0.3),
         borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.grey.shade300.withOpacity(0.5)),
       ),
       child: Stack(
         children: [
-          // 🔹 Sliding background pill
           AnimatedAlign(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
             alignment: isCash ? Alignment.centerLeft : Alignment.centerRight,
             child: Container(
@@ -193,16 +219,15 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
             ),
           ),
 
-          // 🔹 Toggle buttons
           Row(
             children: [
               _switchButton("Cash", isCash, () {
@@ -238,12 +263,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         child: Container(
           alignment: Alignment.center,
           child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 250),
+            duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             style: TextStyle(
               color: active ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
               fontSize: 16,
+              letterSpacing: 0.2,
             ),
             child: Text(title),
           ),
@@ -258,7 +284,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     BoxDecoration boxDecoration(Color color) => BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade400, width: 1),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 6),
+            ),
+          ],
         );
 
     InputDecoration inputDecoration(
@@ -269,8 +302,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     ) =>
         InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Colors.black54),
-          prefixIcon: Icon(icon, size: 22, color: Colors.black),
+          hintStyle: TextStyle(color: Colors.black.withOpacity(0.45)),
+          prefixIcon: Icon(icon, size: 22, color: Colors.black87),
           border: InputBorder.none,
           focusedBorder: InputBorder.none,
           isDense: true,
@@ -278,8 +311,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           suffixIcon: controller.text.isNotEmpty
               ? GestureDetector(
                   onTap: onClear,
-                  child:
-                      const Icon(Icons.clear, size: 22, color: Colors.black54),
+                  child: const Icon(Icons.clear,
+                      size: 22, color: Colors.black54),
                 )
               : null,
         );
@@ -337,7 +370,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           GestureDetector(
             onTap: () async {
               final result = await context.push<bool>('/new_customer');
@@ -357,6 +390,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: const Icon(Icons.add, color: Colors.white),
             ),
@@ -366,9 +406,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     }
   }
 
-  // ✅ Category Chips (NOW FROM DB) — UI unchanged
+  // ✅ Category Chips (better contrast + border)
   Widget _categoryChips(SalesViewModel vm) {
-    if (!isCash) return const SizedBox.shrink();
+    if (!isCash && !isProductMode) return const SizedBox.shrink();
 
     const chipHeight = 45.0;
     const chipFontSize = 15.0;
@@ -382,7 +422,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Chips
         SizedBox(
           height: chipHeight + verticalPadding * 2,
           child: ListView.separated(
@@ -394,12 +433,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final selected = index == vm.selectedCategoryIndex;
+
               return GestureDetector(
                 onTap: () {
                   vm.selectCategory(index);
                   _categoryPageController.animateToPage(
                     index,
-                    duration: const Duration(milliseconds: 300),
+                    duration: const Duration(milliseconds: 260),
                     curve: Curves.easeInOut,
                   );
                 },
@@ -411,11 +451,17 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   decoration: BoxDecoration(
                     color: selected ? AppColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(chipRadius),
+                    border: Border.all(
+                      color: selected
+                          ? Colors.transparent
+                          : Colors.grey.shade300,
+                      width: 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withAlpha(51),
-                        blurRadius: 2,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
@@ -423,7 +469,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     vm.categoryNames[index],
                     style: TextStyle(
                       color: selected ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                       fontSize: chipFontSize,
                     ),
                   ),
@@ -435,13 +481,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
         const SizedBox(height: 8),
 
-        // Dots
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(totalCategories, (index) {
             final selected = index == vm.selectedCategoryIndex;
-            return Container(
-              width: dotSize,
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: selected ? dotSize + 2 : dotSize,
               height: dotSize,
               margin: EdgeInsets.symmetric(horizontal: dotSpacing / 2),
               decoration: BoxDecoration(
@@ -455,49 +501,52 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  // ✅ Category PageView (NOW FROM DB) — UI unchanged
+  // ✅ Category PageView (unchanged behavior)
   Widget _categoryProductView(SalesViewModel vm) {
     return PageView.builder(
       controller: _categoryPageController,
       itemCount: vm.categoryNames.length,
-
       onPageChanged: (index) {
         vm.selectCategory(index);
 
-        // Auto scroll chips to selected index
         final screenWidth = MediaQuery.of(context).size.width;
         final scrollTo = (index * 110) - (screenWidth / 2) + 55;
 
         _categoryScrollController.animateTo(
           scrollTo.clamp(0, _categoryScrollController.position.maxScrollExtent),
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 260),
           curve: Curves.easeInOut,
         );
       },
-
       itemBuilder: (context, index) {
         final query = searchQuery.toLowerCase();
         final isAll = index == 0;
 
         final categoryName = vm.categoryNames[index].toLowerCase();
-        final categoryId = vm.categoryIdByIndex(index); // ✅ DB category id
+        final categoryId = vm.categoryIdByIndex(index);
 
         final filteredProducts = vm.products.where((p) {
           final matchesSearch = p.name.toLowerCase().contains(query);
 
           if (isAll) return matchesSearch;
 
-          // ✅ Best match (new products): categoryId
           final matchesId = categoryId != null && p.categoryId == categoryId;
-
-          // ✅ Fallback (old products): category string match
           final matchesName = p.category.toLowerCase() == categoryName;
 
           return (matchesId || matchesName) && matchesSearch;
         }).toList();
 
         if (filteredProducts.isEmpty) {
-          return const Center(child: Text("No products in this category"));
+          return Center(
+            child: Text(
+              "No products in this category",
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.black.withOpacity(0.55),
+              ),
+            ),
+          );
         }
 
         return ListView.builder(
@@ -509,7 +558,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  // ---------------------------- EVERYTHING BELOW: UNCHANGED ----------------------------
+  // ---------------------------- Product List & Card ----------------------------
 
   Widget _productList(SalesViewModel vm) {
     final displayedProducts = vm.filteredProducts
@@ -517,12 +566,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         .toList();
 
     if (displayedProducts.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 20),
           child: Text(
             'No products found',
-            style: TextStyle(fontSize: 16, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              color: Colors.black.withOpacity(0.55),
+            ),
           ),
         ),
       );
@@ -533,22 +586,23 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       itemCount: displayedProducts.length,
       addAutomaticKeepAlives: false,
       addRepaintBoundaries: false,
-      itemBuilder: (context, index) =>
-          _productCard(displayedProducts[index], vm),
+      itemBuilder: (context, index) => _productCard(displayedProducts[index], vm),
     );
   }
 
+  // ✅ Product card UI improved (price emphasized, stock lighter)
   Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withAlpha(51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -563,17 +617,28 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   Text(
                     product.name,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                       fontSize: 16,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
                   Text(
-                    "Price: ${currencyFormatter.format(product.sellingPrice)}",
-                    style: const TextStyle(color: Colors.black87),
+                    currencyFormatter.format(product.sellingPrice),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     "Stock: ${product.quantity}",
-                    style: const TextStyle(color: Colors.black87),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.black.withOpacity(0.55),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -582,12 +647,21 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _quantitySelector(product, vm),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  "Subtotal: ${currencyFormatter.format(vm.getSubtotal(product))}",
+                  currencyFormatter.format(vm.getSubtotal(product)),
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14.5,
                     color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  "Subtotal",
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black.withOpacity(0.5),
                   ),
                 ),
               ],
@@ -603,13 +677,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.image_not_supported,
         size: 30,
-        color: Colors.grey,
+        color: Colors.black.withOpacity(0.35),
       ),
     );
 
@@ -618,7 +692,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: Image.file(
         File(product.image!),
         width: size,
@@ -635,63 +709,53 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
+  // ✅ Quantity selector improved (no typing + bigger buttons)
   Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
     final controller = vm.controllers[product.id!]!;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[400]!),
+        border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(50),
+        color: Colors.white,
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => vm.decrementQuantity(product),
-            icon: const Icon(Icons.remove, size: 18),
+          InkWell(
+            borderRadius: BorderRadius.circular(50),
+            onTap: () => vm.decrementQuantity(product),
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.remove, size: 18),
+            ),
           ),
-          IntrinsicWidth(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: 40,
-                maxWidth: 80,
-              ),
-              child: TextField(
-                controller: controller,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.black),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                ),
-                onChanged: (text) {
-                  int qty = int.tryParse(text) ?? 0;
-                  qty = qty.clamp(0, product.quantity);
-                  if (controller.text != qty.toString()) {
-                    controller.text = qty.toString();
-                    controller.selection = TextSelection.fromPosition(
-                      TextPosition(offset: controller.text.length),
-                    );
-                  }
-                  vm.productQuantities[product.id!] = qty;
-                  vm.calculateTotal();
-                },
+          Container(
+            width: 44,
+            alignment: Alignment.center,
+            child: Text(
+              controller.text.isEmpty ? "0" : controller.text,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
               ),
             ),
           ),
-          IconButton(
-            onPressed: () => vm.incrementQuantity(product),
-            icon: const Icon(Icons.add, size: 18),
+          InkWell(
+            borderRadius: BorderRadius.circular(50),
+            onTap: () => vm.incrementQuantity(product),
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.add, size: 18),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ✅ Everything below remains the same (Utang flow, summary, checkout etc.)
-  // I kept your code unchanged.
+  // ---------------------------- Utang List (kept behavior) ----------------------------
+
   Widget _utangList() {
     final vm = ref.watch(salesViewModelProvider);
 
@@ -708,19 +772,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             _dueDateCard(),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             if (filteredCustomers.isNotEmpty)
               ...filteredCustomers.map((customer) => _customerItem(customer))
             else
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Text(
                     "No customers found",
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black54,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black.withOpacity(0.55),
                     ),
                   ),
                 ),
@@ -742,29 +806,33 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.black.withOpacity(0.55),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
                 _searchBar(vm),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 _categoryChips(vm),
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Expanded(child: _productList(vm)),
         ],
       );
@@ -799,16 +867,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withAlpha(25),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -816,7 +884,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: AppColors.primary.withOpacity(0.15),
+              backgroundColor: AppColors.primary.withOpacity(0.12),
               child: const Icon(Icons.person, color: AppColors.primary),
             ),
             const SizedBox(width: 12),
@@ -828,22 +896,22 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     "${customer['first_name']} ${customer['last_name']}",
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     "Available Credit: ₱${availableCredit.toStringAsFixed(2)}",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w500,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: Colors.black.withOpacity(0.55),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right),
+            Icon(Icons.chevron_right, color: Colors.black.withOpacity(0.45)),
           ],
         ),
       ),
@@ -881,30 +949,37 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.grey.shade400,
+            color: Colors.grey.shade300,
             width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.calendar_month_rounded,
                 size: 20,
-                color: Colors.black54,
+                color: Colors.black.withOpacity(0.55),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 dueDate != null
@@ -912,26 +987,69 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     : "Select Due Date",
                 style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w800,
                   color: Colors.black,
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 20),
+            Icon(Icons.chevron_right,
+                size: 20, color: Colors.black.withOpacity(0.45)),
           ],
         ),
       ),
     );
   }
 
+  // ✅ Upgraded bottom bar: shows Items + Total + Checkout button
   Widget _bottomBar(SalesViewModel vm, double bottomPadding) {
     final bool canCheckout = vm.hasSelectedProducts;
 
+    int itemCount = 0;
+    for (final e in vm.productQuantities.entries) {
+      if ((e.value) > 0) itemCount += e.value;
+    }
+
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPadding),
-      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + bottomPadding),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
       child: Row(
         children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Items: $itemCount",
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black.withOpacity(0.55),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    currencyFormatter.format(vm.total),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
               onPressed: canCheckout ? () => _showSummary(context, vm) : null,
@@ -942,10 +1060,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: canCheckout ? 2 : 0,
+                minimumSize: const Size.fromHeight(56),
               ),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text("Checkout", style: TextStyle(fontSize: 16)),
+              child: const Text(
+                "Checkout",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
               ),
             ),
           ),
@@ -983,20 +1102,47 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  // ✅ Status header
+                  Text(
+                    isCash ? "CASH SALE" : "UTANG SALE",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: isCash ? AppColors.primary : AppColors.error,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   const Text(
                     'Sale Summary',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
+
+                  if (!isCash && selectedCustomer != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
+                      "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.55),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+
                   const SizedBox(height: 12),
+
                   Expanded(
                     child: selectedProducts.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Text(
                               'No products selected',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black.withOpacity(0.55),
                               ),
                             ),
                           )
@@ -1015,22 +1161,22 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 title: Text(
                                   product.name,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 17,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
                                   ),
                                 ),
                                 subtitle: Text(
-                                  '₱${product.sellingPrice} × $qty',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black54,
+                                  '${currencyFormatter.format(product.sellingPrice)} × $qty',
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black.withOpacity(0.55),
                                   ),
                                 ),
                                 trailing: Text(
                                   currencyFormatter.format(subtotal),
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w900,
                                     fontSize: 15,
                                   ),
                                 ),
@@ -1038,15 +1184,17 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             },
                           ),
                   ),
+
                   const Divider(height: 24),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         'TOTAL',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1,
                         ),
                       ),
@@ -1054,29 +1202,30 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         currencyFormatter.format(vm.total),
                         style: const TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ],
                   ),
+
                   if (!isCash && availableCredit != null) ...[
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Available Credit',
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black.withOpacity(0.55),
                           ),
                         ),
                         Text(
                           currencyFormatter.format(availableCredit),
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
                             color: Colors.black87,
                           ),
                         ),
@@ -1088,13 +1237,15 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         'Amount exceeds available credit. Please reduce items.',
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: Colors.red.shade700,
                         ),
                       ),
                     ],
                   ],
+
                   const SizedBox(height: 16),
+
                   Row(
                     children: [
                       Expanded(
@@ -1109,7 +1260,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           child: const Text(
                             'Cancel',
                             style: TextStyle(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w800,
                               fontSize: 16,
                             ),
                           ),
@@ -1176,9 +1327,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             Navigator.pop(context);
 
                             try {
-                              // Checkout
                               if (isCash) {
-                                await vm.checkout(); // Cash checkout
+                                await vm.checkout();
                               } else {
                                 await vm.checkout(
                                   isCash: false,
@@ -1187,10 +1337,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 );
                               }
 
-                              // Reload customers to refresh available credit
                               await vm.loadCustomers();
 
-                              // Reset UI
                               vm.resetQuantities();
                               vm.selectedCustomer = null;
                               dueDate = null;
@@ -1227,7 +1375,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           child: const Text(
                             'Confirm',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
                               fontSize: 16,
                             ),
                           ),

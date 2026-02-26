@@ -86,7 +86,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         label: "CUSTOMER",
                         subtitle: "Manage customers",
                         icon: Icons.people_alt_outlined,
-                        onTap: () => context.go('/customer_menu'),
+                        onTap: () => context.push('/customer_menu'),
                       ),
                       const SizedBox(height: 18),
                       _bigActionTile(
