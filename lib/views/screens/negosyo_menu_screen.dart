@@ -61,7 +61,20 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
               title: "Negosyo",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
+
+              // ✅ Center the title
+              centerTitle: true,
+
+              // ✅ Show back arrow
+              showBack: true,
+
+              // ✅ Go back to previous page
+              onBackTap: () => context.go('/home'),
+              // OR if you want always go to Home:
+              // onBackTap: () => context.go('/home'),
+
               onBellTap: () {},
+
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),

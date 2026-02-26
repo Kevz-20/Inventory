@@ -27,6 +27,7 @@ import 'views/screens/utang_summary.screen.dart';
 import 'views/screens/customer_menu_screen.dart';
 import 'views/screens/negosyo_menu_screen.dart';
 
+
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
   initialLocation: '/login',

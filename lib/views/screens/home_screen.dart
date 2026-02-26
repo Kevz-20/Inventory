@@ -63,9 +63,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               title: "Home",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
+
+              // ✅ Home title should stay LEFT
+              centerTitle: true,
+
+              // ✅ No back arrow on Home
+              showBack: false,
+
               onBellTap: () {
                 // TODO: context.push('/notifications');
               },
+
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
@@ -85,7 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         label: "CUSTOMER",
                         subtitle: "Manage customers",
                         icon: Icons.people_alt_outlined,
-                        onTap: () => context.push('/customer_menu'),
+                        onTap: () => context.go('/customer_menu'),
                       ),
                       const SizedBox(height: 18),
                       _bigActionTile(
