@@ -9,11 +9,8 @@ import '../repositories/customer_repository.dart';
 import '../services/db_service.dart';
 import '../repositories/capital_management_repository.dart';
 import '../repositories/account_repository.dart';
-
-// ✅ NEW: category repository (same idea as Stock In)
 import '../repositories/product_category_repository.dart';
 
-/// SalesViewModel for shared/global cash & capital
 class SalesViewModel extends ChangeNotifier {
   final void Function()? onCashUpdated;
 
@@ -21,7 +18,6 @@ class SalesViewModel extends ChangeNotifier {
   ProductRepository? _productRepository;
   CustomerRepository? _customerRepository;
 
-  // ✅ NEW
   ProductCategoryRepository? _categoryRepository;
 
   List<ProductModel> products = [];
@@ -34,10 +30,7 @@ class SalesViewModel extends ChangeNotifier {
   final Map<int, TextEditingController> controllers = {};
   final Map<int, VoidCallback> _controllerListeners = {};
 
-  // ✅ NEW: categories from DB
-  // We keep BOTH names + ids so filtering is correct.
-  // Index 0 is always "All".
-  List<Map<String, dynamic>> _dbCategories = []; // rows: {id, name}
+  List<Map<String, dynamic>> _dbCategories = [];
 
   List<String> get categoryNames {
     final names = _dbCategories
@@ -45,7 +38,6 @@ class SalesViewModel extends ChangeNotifier {
         .where((n) => n.isNotEmpty)
         .toList();
 
-    // ensure "All" always first
     return ['All', ...names];
   }
 
@@ -53,6 +45,7 @@ class SalesViewModel extends ChangeNotifier {
     if (index <= 0) return null; // All
     final rowIndex = index - 1;
     if (rowIndex < 0 || rowIndex >= _dbCategories.length) return null;
+
     final id = _dbCategories[rowIndex]['id'];
     if (id is int) return id;
     if (id is num) return id.toInt();
@@ -87,39 +80,77 @@ class SalesViewModel extends ChangeNotifier {
       _customerRepository = CustomerRepository(db);
       _capitalRepository = CapitalManagementRepository(db);
 
-      // ✅ NEW
       _categoryRepository = ProductCategoryRepository(db);
 
-      // ✅ NEW: load categories first
       await loadCategories();
-
       await loadProducts();
       await loadCustomers();
     } catch (_) {}
   }
 
-  // ------------------- Categories (NEW) -------------------
+  // ------------------- Categories -------------------
   Future<void> loadCategories() async {
-  final repo = _categoryRepository;
-  if (repo == null) return;
+    final repo = _categoryRepository;
+    if (repo == null) return;
 
-  try {
-    _dbCategories = await repo.getAllCategories(); // ✅ from your repository
-  } catch (_) {
-    _dbCategories = [];
+    try {
+      _dbCategories = await repo.getAllCategories();
+    } catch (_) {
+      _dbCategories = [];
+    }
+
+    if (selectedCategoryIndex >= categoryNames.length) {
+      selectedCategoryIndex = 0;
+    }
+
+    notifyListeners();
   }
 
-  // keep selected index in bounds
-  if (selectedCategoryIndex >= categoryNames.length) {
-    selectedCategoryIndex = 0;
-  }
-
-  notifyListeners();
-}
   void selectCategory(int index) {
     selectedCategoryIndex = index;
     notifyListeners();
   }
+
+  void setTypedQuantity(ProductModel product, String value) {
+  if (product.id == null) return;
+
+  final id = product.id!;
+  final controller = controllers[id];
+
+  // allow empty while typing
+  if (value.trim().isEmpty) {
+    productQuantities[id] = 0;
+    calculateTotal();
+    return;
+  }
+
+  final parsed = int.tryParse(value) ?? 0;
+
+  // clamp to stock
+  final clamped = parsed.clamp(0, product.quantity);
+
+  productQuantities[id] = clamped;
+
+  // ✅ FORCE UI TEXT to snap back (ex: 100000 -> 50)
+  if (controller != null && controller.text != clamped.toString()) {
+    // remove listener to avoid loop
+    if (_controllerListeners.containsKey(id)) {
+      controller.removeListener(_controllerListeners[id]!);
+    }
+
+    controller.text = clamped.toString();
+    controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: controller.text.length),
+    );
+
+    // add listener back
+    if (_controllerListeners.containsKey(id)) {
+      controller.addListener(_controllerListeners[id]!);
+    }
+  }
+
+  calculateTotal();
+}
 
   // ------------------- Products -------------------
   Future<void> loadProducts() async {
@@ -135,37 +166,58 @@ class SalesViewModel extends ChangeNotifier {
       products = [];
     }
 
-    for (var p in products) {
-      if (p.id != null) {
-        productQuantities[p.id!] ??= 0;
+    // ✅ build controllers + listeners per product
+    for (final p in products) {
+      final id = p.id;
+      if (id == null) continue;
 
-        if (!controllers.containsKey(p.id!)) {
-          controllers[p.id!] = TextEditingController(
-            text: productQuantities[p.id!]!.toString(),
-          );
-        }
+      productQuantities[id] ??= 0;
 
-        final controller = controllers[p.id!]!;
-        if (_controllerListeners.containsKey(p.id!)) {
-          controller.removeListener(_controllerListeners[p.id!]!);
-        }
+      // create controller if missing
+      controllers[id] ??= TextEditingController(text: productQuantities[id].toString());
 
-        _controllerListeners[p.id!] = () {
-          final text = controller.text;
-          productQuantities[p.id!] =
-              text.isEmpty ? 0 : int.tryParse(text)?.clamp(0, p.quantity) ?? 0;
-          calculateTotal();
-        };
+      final controller = controllers[id]!;
 
-        controller.addListener(_controllerListeners[p.id!]!);
+      // remove old listener if exists
+      if (_controllerListeners.containsKey(id)) {
+        controller.removeListener(_controllerListeners[id]!);
       }
+
+      // ✅ new listener (this is the ONLY place totals update from typing)
+      _controllerListeners[id] = () {
+        final text = controller.text.trim();
+
+        // allow empty while typing
+        if (text.isEmpty) {
+          productQuantities[id] = 0;
+          calculateTotal();
+          return;
+        }
+
+        final parsed = int.tryParse(text) ?? 0;
+        final clamped = parsed.clamp(0, p.quantity);
+
+        productQuantities[id] = clamped;
+
+        // ✅ snap text back to max stock
+        if (parsed != clamped) {
+          controller
+            ..text = clamped.toString()
+            ..selection = TextSelection.fromPosition(
+              TextPosition(offset: controller.text.length),
+            );
+        }
+
+        calculateTotal();
+      };
+
+      controller.addListener(_controllerListeners[id]!);
     }
 
     isLoading = false;
     notifyListeners();
   }
 
-  // ✅ UPDATED: filter using DB categories (id-based) + fallback name
   List<ProductModel> get filteredProducts {
     if (selectedCategoryIndex == 0) return products;
 
@@ -173,20 +225,18 @@ class SalesViewModel extends ChangeNotifier {
     final selectedId = categoryIdByIndex(selectedCategoryIndex);
 
     return products.where((p) {
-      // Best: categoryId match (new system)
-      final bool matchesId =
-          selectedId != null && (p.categoryId != null) && p.categoryId == selectedId;
-
-      // Fallback: string category match (old system)
-      final bool matchesName = p.category.toLowerCase() == selectedName;
-
+      final matchesId =
+          selectedId != null && p.categoryId != null && p.categoryId == selectedId;
+      final matchesName = p.category.toLowerCase() == selectedName;
       return matchesId || matchesName;
     }).toList();
   }
 
   void incrementQuantity(ProductModel product) {
     if (product.id == null) return;
-    final currentQty = productQuantities[product.id!] ?? 0;
+    final id = product.id!;
+    final currentQty = productQuantities[id] ?? 0;
+
     if (product.quantity > 0 && currentQty < product.quantity) {
       updateQuantity(product, currentQty + 1);
     }
@@ -194,21 +244,27 @@ class SalesViewModel extends ChangeNotifier {
 
   void decrementQuantity(ProductModel product) {
     if (product.id == null) return;
-    final currentQty = productQuantities[product.id!] ?? 0;
+    final id = product.id!;
+    final currentQty = productQuantities[id] ?? 0;
+
     if (currentQty > 0) {
       updateQuantity(product, currentQty - 1);
     }
   }
 
+  /// ✅ Use this for + / - (and any time you want to force controller text)
   void updateQuantity(ProductModel product, int qty) {
     if (product.id == null) return;
-    qty = qty.clamp(0, product.quantity);
-    productQuantities[product.id!] = qty;
+    final id = product.id!;
 
-    final controller = controllers[product.id!];
+    qty = qty.clamp(0, product.quantity);
+    productQuantities[id] = qty;
+
+    final controller = controllers[id];
     if (controller != null && controller.text != qty.toString()) {
-      if (_controllerListeners.containsKey(product.id!)) {
-        controller.removeListener(_controllerListeners[product.id!]!);
+      // temporarily disable listener so it won’t loop
+      if (_controllerListeners.containsKey(id)) {
+        controller.removeListener(_controllerListeners[id]!);
       }
 
       controller.text = qty.toString();
@@ -216,12 +272,12 @@ class SalesViewModel extends ChangeNotifier {
         TextPosition(offset: controller.text.length),
       );
 
-      if (_controllerListeners.containsKey(product.id!)) {
-        controller.addListener(_controllerListeners[product.id!]!);
+      if (_controllerListeners.containsKey(id)) {
+        controller.addListener(_controllerListeners[id]!);
       }
     }
 
-    calculateTotal();
+    calculateTotal(); // notifyListeners inside
   }
 
   int getQuantity(ProductModel product) =>
@@ -231,11 +287,16 @@ class SalesViewModel extends ChangeNotifier {
       getQuantity(product) * product.sellingPrice;
 
   void calculateTotal() {
-    total = 0.0;
-    for (var p in products) {
-      if (p.id == null) continue;
-      total += p.sellingPrice * (productQuantities[p.id!] ?? 0);
+    double newTotal = 0.0;
+
+    for (final p in products) {
+      final id = p.id;
+      if (id == null) continue;
+
+      newTotal += p.sellingPrice * (productQuantities[id] ?? 0);
     }
+
+    total = newTotal;
     notifyListeners();
   }
 
@@ -243,11 +304,25 @@ class SalesViewModel extends ChangeNotifier {
       productQuantities.values.any((qty) => qty > 0);
 
   void resetQuantities() {
-    for (var p in products) {
-      if (p.id == null) continue;
-      productQuantities[p.id!] = 0;
-      controllers[p.id!]?.text = '0';
+    for (final p in products) {
+      final id = p.id;
+      if (id == null) continue;
+
+      productQuantities[id] = 0;
+
+      // update controller text safely
+      final controller = controllers[id];
+      if (controller != null && controller.text != '0') {
+        if (_controllerListeners.containsKey(id)) {
+          controller.removeListener(_controllerListeners[id]!);
+        }
+        controller.text = '0';
+        if (_controllerListeners.containsKey(id)) {
+          controller.addListener(_controllerListeners[id]!);
+        }
+      }
     }
+
     total = 0.0;
     notifyListeners();
   }
@@ -274,16 +349,20 @@ class SalesViewModel extends ChangeNotifier {
     if (_productRepository == null || _customerRepository == null) return;
 
     final purchasedItems = <Map<String, dynamic>>[];
-    for (var p in products) {
-      final qty = productQuantities[p.id!] ?? 0;
-      if (qty > 0) {
-        purchasedItems.add({
-          'productId': p.id,
-          'quantity': qty,
-          'price': p.sellingPrice,
-          'subtotal': qty * p.sellingPrice,
-        });
-      }
+
+    for (final p in products) {
+      final id = p.id;
+      if (id == null) continue;
+
+      final qty = productQuantities[id] ?? 0;
+      if (qty <= 0) continue;
+
+      purchasedItems.add({
+        'productId': id,
+        'quantity': qty,
+        'price': p.sellingPrice,
+        'subtotal': qty * p.sellingPrice,
+      });
     }
 
     if (purchasedItems.isEmpty) return;
@@ -293,7 +372,7 @@ class SalesViewModel extends ChangeNotifier {
         await _productRepository!.checkoutCash(purchasedItems);
 
         if (_capitalRepository != null) {
-          double totalCash = purchasedItems.fold<double>(
+          final totalCash = purchasedItems.fold<double>(
             0.0,
             (sum, item) => sum + (item['subtotal'] as double),
           );
@@ -350,9 +429,7 @@ class SalesViewModel extends ChangeNotifier {
   }
 }
 
-/// Provider for SalesViewModel
-final salesViewModelProvider =
-    ChangeNotifierProvider<SalesViewModel>((ref) {
+final salesViewModelProvider = ChangeNotifierProvider<SalesViewModel>((ref) {
   return SalesViewModel(
     onCashUpdated: () {
       ref.read(capitalManagementViewModelProvider).loadCapitals();

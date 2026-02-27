@@ -11,7 +11,7 @@ import '../../models/product_model.dart';
 import '../../view_models/record_sales_view_model.dart';
 import '../widgets/header.dart';
 import 'package:intl/intl.dart';
-
+import 'package:flutter/services.dart';
 
 class RecordSalesScreen extends ConsumerStatefulWidget {
   const RecordSalesScreen({super.key});
@@ -31,6 +31,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   bool isCash = true;
   bool isProductMode = false;
 
+
   final ScrollController _categoryScrollController = ScrollController();
   final PageController _categoryPageController = PageController();
   final TextEditingController searchController = TextEditingController();
@@ -42,9 +43,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final vm = ref.read(salesViewModelProvider);
-      vm.resetQuantities();
 
+      vm.resetQuantities();
       await vm.loadCategories();
       await vm.loadProducts();
     });
@@ -56,14 +58,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
+
+
   @override
-  void didPopNext() async {
+void didPopNext() {
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    if (!mounted) return;
     final vm = ref.read(salesViewModelProvider);
 
+    // ✅ Just refresh data, DON'T reset UI state
     await vm.loadCategories();
     await vm.loadProducts();
     await vm.loadCustomers();
-  }
+  });
+}
 
   @override
   void dispose() {
@@ -74,10 +82,136 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     super.dispose();
   }
 
+  // ✅ reusable due date picker
+  Future<void> _pickDueDate() async {
+  
+
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: dueDate ?? now,
+      firstDate: now,
+      lastDate: DateTime(now.year + 5),
+      initialDatePickerMode: DatePickerMode.day,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppColors.primary,
+            onPrimary: Colors.white,
+            onSurface: AppColors.textPrimary,
+          ),
+          dialogTheme: DialogThemeData(
+            backgroundColor: Colors.grey.shade100,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+
+
+
+    if (!mounted) return;
+    if (pickedDate != null) {
+      setState(() => dueDate = pickedDate);
+    }
+  }
+
+  // ✅ clickable edit card for Utang mode (customer + due date)
+  Widget _selectedUtangInfoCard(SalesViewModel vm) {
+    final selectedCustomer = vm.selectedCustomer;
+    if (selectedCustomer == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.shade200,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Customer: ${selectedCustomer['first_name']} ${selectedCustomer['last_name']}',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
+            style: TextStyle(
+              fontSize: 13.5,
+              color: Colors.black.withOpacity(0.55),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      isProductMode = false;
+                      vm.selectedCustomer = null;
+                      searchController.clear();
+                      searchQuery = '';
+                    });
+                    vm.loadCustomers();
+                  },
+                  icon: const Icon(Icons.person_outline, size: 18),
+                  label: const Text(
+                    'Edit Customer',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickDueDate,
+                  icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                  label: const Text(
+                    'Edit Due Date',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(salesViewModelProvider);
-
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
@@ -100,64 +234,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           children: [
                             _cashUtangSwitch(vm),
 
-                            // ✅ Utang: Step guide + selected customer card
-                            if (!isCash) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                isProductMode
-                                    ? "Step 3: Add products for utang"
-                                    : "Step 1: Select Due Date • Step 2: Choose Customer",
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black.withOpacity(0.55),
-                                ),
-                              ),
-                            ],
-
                             if (!isCash && vm.selectedCustomer != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.grey.shade200,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Customer: ${vm.selectedCustomer!['first_name']} ${vm.selectedCustomer!['last_name']}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          color: Colors.black.withOpacity(0.55),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                child: _selectedUtangInfoCard(vm),
                               ),
 
                             const SizedBox(height: 10),
@@ -167,7 +247,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             const SizedBox(height: 10),
 
                             if (isCash || (!isCash && isProductMode)) ...[
-                             
                               const SizedBox(height: 8),
                               _categoryChips(vm),
                             ],
@@ -184,8 +263,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   ),
           ),
 
-          // ✅ Upgraded bottom bar (items + total + checkout)
-          _bottomBar(vm, bottomPadding),
+          if (isCash || (!isCash && isProductMode))
+            _bottomBar(vm, bottomPadding),
         ],
       ),
     );
@@ -227,26 +306,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               ),
             ),
           ),
-
           Row(
             children: [
-              _switchButton("Cash", isCash, () {
+              _switchButton("Cash", isCash, () async {
                 setState(() {
                   isCash = true;
                   isProductMode = false;
                   vm.selectedCustomer = null;
                   dueDate = null;
                 });
+
                 vm.resetQuantities();
-                vm.loadProducts();
+                await vm.loadProducts();
               }),
-              _switchButton("Utang", !isCash, () {
+              _switchButton("Utang", !isCash, () async {
                 setState(() {
                   isCash = false;
                   isProductMode = false;
                 });
+
                 vm.resetQuantities();
-                vm.loadCustomers();
+                await vm.loadCustomers();
               }),
             ],
           ),
@@ -311,8 +391,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           suffixIcon: controller.text.isNotEmpty
               ? GestureDetector(
                   onTap: onClear,
-                  child: const Icon(Icons.clear,
-                      size: 22, color: Colors.black54),
+                  child: const Icon(Icons.clear, size: 22, color: Colors.black54),
                 )
               : null,
         );
@@ -406,7 +485,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     }
   }
 
-  // ✅ Category Chips (better contrast + border)
+  // ✅ Category Chips
   Widget _categoryChips(SalesViewModel vm) {
     if (!isCash && !isProductMode) return const SizedBox.shrink();
 
@@ -452,9 +531,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     color: selected ? AppColors.primary : Colors.white,
                     borderRadius: BorderRadius.circular(chipRadius),
                     border: Border.all(
-                      color: selected
-                          ? Colors.transparent
-                          : Colors.grey.shade300,
+                      color: selected ? Colors.transparent : Colors.grey.shade300,
                       width: 1,
                     ),
                     boxShadow: [
@@ -478,9 +555,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             },
           ),
         ),
-
         const SizedBox(height: 8),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(totalCategories, (index) {
@@ -501,7 +576,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  // ✅ Category PageView (unchanged behavior)
+  // ✅ Category PageView
   Widget _categoryProductView(SalesViewModel vm) {
     return PageView.builder(
       controller: _categoryPageController,
@@ -590,7 +665,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  // ✅ Product card UI improved (price emphasized, stock lighter)
+  // ✅ Product card
   Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
@@ -709,52 +784,76 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  // ✅ Quantity selector improved (no typing + bigger buttons)
   Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
-    final controller = vm.controllers[product.id!]!;
+  final controller = vm.controllers[product.id!]!;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(50),
-        color: Colors.white,
-      ),
-      child: Row(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(50),
-            onTap: () => vm.decrementQuantity(product),
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.remove, size: 18),
-            ),
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey.shade300),
+      borderRadius: BorderRadius.circular(50),
+      color: Colors.white,
+    ),
+    child: Row(
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(50),
+          onTap: () => vm.decrementQuantity(product),
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: Icon(Icons.remove, size: 18),
           ),
-          Container(
-            width: 44,
-            alignment: Alignment.center,
-            child: Text(
-              controller.text.isEmpty ? "0" : controller.text,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          InkWell(
-            borderRadius: BorderRadius.circular(50),
-            onTap: () => vm.incrementQuantity(product),
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.add, size: 18),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
 
-  // ---------------------------- Utang List (kept behavior) ----------------------------
+        SizedBox(
+          width: 44,
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
+            decoration: const InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(vertical: 8),
+            ),
+
+            // ✅ THIS IS THE IMPORTANT PART
+            onChanged: (value) {
+              vm.setTypedQuantity(product, value); // clamps to stock
+            },
+
+            // ✅ OPTIONAL: when user leaves the field, fix empty -> 0
+            onEditingComplete: () {
+              if (controller.text.trim().isEmpty) {
+                vm.setTypedQuantity(product, '0');
+              }
+              FocusScope.of(context).unfocus();
+            },
+          ),
+        ),
+
+        InkWell(
+          borderRadius: BorderRadius.circular(50),
+          onTap: () => vm.incrementQuantity(product),
+          child: const Padding(
+            padding: EdgeInsets.all(8),
+            child: Icon(Icons.add, size: 18),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+  // ---------------------------- Utang List ----------------------------
 
   Widget _utangList() {
     final vm = ref.watch(salesViewModelProvider);
@@ -795,31 +894,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     } else {
       return Column(
         children: [
-          Container(
-            width: double.infinity,
-            color: Colors.white,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Customer: ${vm.selectedCustomer?['first_name']} ${vm.selectedCustomer?['last_name']}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Due Date: ${dueDate != null ? "${dueDate!.month}/${dueDate!.day}/${dueDate!.year}" : "Not selected"}',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color: Colors.black.withOpacity(0.55),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _selectedUtangInfoCard(vm),
           ),
           const SizedBox(height: 10),
           Padding(
@@ -842,8 +919,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   Widget _customerItem(Map<String, dynamic> customer) {
     final vm = ref.read(salesViewModelProvider);
 
-    final double availableCredit =
-        (customer['available_credit'] ?? 1000.0) as double;
+    final double availableCredit = (customer['available_credit'] ?? 1000.0) as double;
 
     return GestureDetector(
       onTap: () {
@@ -920,43 +996,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
   Widget _dueDateCard() {
     return GestureDetector(
-      onTap: () async {
-        final now = DateTime.now();
-        final pickedDate = await showDatePicker(
-          context: context,
-          initialDate: dueDate ?? now,
-          firstDate: now,
-          lastDate: DateTime(now.year + 5),
-          initialDatePickerMode: DatePickerMode.day,
-          initialEntryMode: DatePickerEntryMode.calendarOnly,
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-                onSurface: AppColors.textPrimary,
-              ),
-              dialogTheme: DialogThemeData(
-                backgroundColor: Colors.grey.shade100,
-              ),
-            ),
-            child: child!,
-          ),
-        );
-
-        if (pickedDate != null) {
-          setState(() => dueDate = pickedDate);
-        }
-      },
+      onTap: _pickDueDate,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.03),
@@ -992,15 +1038,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 ),
               ),
             ),
-            Icon(Icons.chevron_right,
-                size: 20, color: Colors.black.withOpacity(0.45)),
+            Icon(Icons.chevron_right, size: 20, color: Colors.black.withOpacity(0.45)),
           ],
         ),
       ),
     );
   }
 
-  // ✅ Upgraded bottom bar: shows Items + Total + Checkout button
+  // ✅ bottom bar (your same version)
   Widget _bottomBar(SalesViewModel vm, double bottomPadding) {
     final bool canCheckout = vm.hasSelectedProducts;
 
@@ -1054,11 +1099,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             child: ElevatedButton(
               onPressed: canCheckout ? () => _showSummary(context, vm) : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    canCheckout ? AppColors.primary : Colors.grey.shade400,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                backgroundColor: canCheckout ? AppColors.primary : Colors.grey.shade400,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: canCheckout ? 2 : 0,
                 minimumSize: const Size.fromHeight(56),
               ),
@@ -1073,322 +1115,310 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
+
   void _showSummary(BuildContext context, SalesViewModel vm) {
-    final selectedProducts = vm.products.where((p) {
-      final id = p.id;
-      if (id == null) return false;
-      return (vm.productQuantities[id] ?? 0) > 0;
-    }).toList();
+  final selectedProducts = vm.products.where((p) {
+    final id = p.id;
+    if (id == null) return false;
+    return (vm.productQuantities[id] ?? 0) > 0;
+  }).toList();
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        final selectedCustomer = vm.selectedCustomer;
-        final double? availableCredit = !isCash && selectedCustomer != null
-            ? ((selectedCustomer['available_credit'] ?? 0.0) as num).toDouble()
-            : null;
-        final bool exceedsAvailableCredit =
-            availableCredit != null && vm.total > availableCredit;
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) {
+      final selectedCustomer = vm.selectedCustomer;
+      final double? availableCredit = !isCash && selectedCustomer != null
+          ? ((selectedCustomer['available_credit'] ?? 0.0) as num).toDouble()
+          : null;
+      final bool exceedsAvailableCredit =
+          availableCredit != null && vm.total > availableCredit;
 
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // ✅ Status header
+      return SafeArea(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Text(
+                  isCash ? "CASH SALE" : "UTANG SALE",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: isCash ? AppColors.primary : AppColors.error,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Sale Summary',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                ),
+                if (!isCash && selectedCustomer != null) ...[
+                  const SizedBox(height: 8),
                   Text(
-                    isCash ? "CASH SALE" : "UTANG SALE",
+                    "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
+                    "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: isCash ? AppColors.primary : AppColors.error,
-                      letterSpacing: 1,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black.withOpacity(0.55),
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Sale Summary',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                  ),
+                ],
+                const SizedBox(height: 12),
+                Expanded(
+                  child: selectedProducts.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No products selected',
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black.withOpacity(0.55),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: selectedProducts.length,
+                          itemBuilder: (_, index) {
+                            final product = selectedProducts[index];
+                            final qty = vm.getQuantity(product);
+                            final subtotal = vm.getSubtotal(product);
 
-                  if (!isCash && selectedCustomer != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
-                      "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                product.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${currencyFormatter.format(product.sellingPrice)} × $qty',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black.withOpacity(0.55),
+                                ),
+                              ),
+                              trailing: Text(
+                                currencyFormatter.format(subtotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const Divider(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'TOTAL',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black.withOpacity(0.55),
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
                       ),
-                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      currencyFormatter.format(vm.total),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
-
-                  const SizedBox(height: 12),
-
-                  Expanded(
-                    child: selectedProducts.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No products selected',
-                              style: TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black.withOpacity(0.55),
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: selectedProducts.length,
-                            itemBuilder: (_, index) {
-                              final product = selectedProducts[index];
-                              final qty = vm.getQuantity(product);
-                              final subtotal = vm.getSubtotal(product);
-
-                              return ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 4,
-                                ),
-                                title: Text(
-                                  product.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '${currencyFormatter.format(product.sellingPrice)} × $qty',
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black.withOpacity(0.55),
-                                  ),
-                                ),
-                                trailing: Text(
-                                  currencyFormatter.format(subtotal),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-
-                  const Divider(height: 24),
-
+                ),
+                if (!isCash && availableCredit != null) ...[
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'TOTAL',
+                      Text(
+                        'Available Credit',
                         style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black.withOpacity(0.55),
                         ),
                       ),
                       Text(
-                        currencyFormatter.format(vm.total),
+                        currencyFormatter.format(availableCredit),
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 15,
                           fontWeight: FontWeight.w900,
+                          color: Colors.black87,
                         ),
                       ),
                     ],
                   ),
-
-                  if (!isCash && availableCredit != null) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Available Credit',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black.withOpacity(0.55),
-                          ),
-                        ),
-                        Text(
-                          currencyFormatter.format(availableCredit),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
+                  if (exceedsAvailableCredit) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Amount exceeds available credit. Please reduce items.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.red.shade700,
+                      ),
                     ),
-                    if (exceedsAvailableCredit) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        'Amount exceeds available credit. Please reduce items.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ],
                   ],
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            // Validate customer and due date for Utang
-                            if (!isCash) {
-                              if (selectedCustomer == null || dueDate == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please select a customer and due date for utang.',
-                                    ),
-                                    duration: Duration(seconds: 2),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-
-                              if (selectedProducts.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please select at least one product for utang.',
-                                    ),
-                                    duration: Duration(seconds: 2),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-
-                              // Credit limit check
-                              final double totalSale = vm.total;
-                              final double creditLimit =
-                                  (selectedCustomer['credit_limit'] ?? 0.0)
-                                      as double;
-                              final double currentBalance =
-                                  (selectedCustomer['current_balance'] ?? 0.0)
-                                      as double;
-                              final double availableCredit =
-                                  creditLimit - currentBalance;
-
-                              if (totalSale > availableCredit) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Customer\'s available credit is ₱${availableCredit.toStringAsFixed(2)}. '
-                                      'You cannot exceed this limit.',
-                                    ),
-                                    duration: const Duration(seconds: 3),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                                return;
-                              }
-                            }
-
-                            Navigator.pop(context);
-
-                            try {
-                              if (isCash) {
-                                await vm.checkout();
-                              } else {
-                                await vm.checkout(
-                                  isCash: false,
-                                  customerId: selectedCustomer!['id'],
-                                  dueDate: dueDate!,
-                                );
-                              }
-
-                              await vm.loadCustomers();
-
-                              vm.resetQuantities();
-                              vm.selectedCustomer = null;
-                              dueDate = null;
-                              isProductMode = false;
-                              searchController.clear();
-                              searchQuery = '';
-
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (!isCash) {
+                            if (selectedCustomer == null || dueDate == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                    'Sale successfully recorded!',
+                                const SnackBar(
+                                  content: Text(
+                                    'Please select a customer and due date for utang.',
                                   ),
-                                  duration: const Duration(seconds: 2),
-                                  backgroundColor: AppColors.success,
-                                ),
-                              );
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Checkout failed: $e'),
-                                  duration: const Duration(seconds: 2),
+                                  duration: Duration(seconds: 2),
                                   backgroundColor: Colors.red,
                                 ),
                               );
+                              return;
                             }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+
+                            if (selectedProducts.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please select at least one product for utang.',
+                                  ),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            final double totalSale = vm.total;
+                            final double creditLimit =
+                                (selectedCustomer['credit_limit'] ?? 0.0)
+                                    as double;
+                            final double currentBalance =
+                                (selectedCustomer['current_balance'] ?? 0.0)
+                                    as double;
+                            final double availableCredit2 =
+                                creditLimit - currentBalance;
+
+                            if (totalSale > availableCredit2) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Customer\'s available credit is ₱${availableCredit2.toStringAsFixed(2)}. '
+                                    'You cannot exceed this limit.',
+                                  ),
+                                  duration: const Duration(seconds: 3),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          Navigator.pop(context);
+
+                          try {
+                            if (isCash) {
+                              await vm.checkout();
+                            } else {
+                              await vm.checkout(
+                                isCash: false,
+                                customerId: selectedCustomer!['id'],
+                                dueDate: dueDate!,
+                              );
+                            }
+
+                            await vm.loadCustomers();
+
+                            vm.resetQuantities();
+                            vm.selectedCustomer = null;
+                            dueDate = null;
+                            isProductMode = false;
+                            searchController.clear();
+                            searchQuery = '';
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Sale successfully recorded!'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Checkout failed: $e'),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            'Confirm',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                            ),
+                        ),
+                        child: const Text(
+                          'Confirm',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 }

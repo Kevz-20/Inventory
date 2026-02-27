@@ -427,6 +427,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         'updated_at': DateTime.now().toIso8601String(),
       };
 
+      // ✅ keep logic: after payment, move next_due_date by +1 month (simple schedule)
       if (item.isInstallment && newRemaining > 0) {
         final baseDate =
             DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ?? DateTime.now();
@@ -469,6 +470,12 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     }
   }
 
+  // ============================================================
+  // ✅ UPDATED BOTTOMSHEET (less redundant)
+  // - Card shows: (Monthly or Paid so far) + Remaining + Next Due
+  // - Bottomsheet shows: Total + Paid so far + Remaining + Next Due + Trace
+  // ============================================================
+
   Future<void> showOwnerUtangModal(Payable item) async {
     final paymentHistory = await fetchOwnerPaymentHistory(item.id);
     if (!mounted) return;
@@ -478,33 +485,26 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final double remaining = (item.remainingAmount ?? item.amount)
+        final total = item.amount.toDouble();
+        final remaining = (item.remainingAmount ?? item.amount)
             .clamp(0.0, item.amount.toDouble())
             .toDouble();
+        final paidSoFar = (total - remaining).clamp(0.0, total);
 
-        final bool isFullyPaid = item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
+        final bool isFullyPaid = item.isPaid || remaining <= 0;
 
+        // ✅ show CURRENT Next Due only (no +1 month preview)
         final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
-
-        DateTime? displayNextDue;
-        String nextDueLabel = "Next Due";
-
-        if (item.isInstallment) {
-          final baseDate = DateTime.tryParse(nextDateStr ?? '');
-          if (baseDate != null) {
-            displayNextDue = addMonths(baseDate, 1);
-            nextDueLabel = "Next Due (after payment)";
-          }
-        } else if (nextDateStr != null) {
-          displayNextDue = DateTime.tryParse(nextDateStr);
-        }
+        final displayNextDue = (nextDateStr != null && nextDateStr.isNotEmpty)
+            ? DateTime.tryParse(nextDateStr)
+            : null;
 
         return SafeArea(
           top: false,
           child: DraggableScrollableSheet(
             expand: false,
-            initialChildSize: 0.55,
-            minChildSize: 0.45,
+            initialChildSize: 0.58,
+            minChildSize: 0.48,
             maxChildSize: 0.92,
             builder: (context, scrollController) {
               return Container(
@@ -568,6 +568,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                         controller: scrollController,
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         children: [
+                          // ✅ SUMMARY CARD: Total / Paid / Remaining + Next Due
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
@@ -585,11 +586,23 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _rowLabelValue(
-                                  "Amount",
-                                  "₱${currencyFormat.format(item.amount)}",
+                                  "Total Amount",
+                                  "₱${currencyFormat.format(total)}",
                                   valueStyle: const TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 14.5,
                                     fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _rowLabelValue(
+                                  "Paid so far",
+                                  "₱${currencyFormat.format(paidSoFar)}",
+                                  valueStyle: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: paidSoFar <= 0
+                                        ? Colors.black87
+                                        : Colors.green.shade700,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -617,10 +630,22 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
                                     child: Text(
-                                      "$nextDueLabel: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
+                                      "Next Due: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
                                       style: const TextStyle(
                                         fontSize: 13,
                                         color: Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                if (item.isInstallment && (item.planMonthly ?? 0) > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      "Monthly: ₱${currencyFormat.format(item.planMonthly)}",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.orange.shade900,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -628,6 +653,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             ),
                           ),
                           const SizedBox(height: 14),
+
                           const Text(
                             "Payment Trace",
                             style: TextStyle(
@@ -636,6 +662,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             ),
                           ),
                           const SizedBox(height: 8),
+
                           if (paymentHistory.isEmpty)
                             Container(
                               padding: const EdgeInsets.all(14),
@@ -648,6 +675,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                 style: TextStyle(color: Colors.black54),
                               ),
                             ),
+
                           ...paymentHistory.map((payment) {
                             final paidLabel = DateFormat('MMM dd, yyyy • hh:mm a')
                                 .format(payment.paidAt);
@@ -693,6 +721,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                         ],
                       ),
                     ),
+
                     if (!isFullyPaid)
                       Container(
                         padding: EdgeInsets.only(
@@ -821,6 +850,10 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
+  // ============================================================
+  // ✅ UPDATED UI BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -829,203 +862,355 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         title: 'Owner Utang',
         showBackButton: true,
       ),
+
+      // ✅ Full-width Add button (same functionality)
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              await GoRouter.of(context).push('/add_utang');
+              _refreshData();
+            },
+            icon: const SizedBox.shrink(),
+            label: const Text(
+              "Add Payable",
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              elevation: 6,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+
       body: Column(
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildFilterButtons(),
-          const SizedBox(height: 15),
-          Expanded(
-            child: _buildOwnerPage(),
-          ),
+          const SizedBox(height: 12),
+          Expanded(child: _buildOwnerPage()),
         ],
       ),
     );
   }
 
   Widget _buildOwnerPage() {
-    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+    if (filteredOwnerPayables.isEmpty) {
+      return _emptyState();
+    }
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            Expanded(
-              child: filteredOwnerPayables.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "Walay bayranan",
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: filteredOwnerPayables.length,
-                      itemBuilder: (context, index) {
-                        return _buildOwnerPayableCard(filteredOwnerPayables[index]);
-                      },
-                    ),
-            ),
-            const SizedBox(height: 100),
-          ],
-        ),
-        _buildAddButton(bottomPadding),
-      ],
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 95),
+      itemCount: filteredOwnerPayables.length,
+      itemBuilder: (context, index) {
+        return _buildOwnerPayableCard(filteredOwnerPayables[index]);
+      },
     );
   }
 
+  Widget _emptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.receipt_long_rounded,
+                size: 34,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Walay bayranan",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Add a payable para ma-track nimo ang due dates ug payments.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.black.withOpacity(0.55),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ Segmented filter
   Widget _buildFilterButtons() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final segmentW = (w - 8) / 3; // container padding = 4 left + 4 right
+          final left = 4 + (segmentW * selectedFilter);
+
+          return Container(
+            height: 48,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300.withOpacity(0.35),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.grey.shade300.withOpacity(0.6)),
+            ),
+            child: Stack(
+              children: [
+                // ✅ Sliding active pill
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOutCubic,
+                  left: left,
+                  top: 0,
+                  bottom: 0,
+                  width: segmentW,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 10,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ✅ Buttons layer
+                Row(
+                  children: [
+                    Expanded(child: _slideSegButton(0, "Tanan")),
+                    Expanded(child: _slideSegButton(1, "Overdue")),
+                    Expanded(child: _slideSegButton(2, "Paid")),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _slideSegButton(int index, String text) {
+    final active = selectedFilter == index;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () => applyOwnerFilter(index),
+      child: Center(
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          style: TextStyle(
+            color: active ? Colors.white : Colors.black87,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w900,
+          ),
+          child: Text(text),
+        ),
+      ),
+    );
+  }
+
+
+  // ✅ Card: show (Monthly or Paid so far) + Remaining + Next Due
+  Widget _buildOwnerPayableCard(Payable item) {
+    final total = item.amount.toDouble();
+    final remaining = (item.remainingAmount ?? item.amount)
+        .clamp(0.0, item.amount.toDouble())
+        .toDouble();
+    final paidSoFar = (total - remaining).clamp(0.0, total);
+
+    final isFullyPaid = item.isPaid || remaining <= 0;
+
+    String status = isFullyPaid ? "Paid" : "";
+    final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
+
+    DateTime? due;
+    if (nextDateStr != null) due = DateTime.tryParse(nextDateStr);
+
+    if (!isFullyPaid && due != null) {
+      final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
+      if (daysLeft < 0) status = "Overdue";
+      else if (daysLeft <= 7) status = "Due Soon";
+    }
+
+    final dueText =
+        (due != null) ? DateFormat('MMM dd, yyyy').format(due) : "No due date";
+
+    final double monthly = item.isInstallment ? (item.planMonthly ?? 0.0) : 0.0;
+
+    return GestureDetector(
+      onTap: () => showOwnerUtangModal(item),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.item,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                if (status.isNotEmpty) _statusPill(status),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _miniStat(
+                    label: item.isInstallment ? "Monthly" : "Paid so far",
+                    value: item.isInstallment
+                        ? "₱${currencyFormat.format(monthly)}"
+                        : "₱${currencyFormat.format(paidSoFar)}",
+                    valueColor: item.isInstallment
+                        ? Colors.orange.shade900
+                        : (paidSoFar <= 0 ? Colors.black87 : Colors.green.shade700),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _miniStat(
+                    label: "Remaining",
+                    value: "₱${currencyFormat.format(remaining)}",
+                    valueColor: isFullyPaid
+                        ? Colors.green.shade700
+                        : Colors.red.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.calendar_month_rounded,
+                    size: 18, color: Colors.black.withOpacity(0.55)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Next Due: $dueText",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black.withOpacity(0.60),
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right,
+                    color: Colors.black.withOpacity(0.35)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _miniStat({
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFilterButton(0, "Tanan"),
-          _buildFilterButton(1, "Overdue"),
-          _buildFilterButton(2, "Paid"),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.black.withOpacity(0.55),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w900,
+              color: valueColor ?? Colors.black87,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterButton(int index, String text) {
-    bool active = selectedFilter == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => applyOwnerFilter(index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: active ? AppColors.primary : Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            text,
-            style: TextStyle(
-              color: active ? Colors.white : Colors.black,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+  Widget _statusPill(String status) {
+    final bg = _getStatusColor(status);
+    final fg = _getStatusTextColor(status);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: bg.withOpacity(0.7)),
       ),
-    );
-  }
-
-  Widget _buildOwnerPayableCard(Payable item) {
-    String? nextDueDisplay;
-    final isFullyPaid = item.isPaid || ((item.remainingAmount ?? item.amount) <= 0);
-    String status = isFullyPaid ? "Paid" : "";
-    final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
-
-    if (nextDateStr != null) {
-      final due = DateTime.tryParse(nextDateStr);
-      if (due != null) {
-        nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
-
-        if (!isFullyPaid) {
-          final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
-          if (daysLeft < 0) {
-            status = "Overdue";
-          } else if (daysLeft <= 7) {
-            status = "Due Soon";
-          }
-        }
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: GestureDetector(
-        onTap: () => showOwnerUtangModal(item),
-        child: Card(
-          color: Colors.white,
-          elevation: 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.item,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (nextDueDisplay != null)
-                      Text(
-                        nextDueDisplay,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (status.isNotEmpty)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(status),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: _getStatusTextColor(status),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddButton(double bottomPadding) {
-    return Positioned(
-      bottom: 20 + bottomPadding,
-      left: 20,
-      right: 20,
-      child: SizedBox(
-        width: double.infinity,
-        height: 50,
-        child: ElevatedButton(
-          onPressed: () async {
-            await GoRouter.of(context).push('/add_utang');
-            _refreshData();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-          ),
-          child: const Text(
-            "Pagdugang og Bayronon",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: fg,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
         ),
       ),
     );

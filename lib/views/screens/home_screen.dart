@@ -1,8 +1,11 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
@@ -58,20 +61,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ✅ UPDATED: use reusable HeroHeader
             HeroHeader(
               title: "Home",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
               centerTitle: true,
               showBack: false,
-              showLogo: true, // ✅ ONLY HERE
+              showLogo: true,
               onBellTap: () {},
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
             ),
-
             const SizedBox(height: 14),
 
             // ✅ CUSTOMER & NEGOSYO AT THE TOP
@@ -103,19 +104,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 
             const SizedBox(height: 6),
 
-            // ✅ STRETCHED GRAPH AT BOTTOM
+            // ✅ BOTH LINES GRAPH ONLY (clean, no toggle buttons)
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _FinanceGraphCard(
-                  mode: homeState.graphMode,
-                  netPoints: homeState.net7Days,
-                  incomePoints: homeState.income7Days,
-                  expensePoints: homeState.expense7Days,
+                child: _SalesOnlyGraphCard(
+                  salesPoints: homeState.income7Days,
                   loading: homeState.isGraphLoading,
                   error: homeState.graphError,
-                  onModeChanged: (m) =>
-                      ref.read(homeViewModelProvider.notifier).setGraphMode(m),
                 ),
               ),
             ),
@@ -132,46 +128,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   required IconData icon,
   required VoidCallback onTap,
 }) {
-  final radius = BorderRadius.circular(24);
+  final radius = BorderRadius.circular(22);
 
   return Material(
     color: Colors.transparent,
     child: InkWell(
       borderRadius: radius,
       onTap: onTap,
-      child: Ink(
-        height: 112,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      child: Container(
+        height: 110,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         decoration: BoxDecoration(
-          // ✅ SAME STYLE AS NEGOSYO BUTTONS
-          color: AppColors.primary.withOpacity(.10),
+          color: Colors.white, // ✅ solid white = clear
+
           borderRadius: radius,
+
+          // ✅ clear boundary
           border: Border.all(
-            color: AppColors.primary.withOpacity(.18),
-            width: 1.2,
+            color: Colors.grey.shade300,
+            width: 1,
           ),
+
+          // ✅ clean raised 3D (not soft blur)
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 16,
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 18,
               offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Row(
           children: [
-            // ✅ icon badge same style
+            // ✅ Accent vertical strip (very clear identity)
             Container(
-              width: 70,
-              height: 70,
+              width: 6,
+              height: 60,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.55),
-                borderRadius: BorderRadius.circular(20),
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // ✅ Icon container with clear border
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(.10),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(.12),
+                  color: AppColors.primary.withOpacity(.25),
                 ),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 34),
+              child: Icon(icon, color: AppColors.primary, size: 32),
             ),
 
             const SizedBox(width: 16),
@@ -183,31 +195,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                 children: [
                   Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 19,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 0.6,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13.2,
-                      height: 1.15,
-                      color: Colors.black.withOpacity(.55),
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
                     ),
                   ),
                 ],
               ),
             ),
-
-            // ✅ ARROW REMOVED
           ],
         ),
       ),
@@ -216,50 +220,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 }
 }
 
-/// ✅ Graph card with mode toggle (NET / INCOME / EXPENSE)
-/// - NOT clickable (no InkWell)
-/// - No chevron/right arrow
-/// - Only pills are tappable
-class _FinanceGraphCard extends StatelessWidget {
-  final HomeGraphMode mode;
-  final List<CashflowPoint> netPoints;
-  final List<CashflowPoint> incomePoints;
-  final List<CashflowPoint> expensePoints;
+// ========================= GRAPH CARD (CLEAN BOTH) =========================
 
+class _SalesOnlyGraphCard extends StatelessWidget {
+  final List<CashflowPoint> salesPoints;
   final bool loading;
   final String? error;
-  final ValueChanged<HomeGraphMode> onModeChanged;
 
-  const _FinanceGraphCard({
-    required this.mode,
-    required this.netPoints,
-    required this.incomePoints,
-    required this.expensePoints,
+  const _SalesOnlyGraphCard({
+    required this.salesPoints,
     required this.loading,
     required this.error,
-    required this.onModeChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String title;
-    if (mode == HomeGraphMode.net) {
-      title = 'Net (Income - Expense)';
-    } else if (mode == HomeGraphMode.income) {
-      title = 'Income (Last 7 Days)';
-    } else {
-      title = 'Expenses (Last 7 Days)';
-    }
-
-    final List<CashflowPoint> points;
-    if (mode == HomeGraphMode.net) {
-      points = netPoints;
-    } else if (mode == HomeGraphMode.income) {
-      points = incomePoints;
-    } else {
-      points = expensePoints;
-    }
-
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
       decoration: BoxDecoration(
@@ -277,7 +252,7 @@ class _FinanceGraphCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            'Total Sales (Last 7 Days)',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -285,16 +260,51 @@ class _FinanceGraphCard extends StatelessWidget {
             ),
             overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 8),
+
+          // ✅ simple legend
+          Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Sales',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black.withOpacity(0.65),
+                ),
+              ),
+            ],
+          ),
+
           const SizedBox(height: 10),
-          _ModePills(mode: mode, onChanged: onModeChanged),
-          const SizedBox(height: 10),
-          Expanded(child: _buildChart(points)),
+          Expanded(
+            child: _buildChart(
+              context: context,
+              sales: salesPoints,
+              loading: loading,
+              error: error,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildChart(List<CashflowPoint> points) {
+  Widget _buildChart({
+    required BuildContext context,
+    required List<CashflowPoint> sales,
+    required bool loading,
+    required String? error,
+  }) {
     if (loading) {
       return const Center(
         child: SizedBox(
@@ -317,10 +327,10 @@ class _FinanceGraphCard extends StatelessWidget {
       );
     }
 
-    if (points.isEmpty) {
+    if (sales.isEmpty) {
       return Center(
         child: Text(
-          'No data yet.',
+          'No sales yet.',
           style: TextStyle(
             color: Colors.black.withOpacity(0.55),
             fontWeight: FontWeight.w600,
@@ -330,42 +340,36 @@ class _FinanceGraphCard extends StatelessWidget {
       );
     }
 
-    final minY = points.map((e) => e.net).reduce((a, b) => a < b ? a : b);
-    final maxY = points.map((e) => e.net).reduce((a, b) => a > b ? a : b);
+    final len = sales.length;
+
+    // ✅ IMPORTANT: Use TOTAL SALES value (not net)
+    // If your model field is NOT "net", change it here:
+    // e.g. pts[i].income or pts[i].salesTotal
+    final spots = <FlSpot>[];
+    for (int i = 0; i < len; i++) {
+      spots.add(FlSpot(i.toDouble(), sales[i].net));
+    }
+
+    final values = sales.map((e) => e.net).toList();
+    final minY = values.reduce((a, b) => a < b ? a : b);
+    final maxY = values.reduce((a, b) => a > b ? a : b);
 
     final pad = (maxY - minY).abs() * 0.2;
     final low = minY - (pad == 0 ? 10 : pad);
     final high = maxY + (pad == 0 ? 10 : pad);
 
-    final spots = <FlSpot>[];
-    for (int i = 0; i < points.length; i++) {
-      spots.add(FlSpot(i.toDouble(), points[i].net));
-    }
-
-    Color lineColor;
-    if (mode == HomeGraphMode.expense) {
-      lineColor = AppColors.error;
-    } else if (mode == HomeGraphMode.income) {
-      lineColor = AppColors.primary;
-    } else {
-      final mostlyNegative = points.where((p) => p.net < 0).length > 3;
-      lineColor = mostlyNegative ? AppColors.error : AppColors.primary;
-    }
-
     return LineChart(
       LineChartData(
         minX: 0,
-        maxX: 6,
+        maxX: (len - 1).toDouble(),
         minY: low,
         maxY: high,
         gridData: const FlGridData(show: false),
+        borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -373,8 +377,10 @@ class _FinanceGraphCard extends StatelessWidget {
               interval: 1,
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
-                if (i < 0 || i >= points.length) return const SizedBox.shrink();
-                final d = points[i].day;
+                if (i < 0 || i >= len) return const SizedBox.shrink();
+
+                final d = sales[i].day;
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
@@ -390,89 +396,35 @@ class _FinanceGraphCard extends StatelessWidget {
             ),
           ),
         ),
-        borderData: FlBorderData(show: false),
+        lineTouchData: LineTouchData(
+          handleBuiltInTouches: true,
+          touchTooltipData: LineTouchTooltipData(
+            tooltipRoundedRadius: 12,
+            fitInsideHorizontally: true,
+            fitInsideVertically: true,
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((s) {
+                return LineTooltipItem(
+                  'Sales: ₱${s.y.toStringAsFixed(2)}',
+                  const TextStyle(fontWeight: FontWeight.w900),
+                );
+              }).toList();
+            },
+          ),
+        ),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: lineColor,
-            barWidth: 3,
+            color: AppColors.primary,
+            barWidth: 3.6,
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: lineColor.withOpacity(0.14),
-            ),
+            belowBarData: BarAreaData(show: false),
           ),
         ],
       ),
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutCubic,
-    );
-  }
-}
-
-class _ModePills extends StatelessWidget {
-  final HomeGraphMode mode;
-  final ValueChanged<HomeGraphMode> onChanged;
-
-  const _ModePills({
-    required this.mode,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _pill('NET', HomeGraphMode.net)),
-          Expanded(child: _pill('INCOME', HomeGraphMode.income)),
-          Expanded(child: _pill('EXPENSE', HomeGraphMode.expense)),
-        ],
-      ),
-    );
-  }
-
-  Widget _pill(String label, HomeGraphMode value) {
-    final selected = mode == value;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => onChanged(value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 10,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: selected
-                  ? AppColors.primary
-                  : Colors.black.withOpacity(0.55),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

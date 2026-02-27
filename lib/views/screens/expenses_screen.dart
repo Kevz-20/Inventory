@@ -736,7 +736,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                               onPressed: canAdd
                                   ? () {
                                       if (formKey.currentState?.validate() !=
-                                          true) return;
+                                          true) {
+                                        return;
+                                      }
                                       Navigator.pop(dialogCtx, controller.text);
                                     }
                                   : null,

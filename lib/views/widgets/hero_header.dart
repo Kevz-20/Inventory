@@ -124,64 +124,153 @@ class HeroHeader extends StatelessWidget {
           const SizedBox(height: 14),
 
           // ✅ Balance glass card (unchanged)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.14)),
+          // ✅ Readable 3D Card (Senior-friendly)
+Container(
+  width: double.infinity,
+  padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(20),
+
+    // less transparent = clearer for older eyes
+    color: Colors.white.withOpacity(0.16),
+
+    // ✅ OUTER SHADOW (3D lift)
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.25),
+        blurRadius: 22,
+        offset: const Offset(0, 14),
+      ),
+      BoxShadow(
+        color: Colors.black.withOpacity(0.12),
+        blurRadius: 10,
+        offset: const Offset(0, 6),
+      ),
+    ],
+
+    // ✅ border definition
+    border: Border.all(
+      color: Colors.white.withOpacity(0.22),
+      width: 1.3,
+    ),
+  ),
+  child: Stack(
+    children: [
+      // ✅ TOP HIGHLIGHT (inner shine)
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: Container(
+          height: 34,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.28),
+                Colors.transparent,
+              ],
             ),
-            child: Row(
+          ),
+        ),
+      ),
+
+      // ✅ subtle inner bottom shadow (makes it feel “pressed in”)
+      Positioned(
+        bottom: 0,
+        left: 0,
+        right: 0,
+        child: Container(
+          height: 26,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                Colors.black.withOpacity(0.12),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Cash on Hand",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        balance,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "Mobile Number: $mobileNumber",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.80),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                Text(
+                  "Cash on Hand",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.95),
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                InkWell(
-                  onTap: onEyeTap,
-                  borderRadius: BorderRadius.circular(14),
-                  child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.visibility_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                const SizedBox(height: 8),
+
+                // ✅ amount — biggest + tight
+                Text(
+                  balance,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    height: 1.05,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Text(
+                  "Mobile Number: $mobileNumber",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.90),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
           ),
+
+          // ✅ Floating “eye” control (more 3D, easier tap)
+          InkWell(
+            onTap: onEyeTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.22),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.visibility_outlined,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+),
         ],
       ),
     );

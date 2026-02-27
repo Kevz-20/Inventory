@@ -25,8 +25,6 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(homeViewModelProvider.notifier).fetchHomeData();
-      // Optional: if you have a selectedIndex setter, set it here:
-      // ref.read(homeViewModelProvider.notifier).setSelectedIndex(0);
     });
   }
 
@@ -62,17 +60,17 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             HeroHeader(
-                  title: "Customer",
-                  balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
-                  mobileNumber: mobileText,
-                  centerTitle: true,
-                  showBack: true,
-                  onBackTap: () => context.go('/home'),
-                  onBellTap: () {},
-                  onEyeTap: () => ref
-                      .read(homeViewModelProvider.notifier)
-                      .toggleMoneyVisibility(),
-                ),
+              title: "Customer",
+              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+              mobileNumber: mobileText,
+              centerTitle: true,
+              showBack: true,
+              onBackTap: () => context.go('/home'),
+              onBellTap: () {},
+              onEyeTap: () => ref
+                  .read(homeViewModelProvider.notifier)
+                  .toggleMoneyVisibility(),
+            ),
             const SizedBox(height: 14),
 
             Expanded(
@@ -83,15 +81,15 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                     constraints: const BoxConstraints(maxWidth: 520),
                     child: ListView(
                       children: [
-                        _bigActionTile(
+                        _homeBigActionTile(
                           label: "HALIN",
                           subtitle: "Record cash sales",
                           icon: Icons.point_of_sale_outlined,
                           onTap: () => context.push('/record_sales'),
                         ),
                         const SizedBox(height: 18),
-                        _bigActionTile(
-                          label: "Customer Utang",
+                        _homeBigActionTile(
+                          label: "CUSTOMER UTANG",
                           subtitle: "Manage customer credit",
                           icon: Icons.receipt_long_outlined,
                           onTap: () => context.push('/customer_utang'),
@@ -106,32 +104,40 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
         ),
       ),
 
-      // ✅ ADD THIS
       bottomNavigationBar: BottomNavBar(
         currentIndex: homeState.selectedIndex,
-        noHighlight: true, 
-        ),
+        noHighlight: true,
+      ),
     );
   }
 
-  Widget _bigActionTile({
-    required String label,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(24),
+  /// ✅ SAME UI/UX AS HomeScreen _bigActionTile
+  Widget _homeBigActionTile({
+  required String label,
+  required String subtitle,
+  required IconData icon,
+  required VoidCallback onTap,
+}) {
+  final radius = BorderRadius.circular(22);
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: radius,
       onTap: onTap,
       child: Container(
-        height: 112,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
+        height: 110,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: radius,
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -139,16 +145,33 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
         ),
         child: Row(
           children: [
+            // ✅ strong left accent strip (clear for 50–65)
             Container(
-              width: 70,
-              height: 70,
+              width: 6,
+              height: 60,
               decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(20),
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(999),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 34),
             ),
-            const SizedBox(width: 18),
+            const SizedBox(width: 16),
+
+            // ✅ icon block with border
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(.10),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(.25),
+                ),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 32),
+            ),
+
+            const SizedBox(width: 16),
+
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -156,40 +179,33 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                 children: [
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 6),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13.5,
-                      color: Colors.black.withOpacity(0.55),
-                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
                     ),
                   ),
                 ],
               ),
             ),
-            Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 18,
-                  color: AppColors.primary,
-                ),
-              ),
+
+            // ✅ no arrow (as requested)
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
