@@ -68,7 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               centerTitle: true,
               showBack: false,
               showLogo: true,
-              onBellTap: () {},
+              onBellTap: () => context.push('/notifications'),
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),

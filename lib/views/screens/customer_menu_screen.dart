@@ -66,7 +66,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
               centerTitle: true,
               showBack: true,
               onBackTap: () => context.go('/home'),
-              onBellTap: () {},
+              onBellTap: () => context.push('/notifications'),
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),

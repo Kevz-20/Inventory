@@ -65,7 +65,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
               centerTitle: true,
               showBack: true,
               onBackTap: () => context.go('/home'),
-              onBellTap: () {},
+              onBellTap: () => context.push('/notifications'),
               onEyeTap: () => ref
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
@@ -73,88 +73,96 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
 
             // ✅ NO SCROLLVIEW: use Expanded layout that fits screen
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                child: Column(
-                  children: [
-                    _dividerTitle("ACTIONS"),
-                    const SizedBox(height: 10),
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      return SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Column(
+              children: [
+                _dividerTitle("ACTIONS"),
+                const SizedBox(height: 10),
 
-                    // ✅ 2x2 grid that expands naturally
-                    Expanded(
-                      flex: 7,
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _actionTile(
-                                    title: "GASTO",
-                                    subtitle: "Track Expenses",
-                                    icon: Icons.payments_outlined,
-                                    onTap: () => context.push('/expenses'),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _actionTile(
-                                    title: "STOCK IN",
-                                    subtitle: "Add Products",
-                                    icon: Icons.inventory_2_outlined,
-                                    onTap: () => context.push('/stockin'),
-                                  ),
-                                ),
-                              ],
+                // ✅ keep your layout same, but make height responsive
+                SizedBox(
+                  height: constraints.maxHeight * 0.64,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _actionTile(
+                                title: "GASTO",
+                                subtitle: "Track Expenses",
+                                icon: Icons.payments_outlined,
+                                onTap: () => context.push('/expenses'),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _actionTile(
-                                    title: "CAPITAL",
-                                    subtitle: "Add / Withdraw",
-                                    icon: Icons.savings_outlined,
-                                    onTap: () =>
-                                        context.push('/capital_management'),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _actionTile(
-                                    title: "OWNER UTANG",
-                                    subtitle: "Store Payables",
-                                    icon: Icons.receipt_long_outlined,
-                                    onTap: () => context.push('/owner_utang'),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _actionTile(
+                                title: "STOCK IN",
+                                subtitle: "Add Products",
+                                icon: Icons.inventory_2_outlined,
+                                onTap: () => context.push('/stockin'),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 12),
-                    _dividerTitle("REPORTS"),
-                    const SizedBox(height: 10),
-
-                    // ✅ bottom reports card (fixed-ish height but responsive)
-                    Expanded(
-                      flex: 3,
-                      child: _reportsCard(
-                        title: "REPORTS",
-                        subtitle: "Income, Balance Sheet, Cash Flow",
-                        icon: Icons.assessment_outlined,
-                        onTap: () => context.push('/reports'),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _actionTile(
+                                title: "CAPITAL",
+                                subtitle: "Add / Withdraw",
+                                icon: Icons.savings_outlined,
+                                onTap: () => context.push('/capital_management'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _actionTile(
+                                title: "OWNER UTANG",
+                                subtitle: "Store Payables",
+                                icon: Icons.receipt_long_outlined,
+                                onTap: () => context.push('/owner_utang'),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 12),
+                _dividerTitle("REPORTS"),
+                const SizedBox(height: 10),
+
+                SizedBox(
+                  height: constraints.maxHeight * 0.22,
+                  child: _reportsCard(
+                    title: "REPORTS",
+                    subtitle: "Income, Balance Sheet, Cash Flow",
+                    icon: Icons.assessment_outlined,
+                    onTap: () => context.push('/reports'),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ),
+      );
+    },
+  ),
+),
           ],
         ),
       ),

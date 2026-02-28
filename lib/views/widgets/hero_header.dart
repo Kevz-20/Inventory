@@ -28,52 +28,62 @@ class HeroHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    const double sideSlot = 40; // space for back/bell alignment
-    const double logoSize = 40; // ✅ change this freely; title won't shift
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 52, 16, 18),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.headerTop, AppColors.headerBottom],
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ✅ TOP AREA uses Stack so logo doesn't affect centering
-          SizedBox(
-            height: 40, // fixed height for consistent alignment
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Row keeps back + title + bell alignment
-                Row(
-                  children: [
-                    SizedBox(
-                      width: sideSlot,
-                      child: showBack
-                          ? InkWell(
-                              onTap: onBackTap,
-                              borderRadius: BorderRadius.circular(14),
-                              child: const Padding(
-                                padding: EdgeInsets.all(6),
-                                child: Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
+Widget build(BuildContext context) {
+  const double sideSlot = 40;
+  const double logoSize = 40;
 
-                    Expanded(
-                      child: Align(
+  final topInset = MediaQuery.of(context).padding.top;
+
+  return Container(
+    width: double.infinity,
+
+    // ✅ responsive top padding (instead of fixed 52)
+    padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 18),
+
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [AppColors.headerTop, AppColors.headerBottom],
+      ),
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: sideSlot,
+                    child: showBack
+                        ? InkWell(
+                            onTap: onBackTap,
+                            borderRadius: BorderRadius.circular(14),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+
+                  Expanded(
+                    child: Align(
+                      alignment:
+                          centerTitle ? Alignment.center : Alignment.centerLeft,
+
+                      // ✅ prevents title overflow when textScale is big
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
                         alignment: centerTitle
                             ? Alignment.center
                             : Alignment.centerLeft,
@@ -87,192 +97,149 @@ class HeroHeader extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ),
 
-                    SizedBox(
-                      width: sideSlot,
-                      child: InkWell(
-                        onTap: onBellTap,
-                        borderRadius: BorderRadius.circular(14),
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(
-                            Icons.notifications_none_rounded,
-                            color: Colors.white,
-                            size: 26,
-                          ),
+                  SizedBox(
+                    width: sideSlot,
+                    child: InkWell(
+                      onTap: onBellTap,
+                      borderRadius: BorderRadius.circular(14),
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.notifications_none_rounded,
+                          color: Colors.white,
+                          size: 26,
                         ),
                       ),
                     ),
-                  ],
-                ),
-
-                // ✅ Logo overlay (does NOT take Row space)
-                if (showLogo)
-                  Positioned(
-                    left: 8, // beside back slot area
-                    child: Image.asset(
-                      'lib/assets/logo.png',
-                      height: logoSize,
-                      width: logoSize,
-                      fit: BoxFit.contain,
-                    ),
                   ),
-              ],
-            ),
+                ],
+              ),
+
+              if (showLogo)
+                Positioned(
+                  left: 8,
+                  child: Image.asset(
+                    'lib/assets/logo.png',
+                    height: logoSize,
+                    width: logoSize,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+            ],
           ),
+        ),
 
-          const SizedBox(height: 14),
+        const SizedBox(height: 14),
 
-          // ✅ Balance glass card (unchanged)
-          // ✅ Readable 3D Card (Senior-friendly)
-Container(
-  width: double.infinity,
-  padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
-  decoration: BoxDecoration(
-    borderRadius: BorderRadius.circular(20),
-
-    // less transparent = clearer for older eyes
-    color: Colors.white.withOpacity(0.16),
-
-    // ✅ OUTER SHADOW (3D lift)
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.25),
-        blurRadius: 22,
-        offset: const Offset(0, 14),
-      ),
-      BoxShadow(
-        color: Colors.black.withOpacity(0.12),
-        blurRadius: 10,
-        offset: const Offset(0, 6),
-      ),
-    ],
-
-    // ✅ border definition
-    border: Border.all(
-      color: Colors.white.withOpacity(0.22),
-      width: 1.3,
-    ),
-  ),
-  child: Stack(
-    children: [
-      // ✅ TOP HIGHLIGHT (inner shine)
-      Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        child: Container(
-          height: 34,
+        // ✅ your improved 3D card stays the same
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.28),
-                Colors.transparent,
+                Colors.white.withOpacity(0.30),
+                Colors.white.withOpacity(0.18),
               ],
             ),
-          ),
-        ),
-      ),
-
-      // ✅ subtle inner bottom shadow (makes it feel “pressed in”)
-      Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: Container(
-          height: 26,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [
-                Colors.black.withOpacity(0.12),
-                Colors.transparent,
-              ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 24,
+                offset: const Offset(0, 16),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.28),
+              width: 1.4,
             ),
           ),
-        ),
-      ),
-
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Cash on Hand",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.95),
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Cash on Hand",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      balance,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        height: 1.05,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Mobile Number: $mobileNumber",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-
-                // ✅ amount — biggest + tight
-                Text(
-                  balance,
-                  style: const TextStyle(
+              ),
+              InkWell(
+                onTap: onEyeTap,
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.35),
+                        Colors.white.withOpacity(0.20),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.30),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.visibility_outlined,
                     color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    height: 1.05,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(height: 10),
-
-                Text(
-                  "Mobile Number: $mobileNumber",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.90),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ✅ Floating “eye” control (more 3D, easier tap)
-          InkWell(
-            onTap: onEyeTap,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.16),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.22),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.18),
-                    blurRadius: 14,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
               ),
-              child: const Icon(
-                Icons.visibility_outlined,
-                color: Colors.white,
-                size: 26,
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
-    ],
-  ),
-),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 }

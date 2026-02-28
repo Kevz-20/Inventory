@@ -28,6 +28,7 @@ import 'views/screens/negosyo_menu_screen.dart';
 import 'views/screens/reports_screen.dart';
 import 'views/screens/customer_utang_screen.dart';
 import 'views/screens/owner_utang_screen.dart';
+import 'views/screens/notification_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
@@ -248,6 +249,15 @@ final router = GoRouter(
           transition: PageTransitionType.forward,
         );
       },
+    ),
+
+    GoRoute(
+      path: '/notifications',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const NotificationScreen(),
+        transition: PageTransitionType.forward,
+      ),
     ),
     GoRoute(
       path: '/list_expenses',
