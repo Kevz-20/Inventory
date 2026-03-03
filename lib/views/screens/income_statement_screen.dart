@@ -209,16 +209,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                                 value: income.transportation,
                                 currency: currency,
                               ),
-                              _itemRow(
-                                label: 'Mga Bayronon',
-                                value: income.rentPayment,
-                                currency: currency,
-                              ),
-                              _itemRow(
-                                label: 'Uban Pa',
-                                value: income.miscExpenses,
-                                currency: currency,
-                              ),
                             ],
                           ),
 
@@ -488,70 +478,65 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   }
 
   // ==================== SECTION CARD (LIKE BALANCE SHEET) ====================
-  Widget _buildFinancialSection({
-    required String title,
-    required IconData icon,
-    required String totalText,
-    required List<Widget> children,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                height: 36,
-                width: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+Widget _buildFinancialSection({
+  required String title,
+  required IconData icon,
+  required String totalText, // keep it for usage in children if you want
+  required List<Widget> children,
+}) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Colors.grey.shade200),
+      boxShadow: [
+        BoxShadow(
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+          color: Colors.black.withOpacity(0.04),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              height: 36,
+              width: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-              Text(
-                totalText,
+              child: Icon(icon, color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
                 style: const TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                  color: AppColors.primary,
+                  fontSize: 17,
+                  color: Colors.black87,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Divider(color: Colors.grey.shade200, height: 1),
-          const SizedBox(height: 6),
-          ...children,
-        ],
-      ),
-    );
-  }
+            ),
+
+            // ❌ Removed the header total here
+            // Text(totalText, ...),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Divider(color: Colors.grey.shade200, height: 1),
+        const SizedBox(height: 6),
+        ...children,
+      ],
+    ),
+  );
+}
 
   Widget _itemRow({
     required String label,

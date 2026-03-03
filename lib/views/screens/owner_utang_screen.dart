@@ -876,7 +876,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             },
             icon: const SizedBox.shrink(),
             label: const Text(
-              "Add Payable",
+              "Dugang Bayronon",
               style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 16,
@@ -1110,7 +1110,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
               children: [
                 Expanded(
                   child: _miniStat(
-                    label: item.isInstallment ? "Monthly" : "Paid so far",
+                    label: item.isInstallment ? "Binulan" : "Nabayran",
                     value: item.isInstallment
                         ? "₱${currencyFormat.format(monthly)}"
                         : "₱${currencyFormat.format(paidSoFar)}",
@@ -1122,7 +1122,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 const SizedBox(width: 10),
                 Expanded(
                   child: _miniStat(
-                    label: "Remaining",
+                    label: "Balayran",
                     value: "₱${currencyFormat.format(remaining)}",
                     valueColor: isFullyPaid
                         ? Colors.green.shade700

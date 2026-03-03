@@ -65,24 +65,28 @@ class IncomeStatementViewModel
 
   /// Load income statement for a given date range
   Future<void> load({
-    required DateTime startDate,
-    required DateTime endDate,
-  }) async {
-    this.startDate = startDate;
-    this.endDate = endDate;
+  required DateTime startDate,
+  required DateTime endDate,
+}) async {
+  this.startDate = startDate;
+  this.endDate = endDate;
 
-    state = const AsyncValue.loading();
+  if (!mounted) return;
+  state = const AsyncValue.loading();
 
-    try {
-      final data = await repository.fetchIncomeStatement(
-        startDate: startDate,
-        endDate: endDate,
-      );
-      state = AsyncValue.data(data);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  try {
+    final data = await repository.fetchIncomeStatement(
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    if (!mounted) return;
+    state = AsyncValue.data(data);
+  } catch (e, st) {
+    if (!mounted) return;
+    state = AsyncValue.error(e, st);
   }
+}
 
   /// Export the current income statement to PDF
   Future<void> exportPdf() async {

@@ -250,7 +250,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             if (isSmallHeight) {
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
-                child: Column(children: [mainContent, bottomLinks]),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        Expanded(child: Center(child: mainContent)),
+                        bottomLinks,
+                      ],
+                    ),
+                  ),
+                ),
               );
             }
 

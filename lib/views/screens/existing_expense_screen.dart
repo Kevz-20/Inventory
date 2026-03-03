@@ -42,7 +42,6 @@ class EditExpenseViewModel extends ChangeNotifier {
     "Kumpra",
     "Tubig / Kuryente",
     "Transportasyon",
-    "Mga Bayronon",
     "Uban pa",
   ];
 
