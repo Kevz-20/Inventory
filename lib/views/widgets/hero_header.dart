@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
+import '../../providers/unread_notif_count_provider.dart';
 
-class HeroHeader extends StatelessWidget {
+class HeroHeader extends ConsumerWidget {
   final String title;
   final String balance;
   final String mobileNumber;
@@ -28,111 +30,146 @@ class HeroHeader extends StatelessWidget {
   });
 
   @override
-Widget build(BuildContext context) {
-  const double sideSlot = 40;
-  const double logoSize = 40;
+  Widget build(BuildContext context, WidgetRef ref) {
+    const double sideSlot = 40;
+    const double logoSize = 40;
 
-  final topInset = MediaQuery.of(context).padding.top;
+    final topInset = MediaQuery.of(context).padding.top;
 
-  return Container(
-    width: double.infinity,
-
-    // ✅ responsive top padding (instead of fixed 52)
-    padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 18),
-
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [AppColors.headerTop, AppColors.headerBottom],
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 18),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.headerTop, AppColors.headerBottom],
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
       ),
-      borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 40,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: sideSlot,
-                    child: showBack
-                        ? InkWell(
-                            onTap: onBackTap,
-                            borderRadius: BorderRadius.circular(14),
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white,
-                                size: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Row(
+                  children: [
+                    SizedBox(
+                      width: sideSlot,
+                      child: showBack
+                          ? InkWell(
+                              onTap: onBackTap,
+                              borderRadius: BorderRadius.circular(14),
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    Expanded(
+                      child: Align(
+                        alignment:
+                            centerTitle ? Alignment.center : Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: centerTitle
+                              ? Alignment.center
+                              : Alignment.centerLeft,
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
                             ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-
-                  Expanded(
-                    child: Align(
-                      alignment:
-                          centerTitle ? Alignment.center : Alignment.centerLeft,
-
-                      // ✅ prevents title overflow when textScale is big
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: centerTitle
-                            ? Alignment.center
-                            : Alignment.centerLeft,
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  SizedBox(
-                    width: sideSlot,
-                    child: InkWell(
-                      onTap: onBellTap,
-                      borderRadius: BorderRadius.circular(14),
-                      child: const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: Icon(
-                          Icons.notifications_none_rounded,
-                          color: Colors.white,
-                          size: 26,
+                    // ✅ BELL WITH BADGE
+                    SizedBox(
+                      width: sideSlot,
+                      child: InkWell(
+                        onTap: onBellTap,
+                        borderRadius: BorderRadius.circular(14),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Icon(
+                                Icons.notifications_none_rounded,
+                                color: Colors.white,
+                                size: 26,
+                              ),
+                              ref.watch(unreadNotifCountProvider).when(
+                                loading: () => const SizedBox.shrink(),
+                                error: (_, __) => const SizedBox.shrink(),
+                                data: (count) {
+                                  if (count <= 0) return const SizedBox.shrink();
+                                  return Positioned(
+                                    right: -6,
+                                    top: -6,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        count > 99 ? '99+' : '$count',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-
-              if (showLogo)
-                Positioned(
-                  left: 8,
-                  child: Image.asset(
-                    'lib/assets/logo.png',
-                    height: logoSize,
-                    width: logoSize,
-                    fit: BoxFit.contain,
-                  ),
+                  ],
                 ),
-            ],
+
+                if (showLogo)
+                  Positioned(
+                    left: 8,
+                    child: Image.asset(
+                      'lib/assets/logo.png',
+                      height: logoSize,
+                      width: logoSize,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 14),
+          const SizedBox(height: 14),
 
+          // ✅ your 3D card stays unchanged below...
+          // (keep the rest of your HeroHeader code as-is)
         // ✅ your improved 3D card stays the same
         Container(
           width: double.infinity,

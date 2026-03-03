@@ -2,10 +2,57 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../models/notification_item.dart';
-import '../../providers/notification_provider.dart';
+import '../../providers/db_service_provider.dart';
+import '../../providers/notification_provider';
+import '../../providers/unread_notif_count_provider.dart';
+import '../widgets/notification_3d_card.dart';
 
-class NotificationScreen extends ConsumerWidget {
+
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
+
+  @override
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+  bool _didMarkSeen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _markSeenIfPossible());
+  }
+
+  Future<void> _markSeenIfPossible() async {
+    if (_didMarkSeen) return;
+
+    final asyncItems = ref.read(notificationsStreamProvider);
+    final items = asyncItems.maybeWhen(
+      data: (data) => data,
+      orElse: () => const <AppNotificationItem>[],
+    );
+
+    if (items.isEmpty) return;
+
+    _didMarkSeen = true;
+
+    final db = await ref.read(databaseProvider.future);
+    final batch = db.batch();
+    final now = DateTime.now().toIso8601String();
+
+    for (final n in items) {
+      batch.execute('''
+        INSERT INTO notif_state (notif_id, seen, seen_at)
+        VALUES (?, 1, ?)
+        ON CONFLICT(notif_id) DO UPDATE SET seen=1, seen_at=?
+      ''', [n.id, now, now]);
+    }
+
+    await batch.commit(noResult: true);
+
+    ref.invalidate(unreadNotifCountProvider);
+  }
 
   IconData _iconFor(AppNotifType type) {
     switch (type) {
@@ -29,7 +76,6 @@ class NotificationScreen extends ConsumerWidget {
     }
   }
 
-  // ✅ For nicer badge tone per type (still within theme)
   double _badgeOpacity(AppNotifType type) {
     switch (type) {
       case AppNotifType.customerUtangDueToday:
@@ -42,13 +88,14 @@ class NotificationScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(notificationsProvider);
+  Widget build(BuildContext context) {
+    final async = ref.watch(notificationsStreamProvider);
+
+    // ✅ once it becomes data, mark seen
+    async.whenData((_) => Future.microtask(_markSeenIfPossible));
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-
-      // ✅ Green themed header like your HeroHeader
       appBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: true,
@@ -67,16 +114,12 @@ class NotificationScreen extends ConsumerWidget {
           ),
         ),
       ),
-
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              'Error: $e',
-              textAlign: TextAlign.center,
-            ),
+            child: Text('Error: $e', textAlign: TextAlign.center),
           ),
         ),
         data: (items) {
@@ -127,10 +170,11 @@ class NotificationScreen extends ConsumerWidget {
           }
 
           return RefreshIndicator(
-            // ✅ better refresh behavior
             onRefresh: () async {
-              ref.invalidate(notificationsProvider);
-              await ref.read(notificationsProvider.future);
+              ref.invalidate(notificationsStreamProvider);
+              await ref.read(notificationsStreamProvider.future);
+              _didMarkSeen = false; // allow re-mark after refresh
+              await _markSeenIfPossible();
             },
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
@@ -139,7 +183,7 @@ class NotificationScreen extends ConsumerWidget {
               itemBuilder: (context, i) {
                 final n = items[i];
 
-                return _Notification3DCard(
+                return Notification3DCard(
                   icon: _iconFor(n.type),
                   badgeText: _badgeText(n.type),
                   badgeOpacity: _badgeOpacity(n.type),
@@ -148,9 +192,7 @@ class NotificationScreen extends ConsumerWidget {
                   dueText: n.dueDate == null
                       ? null
                       : 'Due: ${n.dueDate!.toLocal().toString().split(" ").first}',
-                  onTap: () {
-                    // Later: open owner utang / customer utang / product detail
-                  },
+                  onTap: () {},
                 );
               },
             ),
@@ -161,179 +203,4 @@ class NotificationScreen extends ConsumerWidget {
   }
 }
 
-// ===================== 3D NOTIFICATION CARD =====================
-
-class _Notification3DCard extends StatelessWidget {
-  final IconData icon;
-  final String badgeText;
-  final double badgeOpacity;
-  final String title;
-  final String message;
-  final String? dueText;
-  final VoidCallback onTap;
-
-  const _Notification3DCard({
-    required this.icon,
-    required this.badgeText,
-    required this.badgeOpacity,
-    required this.title,
-    required this.message,
-    required this.onTap,
-    this.dueText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(20);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: radius,
-
-            // ✅ Professional glass + 3D feel
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.95),
-                Colors.white.withOpacity(0.88),
-              ],
-            ),
-
-            // ✅ Stronger shadow (3D)
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.14),
-                blurRadius: 22,
-                offset: const Offset(0, 14),
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 6),
-              ),
-            ],
-
-            // ✅ crisp border for “premium card”
-            border: Border.all(
-              color: Colors.black.withOpacity(0.06),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ✅ Icon bubble
-              Container(
-                height: 48,
-                width: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary.withOpacity(0.18),
-                      AppColors.primary.withOpacity(0.08),
-                    ],
-                  ),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.18),
-                  ),
-                ),
-                child: Icon(icon, color: AppColors.primary, size: 26),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title + badge
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15.8,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(badgeOpacity),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: AppColors.primary.withOpacity(0.18),
-                            ),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 11.2,
-                              color: AppColors.primary,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Text(
-                      message,
-                      style: TextStyle(
-                        color: Colors.black.withOpacity(0.72),
-                        fontWeight: FontWeight.w700,
-                        height: 1.25,
-                      ),
-                    ),
-
-                    if (dueText != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: 16,
-                            color: Colors.black.withOpacity(0.45),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              dueText!,
-                              style: TextStyle(
-                                color: Colors.black.withOpacity(0.52),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12.6,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// keep your _Notification3DCard unchanged below

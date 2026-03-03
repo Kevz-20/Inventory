@@ -1,0 +1,37 @@
+import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/notification_item.dart';
+import '../repositories/notification_repository.dart';
+import 'db_service_provider.dart';
+
+final notificationsStreamProvider =
+    StreamProvider.autoDispose<List<AppNotificationItem>>((ref) async* {
+  final db = await ref.watch(databaseProvider.future);
+  final repo = NotificationRepository(db);
+
+  // We’ll push updates through this controller
+  final controller = StreamController<List<AppNotificationItem>>();
+
+  Future<void> emit() async {
+    try {
+      final items = await repo.buildNotifications();
+      if (!controller.isClosed) controller.add(items);
+    } catch (e, st) {
+      if (!controller.isClosed) controller.addError(e, st);
+    }
+  }
+
+  // emit immediately
+  await emit();
+
+  // poll every 3 seconds
+  final timer = Timer.periodic(const Duration(seconds: 3), (_) => emit());
+
+  // cleanup
+  ref.onDispose(() {
+    timer.cancel();
+    controller.close();
+  });
+
+  yield* controller.stream;
+});
