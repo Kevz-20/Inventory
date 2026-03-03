@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
@@ -179,7 +181,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
               itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, i) {
                 final n = items[i];
 

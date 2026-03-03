@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -343,7 +345,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   // Search
                   ValueListenableBuilder<String>(
                     valueListenable: search,
-                    builder: (_, value, __) => TextField(
+                    builder: (_, value, _) => TextField(
                       onChanged: (v) => search.value = v,
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
@@ -378,7 +380,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   Expanded(
                     child: ValueListenableBuilder<String>(
                       valueListenable: search,
-                      builder: (_, value, __) {
+                      builder: (_, value, _) {
                         final q = value.trim().toLowerCase();
                         final filtered = q.isEmpty
                             ? categories
@@ -430,7 +432,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
                         return ListView.separated(
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemBuilder: (_, i) {
                             final item = filtered[i];
                             final isSelected = item == selected;
@@ -551,7 +553,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
                   ValueListenableBuilder<String>(
                     valueListenable: value,
-                    builder: (_, text, __) {
+                    builder: (_, text, _) {
                       return TextFormField(
                         controller: controller,
                         autofocus: true,
@@ -618,7 +620,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       Expanded(
                         child: ValueListenableBuilder<String>(
                           valueListenable: value,
-                          builder: (_, text, __) {
+                          builder: (_, text, _) {
                             final canAdd = text.trim().isNotEmpty;
                             return ElevatedButton(
                               onPressed: canAdd
@@ -820,7 +822,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 itemCount: options.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     Divider(height: 1, color: Colors.grey.shade200),
                 itemBuilder: (context, index) {
                   final option = options.elementAt(index);

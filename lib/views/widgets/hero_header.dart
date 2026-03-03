@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
@@ -113,7 +115,7 @@ class HeroHeader extends ConsumerWidget {
                               ),
                               ref.watch(unreadNotifCountProvider).when(
                                 loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
+                                error: (_, _) => const SizedBox.shrink(),
                                 data: (count) {
                                   if (count <= 0) return const SizedBox.shrink();
                                   return Positioned(

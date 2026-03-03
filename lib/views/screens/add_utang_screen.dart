@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -83,7 +85,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     setState(() {
       remainingBalance = total - down;
-      monthlyPayment = months > 0 ? remainingBalance / months : remainingBalance;
+      monthlyPayment = months > 0
+          ? remainingBalance / months
+          : remainingBalance;
     });
   }
 
@@ -95,8 +99,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
     final total = parseAmount(totalCostController.text);
     final down = parseAmount(downpaymentController.text);
 
-    final nextError =
-        (total > 0 && down > total) ? "Downpayment exceeds Total Cost" : null;
+    final nextError = (total > 0 && down > total)
+        ? "Downpayment exceeds Total Cost"
+        : null;
 
     if (downpaymentErrorText == nextError) return;
     setState(() => downpaymentErrorText = nextError);
@@ -177,11 +182,15 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     try {
       final total =
-          double.tryParse(totalCostController.text.replaceAll(',', '').trim()) ??
-              0;
+          double.tryParse(
+            totalCostController.text.replaceAll(',', '').trim(),
+          ) ??
+          0;
       final down =
-          double.tryParse(downpaymentController.text.replaceAll(',', '').trim()) ??
-              0;
+          double.tryParse(
+            downpaymentController.text.replaceAll(',', '').trim(),
+          ) ??
+          0;
 
       if (total <= 0) {
         if (!mounted) return;
@@ -234,7 +243,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'item': itemController.text,
           'original_amount': total,
           'remaining_amount': remaining,
-          'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate), // end of plan
+          'due_date': DateFormat(
+            'yyyy-MM-dd',
+          ).format(finalDueDate), // end of plan
           'note': notes,
           'is_paid': 0,
           'has_plan': 1,
@@ -556,22 +567,24 @@ class _AddUtangPageState extends State<AddUtangPage> {
         errorText: errorText,
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
-                ? const Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Text(
-                      "₱",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                  ? const Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Text(
+                        "₱",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
                       ),
-                    ),
-                  )
-                : Icon(icon, color: Colors.grey))
+                    )
+                  : Icon(icon, color: Colors.grey))
             : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -592,7 +605,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),

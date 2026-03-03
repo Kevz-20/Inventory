@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -425,7 +427,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 // Search field
                 ValueListenableBuilder<String>(
                   valueListenable: search,
-                  builder: (_, value, __) => TextField(
+                  builder: (_, value, _) => TextField(
                     onChanged: (v) => search.value = v,
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
@@ -467,7 +469,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 Expanded(
                   child: ValueListenableBuilder<String>(
                     valueListenable: search,
-                    builder: (_, value, __) {
+                    builder: (_, value, _) {
                       final q =
                           value.trim().toLowerCase();
                       final filtered = q.isEmpty
@@ -525,7 +527,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
                       return ListView.separated(
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             const SizedBox(height: 8),
                         itemBuilder: (_, i) {
                           final item =
@@ -664,7 +666,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   const SizedBox(height: 12),
                   ValueListenableBuilder<String>(
                     valueListenable: value,
-                    builder: (_, text, __) {
+                    builder: (_, text, _) {
                       return TextFormField(
                         controller: controller,
                         autofocus: true,
@@ -730,7 +732,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       Expanded(
                         child: ValueListenableBuilder<String>(
                           valueListenable: value,
-                          builder: (_, text, __) {
+                          builder: (_, text, _) {
                             final canAdd = text.trim().isNotEmpty;
                             return ElevatedButton(
                               onPressed: canAdd
