@@ -256,7 +256,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
             return Column(
               children: [
-                Expanded(child: Center(child: mainContent)),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: Center(child: mainContent),
+                  ),
+                ),
                 bottomLinks,
               ],
             );
