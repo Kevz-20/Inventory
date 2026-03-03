@@ -55,7 +55,8 @@ class OwnerPayablePayment {
     return OwnerPayablePayment(
       id: map['id'] as int,
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      paidAt: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+      paidAt:
+          DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
       note: map['note']?.toString(),
     );
   }
@@ -79,7 +80,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
   bool _loadedOnce = false;
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   bool _isPastDueDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return false;
@@ -129,7 +131,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     });
   }
 
-  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(int payableId) async {
+  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(
+    int payableId,
+  ) async {
     final db = await DBService.instance.database;
     final result = await db.query(
       'payable_payment',
@@ -221,7 +225,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     double? value = initialAmount;
     bool didConfirm = false;
 
-    double parseAmount(String v) => double.tryParse(v.replaceAll(',', '')) ?? 0.0;
+    double parseAmount(String v) =>
+        double.tryParse(v.replaceAll(',', '')) ?? 0.0;
     String money(double v) => "₱${currencyFormat.format(v)}";
 
     await showDialog(
@@ -232,7 +237,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
           builder: (dialogContext, setState) {
             final current = value ?? 0.0;
             final hasSuggested = (suggested != null && suggested > 0);
-            final isValid = current > 0 && current <= remaining && remaining > 0;
+            final isValid =
+                current > 0 && current <= remaining && remaining > 0;
             final overLimit = current > remaining && remaining > 0;
 
             return AlertDialog(
@@ -266,60 +272,53 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                           child: Text(
                             "Monthly: ${money(suggested)}",
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
                               color: Colors.orange.shade900,
                             ),
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            final fill = (suggested > remaining) ? remaining : suggested;
-                            controller.text = currencyFormat.format(fill).replaceAll('.00', '');
-                            value = fill;
-                            setState(() {});
-                          },
-                          child: const Text("Use"),
-                        ),
                       ],
                     ),
                   ],
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [ThousandsFormatter()],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                  if (suggested == null ||
+                      suggested == 0) // only for one-time payments
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [ThousandsFormatter()],
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      decoration: InputDecoration(
+                        prefixText: "₱ ",
+                        hintText: "Enter amount",
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey.shade500),
+                        ),
+                      ),
+                      onChanged: (v) => setState(() {
+                        value = parseAmount(v);
+                      }),
                     ),
-                    decoration: InputDecoration(
-                      prefixText: "₱ ",
-                      hintText: "Enter amount",
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade500),
-                      ),
-                    ),
-                    onChanged: (v) => setState(() {
-                      value = parseAmount(v);
-                    }),
-                  ),
                   if (overLimit)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
@@ -392,7 +391,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       final cashRes = await db.rawQuery(
         'SELECT IFNULL(SUM(cash_on_hand), 0) AS total_cash FROM capital_management',
       );
-      final cashOnHand = (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
+      final cashOnHand =
+          (cashRes.first['total_cash'] as num?)?.toDouble() ?? 0.0;
 
       if (cashOnHand < payAmount) {
         if (!mounted) return;
@@ -430,7 +430,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       // ✅ keep logic: after payment, move next_due_date by +1 month (simple schedule)
       if (item.isInstallment && newRemaining > 0) {
         final baseDate =
-            DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ?? DateTime.now();
+            DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ??
+            DateTime.now();
         final nextDue = addMonths(baseDate, 1);
         updateMap['next_due_date'] = DateFormat('yyyy-MM-dd').format(nextDue);
       }
@@ -458,7 +459,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       if (!mounted) return;
 
       final isInsufficientCash = e.toString().contains('Insufficient cash');
-      final msg = isInsufficientCash ? 'Insufficient cash on hand' : 'Failed to process payment';
+      final msg = isInsufficientCash
+          ? 'Insufficient cash on hand'
+          : 'Failed to process payment';
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -494,7 +497,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         final bool isFullyPaid = item.isPaid || remaining <= 0;
 
         // ✅ show CURRENT Next Due only (no +1 month preview)
-        final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
+        final nextDateStr = item.isInstallment
+            ? item.nextDueDate
+            : item.dueDate;
         final displayNextDue = (nextDateStr != null && nextDateStr.isNotEmpty)
             ? DateTime.tryParse(nextDateStr)
             : null;
@@ -541,7 +546,10 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: item.isInstallment
                                   ? Colors.orange.shade100
@@ -549,7 +557,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              item.isInstallment ? "Installment" : "Non-installment",
+                              item.isInstallment
+                                  ? "Installment"
+                                  : "Non-installment",
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
@@ -637,7 +647,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                       ),
                                     ),
                                   ),
-                                if (item.isInstallment && (item.planMonthly ?? 0) > 0)
+                                if (item.isInstallment &&
+                                    (item.planMonthly ?? 0) > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
                                     child: Text(
@@ -677,8 +688,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             ),
 
                           ...paymentHistory.map((payment) {
-                            final paidLabel = DateFormat('MMM dd, yyyy • hh:mm a')
-                                .format(payment.paidAt);
+                            final paidLabel = DateFormat(
+                              'MMM dd, yyyy • hh:mm a',
+                            ).format(payment.paidAt);
 
                             final note = (payment.note?.isNotEmpty == true)
                                 ? payment.note!
@@ -728,7 +740,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                           left: 16,
                           right: 16,
                           top: 12,
-                          bottom: 12 + MediaQuery.of(context).viewPadding.bottom,
+                          bottom:
+                              12 + MediaQuery.of(context).viewPadding.bottom,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -759,7 +772,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -783,11 +798,13 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(context, false),
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
                                           child: const Text("Cancel"),
                                         ),
                                         ElevatedButton(
-                                          onPressed: () => Navigator.pop(context, true),
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
                                           child: const Text("Confirm"),
                                         ),
                                       ],
@@ -805,7 +822,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -843,7 +862,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         ),
         Text(
           value,
-          style: valueStyle ??
+          style:
+              valueStyle ??
               const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ],
@@ -858,10 +878,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surface,
-      appBar: const AppHeader(
-        title: 'Owner Utang',
-        showBackButton: true,
-      ),
+      appBar: const AppHeader(title: 'Owner Utang', showBackButton: true),
 
       // ✅ Full-width Add button (same functionality)
       floatingActionButton: Padding(
@@ -1041,7 +1058,6 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-
   // ✅ Card: show (Monthly or Paid so far) + Remaining + Next Due
   Widget _buildOwnerPayableCard(Payable item) {
     final total = item.amount.toDouble();
@@ -1059,13 +1075,18 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     if (nextDateStr != null) due = DateTime.tryParse(nextDateStr);
 
     if (!isFullyPaid && due != null) {
-      final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
-      if (daysLeft < 0) status = "Overdue";
-      else if (daysLeft <= 7) status = "Due Soon";
+      final daysLeft = _dateOnly(
+        due,
+      ).difference(_dateOnly(DateTime.now())).inDays;
+      if (daysLeft < 0)
+        status = "Overdue";
+      else if (daysLeft <= 7)
+        status = "Due Soon";
     }
 
-    final dueText =
-        (due != null) ? DateFormat('MMM dd, yyyy').format(due) : "No due date";
+    final dueText = (due != null)
+        ? DateFormat('MMM dd, yyyy').format(due)
+        : "No due date";
 
     final double monthly = item.isInstallment ? (item.planMonthly ?? 0.0) : 0.0;
 
@@ -1116,7 +1137,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                         : "₱${currencyFormat.format(paidSoFar)}",
                     valueColor: item.isInstallment
                         ? Colors.orange.shade900
-                        : (paidSoFar <= 0 ? Colors.black87 : Colors.green.shade700),
+                        : (paidSoFar <= 0
+                              ? Colors.black87
+                              : Colors.green.shade700),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1134,8 +1157,11 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             const SizedBox(height: 10),
             Row(
               children: [
-                Icon(Icons.calendar_month_rounded,
-                    size: 18, color: Colors.black.withOpacity(0.55)),
+                Icon(
+                  Icons.calendar_month_rounded,
+                  size: 18,
+                  color: Colors.black.withOpacity(0.55),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1147,8 +1173,10 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right,
-                    color: Colors.black.withOpacity(0.35)),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.black.withOpacity(0.35),
+                ),
               ],
             ),
           ],
@@ -1207,11 +1235,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       ),
       child: Text(
         status,
-        style: TextStyle(
-          color: fg,
-          fontWeight: FontWeight.w900,
-          fontSize: 12,
-        ),
+        style: TextStyle(color: fg, fontWeight: FontWeight.w900, fontSize: 12),
       ),
     );
   }
