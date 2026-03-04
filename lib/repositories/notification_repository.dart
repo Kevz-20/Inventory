@@ -16,18 +16,21 @@ class NotificationRepository {
     // -------------------------
     // 1) OWNER PAYABLE due within 3 days
     // Table: payable
-    // Use next_due_date if exists else due_date
-    // unpaid: is_paid = 0
     // -------------------------
     final ownerPayables = await db.rawQuery('''
       SELECT
-        id,
-        supplier_name,
-        item,
-        remaining_amount,
-        COALESCE(next_due_date, due_date) AS due
-      FROM payable
-      WHERE is_paid = 0
+        p.id,
+        p.supplier_name,
+        p.item,
+        p.remaining_amount,
+        p.plan_monthly,
+        p.plan_months, -- Total months in plan
+        COALESCE(p.plan_monthly, p.remaining_amount) AS current_due_amount, 
+        COALESCE(p.next_due_date, p.due_date) AS due,
+        -- Count existing payments for this payable to determine current installment number
+        (SELECT COUNT(*) FROM payable_payment WHERE payable_id = p.id) AS payments_made
+      FROM payable p
+      WHERE p.is_paid = 0
         AND due IS NOT NULL
         AND due >= ?
         AND due <= ?
@@ -41,7 +44,18 @@ class NotificationRepository {
       final id = row['id'].toString();
       final supplier = (row['supplier_name'] ?? 'Supplier').toString();
       final itemName = (row['item'] ?? 'Item').toString();
-      final remaining = (row['remaining_amount'] as num?)?.toDouble() ?? 0.0;
+      final amountDue = (row['current_due_amount'] as num?)?.toDouble() ?? 0.0;
+      
+      // Installment Logic
+      final totalMonths = row['plan_months'] as int?;
+      final paymentsMade = row['payments_made'] as int? ?? 0;
+      String installmentLabel = "";
+
+      if (totalMonths != null && totalMonths > 0) {
+        // Current installment is payments made + 1
+        int currentInstallment = paymentsMade + 1;
+        installmentLabel = " ($currentInstallment/$totalMonths)";
+      }
 
       final dueStr = row['due']?.toString();
       if (dueStr == null) continue;
@@ -49,15 +63,15 @@ class NotificationRepository {
       if (due == null) continue;
 
       final daysLeft = due.difference(todayStart).inDays;
+      final dateStatus = daysLeft == 0 ? 'Due today' : 'Due in $daysLeft day(s)';
 
       items.add(
         AppNotificationItem(
           id: 'owner_$id',
           type: AppNotifType.ownerPayableSoon,
           title: 'Owner payable due soon',
-          message: daysLeft == 0
-              ? 'Due today • $supplier • $itemName • ₱${remaining.toStringAsFixed(2)}'
-              : 'Due in $daysLeft day(s) • $supplier • $itemName • ₱${remaining.toStringAsFixed(2)}',
+          // The message now includes the (1/3) label if applicable
+          message: '$dateStatus • $supplier • $itemName$installmentLabel • ₱${amountDue.toStringAsFixed(2)}',
           createdAt: now,
           dueDate: due,
           refId: id,
@@ -67,9 +81,6 @@ class NotificationRepository {
 
     // -------------------------
     // 2) CUSTOMER UTANG due today
-    // Table: sales_credit (utang/credit sales)
-    // status: unpaid/partial (not paid)
-    // Join credit_status + customer for readable info
     // -------------------------
     final customerDueToday = await db.rawQuery('''
       SELECT
@@ -117,7 +128,6 @@ class NotificationRepository {
 
     // -------------------------
     // 3) LOW STOCK (<= 10)
-    // Table: product (quantity)
     // -------------------------
     final lowStock = await db.query(
       'product',

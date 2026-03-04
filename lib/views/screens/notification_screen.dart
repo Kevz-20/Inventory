@@ -8,7 +8,7 @@ import '../../providers/db_service_provider.dart';
 import '../../providers/notification_provider';
 import '../../providers/unread_notif_count_provider.dart';
 import '../widgets/notification_3d_card.dart';
-
+import 'package:go_router/go_router.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -185,6 +185,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               itemBuilder: (context, i) {
                 final n = items[i];
 
+                // Inside notification_screen.dart -> ListView.separated -> itemBuilder
                 return Notification3DCard(
                   icon: _iconFor(n.type),
                   badgeText: _badgeText(n.type),
@@ -194,7 +195,16 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   dueText: n.dueDate == null
                       ? null
                       : 'Due: ${n.dueDate!.toLocal().toString().split(" ").first}',
-                  onTap: () {},
+                  onTap: () {
+                    // Navigate specifically for Owner Payables
+                    if (n.type == AppNotifType.ownerPayableSoon) {
+                      context.push('/owner_utang');
+                    } 
+                    // You can add other navigation logic here for different types
+                    else if (n.type == AppNotifType.customerUtangDueToday) {
+                      context.push('/customer_utang');
+                    }
+                  },
                 );
               },
             ),
