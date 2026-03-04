@@ -76,17 +76,17 @@ class CashflowRepository {
         FROM sales_cash
       ''');
 
-      // Credit Payments (sales_credit_payment has NO created_by columns in your DBService)
+      // Credit Payments (customer_payment has NO created_by columns in your DBService)
       final creditPayments = await db.rawQuery('''
         SELECT 
           paid_at AS date,
-          'Credit Payment' AS item,
+          'Customer Utang Payment' AS item,
           amount AS cash_in,
           0 AS cash_out,
           NULL AS created_by_first_name,
           NULL AS created_by_middle_name,
           NULL AS created_by_last_name
-        FROM sales_credit_payment
+        FROM customer_payment
       ''');
 
       // Capital Deposits (capital_transaction has NO created_by columns in your DBService)
