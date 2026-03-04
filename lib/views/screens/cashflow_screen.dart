@@ -1,4 +1,3 @@
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -63,19 +62,16 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : records.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No cashflow records yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: records.length,
-                        itemBuilder: (_, i) => _buildRow(records[i]),
-                      ),
+                ? const Center(
+                    child: Text(
+                      'No cashflow records yet',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: records.length,
+                    itemBuilder: (_, i) => _buildRow(records[i]),
+                  ),
           ),
         ],
       ),
@@ -266,7 +262,11 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       _divider(),
 
                       // ✅ NEW: Recorded By
-                      _detailRow('Recorded By', recordedByValue, multiline: true),
+                      _detailRow(
+                        'Recorded By',
+                        recordedByValue,
+                        multiline: true,
+                      ),
                       _divider(),
 
                       _detailRow('Item', record.item, multiline: true),
@@ -276,8 +276,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                         record.cashIn == 0
                             ? '—'
                             : _formatCurrency(record.cashIn),
-                        valueColor:
-                            isInstallment ? Colors.blue : Colors.green,
+                        valueColor: isInstallment ? Colors.blue : Colors.green,
                         boldValue: true,
                       ),
                       _divider(),
@@ -413,8 +412,9 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Row(
-        crossAxisAlignment:
-            multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: multiline
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           SizedBox(
             width: 90,
@@ -453,14 +453,39 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      color: AppColors.primary,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.withAlpha(90)),
+      ),
       child: Row(
         children: const [
-          _HeaderCell('Item', flex: 5, align: TextAlign.left),
-          _HeaderCell('In', flex: 2, align: TextAlign.right),
-          _HeaderCell('Out', flex: 2, align: TextAlign.right),
-          _HeaderCell('Balance', flex: 3, align: TextAlign.right),
+          _HeaderCell(
+            'Item',
+            flex: 4,
+            align: TextAlign.center,
+            color: Colors.white,
+            showRightBorder: true,
+          ),
+          _HeaderCell(
+            'In',
+            flex: 3,
+            align: TextAlign.center,
+            color: Colors.green,
+            showRightBorder: true,
+          ),
+          _HeaderCell(
+            'Out',
+            flex: 3,
+            align: TextAlign.center,
+            color: Colors.red,
+            showRightBorder: true,
+          ),
+          _HeaderCell(
+            'Balance',
+            flex: 3,
+            align: TextAlign.center,
+            color: Colors.white,
+          ),
         ],
       ),
     );
@@ -469,42 +494,54 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   Widget _buildRow(CashflowRecord r) {
     final isInstallment = r.item.toLowerCase().contains('downpayment');
 
-    return GestureDetector(
-      onTap: () => _showCashflowDetails(r),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha(50),
-              blurRadius: 3,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          left: BorderSide(color: Colors.grey.withAlpha(90)),
+          right: BorderSide(color: Colors.grey.withAlpha(90)),
+          bottom: BorderSide(color: Colors.grey.withAlpha(90)),
         ),
+      ),
+      child: InkWell(
+        splashColor: AppColors.primary.withAlpha(18),
+        highlightColor: AppColors.primary.withAlpha(8),
+        onTap: () => _showCashflowDetails(r),
         child: Row(
           children: [
-            _buildCell(r.item, flex: 5, align: TextAlign.left),
-            _buildCell(
-              r.cashIn == 0 ? '-' : _formatCurrency(r.cashIn),
-              flex: 2,
-              color: isInstallment ? Colors.blue : Colors.green,
-              align: TextAlign.right,
+            _buildTableRowCell(
+              flex: 4,
+              showRightBorder: true,
+              child: _buildItemCell(r.item),
             ),
-            _buildCell(
-              r.cashOut == 0 ? '-' : _formatCurrency(r.cashOut),
-              flex: 2,
-              color: Colors.red,
-              align: TextAlign.right,
-            ),
-            _buildCell(
-              _formatCurrency(r.balance),
+            _buildTableRowCell(
               flex: 3,
-              bold: true,
-              align: TextAlign.right,
+              showRightBorder: true,
+              child: _buildAmountCell(
+                r.cashIn == 0 ? '-' : _formatCurrency(r.cashIn),
+                color: isInstallment ? Colors.blue : Colors.green,
+                bold: true,
+                forceAnimateWhenEligible: true,
+              ),
+            ),
+            _buildTableRowCell(
+              flex: 3,
+              showRightBorder: true,
+              child: _buildAmountCell(
+                r.cashOut == 0 ? '-' : _formatCurrency(r.cashOut),
+                color: Colors.red,
+                bold: true,
+                forceAnimateWhenEligible: true,
+              ),
+            ),
+            _buildTableRowCell(
+              flex: 3,
+              child: _buildAmountCell(
+                _formatCurrency(r.balance),
+                bold: true,
+                forceAnimateWhenEligible: true,
+              ),
             ),
           ],
         ),
@@ -512,25 +549,184 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     );
   }
 
-  Widget _buildCell(
-    String text, {
-    int flex = 1,
-    Color? color,
-    bool bold = false,
-    TextAlign align = TextAlign.center,
+  Widget _buildTableRowCell({
+    required int flex,
+    required Widget child,
+    bool showRightBorder = false,
   }) {
     return Expanded(
       flex: flex,
-      child: AutoSizeText(
-        text,
-        textAlign: align,
-        maxLines: 1,
-        minFontSize: 10,
-        style: TextStyle(
-          color: color ?? Colors.black87,
-          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: showRightBorder
+              ? Border(right: BorderSide(color: Colors.grey.withAlpha(90)))
+              : null,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildItemCell(String text) {
+    final forceAnimate = _hasTenOrMoreLetters(text);
+    return ClipRect(
+      child: _MarqueeText(
+        text: text,
+        textAlign: TextAlign.center,
+        forceAnimate: forceAnimate,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+
+  Widget _buildAmountCell(
+    String text, {
+    Color? color,
+    bool bold = false,
+    bool forceAnimateWhenEligible = false,
+  }) {
+    final shouldAnimate =
+        forceAnimateWhenEligible && _hasSevenOrMoreDigits(text);
+    final isDash = text.trim() == '-';
+    final style = TextStyle(
+      color: color ?? Colors.black87,
+      fontWeight: (bold || isDash) ? FontWeight.w900 : FontWeight.normal,
+      fontSize: 14,
+    );
+
+    return shouldAnimate
+        ? _MarqueeText(
+            text: text,
+            style: style,
+            textAlign: TextAlign.center,
+            forceAnimate: forceAnimateWhenEligible,
+          )
+        : FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: style,
+            ),
+          );
+  }
+
+  bool _hasSevenOrMoreDigits(String value) {
+    return RegExp(r'\d').allMatches(value).length >= 7;
+  }
+
+  bool _hasTenOrMoreLetters(String value) {
+    return RegExp(r'[A-Za-z]').allMatches(value).length >= 10;
+  }
+}
+
+class _MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  final TextAlign textAlign;
+  final bool forceAnimate;
+
+  const _MarqueeText({
+    required this.text,
+    required this.style,
+    required this.textAlign,
+    this.forceAnimate = false,
+  });
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  static const double _gap = 24;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MarqueeText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final tp = TextPainter(
+          text: TextSpan(text: widget.text, style: widget.style),
+          maxLines: 1,
+          textDirection: Directionality.of(context),
+        )..layout();
+
+        final textWidth = tp.width;
+        if (!widget.forceAnimate && textWidth <= maxWidth) {
+          return Text(
+            widget.text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: widget.textAlign,
+            style: widget.style,
+          );
+        }
+
+        final travel = textWidth + _gap;
+        final trackWidth = (textWidth * 2) + _gap;
+
+        return SizedBox(
+          width: maxWidth,
+          height: tp.height + 2,
+          child: ClipRect(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (_, child) {
+                final offset = -travel * _controller.value;
+                return Transform.translate(
+                  offset: Offset(offset, 0),
+                  child: child,
+                );
+              },
+              child: OverflowBox(
+                alignment: Alignment.centerLeft,
+                minWidth: 0,
+                maxWidth: trackWidth,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(widget.text, maxLines: 1, style: widget.style),
+                    const SizedBox(width: _gap),
+                    Text(widget.text, maxLines: 1, style: widget.style),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -539,24 +735,38 @@ class _HeaderCell extends StatelessWidget {
   final String text;
   final int flex;
   final TextAlign align;
+  final Color color;
+  final bool showRightBorder;
 
   const _HeaderCell(
     this.text, {
     required this.flex,
     this.align = TextAlign.center,
+    this.color = Colors.white,
+    this.showRightBorder = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       flex: flex,
-      child: Text(
-        text,
-        textAlign: align,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
+      child: Container(
+        height: 42,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          border: showRightBorder
+              ? Border(right: BorderSide(color: Colors.grey.withAlpha(90)))
+              : null,
+        ),
+        child: Text(
+          text,
+          textAlign: align,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
         ),
       ),
     );
