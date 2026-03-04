@@ -21,59 +21,43 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeIndex = currentIndex.clamp(0, 2);
 
+    final w = MediaQuery.of(context).size.width;
+
+    // ✅ Responsive but controlled (same across pages)
+    // 390 = modern phone baseline
+    final s = (w / 390).clamp(0.95, 1.10);
+
     final unselectedColor = Colors.grey[600]!;
     final selectedColor = noHighlight ? unselectedColor : AppColors.primary;
 
-    // ✅ Make selected look the same as unselected when noHighlight is true
-    final selectedFontSize = noHighlight ? 12.0 : 14.0;
-    final unselectedFontSize = 12.0;
+    // ✅ SAME size always (noHighlight affects color only)
+    final iconSize = (28 * s).clamp(26.0, 32.0);
+    final labelSize = (12.5 * s).clamp(12.0, 14.0);
 
-    final selectedLabelStyle = TextStyle(
-      fontSize: selectedFontSize,
+    final labelStyle = TextStyle(
+      fontSize: labelSize,
       fontWeight: FontWeight.w600,
-      color: selectedColor,
-    );
-
-    final unselectedLabelStyle = TextStyle(
-      fontSize: unselectedFontSize,
-      fontWeight: FontWeight.w600,
-      color: unselectedColor,
-    );
-
-    final selectedIconTheme = IconThemeData(
-      color: selectedColor,
-      size: 28,
-    );
-
-    final unselectedIconTheme = IconThemeData(
-      color: unselectedColor,
-      size: 28,
     );
 
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       currentIndex: safeIndex,
-
-      // ✅ When noHighlight=true, selected color == unselected color
       selectedItemColor: selectedColor,
       unselectedItemColor: unselectedColor,
 
-      // ✅ Same icon theme so nothing pops out
-      selectedIconTheme: selectedIconTheme,
-      unselectedIconTheme: unselectedIconTheme,
+      selectedIconTheme: IconThemeData(color: selectedColor, size: iconSize),
+      unselectedIconTheme: IconThemeData(color: unselectedColor, size: iconSize),
 
-      // ✅ Same label styling (this is what often still looks highlighted)
-      selectedLabelStyle: noHighlight ? unselectedLabelStyle : selectedLabelStyle,
-      unselectedLabelStyle: unselectedLabelStyle,
+      // ✅ SAME style on selected/unselected so sizing is identical
+      selectedLabelStyle: labelStyle,
+      unselectedLabelStyle: labelStyle,
+      selectedFontSize: labelSize,
+      unselectedFontSize: labelSize,
 
-      // ✅ Same font size so selection doesn’t look “bigger”
-      selectedFontSize: selectedFontSize,
-      unselectedFontSize: unselectedFontSize,
-
+      iconSize: iconSize,
       backgroundColor: Colors.white,
 
       onTap: (index) {
-        // Allow navigation always
         onTap?.call(index);
 
         switch (index) {
@@ -88,20 +72,10 @@ class BottomNavBar extends StatelessWidget {
             break;
         }
       },
-
       items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          label: 'History',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
       ],
     );
   }

@@ -54,12 +54,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final balanceText = pesoFormatter.format(homeState.cashOnHand);
     final mobileText = homeState.mobileNumber ?? "Not set";
 
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width >= 700;
+
+    // ✅ a bit wider on tablet so it doesn't look too narrow
+    final maxContentWidth = isTablet ? 760.0 : double.infinity;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
         top: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             HeroHeader(
               title: "Home",
@@ -73,45 +78,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
             ),
-            const SizedBox(height: 14),
 
-            // ✅ CUSTOMER & NEGOSYO AT THE TOP
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            Expanded(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    children: [
-                      _bigActionTile(
-                        label: "CUSTOMER",
-                        subtitle: "Manage customers",
-                        icon: Icons.people_alt_outlined,
-                        onTap: () => context.push('/customer_menu'),
-                      ),
-                      const SizedBox(height: 18),
-                      _bigActionTile(
-                        label: "NEGOSYO",
-                        subtitle: "Store & inventory",
-                        icon: Icons.storefront_outlined,
-                        onTap: () => context.push('/negosyo_menu'),
-                      ),
-                    ],
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final h = c.maxHeight;
+
+                        // ✅ Make the tiles area bigger on tablet so it feels "filled"
+                        // Negosyo feels full because ACTIONS grid takes lots of height.
+                        final tilesBlock = isTablet
+                            ? (h * 0.40).clamp(280.0, 380.0)
+                            : (h * 0.34).clamp(220.0, 320.0);
+
+                        final gap = (h * 0.03).clamp(10.0, 16.0);
+
+                        return Column(
+                          children: [
+                            SizedBox(
+                              height: tilesBlock,
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: _bigActionTile(
+                                      label: "CUSTOMER",
+                                      subtitle: "Manage customers",
+                                      icon: Icons.people_alt_outlined,
+                                      onTap: () => context.push('/customer_menu'),
+                                    ),
+                                  ),
+                                  SizedBox(height: gap),
+                                  Expanded(
+                                    child: _bigActionTile(
+                                      label: "NEGOSYO",
+                                      subtitle: "Store & inventory",
+                                      icon: Icons.storefront_outlined,
+                                      onTap: () => context.push('/negosyo_menu'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: gap),
+
+                            // ✅ Graph fills remaining space
+                            Expanded(
+                              child: _SalesOnlyGraphCard(
+                                salesPoints: homeState.income7Days,
+                                loading: homeState.isGraphLoading,
+                                error: homeState.graphError,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            // ✅ BOTH LINES GRAPH ONLY (clean, no toggle buttons)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _SalesOnlyGraphCard(
-                  salesPoints: homeState.income7Days,
-                  loading: homeState.isGraphLoading,
-                  error: homeState.graphError,
                 ),
               ),
             ),
@@ -123,104 +149,107 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   }
 
   Widget _bigActionTile({
-  required String label,
-  required String subtitle,
-  required IconData icon,
-  required VoidCallback onTap,
-}) {
-  final radius = BorderRadius.circular(22);
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final radius = BorderRadius.circular(22);
 
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      borderRadius: radius,
-      onTap: onTap,
-      child: Container(
-        height: 110,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        decoration: BoxDecoration(
-          color: Colors.white, // ✅ solid white = clear
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final h = c.maxHeight;
 
-          borderRadius: radius,
+            final iconSize = (h * 0.28).clamp(26.0, 34.0);
+            final iconBox = (h * 0.60).clamp(54.0, 74.0);
 
-          // ✅ clear boundary
-          border: Border.all(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
+            final titleSize = (h * 0.18).clamp(18.0, 22.0);
+            final subSize = (h * 0.13).clamp(12.5, 15.0);
 
-          // ✅ clean raised 3D (not soft blur)
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // ✅ Accent vertical strip (very clear identity)
-            Container(
-              width: 6,
-              height: 60,
+            // ✅ Add vertical padding that adapts (so tile doesn't feel "empty")
+            final vPad = (h * 0.12).clamp(12.0, 18.0);
+
+            return Container(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: vPad),
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(999),
+                color: Colors.white,
+                borderRadius: radius,
+                border: Border.all(color: Colors.grey.shade300, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // ✅ Icon container with clear border
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(.10),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(.25),
-                ),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 32),
-            ),
-
-            const SizedBox(width: 16),
-
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                  Container(
+                    width: 6,
+                    height: (h * 0.55).clamp(48.0, 64.0),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                  const SizedBox(width: 16),
+                  Container(
+                    width: iconBox,
+                    height: iconBox,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.primary.withOpacity(.25)),
+                    ),
+                    child: Icon(icon, color: AppColors.primary, size: iconSize),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: subSize,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
-// ========================= GRAPH CARD (CLEAN BOTH) =========================
+// ========================= GRAPH CARD (SALES ONLY) =========================
 
 class _SalesOnlyGraphCard extends StatelessWidget {
   final List<CashflowPoint> salesPoints;
@@ -261,8 +290,6 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
-
-          // ✅ simple legend
           Row(
             children: [
               Container(
@@ -284,8 +311,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 10),
+
           Expanded(
             child: _buildChart(
               context: context,
@@ -342,9 +369,6 @@ class _SalesOnlyGraphCard extends StatelessWidget {
 
     final len = sales.length;
 
-    // ✅ IMPORTANT: Use TOTAL SALES value (not net)
-    // If your model field is NOT "net", change it here:
-    // e.g. pts[i].income or pts[i].salesTotal
     final spots = <FlSpot>[];
     for (int i = 0; i < len; i++) {
       spots.add(FlSpot(i.toDouble(), sales[i].net));
@@ -364,10 +388,39 @@ class _SalesOnlyGraphCard extends StatelessWidget {
         maxX: (len - 1).toDouble(),
         minY: low,
         maxY: high,
-        gridData: const FlGridData(show: false),
+
+        // ✅ Make the chart look "not empty" (like negosyo page feels filled)
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: ((high - low) / 3).clamp(1.0, double.infinity),
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: Colors.black.withOpacity(0.06),
+            strokeWidth: 1,
+          ),
+        ),
+
         borderData: FlBorderData(show: false),
+
         titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          // ✅ show left labels a bit so chart feels real
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              interval: ((high - low) / 3).clamp(1.0, double.infinity),
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toStringAsFixed(0),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black.withOpacity(0.35),
+                  ),
+                );
+              },
+            ),
+          ),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
@@ -378,9 +431,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= len) return const SizedBox.shrink();
-
                 final d = sales[i].day;
-
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
@@ -396,6 +447,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             ),
           ),
         ),
+
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
@@ -412,6 +464,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             },
           ),
         ),
+
         lineBarsData: [
           LineChartBarData(
             spots: spots,

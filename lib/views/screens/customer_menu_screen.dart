@@ -54,6 +54,12 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
     final balanceText = pesoFormatter.format(homeState.cashOnHand);
     final mobileText = homeState.mobileNumber ?? "Not set";
 
+    final w = MediaQuery.of(context).size.width;
+    final isTablet = w >= 700;
+
+    // ✅ wider on tablet (same pattern as Home)
+    final maxContentWidth = isTablet ? 760.0 : 520.0;
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -75,28 +81,55 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
             ),
             const SizedBox(height: 14),
 
+            // ✅ Responsive "Expanded + Center + ConstrainedBox" (like Home)
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
-                    child: ListView(
-                      children: [
-                        _homeBigActionTile(
-                          label: "HALIN",
-                          subtitle: "Record cash sales",
-                          icon: Icons.point_of_sale_outlined,
-                          onTap: () => context.push('/record_sales'),
-                        ),
-                        const SizedBox(height: 18),
-                        _homeBigActionTile(
-                          label: "CUSTOMER UTANG",
-                          subtitle: "Manage customer credit",
-                          icon: Icons.receipt_long_outlined,
-                          onTap: () => context.push('/customer_utang'),
-                        ),
-                      ],
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final h = c.maxHeight;
+
+                        // ✅ Make it feel "filled" on tablet
+                        final tilesBlock = isTablet
+                            ? (h * 0.46).clamp(260.0, 380.0)
+                            : (h * 0.42).clamp(240.0, 320.0);
+
+                        final gap = (h * 0.03).clamp(12.0, 18.0);
+
+                        return Column(
+                          children: [
+                            SizedBox(
+                              height: tilesBlock,
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: _homeBigActionTile(
+                                      label: "HALIN",
+                                      subtitle: "Record cash sales",
+                                      icon: Icons.point_of_sale_outlined,
+                                      onTap: () => context.push('/record_sales'),
+                                    ),
+                                  ),
+                                  SizedBox(height: gap),
+                                  Expanded(
+                                    child: _homeBigActionTile(
+                                      label: "CUSTOMER UTANG",
+                                      subtitle: "Manage customer credit",
+                                      icon: Icons.receipt_long_outlined,
+                                      onTap: () => context.push('/customer_utang'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            SizedBox(height: gap),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -105,7 +138,6 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
           ],
         ),
       ),
-
       bottomNavigationBar: BottomNavBar(
         currentIndex: homeState.selectedIndex,
         noHighlight: true,
@@ -113,101 +145,108 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
     );
   }
 
-  /// ✅ SAME UI/UX AS HomeScreen _bigActionTile
+  /// ✅ Responsive tile (no fixed height)
   Widget _homeBigActionTile({
-  required String label,
-  required String subtitle,
-  required IconData icon,
-  required VoidCallback onTap,
-}) {
-  final radius = BorderRadius.circular(22);
+    required String label,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final radius = BorderRadius.circular(22);
 
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      borderRadius: radius,
-      onTap: onTap,
-      child: Container(
-        height: 110,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: radius,
-          border: Border.all(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // ✅ strong left accent strip (clear for 50–65)
-            Container(
-              width: 6,
-              height: 60,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final h = c.maxHeight;
+
+            final iconSize = (h * 0.28).clamp(26.0, 34.0);
+            final iconBox = (h * 0.60).clamp(54.0, 74.0);
+
+            final titleSize = (h * 0.18).clamp(18.0, 22.0);
+            final subSize = (h * 0.13).clamp(12.5, 15.0);
+
+            final stripH = (h * 0.55).clamp(48.0, 64.0);
+            final vPad = (h * 0.12).clamp(12.0, 18.0);
+
+            return Container(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: vPad),
               decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(999),
+                color: Colors.white,
+                borderRadius: radius,
+                border: Border.all(color: Colors.grey.shade300, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 16),
-
-            // ✅ icon block with border
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(.10),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(.25),
-                ),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 32),
-            ),
-
-            const SizedBox(width: 16),
-
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
+                  Container(
+                    width: 6,
+                    height: stripH,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
+                  const SizedBox(width: 16),
+
+                  Container(
+                    width: iconBox,
+                    height: iconBox,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(.10),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(.25),
+                      ),
+                    ),
+                    child: Icon(icon, color: AppColors.primary, size: iconSize),
+                  ),
+                  const SizedBox(width: 16),
+
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: subSize,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // ✅ no arrow (as requested)
-          ],
+            );
+          },
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

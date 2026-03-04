@@ -33,252 +33,298 @@ class HeroHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const double sideSlot = 40;
-    const double logoSize = 40;
-
     final topInset = MediaQuery.of(context).padding.top;
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 18),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.headerTop, AppColors.headerBottom],
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 40,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Row(
-                  children: [
-                    SizedBox(
-                      width: sideSlot,
-                      child: showBack
-                          ? InkWell(
-                              onTap: onBackTap,
-                              borderRadius: BorderRadius.circular(14),
-                              child: const Padding(
-                                padding: EdgeInsets.all(6),
-                                child: Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    Expanded(
-                      child: Align(
-                        alignment:
-                            centerTitle ? Alignment.center : Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: centerTitle
-                              ? Alignment.center
-                              : Alignment.centerLeft,
-                          child: Text(
-                            title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
 
-                    // ✅ BELL WITH BADGE
-                    SizedBox(
-                      width: sideSlot,
-                      child: InkWell(
-                        onTap: onBellTap,
-                        borderRadius: BorderRadius.circular(14),
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              const Icon(
-                                Icons.notifications_none_rounded,
-                                color: Colors.white,
-                                size: 26,
-                              ),
-                              ref.watch(unreadNotifCountProvider).when(
-                                loading: () => const SizedBox.shrink(),
-                                error: (_, _) => const SizedBox.shrink(),
-                                data: (count) {
-                                  if (count <= 0) return const SizedBox.shrink();
-                                  return Positioned(
-                                    right: -6,
-                                    top: -6,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        borderRadius: BorderRadius.circular(999),
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        count > 99 ? '99+' : '$count',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+        // ✅ SCALE FACTOR (phone → tablet)
+        // 360 = small phone baseline, 900 = tablet cap
+        final s = (w / 360).clamp(1.0, 1.35);
 
-                if (showLogo)
-                  Positioned(
-                    left: 8,
-                    child: Image.asset(
-                      'lib/assets/logo.png',
-                      height: logoSize,
-                      width: logoSize,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-              ],
-            ),
-          ),
+        // ✅ Responsive sizes (same layout)
+        final sideSlot = (40 * s).clamp(40.0, 54.0);
+        final logoSize = (40 * s).clamp(40.0, 54.0);
+        final topRowHeight = (40 * s).clamp(40.0, 56.0);
 
-          const SizedBox(height: 14),
+        final padH = (16 * s).clamp(16.0, 22.0);
+        final padTop = (topInset + 12 * s).clamp(topInset + 12, topInset + 20);
+        final padBottom = (18 * s).clamp(18.0, 24.0);
 
-          // ✅ your 3D card stays unchanged below...
-          // (keep the rest of your HeroHeader code as-is)
-        // ✅ your improved 3D card stays the same
-        Container(
+        final titleSize = (22 * s).clamp(22.0, 28.0);
+        final cashLabelSize = (15 * s).clamp(15.0, 18.0);
+        final balanceSize = (36 * s).clamp(32.0, 46.0);
+        final mobileSize = (14.5 * s).clamp(14.0, 17.0);
+
+        final cardRadius = (22 * s).clamp(22.0, 28.0);
+        final eyePad = (12 * s).clamp(12.0, 16.0);
+        final eyeIconSize = (26 * s).clamp(24.0, 30.0);
+
+        // ✅ Avoid logo overlapping title on very small width
+        final showLogoSafe = showLogo && w >= 360;
+
+        return Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+          padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.30),
-                Colors.white.withOpacity(0.18),
-              ],
+              colors: [AppColors.headerTop, AppColors.headerBottom],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.35),
-                blurRadius: 24,
-                offset: const Offset(0, 16),
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.18),
-                blurRadius: 10,
-                offset: const Offset(0, 6),
-              ),
-            ],
-            border: Border.all(
-              color: Colors.white.withOpacity(0.28),
-              width: 1.4,
-            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
           ),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
+              SizedBox(
+                height: topRowHeight,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: sideSlot,
+                          child: showBack
+                              ? InkWell(
+                                  onTap: onBackTap,
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Padding(
+                                    padding: EdgeInsets.all((6 * s).clamp(6.0, 10.0)),
+                                    child: Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: Colors.white,
+                                      size: (20 * s).clamp(20.0, 24.0),
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: centerTitle
+                                ? Alignment.center
+                                : Alignment.centerLeft,
+                            child: Padding(
+                              // ✅ if logo is shown, add a tiny left padding so title won't collide
+                              padding: EdgeInsets.only(
+                                left: showLogoSafe ? (logoSize + 10) : 0,
+                              ),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: centerTitle
+                                    ? Alignment.center
+                                    : Alignment.centerLeft,
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: titleSize,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // ✅ BELL WITH BADGE
+                        SizedBox(
+                          width: sideSlot,
+                          child: InkWell(
+                            onTap: onBellTap,
+                            borderRadius: BorderRadius.circular(14),
+                            child: Padding(
+                              padding: EdgeInsets.all((6 * s).clamp(6.0, 10.0)),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(
+                                    Icons.notifications_none_rounded,
+                                    color: Colors.white,
+                                    size: (26 * s).clamp(26.0, 32.0),
+                                  ),
+                                  ref.watch(unreadNotifCountProvider).when(
+                                    loading: () => const SizedBox.shrink(),
+                                    error: (_, _) => const SizedBox.shrink(),
+                                    data: (count) {
+                                      if (count <= 0) return const SizedBox.shrink();
+                                      return Positioned(
+                                        right: -6,
+                                        top: -6,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal:
+                                                (6 * s).clamp(6.0, 9.0),
+                                            vertical:
+                                                (2 * s).clamp(2.0, 4.0),
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            count > 99 ? '99+' : '$count',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize:
+                                                  (10.5 * s).clamp(10.5, 13.0),
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (showLogoSafe)
+                      Positioned(
+                        left: 8,
+                        child: Image.asset(
+                          'lib/assets/logo.png',
+                          height: logoSize,
+                          width: logoSize,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: (14 * s).clamp(14.0, 20.0)),
+
+              // ✅ 3D card (same style, responsive sizes)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(
+                  (20 * s).clamp(20.0, 28.0),
+                  (18 * s).clamp(18.0, 24.0),
+                  (16 * s).clamp(16.0, 22.0),
+                  (18 * s).clamp(18.0, 24.0),
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(cardRadius),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withOpacity(0.30),
+                      Colors.white.withOpacity(0.18),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.35),
+                      blurRadius: (24 * s).clamp(24.0, 32.0),
+                      offset: const Offset(0, 16),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: (10 * s).clamp(10.0, 16.0),
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.28),
+                    width: (1.4 * s).clamp(1.4, 1.8),
+                  ),
+                ),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Cash on Hand",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Cash on Hand",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: cashLabelSize,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: (10 * s).clamp(10.0, 14.0)),
+                          Text(
+                            balance,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: balanceSize,
+                              fontWeight: FontWeight.w900,
+                              height: 1.05,
+                            ),
+                          ),
+                          SizedBox(height: (12 * s).clamp(12.0, 16.0)),
+                          Text(
+                            "Mobile Number: $mobileNumber",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: mobileSize,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      balance,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        height: 1.05,
+                    InkWell(
+                      onTap: onEyeTap,
+                      borderRadius: BorderRadius.circular(
+                        (18 * s).clamp(18.0, 22.0),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Mobile Number: $mobileNumber",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
+                      child: Container(
+                        padding: EdgeInsets.all(eyePad),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withOpacity(0.35),
+                              Colors.white.withOpacity(0.20),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            (18 * s).clamp(18.0, 22.0),
+                          ),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.30),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.25),
+                              blurRadius: (16 * s).clamp(16.0, 22.0),
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.visibility_outlined,
+                          color: Colors.white,
+                          size: eyeIconSize,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              InkWell(
-                onTap: onEyeTap,
-                borderRadius: BorderRadius.circular(18),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.35),
-                        Colors.white.withOpacity(0.20),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.30),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.visibility_outlined,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
             ],
           ),
-        ),
-      ],
-    ),
-  );
-}
+        );
+      },
+    );
+  }
 }

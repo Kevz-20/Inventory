@@ -169,28 +169,35 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
   // UI: Divider Title
   // ============================================================
   Widget _dividerTitle(String text) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(height: 1, color: Colors.black.withOpacity(.10)),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.6,
-            color: Colors.black.withOpacity(.55),
+  return LayoutBuilder(
+    builder: (context, c) {
+      final w = c.maxWidth;
+      final s = (w / 360).clamp(1.0, 1.25);
+
+      return Row(
+        children: [
+          Expanded(
+            child: Container(height: 1, color: Colors.black.withOpacity(.10)),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Container(height: 1, color: Colors.black.withOpacity(.10)),
-        ),
-      ],
-    );
-  }
+          SizedBox(width: (10 * s).clamp(10.0, 14.0)),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: (12 * s).clamp(12.0, 15.0),
+              fontWeight: FontWeight.w900,
+              letterSpacing: (1.6 * s).clamp(1.6, 2.0),
+              color: Colors.black.withOpacity(.55),
+            ),
+          ),
+          SizedBox(width: (10 * s).clamp(10.0, 14.0)),
+          Expanded(
+            child: Container(height: 1, color: Colors.black.withOpacity(.10)),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   // ============================================================
   // UI: Action Tile (NO fixed height)
@@ -307,96 +314,111 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
   // UI: Reports Card (responsive height via Expanded)
   // ============================================================
   Widget _reportsCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    final radius = BorderRadius.circular(24);
+  required String title,
+  required String subtitle,
+  required IconData icon,
+  required VoidCallback onTap,
+}) {
+  final radius = BorderRadius.circular(24);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: radius,
-            border: Border.all(color: Colors.grey.shade300, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.85),
-                blurRadius: 1,
-                offset: const Offset(0, -1),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: Row(
-            children: [
-              Container(
-                width: 6,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(999),
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: radius,
+      onTap: onTap,
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final h = c.maxHeight;
+
+          final stripH = (h * 0.55).clamp(48.0, 70.0);
+          final iconBox = (h * 0.55).clamp(50.0, 72.0);
+          final iconSize = (h * 0.26).clamp(24.0, 32.0);
+
+          final titleSize = (h * 0.18).clamp(15.0, 19.0);
+          final subSize = (h * 0.14).clamp(12.0, 15.0);
+
+          final padV = (h * 0.18).clamp(12.0, 18.0);
+
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: radius,
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.10),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Container(
-                height: 56,
-                width: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(.10),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(.25),
-                    width: 1,
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.85),
+                  blurRadius: 1,
+                  offset: const Offset(0, -1),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.fromLTRB(16, padV, 16, padV),
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: stripH,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 26),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
+                const SizedBox(width: 14),
+                Container(
+                  height: iconBox,
+                  width: iconBox,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(.25),
+                      width: 1,
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13.2,
-                        height: 1.15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black.withOpacity(0.65),
-                      ),
-                    ),
-                  ],
+                  ),
+                  child: Icon(icon, color: AppColors.primary, size: iconSize),
                 ),
-              ),
-            ],
-          ),
-        ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: titleSize,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: subSize,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black.withOpacity(0.65),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 }
