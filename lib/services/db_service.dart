@@ -162,7 +162,6 @@ class DBService {
             'Kumpra',
             'Tubig / Kuryente',
             'Transportasyon',
-            'Mga Bayronon',
           ];
 
           for (final c in defaultExpenseCats) {
@@ -682,7 +681,6 @@ class DBService {
         'Kumpra',
         'Tubig / Kuryente',
         'Transportasyon',
-        'Mga Bayronon',
       ];
 
       for (final c in defaultExpenseCats) {

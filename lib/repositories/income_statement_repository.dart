@@ -23,7 +23,6 @@ class IncomeStatementRepository {
       'kompra': ['Kumpra'], 
       'electricity': ['Tubig / Kuryente'],
       'transportation': ['Transportasyon'],
-      'rent': ['Mga Bayronon'],
       'misc': ['Uban pa'],
     };
 

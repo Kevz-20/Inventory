@@ -360,7 +360,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(
-        title: 'Pagdugang og Bayronon',
+        title: 'Dugang Bayronon',
         showBackButton: true,
       ),
       body: Column(
@@ -531,7 +531,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
               ),
             ),
             child: const Text(
-              "Save Bayronon",
+              "Rekord",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),

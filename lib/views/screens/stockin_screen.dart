@@ -211,7 +211,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           children: [
             Expanded(
               child: Text(
-                vm.selectedCategory ?? 'Pili ug category',
+                vm.selectedCategory ?? 'Pili ug Kategorya',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   color: vm.selectedCategory == null
@@ -784,7 +784,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           filled: true,
           fillColor: Colors.grey.shade50,
           prefixIcon: const Icon(Icons.calendar_today, color: AppColors.primary),
-          labelText: 'Date',
+          labelText: 'Petsa',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade300),

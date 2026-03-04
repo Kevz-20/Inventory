@@ -290,7 +290,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               child: Text(
                 vm.isCategoriesLoading
                     ? 'Loading...'
-                    : (vm.selectedCategory ?? 'Pili ug category'),
+                    : (vm.selectedCategory ?? 'Pili ug Kategorya'),
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   color: (vm.selectedCategory == null)
