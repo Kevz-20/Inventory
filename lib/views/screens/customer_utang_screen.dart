@@ -147,85 +147,108 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
 
+        // Scale: tuned for phones -> tablets. Clamped to avoid extreme sizes.
+        final double scale = (w / 390).clamp(0.90, 1.20);
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppHeader(
-        title: 'Customer Utang',
-        showBackButton: true,
-        action: IconButton(
-          tooltip: 'Add Customer',
-          onPressed: () async {
-            final result = await context.push<bool>('/new_customer');
-            if (result == true) {
-              await fetchUtangan();
-            }
-          },
-          icon: const Icon(
-            Icons.person_add_alt_1,
-            color: Colors.white,
-            size: 26,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [          
-                ],
+        // Adaptive paddings
+        final double padH = (16 * scale).clamp(14, 22);
+        final double topGap = (14 * scale).clamp(10, 18);
+
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          appBar: AppHeader(
+            title: 'Customer Utang',
+            showBackButton: true,
+            action: IconButton(
+              tooltip: 'Add Customer',
+              onPressed: () async {
+                final result = await context.push<bool>('/new_customer');
+                if (result == true) {
+                  await fetchUtangan();
+                }
+              },
+              icon: Icon(
+                Icons.person_add_alt_1,
+                color: Colors.white,
+                size: (26 * scale).clamp(22, 30),
               ),
             ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildSearch(),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: utangan.isEmpty
-                  ? Center(
-                      child: Text(
-                        "Walay utangan",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black.withOpacity(0.5),
+          ),
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                SizedBox(height: topGap),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: padH),
+                  child: Row(
+                    children: const [
+                      // keep as-is (empty row in your original)
+                    ],
+                  ),
+                ),
+                SizedBox(height: (10 * scale).clamp(8, 14)),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: padH),
+                  child: _buildSearch(scale: scale),
+                ),
+                SizedBox(height: (10 * scale).clamp(8, 14)),
+                Expanded(
+                  child: utangan.isEmpty
+                      ? Center(
+                          child: Text(
+                            "Walay utangan",
+                            style: TextStyle(
+                              fontSize: (15 * scale).clamp(13, 18),
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black.withOpacity(0.5),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.fromLTRB(
+                            padH,
+                            (6 * scale).clamp(4, 10),
+                            padH,
+                            padH,
+                          ),
+                          itemCount: filteredUtangan.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredUtangan[index];
+                            return _buildCustomerCard(
+                              item,
+                              scale: scale,
+                              maxWidth: w,
+                            );
+                          },
                         ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-                      itemCount: filteredUtangan.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredUtangan[index];
-                        return _buildCustomerCard(item);
-                      },
-                    ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSearch() {
+  Widget _buildSearch({required double scale}) {
+    final double height = (54 * scale).clamp(48, 62);
+
     return Container(
-      height: 54,
+      height: height,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular((18 * scale).clamp(16, 22)),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 8),
+            blurRadius: (12 * scale).clamp(10, 16),
+            offset: Offset(0, (8 * scale).clamp(6, 10)),
           ),
         ],
       ),
@@ -234,9 +257,17 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         onChanged: filterUtangan,
         textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
-          prefixIcon: Icon(Icons.search, color: Colors.black.withOpacity(0.6)),
+          prefixIcon: Icon(
+            Icons.search,
+            color: Colors.black.withOpacity(0.6),
+            size: (22 * scale).clamp(20, 26),
+          ),
           hintText: "Pangalan sa Utangan",
-          hintStyle: TextStyle(color: Colors.black.withOpacity(0.4)),
+          hintStyle: TextStyle(
+            color: Colors.black.withOpacity(0.4),
+            fontSize: (14 * scale).clamp(12.5, 16),
+            fontWeight: FontWeight.w600,
+          ),
           border: InputBorder.none,
           focusedBorder: InputBorder.none,
           enabledBorder: InputBorder.none,
@@ -246,15 +277,27 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                     searchController.clear();
                     filterUtangan('');
                   },
-                  icon: Icon(Icons.clear, color: Colors.black.withOpacity(0.5)),
+                  icon: Icon(
+                    Icons.clear,
+                    color: Colors.black.withOpacity(0.5),
+                    size: (20 * scale).clamp(18, 24),
+                  ),
                 )
               : null,
+        ),
+        style: TextStyle(
+          fontSize: (14.5 * scale).clamp(13, 17),
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  Widget _buildCustomerCard(UtangCustomer item) {
+  Widget _buildCustomerCard(
+    UtangCustomer item, {
+    required double scale,
+    required double maxWidth,
+  }) {
     final hasDebt = item.totalAmount > 0;
     final due = item.dueDate;
 
@@ -280,23 +323,38 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                 ? Colors.orange.shade800
                 : AppColors.primary;
 
+    // Responsive: reserve a fixed-ish width for the right column
+    // so the left side (name/location) won’t get squeezed into overflow.
+    final bool isNarrow = maxWidth < 360;
+    final bool isTablet = maxWidth >= 700;
+
+    final double rightColWidth = isTablet
+        ? 220
+        : isNarrow
+            ? 125
+            : 150;
+
+    final double avatarSize = (44 * scale).clamp(38, 52);
+    final double radius = (18 * scale).clamp(16, 22);
+    final double pad = (14 * scale).clamp(12, 18);
+
     return GestureDetector(
       onTap: () async {
         await GoRouter.of(context).push('/utang_summary', extra: item);
         _refreshData();
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.all(14),
+        margin: EdgeInsets.symmetric(vertical: (6 * scale).clamp(5, 9)),
+        padding: EdgeInsets.all(pad),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(radius),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 10),
+              blurRadius: (14 * scale).clamp(12, 18),
+              offset: Offset(0, (10 * scale).clamp(8, 12)),
             ),
           ],
         ),
@@ -304,15 +362,19 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: avatarSize,
+              height: avatarSize,
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular((14 * scale).clamp(12, 18)),
               ),
-              child: const Icon(Icons.person, color: AppColors.primary),
+              child: Icon(
+                Icons.person,
+                color: AppColors.primary,
+                size: (22 * scale).clamp(20, 28),
+              ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: (12 * scale).clamp(10, 16)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,28 +383,30 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                     item.fullName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: (16 * scale).clamp(14.5, 20),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: (4 * scale).clamp(3, 6)),
                   _miniLine(
                     icon: Icons.location_on_outlined,
                     text: _buildLocation(item),
+                    scale: scale,
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: (2 * scale).clamp(1, 4)),
                   if (item.phoneNumber != null && item.phoneNumber!.isNotEmpty)
                     _miniLine(
                       icon: Icons.call_outlined,
                       text: item.phoneNumber!,
+                      scale: scale,
                     ),
                   if (hasDebt && due != null) ...[
-                    const SizedBox(height: 6),
+                    SizedBox(height: (6 * scale).clamp(4, 8)),
                     Text(
                       _dueSubText(due),
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: (12.5 * scale).clamp(11.5, 15),
                         fontWeight: FontWeight.w700,
                         color: Colors.black.withOpacity(0.55),
                       ),
@@ -351,47 +415,65 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                 ],
               ),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  "₱${currencyFormat.format(item.totalAmount)}",
-                  style: const TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-
-                // ✅ NEW: only show pill when NOT brand-new customer
-                if (!hidePill) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: pillBg,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: pillBg.withOpacity(0.6)),
-                    ),
+            SizedBox(width: (10 * scale).clamp(8, 14)),
+            SizedBox(
+              width: rightColWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
                     child: Text(
-                      !hasDebt
-                          ? "PAID"
-                          : (due == null ? "NO DUE DATE" : _dueLabel(due)),
+                      "₱${currencyFormat.format(item.totalAmount)}",
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: (15.5 * scale).clamp(14, 20),
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 0.6,
-                        color: pillFg,
                       ),
                     ),
                   ),
-                ],
 
-                const SizedBox(height: 6),
-                Icon(Icons.chevron_right,
-                    size: 20, color: Colors.black.withOpacity(0.35)),
-              ],
+                  // ✅ only show pill when NOT brand-new customer
+                  if (!hidePill) ...[
+                    SizedBox(height: (6 * scale).clamp(4, 8)),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (10 * scale).clamp(8, 12),
+                          vertical: (6 * scale).clamp(5, 8),
+                        ),
+                        decoration: BoxDecoration(
+                          color: pillBg,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: pillBg.withOpacity(0.6)),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            !hasDebt
+                                ? "PAID"
+                                : (due == null ? "NO DUE DATE" : _dueLabel(due)),
+                            style: TextStyle(
+                              fontSize: (11.5 * scale).clamp(10.5, 14),
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.6,
+                              color: pillFg,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  SizedBox(height: (6 * scale).clamp(4, 8)),
+                  Icon(
+                    Icons.chevron_right,
+                    size: (20 * scale).clamp(18, 26),
+                    color: Colors.black.withOpacity(0.35),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -399,20 +481,28 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     );
   }
 
-  Widget _miniLine({required IconData icon, required String text}) {
+  Widget _miniLine({
+    required IconData icon,
+    required String text,
+    required double scale,
+  }) {
     if (text.trim().isEmpty) return const SizedBox.shrink();
 
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.black.withOpacity(0.45)),
-        const SizedBox(width: 6),
+        Icon(
+          icon,
+          size: (16 * scale).clamp(14, 20),
+          color: Colors.black.withOpacity(0.45),
+        ),
+        SizedBox(width: (6 * scale).clamp(5, 10)),
         Expanded(
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 12.8,
+              fontSize: (12.8 * scale).clamp(11.5, 16),
               fontWeight: FontWeight.w600,
               color: Colors.black.withOpacity(0.55),
             ),

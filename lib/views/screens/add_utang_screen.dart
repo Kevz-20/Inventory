@@ -33,8 +33,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
   final TextEditingController downpaymentController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
-  final TextEditingController dueDateController =
-      TextEditingController(); // ✅ single date
+  final TextEditingController dueDateController = TextEditingController(); // ✅ single date
 
   double remainingBalance = 0.0;
   double monthlyPayment = 0.0;
@@ -85,9 +84,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     setState(() {
       remainingBalance = total - down;
-      monthlyPayment = months > 0
-          ? remainingBalance / months
-          : remainingBalance;
+      monthlyPayment = months > 0 ? remainingBalance / months : remainingBalance;
     });
   }
 
@@ -182,15 +179,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     try {
       final total =
-          double.tryParse(
-            totalCostController.text.replaceAll(',', '').trim(),
-          ) ??
-          0;
+          double.tryParse(totalCostController.text.replaceAll(',', '').trim()) ??
+              0;
       final down =
-          double.tryParse(
-            downpaymentController.text.replaceAll(',', '').trim(),
-          ) ??
-          0;
+          double.tryParse(downpaymentController.text.replaceAll(',', '').trim()) ??
+              0;
 
       if (total <= 0) {
         if (!mounted) return;
@@ -243,9 +236,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'item': itemController.text,
           'original_amount': total,
           'remaining_amount': remaining,
-          'due_date': DateFormat(
-            'yyyy-MM-dd',
-          ).format(finalDueDate), // end of plan
+          'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate), // end of plan
           'note': notes,
           'is_paid': 0,
           'has_plan': 1,
@@ -357,65 +348,115 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(
-        title: 'Dugang Bayronon',
-        showBackButton: true,
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  buildTextField(
-                    "Item / Description",
-                    itemController,
-                    icon: Icons.description,
-                  ),
-                  const SizedBox(height: 16),
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
-                  buildPaymentCard(),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth;
+        final s = (w / 390).clamp(0.90, 1.20);
 
-                  const SizedBox(height: 16),
+        final padH = (20 * s).clamp(16.0, 26.0);
+        final gap12 = (12 * s).clamp(10.0, 14.0);
+        final gap16 = (16 * s).clamp(12.0, 18.0);
+        final gap20 = (20 * s).clamp(14.0, 24.0);
 
-                  buildNotesCard(),
+        final cardPad = (16 * s).clamp(12.0, 18.0);
+        final r16 = (16 * s).clamp(14.0, 20.0);
+        final r12 = (12 * s).clamp(10.0, 16.0);
 
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
+        final btnH = (50 * s).clamp(46.0, 58.0);
+        final btnText = (18 * s).clamp(15.0, 19.0);
+
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          appBar: const AppHeader(
+            title: 'Dugang Bayronon',
+            showBackButton: true,
           ),
-          const SizedBox(height: 10),
-          buildSaveButton(),
-          const SizedBox(height: 14),
-        ],
-      ),
+          body: Column(
+            children: [
+              SizedBox(height: (12 * s).clamp(10.0, 16.0)),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: padH),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      buildTextField(
+                        "Item / Description",
+                        itemController,
+                        icon: Icons.description,
+                        s: s,
+                        radius: r12,
+                      ),
+                      SizedBox(height: gap16),
+
+                      buildPaymentCard(
+                        s: s,
+                        cardPad: cardPad,
+                        r16: r16,
+                        r12: r12,
+                        gap12: gap12,
+                      ),
+
+                      SizedBox(height: gap16),
+
+                      buildNotesCard(
+                        s: s,
+                        cardPad: cardPad,
+                        r16: r16,
+                        r12: r12,
+                      ),
+
+                      SizedBox(height: gap20),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(height: (10 * s).clamp(8.0, 14.0)),
+
+              buildSaveButton(
+                s: s,
+                padH: padH,
+                btnH: btnH,
+                btnText: btnText,
+                r12: r12,
+                bottomInset: bottomInset,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   // ==============================
   // PAYMENT CARD (toggle inside)
   // ==============================
-  Widget buildPaymentCard() {
+  Widget buildPaymentCard({
+    required double s,
+    required double cardPad,
+    required double r16,
+    required double r12,
+    required double gap12,
+  }) {
+    final titleFs = (16 * s).clamp(14.5, 18.0);
+
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(r16)),
       elevation: 2,
       color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(cardPad),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Payment Details",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: titleFs),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: gap12),
 
             buildTextField(
               "Total Cost",
@@ -424,8 +465,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
               inputFormatters: [ThousandsFormatter()],
               icon: Icons.attach_money,
               onChanged: (_) => onTotalCostChanged(),
+              s: s,
+              radius: r12,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: gap12),
 
             buildTextField(
               "Due Date",
@@ -433,39 +476,52 @@ class _AddUtangPageState extends State<AddUtangPage> {
               readOnly: true,
               icon: Icons.date_range,
               onTap: pickDueDate,
+              s: s,
+              radius: r12,
             ),
 
-            const SizedBox(height: 8),
+            SizedBox(height: (8 * s).clamp(6.0, 10.0)),
 
-            // ✅ toggle now inside the card (not at the top of page)
+            // ✅ toggle inside the card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: EdgeInsets.symmetric(
+                horizontal: (6 * s).clamp(6.0, 10.0),
+                vertical: (4 * s).clamp(4.0, 8.0),
+              ),
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular((12 * s).clamp(10.0, 16.0)),
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: SwitchListTile(
                 dense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: (6 * s).clamp(6.0, 10.0),
+                ),
                 value: isInstallment,
                 activeColor: AppColors.primary,
                 onChanged: _setInstallment,
-                title: const Text(
+                title: Text(
                   "Installment Plan",
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: (14 * s).clamp(13.0, 16.0),
+                  ),
                 ),
                 subtitle: Text(
                   isInstallment
                       ? "Monthly schedule will apply"
                       : "Enable if you will pay monthly",
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: (12 * s).clamp(11.0, 13.5),
+                  ),
                 ),
               ),
             ),
 
             if (isInstallment) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: gap12),
               buildTextField(
                 "Downpayment",
                 downpaymentController,
@@ -474,8 +530,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
                 onChanged: (_) => onDownpaymentChanged(),
                 inputFormatters: [ThousandsFormatter()],
                 errorText: downpaymentErrorText,
+                s: s,
+                radius: r12,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: gap12),
               buildTextField(
                 "Duration (months)",
                 durationController,
@@ -483,8 +541,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
                 icon: Icons.calendar_today,
                 onChanged: (_) => calculateInstallment(),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                s: s,
+                radius: r12,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: gap12),
               Row(
                 children: [
                   Expanded(
@@ -492,14 +552,18 @@ class _AddUtangPageState extends State<AddUtangPage> {
                       "Remaining Balance",
                       remainingBalance,
                       Colors.green,
+                      s: s,
+                      radius: r12,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: (12 * s).clamp(10.0, 14.0)),
                   Expanded(
                     child: buildInfoCard(
                       "Monthly Payment",
                       monthlyPayment,
                       Colors.blue,
+                      s: s,
+                      radius: r12,
                     ),
                   ),
                 ],
@@ -514,25 +578,37 @@ class _AddUtangPageState extends State<AddUtangPage> {
   // ==============================
   // SAVE BUTTON
   // ==============================
-  Widget buildSaveButton() {
+  Widget buildSaveButton({
+    required double s,
+    required double padH,
+    required double btnH,
+    required double btnText,
+    required double r12,
+    required double bottomInset,
+  }) {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: EdgeInsets.fromLTRB(
+          padH,
+          (10 * s).clamp(8.0, 14.0),
+          padH,
+          (14 * s).clamp(10.0, 16.0) + bottomInset,
+        ),
         child: SizedBox(
           width: double.infinity,
-          height: 50,
+          height: btnH,
           child: ElevatedButton(
             onPressed: saveUtang,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(r12),
               ),
             ),
-            child: const Text(
+            child: Text(
               "Rekord",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: btnText, fontWeight: FontWeight.bold),
             ),
           ),
         ),
@@ -541,7 +617,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
   }
 
   // ==============================
-  // TEXT FIELD BUILDER
+  // TEXT FIELD BUILDER (responsive params)
   // ==============================
   Widget buildTextField(
     String label,
@@ -553,7 +629,16 @@ class _AddUtangPageState extends State<AddUtangPage> {
     IconData? icon,
     List<TextInputFormatter>? inputFormatters,
     String? errorText,
+
+    // ✅ responsive
+    required double s,
+    required double radius,
   }) {
+    final labelFs = (13.5 * s).clamp(12.0, 15.0);
+    final textFs = (14.5 * s).clamp(13.0, 16.0);
+    final padV = (12 * s).clamp(10.0, 14.0);
+    final padH = (16 * s).clamp(14.0, 18.0);
+
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
@@ -561,62 +646,81 @@ class _AddUtangPageState extends State<AddUtangPage> {
       onTap: onTap,
       onChanged: onChanged,
       inputFormatters: inputFormatters,
+      style: TextStyle(fontSize: textFs),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
+        labelStyle: TextStyle(color: Colors.grey, fontSize: labelFs),
         errorText: errorText,
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
-                  ? const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Text(
-                        "₱",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
+                ? Padding(
+                    padding: EdgeInsets.all((14 * s).clamp(12.0, 16.0)),
+                    child: Text(
+                      "₱",
+                      style: TextStyle(
+                        fontSize: (20 * s).clamp(16.0, 22.0),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
                       ),
-                    )
-                  : Icon(icon, color: Colors.grey))
+                    ),
+                  )
+                : Icon(icon, color: Colors.grey, size: (22 * s).clamp(20.0, 26.0)))
             : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
+        contentPadding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
+      ),
+    );
+  }
+
+  Widget buildNotesCard({
+    required double s,
+    required double cardPad,
+    required double r16,
+    required double r12,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(r16)),
+      elevation: 2,
+      color: Colors.white,
+      child: Padding(
+        padding: EdgeInsets.all(cardPad),
+        child: buildTextField(
+          "Notes",
+          notesController,
+          icon: Icons.note,
+          s: s,
+          radius: r12,
         ),
       ),
     );
   }
 
-  Widget buildNotesCard() {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: buildTextField("Notes", notesController, icon: Icons.note),
-      ),
-    );
-  }
+  Widget buildInfoCard(
+    String title,
+    double amount,
+    Color color, {
+    required double s,
+    required double radius,
+  }) {
+    final tFs = (14 * s).clamp(12.0, 15.0);
+    final vFs = (16 * s).clamp(13.5, 17.5);
 
-  Widget buildInfoCard(String title, double amount, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all((12 * s).clamp(10.0, 14.0)),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-          const SizedBox(height: 4),
+          Text(title, style: TextStyle(fontSize: tFs, color: Colors.grey)),
+          SizedBox(height: (4 * s).clamp(3.0, 6.0)),
           Text(
             "₱${currencyFormat.format(amount)}",
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: vFs,
               fontWeight: FontWeight.bold,
               color: color,
             ),

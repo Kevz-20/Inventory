@@ -55,8 +55,7 @@ class OwnerPayablePayment {
     return OwnerPayablePayment(
       id: map['id'] as int,
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
-      paidAt:
-          DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+      paidAt: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
       note: map['note']?.toString(),
     );
   }
@@ -80,8 +79,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
   bool _loadedOnce = false;
 
-  DateTime _dateOnly(DateTime date) =>
-      DateTime(date.year, date.month, date.day);
+  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 
   bool _isPastDueDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return false;
@@ -131,9 +129,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     });
   }
 
-  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(
-    int payableId,
-  ) async {
+  Future<List<OwnerPayablePayment>> fetchOwnerPaymentHistory(int payableId) async {
     final db = await DBService.instance.database;
     final result = await db.query(
       'payable_payment',
@@ -233,134 +229,160 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setState) {
-            final current = value ?? 0.0;
-            final hasSuggested = (suggested != null && suggested > 0);
-            final isValid =
-                current > 0 && current <= remaining && remaining > 0;
-            final overLimit = current > remaining && remaining > 0;
+        return LayoutBuilder(
+          builder: (context, c) {
+            final s = (c.maxWidth / 390).clamp(0.90, 1.15);
+            final t18 = (18 * s).clamp(16.0, 20.0);
+            final t14 = (14 * s).clamp(12.5, 15.0);
+            final t20 = (20 * s).clamp(18.0, 22.0);
+            final padH = (14 * s).clamp(12.0, 16.0);
+            final padV = (14 * s).clamp(12.0, 16.0);
+            final r14 = (14 * s).clamp(12.0, 16.0);
+            final r18 = (18 * s).clamp(16.0, 22.0);
 
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
-              contentPadding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              title: const Text(
-                "Partial Payment",
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Remaining: ${money(remaining)}",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w700,
-                    ),
+            return StatefulBuilder(
+              builder: (dialogContext, setState) {
+                final current = value ?? 0.0;
+                final hasSuggested = (suggested != null && suggested > 0);
+                final isValid = current > 0 && current <= remaining && remaining > 0;
+                final overLimit = current > remaining && remaining > 0;
+
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(r18),
                   ),
-                  if (hasSuggested) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "Monthly: ${money(suggested)}",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.orange.shade900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  if (suggested == null ||
-                      suggested == 0) // only for one-time payments
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [ThousandsFormatter()],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      decoration: InputDecoration(
-                        prefixText: "₱ ",
-                        hintText: "Enter amount",
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade500),
-                        ),
-                      ),
-                      onChanged: (v) => setState(() {
-                        value = parseAmount(v);
-                      }),
-                    ),
-                  if (overLimit)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text(
-                        "Too high (exceeds remaining).",
+                  titlePadding: EdgeInsets.fromLTRB(
+                    (18 * s).clamp(14.0, 20.0),
+                    (18 * s).clamp(14.0, 20.0),
+                    (18 * s).clamp(14.0, 20.0),
+                    (8 * s).clamp(6.0, 10.0),
+                  ),
+                  contentPadding: EdgeInsets.fromLTRB(
+                    (18 * s).clamp(14.0, 20.0),
+                    0,
+                    (18 * s).clamp(14.0, 20.0),
+                    (8 * s).clamp(6.0, 10.0),
+                  ),
+                  actionsPadding: EdgeInsets.fromLTRB(
+                    (12 * s).clamp(10.0, 14.0),
+                    0,
+                    (12 * s).clamp(10.0, 14.0),
+                    (12 * s).clamp(10.0, 14.0),
+                  ),
+                  title: Text(
+                    "Partial Payment",
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: t18),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Remaining: ${money(remaining)}",
                         style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 13,
+                          fontSize: t14,
+                          color: Colors.black87,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    value = null;
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text("Cancel"),
-                ),
-                ElevatedButton(
-                  onPressed: isValid
-                      ? () {
-                          value = parseAmount(controller.text);
-                          didConfirm = true;
-                          Navigator.pop(dialogContext);
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
+                      if (hasSuggested) ...[
+                        SizedBox(height: (8 * s).clamp(6.0, 10.0)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                "Monthly: ${money(suggested)}",
+                                style: TextStyle(
+                                  fontSize: t20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.orange.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      SizedBox(height: (12 * s).clamp(10.0, 14.0)),
+                      if (suggested == null || suggested == 0)
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [ThousandsFormatter()],
+                          style: TextStyle(
+                            fontSize: (18 * s).clamp(16.0, 20.0),
+                            fontWeight: FontWeight.w800,
+                          ),
+                          decoration: InputDecoration(
+                            prefixText: "₱ ",
+                            hintText: "Enter amount",
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: padH,
+                              vertical: padV,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(r14),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(r14),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(r14),
+                              borderSide: BorderSide(color: Colors.grey.shade500),
+                            ),
+                          ),
+                          onChanged: (v) => setState(() {
+                            value = parseAmount(v);
+                          }),
+                        ),
+                      if (overLimit)
+                        Padding(
+                          padding: EdgeInsets.only(top: (8 * s).clamp(6.0, 10.0)),
+                          child: Text(
+                            "Too high (exceeds remaining).",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: (13 * s).clamp(12.0, 14.0),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  child: const Text("Confirm"),
-                ),
-              ],
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        value = null;
+                        Navigator.pop(dialogContext);
+                      },
+                      child: const Text("Cancel"),
+                    ),
+                    ElevatedButton(
+                      onPressed: isValid
+                          ? () {
+                              value = parseAmount(controller.text);
+                              didConfirm = true;
+                              Navigator.pop(dialogContext);
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(r14),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (18 * s).clamp(14.0, 20.0),
+                          vertical: (12 * s).clamp(10.0, 14.0),
+                        ),
+                      ),
+                      child: const Text("Confirm"),
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
@@ -431,7 +453,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       if (item.isInstallment && newRemaining > 0) {
         final baseDate =
             DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ??
-            DateTime.now();
+                DateTime.now();
         final nextDue = addMonths(baseDate, 1);
         updateMap['next_due_date'] = DateFormat('yyyy-MM-dd').format(nextDue);
       }
@@ -475,8 +497,6 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
   // ============================================================
   // ✅ UPDATED BOTTOMSHEET (less redundant)
-  // - Card shows: (Monthly or Paid so far) + Remaining + Next Due
-  // - Bottomsheet shows: Total + Paid so far + Remaining + Next Due + Trace
   // ============================================================
 
   Future<void> showOwnerUtangModal(Payable item) async {
@@ -496,353 +516,358 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
         final bool isFullyPaid = item.isPaid || remaining <= 0;
 
-        // ✅ show CURRENT Next Due only (no +1 month preview)
-        final nextDateStr = item.isInstallment
-            ? item.nextDueDate
-            : item.dueDate;
+        final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
         final displayNextDue = (nextDateStr != null && nextDateStr.isNotEmpty)
             ? DateTime.tryParse(nextDateStr)
             : null;
 
-        return SafeArea(
-          top: false,
-          child: DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.58,
-            minChildSize: 0.48,
-            maxChildSize: 0.92,
-            builder: (context, scrollController) {
-              return Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10, bottom: 8),
-                      child: Container(
-                        width: 42,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.black12,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+        return LayoutBuilder(
+          builder: (context, c) {
+            final s = (c.maxWidth / 390).clamp(0.90, 1.15);
+            final pad16 = (16 * s).clamp(12.0, 20.0);
+            final pad14 = (14 * s).clamp(12.0, 18.0);
+            final r22 = (22 * s).clamp(18.0, 26.0);
+            final r16 = (16 * s).clamp(14.0, 20.0);
+            final t20 = (20 * s).clamp(17.0, 22.0);
+            final t15 = (15 * s).clamp(13.0, 16.0);
+
+            return SafeArea(
+              top: false,
+              child: DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.58,
+                minChildSize: 0.48,
+                maxChildSize: 0.92,
+                builder: (context, scrollController) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F7F7),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(r22),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.item,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: (10 * s).clamp(8.0, 12.0),
+                            bottom: (8 * s).clamp(6.0, 10.0),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
+                          child: Container(
+                            width: (42 * s).clamp(36.0, 48.0),
+                            height: (5 * s).clamp(4.0, 6.0),
                             decoration: BoxDecoration(
-                              color: item.isInstallment
-                                  ? Colors.orange.shade100
-                                  : Colors.blue.shade100,
+                              color: Colors.black12,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text(
-                              item.isInstallment
-                                  ? "Installment"
-                                  : "Non-installment",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                                color: item.isInstallment
-                                    ? Colors.orange.shade800
-                                    : Colors.blue.shade800,
-                              ),
-                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: ListView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        children: [
-                          // ✅ SUMMARY CARD: Total / Paid / Remaining + Next Due
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _rowLabelValue(
-                                  "Total Amount",
-                                  "₱${currencyFormat.format(total)}",
-                                  valueStyle: const TextStyle(
-                                    fontSize: 14.5,
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: pad16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.item,
+                                  style: TextStyle(
+                                    fontSize: t20,
                                     fontWeight: FontWeight.w800,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 8),
-                                _rowLabelValue(
-                                  "Paid so far",
-                                  "₱${currencyFormat.format(paidSoFar)}",
-                                  valueStyle: TextStyle(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: paidSoFar <= 0
-                                        ? Colors.black87
-                                        : Colors.green.shade700,
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (10 * s).clamp(8.0, 12.0),
+                                  vertical: (6 * s).clamp(5.0, 8.0),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: item.isInstallment
+                                      ? Colors.orange.shade100
+                                      : Colors.blue.shade100,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  item.isInstallment ? "Installment" : "Non-installment",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: (12 * s).clamp(11.0, 13.0),
+                                    color: item.isInstallment
+                                        ? Colors.orange.shade800
+                                        : Colors.blue.shade800,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                _rowLabelValue(
-                                  "Remaining",
-                                  "₱${currencyFormat.format(remaining)}",
-                                  valueStyle: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w900,
-                                    color: remaining <= 0
-                                        ? Colors.green.shade700
-                                        : Colors.red.shade700,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                if (item.createdAtDate != null)
-                                  Text(
-                                    "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.black54,
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: (12 * s).clamp(10.0, 14.0)),
+                        Expanded(
+                          child: ListView(
+                            controller: scrollController,
+                            padding: EdgeInsets.fromLTRB(pad16, 0, pad16, pad16),
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(pad14),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(r16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
-                                  ),
-                                if (displayNextDue != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      "Next Due: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.black54,
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _rowLabelValue(
+                                      "Total Amount",
+                                      "₱${currencyFormat.format(total)}",
+                                      valueStyle: TextStyle(
+                                        fontSize: (14.5 * s).clamp(13.0, 16.0),
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                  ),
-                                if (item.isInstallment &&
-                                    (item.planMonthly ?? 0) > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      "Monthly: ₱${currencyFormat.format(item.planMonthly)}",
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.orange.shade900,
-                                        fontWeight: FontWeight.w700,
+                                    SizedBox(height: (8 * s).clamp(6.0, 10.0)),
+                                    _rowLabelValue(
+                                      "Paid so far",
+                                      "₱${currencyFormat.format(paidSoFar)}",
+                                      valueStyle: TextStyle(
+                                        fontSize: (14.5 * s).clamp(13.0, 16.0),
+                                        fontWeight: FontWeight.w900,
+                                        color: paidSoFar <= 0
+                                            ? Colors.black87
+                                            : Colors.green.shade700,
                                       ),
                                     ),
+                                    SizedBox(height: (8 * s).clamp(6.0, 10.0)),
+                                    _rowLabelValue(
+                                      "Remaining",
+                                      "₱${currencyFormat.format(remaining)}",
+                                      valueStyle: TextStyle(
+                                        fontSize: (15 * s).clamp(13.5, 16.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: remaining <= 0
+                                            ? Colors.green.shade700
+                                            : Colors.red.shade700,
+                                      ),
+                                    ),
+                                    SizedBox(height: (10 * s).clamp(8.0, 12.0)),
+                                    if (item.createdAtDate != null)
+                                      Text(
+                                        "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
+                                        style: TextStyle(
+                                          fontSize: (13 * s).clamp(11.5, 14.0),
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    if (displayNextDue != null)
+                                      Padding(
+                                        padding: EdgeInsets.only(top: (4 * s).clamp(3.0, 6.0)),
+                                        child: Text(
+                                          "Next Due: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
+                                          style: TextStyle(
+                                            fontSize: (13 * s).clamp(11.5, 14.0),
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                      ),
+                                    if (item.isInstallment && (item.planMonthly ?? 0) > 0)
+                                      Padding(
+                                        padding: EdgeInsets.only(top: (4 * s).clamp(3.0, 6.0)),
+                                        child: Text(
+                                          "Monthly: ₱${currencyFormat.format(item.planMonthly)}",
+                                          style: TextStyle(
+                                            fontSize: (13 * s).clamp(11.5, 14.0),
+                                            color: Colors.orange.shade900,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: (14 * s).clamp(12.0, 18.0)),
+                              Text(
+                                "Payment Trace",
+                                style: TextStyle(
+                                  fontSize: t15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              SizedBox(height: (8 * s).clamp(6.0, 10.0)),
+                              if (paymentHistory.isEmpty)
+                                Container(
+                                  padding: EdgeInsets.all(pad14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(r16),
                                   ),
+                                  child: const Text(
+                                    "No payments recorded yet.",
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                ),
+                              ...paymentHistory.map((payment) {
+                                final paidLabel =
+                                    DateFormat('MMM dd, yyyy • hh:mm a').format(payment.paidAt);
+
+                                final note = (payment.note?.isNotEmpty == true)
+                                    ? payment.note!
+                                    : 'Payment';
+
+                                final leftLabel =
+                                    '$note ₱${currencyFormat.format(payment.amount)}';
+
+                                return Container(
+                                  margin: EdgeInsets.only(bottom: (8 * s).clamp(6.0, 10.0)),
+                                  padding: EdgeInsets.all((12 * s).clamp(10.0, 14.0)),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular((14 * s).clamp(12.0, 16.0)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          leftLabel,
+                                          style: TextStyle(
+                                            fontSize: (13 * s).clamp(12.0, 14.0),
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: (10 * s).clamp(8.0, 12.0)),
+                                      Text(
+                                        paidLabel,
+                                        style: TextStyle(
+                                          fontSize: (12 * s).clamp(11.0, 13.0),
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                        if (!isFullyPaid)
+                          Container(
+                            padding: EdgeInsets.only(
+                              left: pad16,
+                              right: pad16,
+                              top: (12 * s).clamp(10.0, 14.0),
+                              bottom: (12 * s).clamp(10.0, 14.0) +
+                                  MediaQuery.of(context).viewPadding.bottom,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.06),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, -6),
+                                ),
+                              ],
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular((16 * s).clamp(14.0, 20.0)),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      double? amount = await promptPartialAmount(
+                                        remaining,
+                                        suggested: item.planMonthly,
+                                      );
+                                      if (amount != null) {
+                                        await applyPayment(item, amount);
+                                        if (context.mounted) Navigator.pop(context);
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: (14 * s).clamp(12.0, 16.0),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular((14 * s).clamp(12.0, 16.0)),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      "Partial Pay",
+                                      style: TextStyle(fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: (12 * s).clamp(10.0, 14.0)),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text("Confirm Full Payment"),
+                                          content: Text(
+                                            "Are you sure you want to record the full payment of ₱${currencyFormat.format(remaining)}?",
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text("Cancel"),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              child: const Text("Confirm"),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await applyPayment(
+                                          item,
+                                          remaining,
+                                          isFullPay: true,
+                                        );
+                                        if (context.mounted) Navigator.pop(context);
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: (14 * s).clamp(12.0, 16.0),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular((14 * s).clamp(12.0, 16.0)),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      "Full Pay",
+                                      style: TextStyle(fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 14),
-
-                          const Text(
-                            "Payment Trace",
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          if (paymentHistory.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Text(
-                                "No payments recorded yet.",
-                                style: TextStyle(color: Colors.black54),
-                              ),
-                            ),
-
-                          ...paymentHistory.map((payment) {
-                            final paidLabel = DateFormat(
-                              'MMM dd, yyyy • hh:mm a',
-                            ).format(payment.paidAt);
-
-                            final note = (payment.note?.isNotEmpty == true)
-                                ? payment.note!
-                                : 'Payment';
-
-                            final leftLabel =
-                                '$note ₱${currencyFormat.format(payment.amount)}';
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      leftLabel,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    paidLabel,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
+                      ],
                     ),
-
-                    if (!isFullyPaid)
-                      Container(
-                        padding: EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          top: 12,
-                          bottom:
-                              12 + MediaQuery.of(context).viewPadding.bottom,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 16,
-                              offset: const Offset(0, -6),
-                            ),
-                          ],
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  double? amount = await promptPartialAmount(
-                                    remaining,
-                                    suggested: item.planMonthly,
-                                  );
-                                  if (amount != null) {
-                                    await applyPayment(item, amount);
-                                    if (context.mounted) Navigator.pop(context);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Partial Pay",
-                                  style: TextStyle(fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  final confirm = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text("Confirm Full Payment"),
-                                      content: Text(
-                                        "Are you sure you want to record the full payment of ₱${currencyFormat.format(remaining)}?",
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text("Cancel"),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text("Confirm"),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  if (confirm == true) {
-                                    await applyPayment(
-                                      item,
-                                      remaining,
-                                      isFullPay: true,
-                                    );
-                                    if (context.mounted) Navigator.pop(context);
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Full Pay",
-                                  style: TextStyle(fontWeight: FontWeight.w800),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
@@ -862,8 +887,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         ),
         Text(
           value,
-          style:
-              valueStyle ??
+          style: valueStyle ??
               const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ],
@@ -871,103 +895,132 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
   }
 
   // ============================================================
-  // ✅ UPDATED UI BUILD
+  // ✅ RESPONSIVE UI BUILD (NO LOGIC CHANGES)
   // ============================================================
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Owner Utang', showBackButton: true),
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
-      // ✅ Full-width Add button (same functionality)
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              await GoRouter.of(context).push('/add_utang');
-              _refreshData();
-            },
-            icon: const SizedBox.shrink(),
-            label: const Text(
-              "Dugang Bayronon",
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              elevation: 6,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth;
+        final s = (w / 390).clamp(0.90, 1.20);
+
+        final pad16 = (16 * s).clamp(12.0, 20.0);
+        final gap16 = (16 * s).clamp(12.0, 18.0);
+        final gap12 = (12 * s).clamp(10.0, 14.0);
+
+        final fabH = (56 * s).clamp(50.0, 62.0);
+        final fabFs = (16 * s).clamp(14.0, 17.0);
+        final fabR = (18 * s).clamp(16.0, 22.0);
+
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          appBar: const AppHeader(title: 'Owner Utang', showBackButton: true),
+
+          // ✅ Full-width Add button (same functionality)
+          floatingActionButton: Padding(
+            padding: EdgeInsets.fromLTRB(pad16, 0, pad16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              height: fabH,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await GoRouter.of(context).push('/add_utang');
+                  _refreshData();
+                },
+                icon: const SizedBox.shrink(),
+                label: Text(
+                  "Dugang Bayronon",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: fabFs,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(fabR),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          _buildFilterButtons(),
-          const SizedBox(height: 12),
-          Expanded(child: _buildOwnerPage()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOwnerPage() {
-    if (filteredOwnerPayables.isEmpty) {
-      return _emptyState();
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 95),
-      itemCount: filteredOwnerPayables.length,
-      itemBuilder: (context, index) {
-        return _buildOwnerPayableCard(filteredOwnerPayables[index]);
+          body: Column(
+            children: [
+              SizedBox(height: gap16),
+              _buildFilterButtons(s: s, padH: pad16),
+              SizedBox(height: gap12),
+              Expanded(child: _buildOwnerPage(s: s, padH: pad16, bottomInset: bottomInset)),
+            ],
+          ),
+        );
       },
     );
   }
 
-  Widget _emptyState() {
+  Widget _buildOwnerPage({
+    required double s,
+    required double padH,
+    required double bottomInset,
+  }) {
+    if (filteredOwnerPayables.isEmpty) {
+      return _emptyState(s: s);
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.fromLTRB(
+        padH,
+        (8 * s).clamp(6.0, 10.0),
+        padH,
+        (95 * s).clamp(88.0, 120.0),
+      ),
+      itemCount: filteredOwnerPayables.length,
+      itemBuilder: (context, index) {
+        return _buildOwnerPayableCard(filteredOwnerPayables[index], s: s);
+      },
+    );
+  }
+
+  Widget _emptyState({required double s}) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all((24 * s).clamp(18.0, 28.0)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: (72 * s).clamp(62.0, 80.0),
+              height: (72 * s).clamp(62.0, 80.0),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular((20 * s).clamp(16.0, 24.0)),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.receipt_long_rounded,
-                size: 34,
+                size: (34 * s).clamp(28.0, 38.0),
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: (12 * s).clamp(10.0, 14.0)),
+            Text(
               "Walay bayranan",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                fontSize: (18 * s).clamp(16.0, 20.0),
+                fontWeight: FontWeight.w900,
+              ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: (6 * s).clamp(4.0, 8.0)),
             Text(
               "Add a payable para ma-track nimo ang due dates ug payments.",
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 13.5,
+                fontSize: (13.5 * s).clamp(12.0, 15.0),
                 fontWeight: FontWeight.w600,
                 color: Colors.black.withOpacity(0.55),
               ),
@@ -978,19 +1031,23 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-  // ✅ Segmented filter
-  Widget _buildFilterButtons() {
+  // ✅ Segmented filter (responsive)
+  Widget _buildFilterButtons({required double s, required double padH}) {
+    final barH = (48 * s).clamp(44.0, 54.0);
+    final innerPad = (4 * s).clamp(4.0, 6.0);
+    final textFs = (14.5 * s).clamp(13.0, 16.0);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: padH),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final w = constraints.maxWidth;
-          final segmentW = (w - 8) / 3; // container padding = 4 left + 4 right
-          final left = 4 + (segmentW * selectedFilter);
+          final segmentW = (w - (innerPad * 2)) / 3;
+          final left = innerPad + (segmentW * selectedFilter);
 
           return Container(
-            height: 48,
-            padding: const EdgeInsets.all(4),
+            height: barH,
+            padding: EdgeInsets.all(innerPad),
             decoration: BoxDecoration(
               color: Colors.grey.shade300.withOpacity(0.35),
               borderRadius: BorderRadius.circular(999),
@@ -998,7 +1055,6 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             ),
             child: Stack(
               children: [
-                // ✅ Sliding active pill
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 240),
                   curve: Curves.easeOutCubic,
@@ -1020,13 +1076,11 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                     ),
                   ),
                 ),
-
-                // ✅ Buttons layer
                 Row(
                   children: [
-                    Expanded(child: _slideSegButton(0, "Tanan")),
-                    Expanded(child: _slideSegButton(1, "Overdue")),
-                    Expanded(child: _slideSegButton(2, "Paid")),
+                    Expanded(child: _slideSegButton(0, "Tanan", textFs: textFs)),
+                    Expanded(child: _slideSegButton(1, "Overdue", textFs: textFs)),
+                    Expanded(child: _slideSegButton(2, "Paid", textFs: textFs)),
                   ],
                 ),
               ],
@@ -1037,7 +1091,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-  Widget _slideSegButton(int index, String text) {
+  Widget _slideSegButton(int index, String text, {required double textFs}) {
     final active = selectedFilter == index;
 
     return InkWell(
@@ -1049,7 +1103,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
           curve: Curves.easeOut,
           style: TextStyle(
             color: active ? Colors.white : Colors.black87,
-            fontSize: 14.5,
+            fontSize: textFs,
             fontWeight: FontWeight.w900,
           ),
           child: Text(text),
@@ -1058,8 +1112,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-  // ✅ Card: show (Monthly or Paid so far) + Remaining + Next Due
-  Widget _buildOwnerPayableCard(Payable item) {
+  // ✅ Card (responsive sizes only)
+  Widget _buildOwnerPayableCard(Payable item, {required double s}) {
     final total = item.amount.toDouble();
     final remaining = (item.remainingAmount ?? item.amount)
         .clamp(0.0, item.amount.toDouble())
@@ -1075,13 +1129,10 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     if (nextDateStr != null) due = DateTime.tryParse(nextDateStr);
 
     if (!isFullyPaid && due != null) {
-      final daysLeft = _dateOnly(
-        due,
-      ).difference(_dateOnly(DateTime.now())).inDays;
+      final daysLeft = _dateOnly(due).difference(_dateOnly(DateTime.now())).inDays;
       if (daysLeft < 0)
         status = "Overdue";
-      else if (daysLeft <= 7)
-        status = "Due Soon";
+      else if (daysLeft <= 7) status = "Due Soon";
     }
 
     final dueText = (due != null)
@@ -1090,14 +1141,18 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
     final double monthly = item.isInstallment ? (item.planMonthly ?? 0.0) : 0.0;
 
+    final pad14 = (14 * s).clamp(12.0, 18.0);
+    final r16 = (16 * s).clamp(14.0, 20.0);
+    final titleFs = (16.5 * s).clamp(14.5, 18.5);
+
     return GestureDetector(
       onTap: () => showOwnerUtangModal(item),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        margin: EdgeInsets.only(bottom: (10 * s).clamp(8.0, 12.0)),
+        padding: EdgeInsets.all(pad14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(r16),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
@@ -1117,16 +1172,16 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                     item.item,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16.5,
+                    style: TextStyle(
+                      fontSize: titleFs,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
-                if (status.isNotEmpty) _statusPill(status),
+                if (status.isNotEmpty) _statusPill(status, s: s),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: (10 * s).clamp(8.0, 12.0)),
             Row(
               children: [
                 Expanded(
@@ -1138,36 +1193,37 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                     valueColor: item.isInstallment
                         ? Colors.orange.shade900
                         : (paidSoFar <= 0
-                              ? Colors.black87
-                              : Colors.green.shade700),
+                            ? Colors.black87
+                            : Colors.green.shade700),
+                    s: s,
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: (10 * s).clamp(8.0, 12.0)),
                 Expanded(
                   child: _miniStat(
                     label: "Balayran",
                     value: "₱${currencyFormat.format(remaining)}",
-                    valueColor: isFullyPaid
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
+                    valueColor:
+                        isFullyPaid ? Colors.green.shade700 : Colors.red.shade700,
+                    s: s,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: (10 * s).clamp(8.0, 12.0)),
             Row(
               children: [
                 Icon(
                   Icons.calendar_month_rounded,
-                  size: 18,
+                  size: (18 * s).clamp(16.0, 20.0),
                   color: Colors.black.withOpacity(0.55),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: (8 * s).clamp(6.0, 10.0)),
                 Expanded(
                   child: Text(
                     "Next Due: $dueText",
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: (13 * s).clamp(12.0, 14.5),
                       fontWeight: FontWeight.w700,
                       color: Colors.black.withOpacity(0.60),
                     ),
@@ -1189,12 +1245,16 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     required String label,
     required String value,
     Color? valueColor,
+    required double s,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: (12 * s).clamp(10.0, 14.0),
+        vertical: (10 * s).clamp(9.0, 12.0),
+      ),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular((14 * s).clamp(12.0, 16.0)),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -1203,16 +1263,16 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: (12 * s).clamp(11.0, 13.0),
               fontWeight: FontWeight.w700,
               color: Colors.black.withOpacity(0.55),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: (6 * s).clamp(4.0, 8.0)),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14.5,
+              fontSize: (14.5 * s).clamp(13.0, 16.0),
               fontWeight: FontWeight.w900,
               color: valueColor ?? Colors.black87,
             ),
@@ -1222,12 +1282,15 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-  Widget _statusPill(String status) {
+  Widget _statusPill(String status, {required double s}) {
     final bg = _getStatusColor(status);
     final fg = _getStatusTextColor(status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: (10 * s).clamp(8.0, 12.0),
+        vertical: (6 * s).clamp(5.0, 8.0),
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
@@ -1235,7 +1298,11 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       ),
       child: Text(
         status,
-        style: TextStyle(color: fg, fontWeight: FontWeight.w900, fontSize: 12),
+        style: TextStyle(
+          color: fg,
+          fontWeight: FontWeight.w900,
+          fontSize: (12 * s).clamp(11.0, 13.0),
+        ),
       ),
     );
   }

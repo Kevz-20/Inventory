@@ -497,7 +497,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   ),
                 ],
               ),
-              child: Icon(Icons.add, color: Colors.white, size: (22 * s).clamp(22.0, 26.0)),
+              child: Icon(
+                Icons.person_add_alt_1,
+                  color: Colors.white,
+                  size: (26 * s).clamp(22.0, 30.0),
+                ),
             ),
           ),
         ],

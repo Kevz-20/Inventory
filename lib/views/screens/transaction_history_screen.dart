@@ -5,6 +5,7 @@ import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/app_colors.dart';
 import '../../models/current_user.dart';
 import '../../view_models/transaction_history_view_model.dart';
@@ -78,6 +79,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width >= 700;
+
+    // ✅ same pattern as your HomeScreen
+    final maxContentWidth = isTablet ? 760.0 : double.infinity;
+
     return ChangeNotifierProvider.value(
       value: viewModel,
       child: Consumer<TransactionHistoryViewModel>(
@@ -92,69 +99,97 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              centerTitle: true,
+              elevation: 2,
             ),
             backgroundColor: AppColors.surface,
-            body: Column(
-              children: [
-                // Date pickers
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+            body: SafeArea(
+              top: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: _DatePickerBox(
-                          title: 'Start Date',
-                          date: vm.startDate ?? DateTime.now(),
-                          onDateSelected: vm.setStartDate,
+                      // ✅ Date pickers responsive
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                        child: LayoutBuilder(
+                          builder: (context, c) {
+                            final isNarrow = c.maxWidth < 420;
+
+                            final startBox = _DatePickerBox(
+                              title: 'Start Date',
+                              date: vm.startDate ?? DateTime.now(),
+                              onDateSelected: vm.setStartDate,
+                            );
+
+                            final endBox = _DatePickerBox(
+                              title: 'End Date',
+                              date: vm.endDate ?? DateTime.now(),
+                              onDateSelected: vm.setEndDate,
+                            );
+
+                            if (isNarrow) {
+                              return Column(
+                                children: [
+                                  startBox,
+                                  const SizedBox(height: 12),
+                                  endBox,
+                                ],
+                              );
+                            }
+
+                            return Row(
+                              children: [
+                                Expanded(child: startBox),
+                                const SizedBox(width: 12),
+                                Expanded(child: endBox),
+                              ],
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(width: 12),
+
+                      // ✅ Category chips (same behavior)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: CategoryChipsWithDots(
+                          scrollController: _categoryScrollController,
+                          categories: _historyCategories,
+                          selectedCategory: vm.selectedCategory,
+                          onCategorySelected: (cat) {
+                            final index = _historyCategories.indexOf(cat);
+                            vm.setSelectedCategory(cat);
+                            if (index >= 0) {
+                              _categoryPageController.animateToPage(
+                                index,
+                                duration: const Duration(milliseconds: 280),
+                                curve: Curves.easeInOut,
+                              );
+                              _autoScrollChips(index);
+                            }
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      // ✅ List area
                       Expanded(
-                        child: _DatePickerBox(
-                          title: 'End Date',
-                          date: vm.endDate ?? DateTime.now(),
-                          onDateSelected: vm.setEndDate,
+                        child: PageView.builder(
+                          controller: _categoryPageController,
+                          itemCount: _historyCategories.length,
+                          onPageChanged: (index) {
+                            vm.setSelectedCategory(_historyCategories[index]);
+                            _autoScrollChips(index);
+                          },
+                          itemBuilder: (context, index) => _buildHistoryList(vm),
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                // Category chips
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: CategoryChipsWithDots(
-                    scrollController: _categoryScrollController,
-                    categories: _historyCategories,
-                    selectedCategory: vm.selectedCategory,
-                    onCategorySelected: (cat) {
-                      final index = _historyCategories.indexOf(cat);
-                      vm.setSelectedCategory(cat);
-                      if (index >= 0) {
-                        _categoryPageController.animateToPage(
-                          index,
-                          duration: const Duration(milliseconds: 280),
-                          curve: Curves.easeInOut,
-                        );
-                        _autoScrollChips(index);
-                      }
-                    },
-                  ),
-                ),
-
-                // Transaction list
-                Expanded(
-                  child: PageView.builder(
-                    controller: _categoryPageController,
-                    itemCount: _historyCategories.length,
-                    onPageChanged: (index) {
-                      vm.setSelectedCategory(_historyCategories[index]);
-                      _autoScrollChips(index);
-                    },
-                    itemBuilder: (context, index) => _buildHistoryList(vm),
-                  ),
-                ),
-              ],
+              ),
             ),
             bottomNavigationBar: const BottomNavBar(currentIndex: 1),
           );
@@ -170,16 +205,20 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
     if (vm.sections.isEmpty) {
       return Center(
-        child: Text(
-          vm.emptyStateMessage,
-          style: const TextStyle(fontSize: 16, color: Colors.black45),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            vm.emptyStateMessage,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, color: Colors.black45),
+          ),
         ),
       );
     }
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       itemCount: vm.sections.length,
       itemBuilder: (context, sectionIndex) {
         final section = vm.sections[sectionIndex];
@@ -193,13 +232,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Text(
             section.title,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         ...section.items.map((tx) => _buildTransactionCard(tx, context)),
+        const SizedBox(height: 6),
       ],
     );
   }
@@ -217,18 +257,18 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final typeLabel = isDownpayment
         ? 'Owner Payment'
         : isHalinUtang
-        ? 'Halin (Utang)'
-        : isHalin
-        ? 'Halin'
-        : isExpense
-        ? 'Gasto'
-        : isCapital
-        ? 'Capital'
-        : isCustomerPayment
-        ? 'Customer Payment'
-        : isOwnerPayment
-        ? 'Owner Payment'
-        : tx.type;
+            ? 'Halin (Utang)'
+            : isHalin
+                ? 'Halin'
+                : isExpense
+                    ? 'Gasto'
+                    : isCapital
+                        ? 'Capital'
+                        : isCustomerPayment
+                            ? 'Customer Payment'
+                            : isOwnerPayment
+                                ? 'Owner Payment'
+                                : tx.type;
 
     final descriptionLabel = isDownpayment
         ? '${tx.description ?? ''} downpayment'
@@ -241,8 +281,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final isIncome = isCapital || isHalin || isCustomerPayment;
     final amountColor = isIncome ? Colors.green : Colors.red;
 
+    final amountText = isIncome
+        ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
+        : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}';
+
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(14),
       onTap: () {
         showModalBottomSheet(
           context: context,
@@ -260,16 +304,17 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(14),
           color: Colors.white,
+          border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withAlpha(25),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -279,28 +324,34 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           children: [
             Row(
               children: [
-                Text(
-                  typeLabel,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black54,
+                Expanded(
+                  child: Text(
+                    typeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54,
+                    ),
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  isIncome
-                      ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-                      : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: amountColor,
+                const SizedBox(width: 10),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    amountText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: amountColor,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
+
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -312,71 +363,107 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             isDownpayment)
                         ? descriptionLabel
                         : isCapital
-                        ? ''
-                        : (tx.productName ?? 'Product'),
+                            ? ''
+                            : (tx.productName ?? 'Product'),
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (isExpense && tx.receiptImagePath != null)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade50,
-                      foregroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+
+                // ✅ Make receipt button responsive (no overflow)
+                if (isExpense && tx.receiptImagePath != null) ...[
+                  const SizedBox(width: 10),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 130),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green,
                         side: BorderSide(color: Colors.green.shade200),
+                        backgroundColor: Colors.green.shade50,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    ),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => Dialog(
-                          child: InteractiveViewer(
-                            child: Image.file(
-                              File(tx.receiptImagePath!),
-                              fit: BoxFit.contain,
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => Dialog(
+                            child: InteractiveViewer(
+                              child: Image.file(
+                                File(tx.receiptImagePath!),
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
+                        );
+                      },
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'View Receipt',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'View Receipt',
-                      style: TextStyle(fontSize: 13),
+                      ),
                     ),
                   ),
+                ],
               ],
             ),
-            const SizedBox(height: 2),
+
+            const SizedBox(height: 8),
+
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (isCapital)
-                  Text(
-                    'Note: $capitalNote',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  )
-                else if (isHalin && tx.quantity != null)
-                  Text(
-                    'Qty: ${tx.quantity}',
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
-                  )
-                else if (isExpense && tx.category != null)
-                  Text(
-                    'Category: ${tx.category}',
-                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                Expanded(
+                  child: Builder(
+                    builder: (_) {
+                      if (isCapital) {
+                        return Text(
+                          'Note: $capitalNote',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        );
+                      } else if (isHalin && tx.quantity != null) {
+                        return Text(
+                          'Qty: ${tx.quantity}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        );
+                      } else if (isExpense && tx.category != null) {
+                        return Text(
+                          'Category: ${tx.category}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
+                ),
+                const SizedBox(width: 10),
                 Text(
                   DateFormat('hh:mm a').format(tx.createdAt),
                   style: const TextStyle(fontSize: 13, color: Colors.black45),
@@ -435,35 +522,45 @@ class _DatePickerBox extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withAlpha(51),
-              blurRadius: 2,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const Icon(Icons.calendar_today, size: 17),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('MMMM d, y').format(date),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('MMMM d, y').format(date),
-              style: const TextStyle(fontSize: 15, color: Colors.black),
-            ),
+            const SizedBox(width: 10),
+            const Icon(Icons.calendar_today, size: 18),
           ],
         ),
       ),
@@ -491,9 +588,9 @@ class CategoryChipsWithDots extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          height: 45,
+          height: 46,
           child: ListView.separated(
-            controller: scrollController, // ✅ FIX
+            controller: scrollController,
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
             itemCount: categories.length,
@@ -506,12 +603,12 @@ class CategoryChipsWithDots extends StatelessWidget {
                 onTap: () => onCategorySelected(category),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 14,
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.primary
@@ -519,17 +616,17 @@ class CategoryChipsWithDots extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withAlpha(51),
-                        blurRadius: 2,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 6),
                       ),
                     ],
                   ),
                   child: Text(
                     category.displayName,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
                       color: isSelected ? Colors.white : Colors.black87,
                     ),
                   ),
@@ -538,14 +635,13 @@ class CategoryChipsWithDots extends StatelessWidget {
             },
           ),
         ),
-
         const SizedBox(height: 10),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: categories.map((category) {
             final isSelected = selectedCategory == category;
-            return Container(
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: isSelected ? 8 : 6,
               height: isSelected ? 8 : 6,
@@ -556,8 +652,7 @@ class CategoryChipsWithDots extends StatelessWidget {
             );
           }).toList(),
         ),
-
-        const SizedBox(height: 5),
+        const SizedBox(height: 6),
       ],
     );
   }
@@ -578,17 +673,21 @@ class _TransactionDetailsSheet extends StatelessWidget {
     final isOwnerPayment = transaction.type == 'Owner Payment';
     final isDownpayment = transaction.type == 'Downpayment';
     final detailTypeLabel = isDownpayment ? 'Owner Payment' : transaction.type;
+
     final currentUserName = [
       CurrentUser.firstName ?? '',
       CurrentUser.middleName ?? '',
       CurrentUser.lastName ?? '',
     ].where((s) => s.trim().isNotEmpty).join(' ').trim();
+
     final capitalAddedBy = (transaction.recordedBy ?? '').trim().isEmpty
         ? currentUserName
         : transaction.recordedBy!.trim();
+
     final recordedByValue = (transaction.recordedBy ?? '').trim().isEmpty
         ? currentUserName
         : transaction.recordedBy!.trim();
+
     final NumberFormat currency = NumberFormat.currency(
       locale: 'en_PH',
       symbol: '₱',
@@ -596,7 +695,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
     );
 
     return SafeArea(
-      top: false, // keeps drag handle closer to top
+      top: false,
       child: Padding(
         padding: EdgeInsets.only(
           left: 16,
@@ -623,7 +722,6 @@ class _TransactionDetailsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Amount
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -641,12 +739,12 @@ class _TransactionDetailsSheet extends StatelessWidget {
                     color: isHalin
                         ? Colors.green
                         : isExpense
-                        ? Colors.red
-                        : isCustomerPayment
-                        ? Colors.green
-                        : (isOwnerPayment || isDownpayment)
-                        ? Colors.red
-                        : Colors.green,
+                            ? Colors.red
+                            : isCustomerPayment
+                                ? Colors.green
+                                : (isOwnerPayment || isDownpayment)
+                                    ? Colors.red
+                                    : Colors.green,
                   ),
                 ),
               ],
@@ -672,10 +770,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Category:', style: TextStyle(fontSize: 16)),
-                  Text(
-                    transaction.category!,
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                  Text(transaction.category!, style: const TextStyle(fontSize: 16)),
                 ],
               ),
 
@@ -684,10 +779,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Quantity:', style: TextStyle(fontSize: 16)),
-                  Text(
-                    transaction.quantity.toString(),
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                  Text(transaction.quantity.toString(), style: const TextStyle(fontSize: 16)),
                 ],
               ),
 
@@ -698,7 +790,13 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Added By:', style: TextStyle(fontSize: 16)),
-                  Text(capitalAddedBy, style: const TextStyle(fontSize: 16)),
+                  Flexible(
+                    child: Text(
+                      capitalAddedBy,
+                      style: const TextStyle(fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
 
@@ -711,9 +809,16 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Recorded By:', style: TextStyle(fontSize: 16)),
-                  Text(recordedByValue, style: const TextStyle(fontSize: 16)),
+                  Flexible(
+                    child: Text(
+                      recordedByValue,
+                      style: const TextStyle(fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
+
             const SizedBox(height: 16),
 
             if (isExpense && transaction.receiptImagePath != null)
@@ -736,10 +841,14 @@ class _TransactionDetailsSheet extends StatelessWidget {
                         ),
                       );
                     },
-                    child: Image.file(
-                      File(transaction.receiptImagePath!),
-                      height: 150,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        File(transaction.receiptImagePath!),
+                        height: 170,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ],

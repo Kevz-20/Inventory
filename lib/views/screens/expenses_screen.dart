@@ -96,157 +96,220 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
     _dateTextController.text = vm.formattedDate;
 
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppHeader(
-        title: 'Gasto',
-        showBackButton: true,
-        action: Visibility(
-          visible: false,
-          maintainSize: true,
-          maintainAnimation: true,
-          maintainState: true,
-          child: IconButton(
-            icon: const Icon(Icons.list, color: Colors.white),
-            onPressed: () => GoRouter.of(context).push('/list_expenses'),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+
+        // Phone -> tablet scaling, clamped (same style as your other pages)
+        final double scale = (w / 390).clamp(0.90, 1.20);
+
+        final double padH = (16 * scale).clamp(14, 22);
+        final double padTop = (14 * scale).clamp(10, 18);
+        final double padBottom = (16 * scale).clamp(12, 20);
+
+        final double cardPad = (14 * scale).clamp(12, 18);
+        final double radius16 = (16 * scale).clamp(14, 20);
+        final double radius14 = (14 * scale).clamp(12, 18);
+        final double radius12 = (12 * scale).clamp(10, 16);
+
+        final double fieldH = (60 * scale).clamp(54, 66);
+        final double receiptH = (220 * scale).clamp(170, 260);
+
+        final double titleFs = (16 * scale).clamp(14.5, 18);
+        final double labelFs = (14 * scale).clamp(13, 16);
+        final double valueFs = (14 * scale).clamp(13, 16);
+        final double buttonFs = (16 * scale).clamp(14.5, 18);
+
+        final double gap12 = (12 * scale).clamp(10, 14);
+        final double gap14 = (14 * scale).clamp(12, 18);
+
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          appBar: AppHeader(
+            title: 'Gasto',
+            showBackButton: true,
+            action: Visibility(
+              visible: false,
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: IconButton(
+                icon: const Icon(Icons.list, color: Colors.white),
+                onPressed: () => GoRouter.of(context).push('/list_expenses'),
+              ),
+            ),
           ),
-        ),
-      ),
-      body: ScrollbarTheme(
-        data: ScrollbarThemeData(
-          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
-          thickness: WidgetStateProperty.all(5),
-          radius: const Radius.circular(8),
-        ),
-        child: Scrollbar(
-          controller: _scrollController,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _cleanCard(
-                  child: Column(
-                    children: [
-                      _readOnlyField(
-                        controller: _dateTextController,
-                        icon: Icons.calendar_month_rounded,
-                        label: 'Petsa',
-                        onTap: () => _pickDate(context, vm),
-                      ),
-                      const SizedBox(height: 12),
+          body: ScrollbarTheme(
+            data: ScrollbarThemeData(
+              thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+              thickness: WidgetStateProperty.all(5),
+              radius: const Radius.circular(8),
+            ),
+            child: Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _cleanCard(
+                      scale: scale,
+                      padding: cardPad,
+                      radius: radius16,
+                      child: Column(
+                        children: [
+                          _readOnlyField(
+                            scale: scale,
+                            height: fieldH,
+                            radius: radius12,
+                            controller: _dateTextController,
+                            icon: Icons.calendar_month_rounded,
+                            label: 'Petsa',
+                            onTap: () => _pickDate(context, vm),
+                            labelFs: labelFs,
+                            valueFs: valueFs,
+                          ),
+                          SizedBox(height: gap12),
 
-                      // ✅ NEW: Bottom sheet picker like StockIn (with Add Category)
-                      _categoryPickerField(vm),
+                          // ✅ NEW: Bottom sheet picker like StockIn (with Add Category)
+                          _categoryPickerField(vm, scale: scale, radius: radius12, labelFs: labelFs),
 
-                      const SizedBox(height: 12),
-                      _inputTextField(
-                        prefix: const SizedBox(
-                          width: 48,
-                          child: Center(
-                            child: Text(
-                              '₱',
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
+                          SizedBox(height: gap12),
+                          _inputTextField(
+                            scale: scale,
+                            height: fieldH,
+                            radius: radius12,
+                            prefix: SizedBox(
+                              width: (48 * scale).clamp(42, 56),
+                              child: Center(
+                                child: Text(
+                                  '₱',
+                                  style: TextStyle(
+                                    fontSize: (20 * scale).clamp(18, 24),
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
+                            label: 'Gasto',
+                            controller: vm.amountController,
+                            showError: vm.showValidationErrors,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [ThousandsFormatter()],
+                            hintText: "0.00",
+                            labelFs: labelFs,
+                            valueFs: valueFs,
+                          ),
+                          SizedBox(height: gap12),
+                          _inputTextField(
+                            scale: scale,
+                            height: fieldH,
+                            radius: radius12,
+                            prefix: Icon(
+                              Icons.description_rounded,
+                              color: AppColors.primary,
+                              size: (22 * scale).clamp(20, 26),
+                            ),
+                            label: 'Deskripsyon',
+                            controller: vm.descriptionController,
+                            showError: vm.showValidationErrors,
+                            hintText: "Unsa ni nga gasto?",
+                            labelFs: labelFs,
+                            valueFs: valueFs,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: gap14),
+                    _sectionCard(
+                      scale: scale,
+                      padding: cardPad,
+                      radius: radius16,
+                      titleFs: titleFs,
+                      title: "Resibo (Opsyonal)",
+                      icon: Icons.camera_alt_rounded,
+                      child: _receiptSection(context, vm, scale: scale, radius: radius14, receiptHeight: receiptH),
+                    ),
+                    SizedBox(height: (90 * scale).clamp(70, 110)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          bottomNavigationBar: Padding(
+            padding: EdgeInsets.fromLTRB(
+              padH,
+              (12 * scale).clamp(10, 14),
+              padH,
+              (12 * scale).clamp(10, 14) + bottomPadding,
+            ),
+            child: Material(
+              elevation: 10,
+              borderRadius: BorderRadius.circular(radius14),
+              shadowColor: Colors.black.withOpacity(0.15),
+              child: SizedBox(
+                height: (52 * scale).clamp(48, 58),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(radius14),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: vm.isLoading
+                      ? null
+                      : () async {
+                          vm.triggerValidation();
+
+                          await vm.save(
+                            context: context,
+                            createdByFirstName: CurrentUser.firstName ?? '',
+                            createdByMiddleName: CurrentUser.middleName ?? '',
+                            createdByLastName: CurrentUser.lastName ?? '',
+                          );
+                        },
+                  child: vm.isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Rekord',
+                          style: TextStyle(
+                            fontSize: buttonFs,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        label: 'Gasto',
-                        controller: vm.amountController,
-                        showError: vm.showValidationErrors,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [ThousandsFormatter()],
-                        hintText: "0.00",
-                      ),
-                      const SizedBox(height: 12),
-                      _inputTextField(
-                        prefix: const Icon(
-                          Icons.description_rounded,
-                          color: AppColors.primary,
-                        ),
-                        label: 'Deskripsyon',
-                        controller: vm.descriptionController,
-                        showError: vm.showValidationErrors,
-                        hintText: "Unsa ni nga gasto?",
-                      ),
-                    ],
-                  ),
                 ),
-                const SizedBox(height: 14),
-                _sectionCard(
-                  title: "Resibo (Opsyonal)",
-                  icon: Icons.camera_alt_rounded,
-                  child: _receiptSection(context, vm),
-                ),
-                const SizedBox(height: 90),
-              ],
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
-        child: Material(
-          elevation: 10,
-          borderRadius: BorderRadius.circular(14),
-          shadowColor: Colors.black.withOpacity(0.15),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
               ),
-              onPressed: vm.isLoading
-                  ? null
-                  : () async {
-                      vm.triggerValidation();
-
-                      await vm.save(
-                        context: context,
-                        createdByFirstName: CurrentUser.firstName ?? '',
-                        createdByMiddleName: CurrentUser.middleName ?? '',
-                        createdByLastName: CurrentUser.lastName ?? '',
-                      );
-                    },
-              child: vm.isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Rekord',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                    ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   // ============================================================
   // ✅ CATEGORY PICKER FIELD (BOTTOM SHEET) - same as StockIn
   // ============================================================
-  Widget _categoryPickerField(ExpensesViewModel vm) {
+  Widget _categoryPickerField(
+    ExpensesViewModel vm, {
+    required double scale,
+    required double radius,
+    required double labelFs,
+  }) {
     final isError = vm.showValidationErrors && (vm.selectedCategory == null);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(radius),
       onTap: vm.isCategoriesLoading
           ? null
           : () async {
@@ -254,12 +317,13 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 context: context,
                 categories: vm.categoryNames,
                 selected: vm.selectedCategory,
+                scale: scale,
               );
 
               if (selected == null) return;
 
               if (selected == '__add_new__') {
-                await _showAddCategoryDialog(context, vm);
+                await _showAddCategoryDialog(context, vm, scale: scale);
                 return;
               }
 
@@ -269,16 +333,17 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.grey.shade50,
-          prefixIcon: const Icon(Icons.category, color: AppColors.primary),
+          prefixIcon: Icon(Icons.category, color: AppColors.primary, size: (22 * scale).clamp(20, 26)),
           labelText: 'Kategorya',
+          labelStyle: TextStyle(fontSize: labelFs),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
               color: isError ? Colors.red : Colors.grey.shade300,
             ),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
               color: isError ? Colors.red : AppColors.primary,
             ),
@@ -291,15 +356,22 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 vm.isCategoriesLoading
                     ? 'Loading...'
                     : (vm.selectedCategory ?? 'Pili ug Kategorya'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
+                  fontSize: (14 * scale).clamp(13, 16),
                   color: (vm.selectedCategory == null)
                       ? Colors.grey.shade600
                       : Colors.black,
                 ),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black54),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.black54,
+              size: (22 * scale).clamp(20, 26),
+            ),
           ],
         ),
       ),
@@ -307,319 +379,257 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   }
 
   Future<String?> _showCategoryBottomSheet({
-  required BuildContext context,
-  required List<String> categories,
-  required String? selected,
-}) async {
-  return showModalBottomSheet<String>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.35),
-    builder: (sheetCtx) {
-      final search = ValueNotifier('');
-      final maxHeight = MediaQuery.of(sheetCtx).size.height * 0.78;
+    required BuildContext context,
+    required List<String> categories,
+    required String? selected,
+    required double scale,
+  }) async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (sheetCtx) {
+        final search = ValueNotifier('');
+        final maxHeight = MediaQuery.of(sheetCtx).size.height * 0.78;
 
-      return SafeArea(
-        top: false,
-        child: Container(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 24,
-                offset: const Offset(0, -6),
-                color: Colors.black.withOpacity(0.10),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 10,
-              bottom: 16 + MediaQuery.of(sheetCtx).viewInsets.bottom,
+        final double s = scale.clamp(0.90, 1.20);
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                  color: Colors.black.withOpacity(0.10),
+                ),
+              ],
             ),
-            child: Column(
-              children: [
-                // Drag handle
-                Container(
-                  height: 5,
-                  width: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(99),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: (16 * s).clamp(14, 20),
+                right: (16 * s).clamp(14, 20),
+                top: (10 * s).clamp(8, 12),
+                bottom: (16 * s).clamp(14, 20) + MediaQuery.of(sheetCtx).viewInsets.bottom,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: 5,
+                    width: (48 * s).clamp(44, 54),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                // Header
-                Row(
-                  children: [
-                    Container(
-                      height: 36,
-                      width: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.category_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Pili ug Kategorya',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-
-                    // Add button (same style as StockIn)
-                    InkWell(
-                      onTap: () =>
-                          Navigator.pop(sheetCtx, '__add_new__'),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 9,
-                        ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  Row(
+                    children: [
+                      Container(
+                        height: (36 * s).clamp(34, 42),
+                        width: (36 * s).clamp(34, 42),
                         decoration: BoxDecoration(
-                          color:
-                              AppColors.primary.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppColors.primary
-                                .withOpacity(0.25),
+                          color: AppColors.primary.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.category_rounded,
+                          color: AppColors.primary,
+                          size: (20 * s).clamp(18, 24),
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(8, 12)),
+                      Expanded(
+                        child: Text(
+                          'Pili ug Kategorya',
+                          style: TextStyle(
+                            fontSize: (16 * s).clamp(14, 18),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black87,
                           ),
                         ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.add,
-                                size: 18,
-                                color: AppColors.primary),
-                            SizedBox(width: 6),
-                            Text(
-                              'Add Kategorya',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.primary,
-                              ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(sheetCtx, '__add_new__'),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: (12 * s).clamp(10, 14),
+                            vertical: (9 * s).clamp(8, 10),
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.primary.withOpacity(0.25),
                             ),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.add, size: (18 * s).clamp(16, 22), color: AppColors.primary),
+                              SizedBox(width: (6 * s).clamp(5, 8)),
+                              Text(
+                                'Add Kategorya',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                  fontSize: (13 * s).clamp(12, 15),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Search field
-                ValueListenableBuilder<String>(
-                  valueListenable: search,
-                  builder: (_, value, _) => TextField(
-                    onChanged: (v) => search.value = v,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: 'Search category...',
-                      prefixIcon:
-                          const Icon(Icons.search_rounded),
-                      suffixIcon: value.trim().isEmpty
-                          ? null
-                          : IconButton(
-                              onPressed: () =>
-                                  search.value = '',
-                              icon: const Icon(
-                                  Icons.close_rounded),
-                            ),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      contentPadding:
-                          const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                            color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                            color: AppColors.primary),
+                    ],
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  ValueListenableBuilder<String>(
+                    valueListenable: search,
+                    builder: (_, value, _) => TextField(
+                      onChanged: (v) => search.value = v,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Search category...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: value.trim().isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () => search.value = '',
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: (12 * s).clamp(10, 14),
+                          vertical: (14 * s).clamp(12, 16),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppColors.primary),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: search,
+                      builder: (_, value, _) {
+                        final q = value.trim().toLowerCase();
+                        final filtered = q.isEmpty
+                            ? categories
+                            : categories.where((e) => e.toLowerCase().contains(q)).toList();
 
-                // Category list
-                Expanded(
-                  child: ValueListenableBuilder<String>(
-                    valueListenable: search,
-                    builder: (_, value, _) {
-                      final q =
-                          value.trim().toLowerCase();
-                      final filtered = q.isEmpty
-                          ? categories
-                          : categories
-                              .where((e) => e
-                                  .toLowerCase()
-                                  .contains(q))
-                              .toList();
-
-                      if (filtered.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.all(16),
-                            child: Column(
-                              mainAxisSize:
-                                  MainAxisSize.min,
-                              children: [
-                                Container(
-                                  height: 56,
-                                  width: 56,
-                                  decoration:
-                                      BoxDecoration(
-                                    color: Colors
-                                        .grey.shade100,
-                                    borderRadius:
-                                        BorderRadius
-                                            .circular(
-                                                18),
-                                  ),
-                                  child: const Icon(
-                                    Icons
-                                        .search_off_rounded,
-                                    color:
-                                        Colors.black54,
-                                  ),
-                                ),
-                                const SizedBox(
-                                    height: 10),
-                                Text(
-                                  'Walay match nga category.',
-                                  style: TextStyle(
-                                    color: Colors
-                                        .grey.shade700,
-                                    fontWeight:
-                                        FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 8),
-                        itemBuilder: (_, i) {
-                          final item =
-                              filtered[i];
-                          final isSelected =
-                              item == selected;
-
-                          return InkWell(
-                            borderRadius:
-                                BorderRadius
-                                    .circular(14),
-                            onTap: () =>
-                                Navigator.pop(
-                                    sheetCtx, item),
-                            child: Container(
-                              padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color: isSelected
-                                    ? AppColors
-                                        .primary
-                                        .withOpacity(
-                                            0.10)
-                                    : Colors.white,
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(14),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? AppColors
-                                          .primary
-                                          .withOpacity(
-                                              0.35)
-                                      : Colors.grey
-                                          .shade200,
-                                ),
-                              ),
-                              child: Row(
+                        if (filtered.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: EdgeInsets.all((16 * s).clamp(14, 20)),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      item,
-                                      style:
-                                          TextStyle(
-                                        fontWeight:
-                                            FontWeight
-                                                .w900,
-                                        color: isSelected
-                                            ? AppColors
-                                                .primary
-                                            : Colors
-                                                .black87,
-                                      ),
+                                  Container(
+                                    height: (56 * s).clamp(50, 66),
+                                    width: (56 * s).clamp(50, 66),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: const Icon(Icons.search_off_rounded, color: Colors.black54),
+                                  ),
+                                  SizedBox(height: (10 * s).clamp(8, 12)),
+                                  Text(
+                                    'Walay match nga category.',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: (13.5 * s).clamp(12.5, 15),
                                     ),
                                   ),
-                                  if (isSelected)
-                                    const Icon(
-                                      Icons
-                                          .check_circle_rounded,
-                                      color: AppColors
-                                          .primary,
-                                    ),
                                 ],
                               ),
                             ),
                           );
-                        },
-                      );
-                    },
+                        }
+
+                        return ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => SizedBox(height: (8 * s).clamp(6, 10)),
+                          itemBuilder: (_, i) {
+                            final item = filtered[i];
+                            final isSelected = item == selected;
+
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () => Navigator.pop(sheetCtx, item),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (14 * s).clamp(12, 16),
+                                  vertical: (12 * s).clamp(10, 14),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary.withOpacity(0.10)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary.withOpacity(0.35)
+                                        : Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: isSelected ? AppColors.primary : Colors.black87,
+                                          fontSize: (14 * s).clamp(13, 16),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(Icons.check_circle_rounded, color: AppColors.primary),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   Future<void> _showAddCategoryDialog(
     BuildContext context,
-    ExpensesViewModel vm,
-  ) async {
+    ExpensesViewModel vm, {
+    required double scale,
+  }) async {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
     final value = ValueNotifier<String>('');
+
+    final double s = scale.clamp(0.90, 1.20);
 
     final result = await showDialog<String>(
       context: context,
@@ -627,9 +637,14 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       builder: (dialogCtx) {
         return Dialog(
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular((18 * s).clamp(16, 22))),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              (16 * s).clamp(14, 20),
+              (14 * s).clamp(12, 18),
+              (16 * s).clamp(14, 20),
+              (12 * s).clamp(10, 16),
+            ),
             child: Form(
               key: formKey,
               child: Column(
@@ -638,11 +653,11 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           "Add New Category",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
                             color: Colors.black87,
                           ),
@@ -655,15 +670,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: (10 * s).clamp(8, 12)),
                   Text(
                     "Example: Kumpra, Bayronon, Transportasyon",
                     style: TextStyle(
                       color: Colors.grey.shade700,
                       fontWeight: FontWeight.w600,
+                      fontSize: (13.5 * s).clamp(12.5, 15),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
                   ValueListenableBuilder<String>(
                     valueListenable: value,
                     builder: (_, text, _) {
@@ -680,13 +696,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           filled: true,
                           fillColor: Colors.grey.shade50,
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: AppColors.primary),
+                            borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                            borderSide: const BorderSide(color: AppColors.primary),
                           ),
                         ),
                         onChanged: (v) => value.value = v,
@@ -708,7 +723,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: (6 * s).clamp(4, 10)),
                   Row(
                     children: [
                       Expanded(
@@ -718,17 +733,17 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                             foregroundColor: Colors.black87,
                             side: BorderSide(color: Colors.grey.shade300),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: EdgeInsets.symmetric(vertical: (12 * s).clamp(10, 14)),
                           ),
-                          child: const Text(
+                          child: Text(
                             "Cancel",
-                            style: TextStyle(fontWeight: FontWeight.w800),
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: (13.5 * s).clamp(12.5, 15)),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: (10 * s).clamp(8, 12)),
                       Expanded(
                         child: ValueListenableBuilder<String>(
                           valueListenable: value,
@@ -737,8 +752,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                             return ElevatedButton(
                               onPressed: canAdd
                                   ? () {
-                                      if (formKey.currentState?.validate() !=
-                                          true) {
+                                      if (formKey.currentState?.validate() != true) {
                                         return;
                                       }
                                       Navigator.pop(dialogCtx, controller.text);
@@ -746,18 +760,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                disabledBackgroundColor:
-                                    AppColors.primary.withOpacity(0.30),
+                                disabledBackgroundColor: AppColors.primary.withOpacity(0.30),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                padding: EdgeInsets.symmetric(vertical: (12 * s).clamp(10, 14)),
                                 elevation: 0,
                               ),
-                              child: const Text(
+                              child: Text(
                                 "Add",
-                                style: TextStyle(fontWeight: FontWeight.w900),
+                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: (13.5 * s).clamp(12.5, 15)),
                               ),
                             );
                           },
@@ -781,19 +793,25 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   }
 
   // ============================================================
-  // UI PARTS
+  // UI PARTS (RESPONSIVE)
   // ============================================================
   Widget _sectionCard({
     required String title,
     required IconData icon,
     required Widget child,
+    required double scale,
+    required double padding,
+    required double radius,
+    required double titleFs,
   }) {
+    final s = scale.clamp(0.90, 1.20);
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
@@ -809,41 +827,46 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           Row(
             children: [
               Container(
-                height: 36,
-                width: 36,
+                height: (36 * s).clamp(34, 44),
+                width: (36 * s).clamp(34, 44),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: (20 * s).clamp(18, 24)),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: (10 * s).clamp(8, 12)),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16,
+                    fontSize: titleFs,
                     color: Colors.black87,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: (12 * s).clamp(10, 14)),
           child,
         ],
       ),
     );
   }
 
-  Widget _cleanCard({required Widget child}) {
+  Widget _cleanCard({
+    required Widget child,
+    required double scale,
+    required double padding,
+    required double radius,
+  }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
@@ -862,29 +885,38 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    required double scale,
+    required double height,
+    required double radius,
+    required double labelFs,
+    required double valueFs,
   }) {
+    final s = scale.clamp(0.90, 1.20);
+
     return SizedBox(
-      height: 60,
+      height: height,
       child: TextField(
         controller: controller,
         readOnly: true,
         onTap: onTap,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w800,
+          fontSize: valueFs,
         ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.grey.shade50,
-          prefixIcon: Icon(icon, color: AppColors.primary),
+          prefixIcon: Icon(icon, color: AppColors.primary, size: (22 * s).clamp(20, 26)),
           labelText: label,
-          suffixIcon: const Icon(Icons.chevron_right_rounded),
+          labelStyle: TextStyle(fontSize: labelFs, fontWeight: FontWeight.w700),
+          suffixIcon: Icon(Icons.chevron_right_rounded, size: (22 * s).clamp(20, 26)),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
           ),
         ),
@@ -892,23 +924,31 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     );
   }
 
-  Widget _receiptSection(BuildContext context, ExpensesViewModel vm) {
+  Widget _receiptSection(
+    BuildContext context,
+    ExpensesViewModel vm, {
+    required double scale,
+    required double radius,
+    required double receiptHeight,
+  }) {
+    final s = scale.clamp(0.90, 1.20);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
           onTap: () => _pickReceiptImage(context, vm),
           child: Container(
-            height: 220,
+            height: receiptHeight,
             width: double.infinity,
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(radius),
               color: Colors.grey.shade50,
             ),
             child: vm.receiptImage != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(radius),
                     child: Image.file(
                       File(vm.receiptImage!.path),
                       fit: BoxFit.cover,
@@ -918,66 +958,73 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        height: 54,
-                        width: 54,
+                        height: (54 * s).clamp(46, 62),
+                        width: (54 * s).clamp(46, 62),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.camera_alt_rounded,
                           color: AppColors.primary,
-                          size: 28,
+                          size: (28 * s).clamp(24, 34),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      SizedBox(height: (10 * s).clamp(8, 12)),
                       Text(
                         "Tap para mag add og resibo",
                         style: TextStyle(
                           color: Colors.grey.shade700,
                           fontWeight: FontWeight.w700,
+                          fontSize: (13.5 * s).clamp(12.5, 15),
                         ),
                       ),
                     ],
                   ),
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: (10 * s).clamp(8, 12)),
         Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => _pickReceiptImage(context, vm),
-              icon: const Icon(Icons.camera_alt_rounded),
-              label: const Text("Add / Retake"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _pickReceiptImage(context, vm),
+                icon: Icon(Icons.camera_alt_rounded, size: (20 * s).clamp(18, 24)),
+                label: Text(
+                  "Add / Retake",
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: (13.5 * s).clamp(12.5, 15)),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: (12 * s).clamp(10, 14)),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: vm.receiptImage == null ? null : vm.removeReceipt,
-              icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text("Remove"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: BorderSide(color: Colors.red.withOpacity(0.5)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            SizedBox(width: (10 * s).clamp(8, 12)),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: vm.receiptImage == null ? null : vm.removeReceipt,
+                icon: Icon(Icons.delete_outline_rounded, size: (20 * s).clamp(18, 24)),
+                label: Text(
+                  "Remove",
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: (13.5 * s).clamp(12.5, 15)),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: BorderSide(color: Colors.red.withOpacity(0.5)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: (12 * s).clamp(10, 14)),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ],
     );
   }
@@ -990,34 +1037,45 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
     String? hintText,
+
+    // responsive
+    required double scale,
+    required double height,
+    required double radius,
+    required double labelFs,
+    required double valueFs,
   }) {
     final isError = showError && controller.text.isEmpty;
+    final s = scale.clamp(0.90, 1.20);
 
     return SizedBox(
-      height: 60,
+      height: height,
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.black87,
           fontWeight: FontWeight.w800,
+          fontSize: valueFs,
         ),
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.grey.shade50,
           prefixIcon: prefix,
           labelText: label,
+          labelStyle: TextStyle(fontSize: labelFs, fontWeight: FontWeight.w700),
           hintText: hintText,
+          hintStyle: TextStyle(fontSize: (13.5 * s).clamp(12.5, 15), color: Colors.grey.shade600),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
               color: isError ? Colors.red : Colors.grey.shade300,
               width: 1.2,
             ),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
               color: isError ? Colors.red : AppColors.primary,
               width: 1.2,

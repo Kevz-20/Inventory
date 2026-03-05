@@ -16,6 +16,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width >= 700;
+
+    // ✅ keep same toolbar height, just adjust title sizing a bit on tablet
+    final titleFontSize = isTablet ? 18.0 : 16.0;
+
     return AppBar(
       leading: showBackButton
           ? IconButton(
@@ -27,17 +33,41 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               },
             )
           : null,
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
+
+      // ✅ Responsive title (won’t overflow on small phones)
+      title: LayoutBuilder(
+        builder: (context, c) {
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: c.maxWidth,
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: titleFontSize,
+                ),
+              ),
+            ),
+          );
+        },
       ),
+
       centerTitle: true,
       backgroundColor: AppColors.primary,
       elevation: 2,
-      actions: action != null ? [action!] : null, // ✅ added this
+
+      // ✅ same action logic
+      actions: action != null ? [action!] : null,
+
+      // ✅ small spacing improvement so title stays centered nicely
+      titleSpacing: showBackButton ? 0 : (isTablet ? 16 : 8),
     );
   }
 

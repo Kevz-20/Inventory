@@ -89,148 +89,205 @@ class _CapitalManagementScreenState
 
         final enteredAmount = _parseAmount();
 
-        return Scaffold(
-          backgroundColor: AppColors.surface,
-          appBar: const AppHeader(
-            title: 'Capital Management',
-            showBackButton: true,
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ===================== SUMMARY (better layout) =====================
-                Column(
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+
+            // ✅ same responsive scaling approach
+            final double s = (w / 390).clamp(0.90, 1.20);
+
+            final double padH = (16 * s).clamp(14, 22);
+            final double padTop = (14 * s).clamp(10, 18);
+            final double padBottom = (16 * s).clamp(12, 20);
+
+            final double cardPad = (14 * s).clamp(12, 18);
+            final double r16 = (16 * s).clamp(14, 20);
+            final double r14 = (14 * s).clamp(12, 18);
+            final double r12 = (12 * s).clamp(10, 16);
+
+            final double fieldH = (58 * s).clamp(54, 66);
+            final double btnH = (52 * s).clamp(48, 58);
+
+            final double gap12 = (12 * s).clamp(10, 14);
+            final double gap14 = (14 * s).clamp(12, 18);
+
+            final double titleFs = (16 * s).clamp(14.5, 18);
+            final double smallFs = (12 * s).clamp(11.5, 14);
+            final double balanceLabelFs = (13 * s).clamp(12, 15);
+            final double balanceValueFs = (18 * s).clamp(16, 22);
+            final double bottomBtnFs = (16 * s).clamp(14.5, 18);
+
+            return Scaffold(
+              backgroundColor: AppColors.surface,
+              appBar: const AppHeader(
+                title: 'Capital Management',
+                showBackButton: true,
+              ),
+              body: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _miniBalanceCard(
-                      title: "Cash on Hand",
-                      value: totalCashOnHand,
-                      icon: Icons.money_rounded,
-                    ),
-                    const SizedBox(height: 12),
-                    _miniBalanceCard(
-                      title: "Capital",
-                      value: totalCapital,
-                      icon: Icons.account_balance_rounded,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                // ===================== ADD CAPITAL =====================
-                _sectionCard(
-                  title: 'Add Capital',
-                  icon: Icons.add_circle_outline_rounded,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _amountInput(),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Enter the amount you want to add',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
+                    // ===================== SUMMARY =====================
+                    Column(
+                      children: [
+                        _miniBalanceCard(
+                          title: "Cash on Hand",
+                          value: totalCashOnHand,
+                          icon: Icons.money_rounded,
+                          s: s,
+                          padding: cardPad,
+                          radius: r16,
+                          labelFs: balanceLabelFs,
+                          valueFs: balanceValueFs,
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                        SizedBox(height: gap12),
+                        _miniBalanceCard(
+                          title: "Capital",
+                          value: totalCapital,
+                          icon: Icons.account_balance_rounded,
+                          s: s,
+                          padding: cardPad,
+                          radius: r16,
+                          labelFs: balanceLabelFs,
+                          valueFs: balanceValueFs,
+                        ),
+                      ],
+                    ),
 
-                      // Chips responsive
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                    SizedBox(height: gap14),
+
+                    // ===================== ADD CAPITAL =====================
+                    _sectionCard(
+                      title: 'Add Capital',
+                      icon: Icons.add_circle_outline_rounded,
+                      s: s,
+                      padding: cardPad,
+                      radius: r16,
+                      titleFs: titleFs,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _quickAmountChip('500'),
-                          _quickAmountChip('1000'),
-                          _quickAmountChip('5000'),
+                          _amountInput(
+                            s: s,
+                            height: fieldH,
+                            radius: r12,
+                          ),
+                          SizedBox(height: (8 * s).clamp(6, 10)),
+                          Text(
+                            'Enter the amount you want to add',
+                            style: TextStyle(
+                              fontSize: smallFs,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: gap12),
+
+                          // Chips responsive
+                          Wrap(
+                            spacing: (8 * s).clamp(6, 10),
+                            runSpacing: (8 * s).clamp(6, 10),
+                            children: [
+                              _quickAmountChip('500', s: s, radius: r12),
+                              _quickAmountChip('1000', s: s, radius: r12),
+                              _quickAmountChip('5000', s: s, radius: r12),
+                            ],
+                          ),
+
+                          SizedBox(height: gap14),
+                          _remarksInput(
+                            s: s,
+                            height: fieldH,
+                            radius: r12,
+                          ),
                         ],
                       ),
-
-                      const SizedBox(height: 14),
-                      _remarksInput(),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 90),
-              ],
-            ),
-          ),
-
-          // ===================== BOTTOM BUTTON (same behavior) =====================
-          bottomNavigationBar: Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
-            child: Material(
-              elevation: 10,
-              borderRadius: BorderRadius.circular(14),
-              shadowColor: Colors.black.withOpacity(0.15),
-              child: SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: vm.isLoading || enteredAmount <= 0
-                      ? null
-                      : () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          messenger.hideCurrentSnackBar();
-
-                          await vm.addCapital(
-                            capitalAmount: enteredAmount,
-                            remarks: _remarksController.text,
-                          );
-
-                          if (!mounted) return;
-
-                          if (vm.error == null) {
-                            _amountController.clear();
-                            _remarksController.clear();
-                            setState(() {});
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Capital added successfully!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          } else {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Failed to add capital: ${vm.error}',
-                                ),
-                                backgroundColor: AppColors.error,
-                              ),
-                            );
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
                     ),
-                    elevation: 0,
-                  ),
-                  child: vm.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          "Add Capital",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+
+                    SizedBox(height: (90 * s).clamp(70, 110)),
+                  ],
                 ),
               ),
-            ),
-          ),
+
+              // ===================== BOTTOM BUTTON =====================
+              bottomNavigationBar: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  padH,
+                  (12 * s).clamp(10, 14),
+                  padH,
+                  (12 * s).clamp(10, 14) + bottomPadding,
+                ),
+                child: Material(
+                  elevation: 10,
+                  borderRadius: BorderRadius.circular(r14),
+                  shadowColor: Colors.black.withOpacity(0.15),
+                  child: SizedBox(
+                    height: btnH,
+                    child: ElevatedButton(
+                      onPressed: vm.isLoading || enteredAmount <= 0
+                          ? null
+                          : () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              messenger.hideCurrentSnackBar();
+
+                              await vm.addCapital(
+                                capitalAmount: enteredAmount,
+                                remarks: _remarksController.text,
+                              );
+
+                              if (!mounted) return;
+
+                              if (vm.error == null) {
+                                _amountController.clear();
+                                _remarksController.clear();
+                                setState(() {});
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Capital added successfully!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              } else {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Failed to add capital: ${vm.error}',
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(r14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: vm.isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              "Add Capital",
+                              style: TextStyle(
+                                fontSize: bottomBtnFs,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
       loading: () =>
@@ -239,15 +296,19 @@ class _CapitalManagementScreenState
     );
   }
 
-  // ================= UI HELPERS =================
+  // ================= UI HELPERS (responsive params) =================
 
-  Widget _card({required Widget child}) {
+  Widget _card({
+    required Widget child,
+    required double padding,
+    required double radius,
+  }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
@@ -265,38 +326,49 @@ class _CapitalManagementScreenState
     required String title,
     required IconData icon,
     required Widget child,
+
+    required double s,
+    required double padding,
+    required double radius,
+    required double titleFs,
   }) {
     return _card(
+      padding: padding,
+      radius: radius,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                height: 36,
-                width: 36,
+                height: (36 * s).clamp(34, 44),
+                width: (36 * s).clamp(34, 44),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary,
+                  size: (20 * s).clamp(18, 24),
+                ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: (10 * s).clamp(8, 12)),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 16,
+                    fontSize: titleFs,
                     color: Colors.black87,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: (10 * s).clamp(8, 12)),
           Divider(color: Colors.grey.shade200, height: 1),
-          const SizedBox(height: 12),
+          SizedBox(height: (12 * s).clamp(10, 14)),
           child,
         ],
       ),
@@ -307,12 +379,18 @@ class _CapitalManagementScreenState
     required String title,
     required double value,
     IconData? icon,
+
+    required double s,
+    required double padding,
+    required double radius,
+    required double labelFs,
+    required double valueFs,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
@@ -326,15 +404,19 @@ class _CapitalManagementScreenState
         children: [
           if (icon != null)
             Container(
-              height: 42,
-              width: 42,
+              height: (42 * s).clamp(38, 52),
+              width: (42 * s).clamp(38, 52),
               decoration: BoxDecoration(
                 color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
               ),
-              child: Icon(icon, size: 22, color: AppColors.primary),
+              child: Icon(
+                icon,
+                size: (22 * s).clamp(20, 28),
+                color: AppColors.primary,
+              ),
             ),
-          if (icon != null) const SizedBox(width: 12),
+          if (icon != null) SizedBox(width: (12 * s).clamp(10, 14)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,14 +426,14 @@ class _CapitalManagementScreenState
                   style: TextStyle(
                     color: Colors.grey.shade700,
                     fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                    fontSize: labelFs,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: (4 * s).clamp(3, 6)),
                 Text(
                   _currencyFormatter.format(value),
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(
+                    fontSize: valueFs,
                     fontWeight: FontWeight.w900,
                     color: Colors.black87,
                   ),
@@ -365,7 +447,11 @@ class _CapitalManagementScreenState
     );
   }
 
-  Widget _quickAmountChip(String value) {
+  Widget _quickAmountChip(
+    String value, {
+    required double s,
+    required double radius,
+  }) {
     return OutlinedButton(
       onPressed: () {
         final current = _amountController.text.replaceAll(',', '');
@@ -378,16 +464,29 @@ class _CapitalManagementScreenState
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
         side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+        padding: EdgeInsets.symmetric(
+          horizontal: (14 * s).clamp(12, 18),
+          vertical: (12 * s).clamp(10, 14),
+        ),
       ),
-      child: Text('₱${NumberFormat('#,##0').format(int.parse(value))}'),
+      child: Text(
+        '₱${NumberFormat('#,##0').format(int.parse(value))}',
+        style: TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: (13.5 * s).clamp(12.5, 15.5),
+        ),
+      ),
     );
   }
 
-  Widget _amountInput() {
+  Widget _amountInput({
+    required double s,
+    required double height,
+    required double radius,
+  }) {
     return SizedBox(
-      height: 58,
+      height: height,
       child: TextField(
         controller: _amountController,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -396,31 +495,32 @@ class _CapitalManagementScreenState
           ThousandDecimalInputFormatter(),
         ],
         onChanged: (_) => setState(() {}),
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.black87,
           fontWeight: FontWeight.w800,
+          fontSize: (14 * s).clamp(13, 16),
         ),
         decoration: InputDecoration(
           hintText: '0.00',
           filled: true,
           fillColor: Colors.grey.shade50,
           prefixIcon: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all((16 * s).clamp(14, 18)),
             child: Text(
               '₱',
               style: TextStyle(
                 color: AppColors.primary,
-                fontSize: 18,
+                fontSize: (18 * s).clamp(16, 22),
                 fontWeight: FontWeight.w900,
               ),
             ),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
           ),
         ),
@@ -428,26 +528,35 @@ class _CapitalManagementScreenState
     );
   }
 
-  Widget _remarksInput() {
+  Widget _remarksInput({
+    required double s,
+    required double height,
+    required double radius,
+  }) {
     return SizedBox(
-      height: 58,
+      height: height,
       child: TextField(
         controller: _remarksController,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.black87,
           fontWeight: FontWeight.w700,
+          fontSize: (14 * s).clamp(13, 16),
         ),
         decoration: InputDecoration(
           hintText: 'Optional note',
           filled: true,
           fillColor: Colors.grey.shade50,
-          prefixIcon: const Icon(Icons.notes_rounded, color: AppColors.primary),
+          prefixIcon: Icon(
+            Icons.notes_rounded,
+            color: AppColors.primary,
+            size: (22 * s).clamp(20, 26),
+          ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
             borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
           ),
         ),

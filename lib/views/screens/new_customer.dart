@@ -22,26 +22,16 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   List<BarangayModel> currentBarangays = [];
   bool _showValidationErrors = false;
 
-  // ✅ NEW: Track if user interacted with Contact field (so no red border on page load)
   bool _contactTouched = false;
 
-  // ✅ CONTACT NUMBER VALIDATION
   String? _contactErrorText(String value) {
     final v = value.trim();
-
-    // empty is handled by required validation (so we don't show format message here)
     if (v.isEmpty) return null;
 
-    if (!RegExp(r'^\d+$').hasMatch(v)) {
-      return 'Numbers only';
-    }
-    if (v.length != 11) {
-      return 'Contact number must be 11 digits';
-    }
-    if (!v.startsWith('09')) {
-      return 'Contact number must start with 09';
-    }
-    return null; // valid
+    if (!RegExp(r'^\d+$').hasMatch(v)) return 'Numbers only';
+    if (v.length != 11) return 'Contact number must be 11 digits';
+    if (!v.startsWith('09')) return 'Contact number must start with 09';
+    return null;
   }
 
   @override
@@ -67,22 +57,37 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     final sortedBarangays = List<BarangayModel>.from(vm.barangays)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-    // ✅ button enabled only when form valid and not loading
     final canSave = !vm.isLoading && vm.isFormValid;
+
+    // ✅ Responsive scale (small phone -> tablet)
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+    final s = (w / 360).clamp(1.0, 1.18);
+
+    // ✅ Responsive paddings (keeps your same layout, just adapts spacing)
+    final padH = (16.0 * s).clamp(16.0, 24.0);
+    final padV = (16.0 * s).clamp(16.0, 24.0);
+
+    // ✅ Responsive list max height
+    final suggestMaxH = (h * 0.28).clamp(180.0, 280.0);
+
+    // ✅ Responsive button height
+    final buttonH = (52.0 * s).clamp(52.0, 60.0);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Add New Customer', showBackButton: true),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: EdgeInsets.fromLTRB(padH, padV, padH, 24),
         child: Column(
           children: [
-            _sectionHeader(title: "Customer Information"),
-            const SizedBox(height: 12),
+            _sectionHeader(title: "Customer Information", s: s),
+            SizedBox(height: (12 * s).clamp(12.0, 16.0)),
 
             _buildTextField(
               'First Name',
               vmNotifier.firstNameController,
+              s: s,
               isRequired: true,
               icon: Icons.person_outline,
               hintText: "Juan",
@@ -91,6 +96,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
             _buildTextField(
               'Middle Name (optional)',
               vmNotifier.middleNameController,
+              s: s,
               icon: Icons.person_outline,
               hintText: "Dela",
             ),
@@ -98,15 +104,16 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
             _buildTextField(
               'Last Name',
               vmNotifier.lastNameController,
+              s: s,
               isRequired: true,
               icon: Icons.person_outline,
               hintText: "Cruz",
             ),
 
-            // ✅ Contact field: show format hint ONLY after user starts typing
             _buildTextField(
               'Contact Number',
               vmNotifier.contactController,
+              s: s,
               isRequired: true,
               icon: Icons.phone_outlined,
               hintText: "09XXXXXXXXX",
@@ -116,25 +123,23 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                 LengthLimitingTextInputFormatter(11),
               ],
               validator: _contactErrorText,
-              showValidationWhileTyping:
-                  _contactTouched, // ✅ only after touched
+              showValidationWhileTyping: _contactTouched,
               onUserInteracted: () {
-                if (!_contactTouched) {
-                  setState(() => _contactTouched = true);
-                }
+                if (!_contactTouched) setState(() => _contactTouched = true);
               },
             ),
 
             _buildSearchField(
               label: 'Municipality',
               controller: vm.cityController,
+              s: s,
               isRequired: true,
               hintText: "Select municipality",
               icon: Icons.location_city_outlined,
               items: sortedCities.map((c) => c.name).toList(),
               filteredItems: filteredCities,
-              onChangedFiltered: (list) =>
-                  setState(() => filteredCities = list),
+              suggestMaxHeight: suggestMaxH,
+              onChangedFiltered: (list) => setState(() => filteredCities = list),
               onItemSelected: (value) {
                 final selected = vm.cities.firstWhere((c) => c.name == value);
                 vmNotifier.selectCity(selected);
@@ -151,17 +156,16 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
             _buildSearchField(
               label: 'Barangay',
               controller: vm.barangayController,
+              s: s,
               isRequired: true,
               hintText: "Select barangay",
               icon: Icons.place_outlined,
               items: sortedBarangays.map((b) => b.name).toList(),
               filteredItems: filteredBarangays,
-              onChangedFiltered: (list) =>
-                  setState(() => filteredBarangays = list),
+              suggestMaxHeight: suggestMaxH,
+              onChangedFiltered: (list) => setState(() => filteredBarangays = list),
               onItemSelected: (value) {
-                final selected = sortedBarangays.firstWhere(
-                  (b) => b.name == value,
-                );
+                final selected = sortedBarangays.firstWhere((b) => b.name == value);
                 vmNotifier.selectBarangay(selected);
               },
             ),
@@ -169,25 +173,23 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
             _buildTextField(
               'Landmark / Street',
               vmNotifier.landmarkController,
+              s: s,
               isRequired: true,
               icon: Icons.edit_location_alt_outlined,
               hintText: "Purok / Street / Landmark",
             ),
 
-            const SizedBox(height: 18),
+            SizedBox(height: (18 * s).clamp(18.0, 24.0)),
 
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: buttonH,
               child: ElevatedButton(
                 onPressed: canSave
                     ? () async {
                         setState(() => _showValidationErrors = true);
 
-                        // ✅ Required checks (kept your logic)
-                        if (vmNotifier.firstNameController.text
-                            .trim()
-                            .isEmpty) {
+                        if (vmNotifier.firstNameController.text.trim().isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('First Name is required'),
@@ -215,10 +217,8 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           return;
                         }
 
-                        // ✅ Format check (kept)
-                        final contactFormatError = _contactErrorText(
-                          vmNotifier.contactController.text,
-                        );
+                        final contactFormatError =
+                            _contactErrorText(vmNotifier.contactController.text);
                         if (contactFormatError != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -270,35 +270,33 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                           vmNotifier.resetFields();
                           setState(() {
                             _showValidationErrors = false;
-                            _contactTouched = false; // ✅ reset touch state too
+                            _contactTouched = false;
                           });
                           Navigator.pop(context, true);
                         }
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: canSave
-                      ? AppColors.primary
-                      : Colors.grey.shade400,
+                  backgroundColor: canSave ? AppColors.primary : Colors.grey.shade400,
                   disabledBackgroundColor: Colors.grey.shade400,
                   elevation: canSave ? 2 : 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular((16 * s).clamp(16.0, 20.0)),
                   ),
                 ),
                 child: vm.isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(
+                    ? SizedBox(
+                        height: (22 * s).clamp(22.0, 26.0),
+                        width: (22 * s).clamp(22.0, 26.0),
+                        child: const CircularProgressIndicator(
                           strokeWidth: 2.6,
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
+                    : Text(
                         'Add Customer',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: (16 * s).clamp(16.0, 18.0),
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                         ),
@@ -315,18 +313,21 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   // UI HELPERS
   // -------------------------
 
-  Widget _sectionHeader({required String title}) {
+  Widget _sectionHeader({required String title, required double s}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all((14 * s).clamp(14.0, 18.0)),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular((16 * s).clamp(16.0, 20.0)),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+        style: TextStyle(
+          fontSize: (16 * s).clamp(16.0, 18.0),
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -334,6 +335,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
+    required double s,
     bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
@@ -341,15 +343,12 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     String? hintText,
     String? Function(String value)? validator,
     bool showValidationWhileTyping = false,
-    VoidCallback? onUserInteracted, // ✅ NEW
+    VoidCallback? onUserInteracted,
   }) {
     final isEmpty = controller.text.trim().isEmpty;
     final formatError = validator?.call(controller.text);
 
-    // ✅ Required empty: show only when Save pressed
     final showEmptyError = _showValidationErrors && isRequired && isEmpty;
-
-    // ✅ Format error: show when Save pressed OR user already interacted (and not empty)
     final showFormatError =
         (_showValidationErrors || showValidationWhileTyping) &&
         !isEmpty &&
@@ -357,8 +356,10 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
 
     final showError = showEmptyError || showFormatError;
 
+    final radius = (14 * s).clamp(14.0, 18.0);
+
     final baseBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
         color: showError ? AppColors.error : Colors.grey.shade300,
         width: showError ? 1.4 : 1,
@@ -366,7 +367,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     );
 
     final focusedBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
         color: showError ? AppColors.error : AppColors.primary,
         width: 1.6,
@@ -374,7 +375,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: (8 * s).clamp(8.0, 12.0)),
       child: TextFormField(
         controller: controller,
         cursorColor: AppColors.textPrimary,
@@ -382,22 +383,18 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
         inputFormatters: inputFormatters,
         onChanged: (_) {
           onUserInteracted?.call();
-          if (_showValidationErrors || showValidationWhileTyping) {
-            setState(() {});
-          }
+          if (_showValidationErrors || showValidationWhileTyping) setState(() {});
         },
         decoration: InputDecoration(
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           labelText: label,
           hintText: hintText,
-          prefixIcon: icon != null
-              ? Icon(icon, color: Colors.grey.shade600)
-              : null,
+          prefixIcon: icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
           filled: true,
           fillColor: const Color(0xFFF9FAFB),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 14,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: (14 * s).clamp(14.0, 18.0),
+            vertical: (14 * s).clamp(14.0, 18.0),
           ),
           labelStyle: TextStyle(
             fontWeight: FontWeight.w700,
@@ -410,15 +407,11 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
           border: baseBorder,
           enabledBorder: baseBorder,
           focusedBorder: focusedBorder,
-
-          // ✅ Format message under field (only when visible)
           helperText: showFormatError ? formatError : null,
           helperStyle: const TextStyle(
             color: AppColors.error,
             fontWeight: FontWeight.w700,
           ),
-
-          // ✅ Required empty “red state” (no text)
           errorText: showEmptyError ? "" : null,
           errorStyle: const TextStyle(height: 0, fontSize: 0),
         ),
@@ -429,19 +422,21 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   Widget _buildSearchField({
     required String label,
     required TextEditingController controller,
-    bool isRequired = false,
     required List<String> items,
     required List<String> filteredItems,
     required Function(List<String>) onChangedFiltered,
     required Function(String) onItemSelected,
+    required double suggestMaxHeight,
+    required double s,
+    bool isRequired = false,
     String? hintText,
     IconData? icon,
   }) {
-    final showError =
-        _showValidationErrors && isRequired && controller.text.trim().isEmpty;
+    final showError = _showValidationErrors && isRequired && controller.text.trim().isEmpty;
+    final radius = (14 * s).clamp(14.0, 18.0);
 
     final baseBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
         color: showError ? AppColors.error : Colors.grey.shade300,
         width: showError ? 1.4 : 1,
@@ -449,7 +444,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     );
 
     final focusedBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
         color: showError ? AppColors.error : AppColors.primary,
         width: 1.6,
@@ -457,7 +452,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: (8 * s).clamp(8.0, 12.0)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -468,14 +463,12 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
               floatingLabelBehavior: FloatingLabelBehavior.auto,
               labelText: label,
               hintText: hintText,
-              prefixIcon: icon != null
-                  ? Icon(icon, color: Colors.grey.shade600)
-                  : null,
+              prefixIcon: icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
               filled: true,
               fillColor: const Color(0xFFF9FAFB),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 14,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: (14 * s).clamp(14.0, 18.0),
+                vertical: (14 * s).clamp(14.0, 18.0),
               ),
               labelStyle: TextStyle(
                 fontWeight: FontWeight.w700,
@@ -493,10 +486,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
             ),
             onChanged: (value) {
               final matches = items
-                  .where(
-                    (item) =>
-                        item.toLowerCase().startsWith(value.toLowerCase()),
-                  )
+                  .where((item) => item.toLowerCase().startsWith(value.toLowerCase()))
                   .toList();
               onChangedFiltered(matches);
               if (_showValidationErrors) setState(() {});
@@ -505,11 +495,11 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
           if (controller.text.isNotEmpty && filteredItems.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 6),
-              constraints: const BoxConstraints(maxHeight: 220),
+              constraints: BoxConstraints(maxHeight: suggestMaxHeight),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border.all(color: Colors.grey.shade200),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(radius),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
@@ -528,9 +518,9 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                     dense: true,
                     title: Text(
                       item,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontSize: (13 * s).clamp(13.0, 15.0),
                       ),
                     ),
                     onTap: () {
