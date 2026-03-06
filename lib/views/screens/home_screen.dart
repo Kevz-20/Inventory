@@ -41,6 +41,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     ref.read(homeViewModelProvider.notifier).fetchHomeData();
   }
 
+  double _screenWidth(BuildContext context) => MediaQuery.of(context).size.width;
+
+  bool _isTablet(BuildContext context) => _screenWidth(context) >= 700;
+
+  bool _isLandscape(BuildContext context) =>
+      MediaQuery.of(context).orientation == Orientation.landscape;
+
+  double _responsiveScale(BuildContext context) {
+    final width = _screenWidth(context);
+    if (width < 360) return 0.90;
+    if (width < 400) return 0.95;
+    if (width < 700) return 1.00;
+    if (width < 1000) return 1.10;
+    return 1.18;
+  }
+
+  double _r(BuildContext context, double value) {
+    final scaled = value * _responsiveScale(context);
+    final min = value * 0.85;
+    final max = value * 1.25;
+    return scaled.clamp(min, max);
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
@@ -54,11 +77,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final balanceText = pesoFormatter.format(homeState.cashOnHand);
     final mobileText = homeState.mobileNumber ?? "Not set";
 
-    final width = MediaQuery.of(context).size.width;
-    final isTablet = width >= 700;
 
-    // ✅ a bit wider on tablet so it doesn't look too narrow
-    final maxContentWidth = isTablet ? 760.0 : double.infinity;
+    final isTablet = _isTablet(context);
+    final isLandscape = _isLandscape(context);
+
+    final maxContentWidth = isTablet
+        ? (isLandscape ? 1100.0 : 760.0)
+        : double.infinity;
+
+    final horizontalPadding = isTablet
+        ? (isLandscape ? 24.0 : 18.0)
+        : (isLandscape ? 14.0 : 16.0);
+
+    final verticalPadding = isLandscape ? 10.0 : 12.0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -78,24 +109,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   .read(homeViewModelProvider.notifier)
                   .toggleMoneyVisibility(),
             ),
-
             Expanded(
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxContentWidth),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      verticalPadding,
+                      horizontalPadding,
+                      verticalPadding,
+                    ),
                     child: LayoutBuilder(
                       builder: (context, c) {
                         final h = c.maxHeight;
 
-                        // ✅ Make the tiles area bigger on tablet so it feels "filled"
-                        // Negosyo feels full because ACTIONS grid takes lots of height.
-                        final tilesBlock = isTablet
-                            ? (h * 0.40).clamp(280.0, 380.0)
-                            : (h * 0.34).clamp(220.0, 320.0);
+                        final gap = isLandscape
+                            ? (h * 0.025).clamp(8.0, 14.0)
+                            : (h * 0.03).clamp(10.0, 16.0);
 
-                        final gap = (h * 0.03).clamp(10.0, 16.0);
+                        final tilesBlock = isTablet
+                            ? (isLandscape
+                                ? (h * 0.36).clamp(220.0, 300.0)
+                                : (h * 0.40).clamp(280.0, 380.0))
+                            : (isLandscape
+                                ? (h * 0.42).clamp(190.0, 260.0)
+                                : (h * 0.34).clamp(220.0, 320.0));
 
                         return Column(
                           children: [
@@ -124,8 +163,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                               ),
                             ),
                             SizedBox(height: gap),
-
-                            // ✅ Graph fills remaining space
                             Expanded(
                               child: _SalesOnlyGraphCard(
                                 salesPoints: homeState.income7Days,
@@ -154,7 +191,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    final radius = BorderRadius.circular(22);
+    final radius = BorderRadius.circular(_r(context, 22));
 
     return Material(
       color: Colors.transparent,
@@ -164,18 +201,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
         child: LayoutBuilder(
           builder: (context, c) {
             final h = c.maxHeight;
+            final isLandscape = _isLandscape(context);
+            final isTablet = _isTablet(context);
 
-            final iconSize = (h * 0.28).clamp(26.0, 34.0);
-            final iconBox = (h * 0.60).clamp(54.0, 74.0);
+            final iconSize = isTablet
+                ? (h * 0.24).clamp(_r(context, 28), _r(context, 38))
+                : (h * 0.28).clamp(_r(context, 26), _r(context, 34));
 
-            final titleSize = (h * 0.18).clamp(18.0, 22.0);
-            final subSize = (h * 0.13).clamp(12.5, 15.0);
+            final iconBox = isTablet
+                ? (h * 0.56).clamp(_r(context, 56), _r(context, 80))
+                : (h * 0.60).clamp(_r(context, 54), _r(context, 74));
 
-            // ✅ Add vertical padding that adapts (so tile doesn't feel "empty")
-            final vPad = (h * 0.12).clamp(12.0, 18.0);
+            final titleSize = isLandscape
+                ? (h * 0.17).clamp(_r(context, 17), _r(context, 22))
+                : (h * 0.18).clamp(_r(context, 18), _r(context, 22));
+
+            final subSize = isLandscape
+                ? (h * 0.12).clamp(_r(context, 12), _r(context, 14.5))
+                : (h * 0.13).clamp(_r(context, 12.5), _r(context, 15));
+
+            final vPad = isLandscape
+                ? (h * 0.10).clamp(_r(context, 10), _r(context, 16))
+                : (h * 0.12).clamp(_r(context, 12), _r(context, 18));
+
+            final accentHeight = isLandscape
+                ? (h * 0.50).clamp(_r(context, 42), _r(context, 60))
+                : (h * 0.55).clamp(_r(context, 48), _r(context, 64));
 
             return Container(
-              padding: EdgeInsets.symmetric(horizontal: 18, vertical: vPad),
+              padding: EdgeInsets.symmetric(
+                horizontal: _r(context, 18),
+                vertical: vPad,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: radius,
@@ -183,33 +240,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
+                    blurRadius: _r(context, 18),
+                    offset: Offset(0, _r(context, 10)),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 6,
-                    height: (h * 0.55).clamp(48.0, 64.0),
+                    width: _r(context, 6),
+                    height: accentHeight,
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: _r(context, 16)),
                   Container(
                     width: iconBox,
                     height: iconBox,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(.10),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.primary.withOpacity(.25)),
+                      borderRadius: BorderRadius.circular(_r(context, 18)),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(.25),
+                      ),
                     ),
-                    child: Icon(icon, color: AppColors.primary, size: iconSize),
+                    child: Icon(
+                      icon,
+                      color: AppColors.primary,
+                      size: iconSize,
+                    ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: _r(context, 16)),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -217,6 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                       children: [
                         FittedBox(
                           fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
                           child: Text(
                             label,
                             style: TextStyle(
@@ -225,7 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: _r(context, 6)),
                         Text(
                           subtitle,
                           maxLines: 1,
@@ -262,18 +326,47 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     required this.error,
   });
 
+  bool _isTablet(BuildContext context) => MediaQuery.of(context).size.width >= 700;
+
+  bool _isLandscape(BuildContext context) =>
+      MediaQuery.of(context).orientation == Orientation.landscape;
+
+  double _responsiveScale(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return 0.90;
+    if (width < 400) return 0.95;
+    if (width < 700) return 1.00;
+    if (width < 1000) return 1.10;
+    return 1.18;
+  }
+
+  double _r(BuildContext context, double value) {
+    final scaled = value * _responsiveScale(context);
+    final min = value * 0.85;
+    final max = value * 1.25;
+    return scaled.clamp(min, max);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isTablet = _isTablet(context);
+    final isLandscape = _isLandscape(context);
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      padding: EdgeInsets.fromLTRB(
+        _r(context, 14),
+        _r(context, 12),
+        _r(context, 14),
+        _r(context, 10),
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(_r(context, 18)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 10),
+            blurRadius: _r(context, 14),
+            offset: Offset(0, _r(context, 10)),
           ),
         ],
       ),
@@ -283,36 +376,37 @@ class _SalesOnlyGraphCard extends StatelessWidget {
           Text(
             'Total Sales (Last 7 Days)',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: isTablet
+                  ? _r(context, 15)
+                  : _r(context, 14),
               fontWeight: FontWeight.w800,
               color: Colors.black.withOpacity(0.78),
             ),
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: _r(context, 8)),
           Row(
             children: [
               Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
+                width: _r(context, 10),
+                height: _r(context, 10),
+                decoration: const BoxDecoration(
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: _r(context, 6)),
               Text(
                 'Sales',
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: _r(context, 12.5),
                   fontWeight: FontWeight.w800,
                   color: Colors.black.withOpacity(0.65),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-
+          SizedBox(height: _r(context, isLandscape ? 8 : 10)),
           Expanded(
             child: _buildChart(
               context: context,
@@ -367,6 +461,9 @@ class _SalesOnlyGraphCard extends StatelessWidget {
       );
     }
 
+    final isTablet = _isTablet(context);
+    final isLandscape = _isLandscape(context);
+
     final len = sales.length;
 
     final spots = <FlSpot>[];
@@ -382,62 +479,68 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     final low = minY - (pad == 0 ? 10 : pad);
     final high = maxY + (pad == 0 ? 10 : pad);
 
+    final horizontalInterval = ((high - low) / 3).clamp(1.0, double.infinity);
+
     return LineChart(
       LineChartData(
         minX: 0,
         maxX: (len - 1).toDouble(),
         minY: low,
         maxY: high,
-
-        // ✅ Make the chart look "not empty" (like negosyo page feels filled)
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: ((high - low) / 3).clamp(1.0, double.infinity),
+          horizontalInterval: horizontalInterval,
           getDrawingHorizontalLine: (_) => FlLine(
             color: Colors.black.withOpacity(0.06),
             strokeWidth: 1,
           ),
         ),
-
         borderData: FlBorderData(show: false),
-
         titlesData: FlTitlesData(
-          // ✅ show left labels a bit so chart feels real
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
-              interval: ((high - low) / 3).clamp(1.0, double.infinity),
+              reservedSize: isTablet
+                  ? (isLandscape ? 46 : 44)
+                  : 40,
+              interval: horizontalInterval,
               getTitlesWidget: (value, meta) {
-                return Text(
-                  value.toStringAsFixed(0),
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black.withOpacity(0.35),
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    value.toStringAsFixed(0),
+                    style: TextStyle(
+                      fontSize: isTablet ? 11 : 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black.withOpacity(0.35),
+                    ),
                   ),
                 );
               },
             ),
           ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 18,
+              reservedSize: isLandscape ? 22 : 18,
               interval: 1,
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= len) return const SizedBox.shrink();
                 final d = sales[i].day;
                 return Padding(
-                  padding: const EdgeInsets.only(top: 6),
+                  padding: EdgeInsets.only(top: _r(context, 6)),
                   child: Text(
                     '${d.day}',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: isTablet ? 11.5 : 11,
                       color: Colors.black.withOpacity(0.45),
                       fontWeight: FontWeight.w700,
                     ),
@@ -447,7 +550,6 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             ),
           ),
         ),
-
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
@@ -464,13 +566,12 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             },
           ),
         ),
-
         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
             color: AppColors.primary,
-            barWidth: 3.6,
+            barWidth: isTablet ? 4.0 : 3.6,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(show: false),
           ),
