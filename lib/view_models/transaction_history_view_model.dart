@@ -163,13 +163,6 @@ class TransactionHistoryViewModel extends ChangeNotifier {
   DateTime? _startDate;
   DateTime? _endDate;
 
-  /// Returns the current date in Philippine Time (UTC+8).
-  static DateTime _todayInPHT() {
-    final nowUtc = DateTime.now().toUtc();
-    final pht = nowUtc.add(const Duration(hours: 8));
-    return DateTime(pht.year, pht.month, pht.day);
-  }
-
   // Pagination
   static const int pageSize = 20;
   int _currentPage = 0;
@@ -288,10 +281,14 @@ class TransactionHistoryViewModel extends ChangeNotifier {
 
   // ---------------- Constructor ----------------
   TransactionHistoryViewModel() {
-    final today = _todayInPHT();
-    _startDate = today;
-    _endDate = today;
+    // Do not lock to "today" by default so latest records are always visible.
+    _startDate = null;
+    _endDate = null;
     _loadFullHistory();
+  }
+
+  Future<void> refreshHistory() async {
+    await _loadFullHistory();
   }
 
   // ---------------- Load full history ----------------

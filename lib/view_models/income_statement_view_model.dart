@@ -2,7 +2,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <-- For rootBundle
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
@@ -12,7 +12,6 @@ import 'package:pdf/pdf.dart';
 
 import '../models/income_statement_model.dart';
 import '../repositories/income_statement_repository.dart';
-import '../providers/database_provider.dart';
 
 // -----------------------------
 // Provider
@@ -22,20 +21,7 @@ final incomeStatementViewModelProvider =
       IncomeStatementViewModel,
       AsyncValue<IncomeStatementModel>
     >((ref) {
-      final dbAsync = ref.watch(databaseProvider);
-
-      return dbAsync.when(
-        data: (_) {
-          final repository = IncomeStatementRepository();
-          return IncomeStatementViewModel(repository);
-        },
-        loading: () {
-          final repository = IncomeStatementRepository();
-          return IncomeStatementViewModel(repository);
-        },
-        error: (error, stackTrace) =>
-            throw Exception('Database initialization failed'),
-      );
+      return IncomeStatementViewModel(IncomeStatementRepository());
     });
 
 // -----------------------------
@@ -48,12 +34,10 @@ class IncomeStatementViewModel
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
 
-  // Load Roboto font once
   pw.Font? _ttfFont;
 
   IncomeStatementViewModel(this.repository) : super(const AsyncValue.loading());
 
-  /// Load Roboto TTF font from assets
   Future<void> _loadFont() async {
     if (_ttfFont == null) {
       final fontData = await rootBundle.load(
@@ -63,95 +47,118 @@ class IncomeStatementViewModel
     }
   }
 
-  /// Load income statement for a given date range
   Future<void> load({
-  required DateTime startDate,
-  required DateTime endDate,
-}) async {
-  this.startDate = startDate;
-  this.endDate = endDate;
-
-  if (!mounted) return;
-  state = const AsyncValue.loading();
-
-  try {
-    final data = await repository.fetchIncomeStatement(
-      startDate: startDate,
-      endDate: endDate,
-    );
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    this.startDate = startDate;
+    this.endDate = endDate;
 
     if (!mounted) return;
-    state = AsyncValue.data(data);
-  } catch (e, st) {
-    if (!mounted) return;
-    state = AsyncValue.error(e, st);
+    state = const AsyncValue.loading();
+
+    try {
+      final data = await repository.fetchIncomeStatement(
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      if (!mounted) return;
+      state = AsyncValue.data(data);
+    } catch (e, st) {
+      if (!mounted) return;
+      state = AsyncValue.error(e, st);
+    }
   }
-}
 
-  /// Export the current income statement to PDF
   Future<void> exportPdf() async {
     final data = state.value;
     if (data == null) return;
 
-    await _loadFont(); // Load font once
+    await _loadFont();
 
     final pdf = pw.Document();
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        build: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              "Income Statement",
-              style: pw.TextStyle(
-                fontSize: 20,
-                fontWeight: pw.FontWeight.bold,
-                font: _ttfFont,
-              ),
-            ),
-            pw.SizedBox(height: 8),
-            pw.Text(
-              "Period: ${DateFormat('yyyy-MM-dd').format(startDate)} - ${DateFormat('yyyy-MM-dd').format(endDate)}",
-              style: pw.TextStyle(font: _ttfFont),
-            ),
-            pw.Divider(),
-            pw.SizedBox(height: 8),
+        build: (context) {
+          final expenseEntries = data.expenseCategories.entries.toList()
+            ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
 
-            // SALES
-            pw.Text(
-              "Sales",
-              style: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                font: _ttfFont,
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                "Income Statement",
+                style: pw.TextStyle(
+                  fontSize: 20,
+                  fontWeight: pw.FontWeight.bold,
+                  font: _ttfFont,
+                ),
               ),
-            ),
-            _pdfLeaderRow(
-              "Merchandise Sales",
-              data.merchandiseSales,
-              indent: true,
-            ),
-            _pdfLeaderRow("TOTAL SALES", data.sales, bold: true, indent: true),
-            pw.SizedBox(height: 12),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                "Period: ${DateFormat('yyyy-MM-dd').format(startDate)} - ${DateFormat('yyyy-MM-dd').format(endDate)}",
+                style: pw.TextStyle(font: _ttfFont),
+              ),
+              pw.Divider(),
+              pw.SizedBox(height: 8),
 
-            // EXPENSES
-            pw.Text(
-              "Expenses",
-              style: pw.TextStyle(
-                fontWeight: pw.FontWeight.bold,
-                font: _ttfFont,
+              pw.Text(
+                "Sales",
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  font: _ttfFont,
+                ),
               ),
-            ),
-            _pdfLeaderRow("Kompra", data.kompra, indent: true),
-            _pdfLeaderRow("Kuryente / Tubig", data.electricity, indent: true),
-            _pdfLeaderRow("Transportation", data.transportation, indent: true),
-            _pdfLeaderRow("Mga Bayronon", data.rentPayment, indent: true),
-            _pdfLeaderRow("Uban Pa", data.miscExpenses, indent: true),
-            pw.Divider(),
-            _pdfLeaderRow("NET INCOME", data.netIncome, bold: true),
-          ],
-        ),
+              _pdfLeaderRow(
+                "Merchandise Sales",
+                data.merchandiseSales,
+                indent: true,
+              ),
+              _pdfLeaderRow(
+                "TOTAL SALES",
+                data.sales,
+                bold: true,
+                indent: true,
+              ),
+              pw.SizedBox(height: 12),
+
+              pw.Text(
+                "Expenses",
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  font: _ttfFont,
+                ),
+              ),
+
+              if (expenseEntries.isEmpty)
+                _pdfLeaderRow("No expenses", 0, indent: true)
+              else
+                ...expenseEntries.map(
+                  (entry) => _pdfLeaderRow(
+                    entry.key,
+                    entry.value,
+                    indent: true,
+                  ),
+                ),
+
+              pw.Divider(),
+              _pdfLeaderRow(
+                "TOTAL EXPENSES",
+                data.totalExpenses,
+                bold: true,
+              ),
+              pw.SizedBox(height: 8),
+              _pdfLeaderRow(
+                "NET INCOME",
+                data.netIncome,
+                bold: true,
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -165,7 +172,6 @@ class IncomeStatementViewModel
     }
   }
 
-  /// Helper for PDF row formatting
   pw.Widget _pdfLeaderRow(
     String title,
     double value, {
@@ -189,13 +195,22 @@ class IncomeStatementViewModel
             child: pw.Text(
               '.' * 80,
               maxLines: 1,
-              style: pw.TextStyle(color: PdfColors.grey, font: _ttfFont),
+              style: pw.TextStyle(
+                color: PdfColors.grey,
+                font: _ttfFont,
+              ),
             ),
           ),
           pw.SizedBox(width: 6),
           pw.Text(
-            NumberFormat.currency(symbol: '₱', decimalDigits: 2).format(value),
-            style: pw.TextStyle(font: _ttfFont),
+            NumberFormat.currency(
+              symbol: '₱',
+              decimalDigits: 2,
+            ).format(value),
+            style: pw.TextStyle(
+              fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              font: _ttfFont,
+            ),
           ),
         ],
       ),

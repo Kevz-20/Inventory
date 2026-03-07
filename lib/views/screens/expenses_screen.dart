@@ -67,6 +67,13 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 }
 
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _cardBgAlt = Color(0xFFF6FBF9);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   late final ScrollController _scrollController;
   late final TextEditingController _dateTextController;
 
@@ -124,7 +131,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         final double gap14 = (14 * scale).clamp(12, 18);
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: _pageBg,
           appBar: AppHeader(
             title: 'Gasto',
             showBackButton: true,
@@ -185,7 +192,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                               width: (48 * scale).clamp(42, 56),
                               child: Center(
                                 child: Text(
-                                  '₱',
+                                  '\u20B1',
                                   style: TextStyle(
                                     fontSize: (20 * scale).clamp(18, 24),
                                     color: AppColors.primary,
@@ -332,14 +339,14 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _cardBgAlt,
           prefixIcon: Icon(Icons.category, color: AppColors.primary, size: (22 * scale).clamp(20, 26)),
           labelText: 'Kategorya',
           labelStyle: TextStyle(fontSize: labelFs),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
-              color: isError ? Colors.red : Colors.grey.shade300,
+              color: isError ? Colors.red : _cardBorder,
             ),
           ),
           focusedBorder: OutlineInputBorder(
@@ -362,14 +369,14 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   fontWeight: FontWeight.w800,
                   fontSize: (14 * scale).clamp(13, 16),
                   color: (vm.selectedCategory == null)
-                      ? Colors.grey.shade600
-                      : Colors.black,
+                      ? _subtitleColor
+                      : _titleColor,
                 ),
               ),
             ),
             Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: Colors.black54,
+              color: _subtitleColor,
               size: (22 * scale).clamp(20, 26),
             ),
           ],
@@ -400,7 +407,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           child: Container(
             constraints: BoxConstraints(maxHeight: maxHeight),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _cardBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
@@ -423,7 +430,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     height: 5,
                     width: (48 * s).clamp(44, 54),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: _cardBorder,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
@@ -450,7 +457,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           style: TextStyle(
                             fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                            color: _titleColor,
                           ),
                         ),
                       ),
@@ -503,14 +510,14 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                 icon: const Icon(Icons.close_rounded),
                               ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: _cardBgAlt,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: (12 * s).clamp(10, 14),
                           vertical: (14 * s).clamp(12, 16),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
+                          borderSide: BorderSide(color: _cardBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -540,16 +547,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                     height: (56 * s).clamp(50, 66),
                                     width: (56 * s).clamp(50, 66),
                                     decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
+                                      color: _cardBgAlt,
                                       borderRadius: BorderRadius.circular(18),
                                     ),
-                                    child: const Icon(Icons.search_off_rounded, color: Colors.black54),
+                                    child: const Icon(Icons.search_off_rounded, color: _subtitleColor),
                                   ),
                                   SizedBox(height: (10 * s).clamp(8, 12)),
                                   Text(
                                     'Walay match nga category.',
                                     style: TextStyle(
-                                      color: Colors.grey.shade700,
+                                      color: _subtitleColor,
                                       fontWeight: FontWeight.w800,
                                       fontSize: (13.5 * s).clamp(12.5, 15),
                                     ),
@@ -578,12 +585,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppColors.primary.withOpacity(0.10)
-                                      : Colors.white,
+                                      : _cardBgAlt,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: isSelected
                                         ? AppColors.primary.withOpacity(0.35)
-                                        : Colors.grey.shade200,
+                                        : _cardBorder.withOpacity(0.8),
                                   ),
                                 ),
                                 child: Row(
@@ -595,7 +602,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w900,
-                                          color: isSelected ? AppColors.primary : Colors.black87,
+                                          color: isSelected ? AppColors.primary : _titleColor,
                                           fontSize: (14 * s).clamp(13, 16),
                                         ),
                                       ),
@@ -636,7 +643,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       barrierDismissible: true,
       builder: (dialogCtx) {
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: _cardBg,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular((18 * s).clamp(16, 22))),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -659,7 +666,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           style: TextStyle(
                             fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                            color: _titleColor,
                           ),
                         ),
                       ),
@@ -674,7 +681,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   Text(
                     "Example: Kumpra, Bayronon, Transportasyon",
                     style: TextStyle(
-                      color: Colors.grey.shade700,
+                      color: _subtitleColor,
                       fontWeight: FontWeight.w600,
                       fontSize: (13.5 * s).clamp(12.5, 15),
                     ),
@@ -694,10 +701,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           labelText: "Category name",
                           hintText: "e.g. Uban pa",
                           filled: true,
-                          fillColor: Colors.grey.shade50,
+                          fillColor: _cardBgAlt,
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(color: _cardBorder),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
@@ -730,8 +737,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(dialogCtx),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black87,
-                            side: BorderSide(color: Colors.grey.shade300),
+                            foregroundColor: _titleColor,
+                            side: BorderSide(color: _cardBorder),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                             ),
@@ -810,9 +817,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
@@ -842,7 +849,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: titleFs,
-                    color: Colors.black87,
+                    color: _titleColor,
                   ),
                 ),
               ),
@@ -865,9 +872,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
@@ -906,14 +913,14 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         ),
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _cardBgAlt,
           prefixIcon: Icon(icon, color: AppColors.primary, size: (22 * s).clamp(20, 26)),
           labelText: label,
           labelStyle: TextStyle(fontSize: labelFs, fontWeight: FontWeight.w700),
           suffixIcon: Icon(Icons.chevron_right_rounded, size: (22 * s).clamp(20, 26)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+            borderSide: BorderSide(color: _cardBorder, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
@@ -942,9 +949,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             height: receiptHeight,
             width: double.infinity,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: _cardBorder),
               borderRadius: BorderRadius.circular(radius),
-              color: Colors.grey.shade50,
+              color: _cardBgAlt,
             ),
             child: vm.receiptImage != null
                 ? ClipRRect(
@@ -974,7 +981,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       Text(
                         "Tap para mag add og resibo",
                         style: TextStyle(
-                          color: Colors.grey.shade700,
+                          color: _subtitleColor,
                           fontWeight: FontWeight.w700,
                           fontSize: (13.5 * s).clamp(12.5, 15),
                         ),
@@ -1055,22 +1062,22 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         style: TextStyle(
-          color: Colors.black87,
+          color: _titleColor,
           fontWeight: FontWeight.w800,
           fontSize: valueFs,
         ),
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _cardBgAlt,
           prefixIcon: prefix,
           labelText: label,
           labelStyle: TextStyle(fontSize: labelFs, fontWeight: FontWeight.w700),
           hintText: hintText,
-          hintStyle: TextStyle(fontSize: (13.5 * s).clamp(12.5, 15), color: Colors.grey.shade600),
+          hintStyle: TextStyle(fontSize: (13.5 * s).clamp(12.5, 15), color: _subtitleColor),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
-              color: isError ? Colors.red : Colors.grey.shade300,
+              color: isError ? Colors.red : _cardBorder,
               width: 1.2,
             ),
           ),
@@ -1106,7 +1113,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: _cardBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(20),

@@ -27,7 +27,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   final NumberFormat _currencyFormatter = NumberFormat.currency(
     locale: 'en_PH',
-    symbol: '₱',
+    symbol: '?',
     decimalDigits: 2,
   );
 
@@ -82,7 +82,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final width = MediaQuery.of(context).size.width;
     final isTablet = width >= 700;
 
-    // ✅ same pattern as your HomeScreen
+    // ? same pattern as your HomeScreen
     final maxContentWidth = isTablet ? 760.0 : double.infinity;
 
     return ChangeNotifierProvider.value(
@@ -110,7 +110,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   constraints: BoxConstraints(maxWidth: maxContentWidth),
                   child: Column(
                     children: [
-                      // ✅ Date pickers responsive
+                      // ? Date pickers responsive
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                         child: LayoutBuilder(
@@ -143,7 +143,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         ),
                       ),
 
-                      // ✅ Category chips (same behavior)
+                      // ? Category chips (same behavior)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: CategoryChipsWithDots(
@@ -167,7 +167,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
                       const SizedBox(height: 6),
 
-                      // ✅ List area
+                      // ? List area
                       Expanded(
                         child: PageView.builder(
                           controller: _categoryPageController,
@@ -368,7 +368,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   ),
                 ),
 
-                // ✅ Make receipt button responsive (no overflow)
+                // ? Make receipt button responsive (no overflow)
                 if (isExpense && tx.receiptImagePath != null) ...[
                   const SizedBox(width: 10),
                   ConstrainedBox(
@@ -688,7 +688,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
 
     final NumberFormat currency = NumberFormat.currency(
       locale: 'en_PH',
-      symbol: '₱',
+      symbol: '?',
       decimalDigits: 2,
     );
 
@@ -859,3 +859,5 @@ class _TransactionDetailsSheet extends StatelessWidget {
     );
   }
 }
+
+

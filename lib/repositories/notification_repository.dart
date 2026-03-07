@@ -62,16 +62,13 @@ class NotificationRepository {
       final due = DateTime.tryParse(dueStr);
       if (due == null) continue;
 
-      final daysLeft = due.difference(todayStart).inDays;
-      final dateStatus = daysLeft == 0 ? 'Due today' : 'Due in $daysLeft day(s)';
-
       items.add(
         AppNotificationItem(
           id: 'owner_$id',
           type: AppNotifType.ownerPayableSoon,
-          title: 'Owner payable due soon',
-          // The message now includes the (1/3) label if applicable
-          message: '$dateStatus • $supplier • $itemName$installmentLabel • ₱${amountDue.toStringAsFixed(2)}',
+          title: 'Owner payable',
+          // Keep only key details here; due date is displayed separately in UI.
+          message: '${supplier.toLowerCase() == 'owner' ? itemName : '$supplier • $itemName'}$installmentLabel • ₱${amountDue.toStringAsFixed(2)}',
           createdAt: now,
           dueDate: due,
           refId: id,
@@ -117,7 +114,7 @@ class NotificationRepository {
         AppNotificationItem(
           id: 'cust_$id',
           type: AppNotifType.customerUtangDueToday,
-          title: 'Customer utang due today',
+          title: 'Customer utang',
           message: '$name • ₱${amount.toStringAsFixed(2)}',
           createdAt: now,
           dueDate: todayStart,
@@ -129,13 +126,35 @@ class NotificationRepository {
     // -------------------------
     // 3) LOW STOCK (<= 10)
     // -------------------------
-    final lowStock = await db.query(
+    final allProducts = await db.query(
       'product',
       columns: ['id', 'name', 'quantity'],
-      where: 'quantity <= ?',
-      whereArgs: [10],
       orderBy: 'quantity ASC',
     );
+
+    // When stock recovers above threshold, clear old seen-state so the same
+    // product can trigger a new unread alert if it becomes low-stock again.
+    final recoveredNotifIds = <String>[];
+    for (final row in allProducts) {
+      final productId = row['id'];
+      final qty = (row['quantity'] as num?)?.toInt() ?? 0;
+      if (productId != null && qty > 10) {
+        recoveredNotifIds.add('stock_$productId');
+      }
+    }
+
+    if (recoveredNotifIds.isNotEmpty) {
+      final placeholders = List.filled(recoveredNotifIds.length, '?').join(',');
+      await db.rawDelete(
+        'DELETE FROM notif_state WHERE notif_id IN ($placeholders)',
+        recoveredNotifIds,
+      );
+    }
+
+    final lowStock = allProducts.where((row) {
+      final qty = (row['quantity'] as num?)?.toInt() ?? 0;
+      return qty <= 10;
+    });
 
     for (final row in lowStock) {
       final id = row['id'].toString();
@@ -154,6 +173,9 @@ class NotificationRepository {
       );
     }
 
+    // Keep notif_state aligned with currently active notifications.
+    await _removeResolvedNotifState(items.map((e) => e.id).toList());
+
     // Sort: dueDate first
     items.sort((a, b) {
       final ad = a.dueDate?.millisecondsSinceEpoch ?? 9999999999999;
@@ -162,5 +184,21 @@ class NotificationRepository {
     });
 
     return items;
+  }
+
+  Future<void> _removeResolvedNotifState(List<String> activeIds) async {
+    const condition =
+        "(notif_id LIKE 'owner_%' OR notif_id LIKE 'cust_%' OR notif_id LIKE 'stock_%')";
+
+    if (activeIds.isEmpty) {
+      await db.rawDelete('DELETE FROM notif_state WHERE $condition');
+      return;
+    }
+
+    final placeholders = List.filled(activeIds.length, '?').join(',');
+    await db.rawDelete(
+      'DELETE FROM notif_state WHERE $condition AND notif_id NOT IN ($placeholders)',
+      activeIds,
+    );
   }
 }

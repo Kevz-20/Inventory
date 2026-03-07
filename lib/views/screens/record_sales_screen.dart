@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+﻿// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'dart:io';
 
@@ -28,6 +28,13 @@ final currencyFormatter = NumberFormat.currency(
 
 class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     with RouteAware {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _cardBgAlt = Color(0xFFE8F4F0);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   bool isCash = true;
   bool isProductMode = false;
 
@@ -257,7 +264,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: _pageBg,
       appBar: const AppHeader(title: 'Halin', showBackButton: true),
       body: Column(
         children: [
@@ -314,9 +321,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       height: height,
       padding: EdgeInsets.all(_r(context, 4)),
       decoration: BoxDecoration(
-        color: Colors.grey.shade300.withOpacity(0.3),
+        color: _cardBgAlt,
         borderRadius: BorderRadius.circular(_r(context, 25)),
-        border: Border.all(color: Colors.grey.shade300.withOpacity(0.5)),
+        border: Border.all(color: _cardBorder.withOpacity(0.75)),
       ),
       child: Stack(
         children: [
@@ -380,7 +387,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             style: TextStyle(
-              color: active ? Colors.white : Colors.black87,
+              color: active ? Colors.white : _titleColor,
               fontWeight: FontWeight.w900,
               fontSize: _r(context, 16),
               letterSpacing: 0.2,
@@ -398,7 +405,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     BoxDecoration boxDecoration(Color color) => BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(_r(context, 16)),
-          border: Border.all(color: Colors.grey.shade300, width: 1),
+          border: Border.all(color: _cardBorder, width: 1.1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.03),
@@ -417,10 +424,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
-            color: Colors.black.withOpacity(0.45),
+            color: _subtitleColor.withOpacity(0.85),
             fontSize: _r(context, 14),
           ),
-          prefixIcon: Icon(icon, size: _r(context, 22), color: Colors.black87),
+          prefixIcon: Icon(icon, size: _r(context, 22), color: _titleColor),
           border: InputBorder.none,
           focusedBorder: InputBorder.none,
           isDense: true,
@@ -440,7 +447,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     if (isCash || (!isCash && isProductMode)) {
       return Container(
         height: height,
-        decoration: boxDecoration(Colors.white),
+        decoration: boxDecoration(_cardBg),
         alignment: Alignment.center,
         child: TextField(
           controller: searchController,
@@ -466,7 +473,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           Expanded(
             child: Container(
               height: height,
-              decoration: boxDecoration(Colors.white),
+              decoration: boxDecoration(_cardBg),
               alignment: Alignment.center,
               child: TextField(
                 controller: searchController,
@@ -570,11 +577,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   padding: EdgeInsets.symmetric(horizontal: _r(context, 16)),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.primary : Colors.white,
+                    color: selected ? AppColors.primary : _cardBg,
                     borderRadius: BorderRadius.circular(chipRadius),
                     border: Border.all(
                       color:
-                          selected ? Colors.transparent : Colors.grey.shade300,
+                          selected ? Colors.transparent : _cardBorder,
                       width: 1,
                     ),
                     boxShadow: [
@@ -588,7 +595,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   child: Text(
                     vm.categoryNames[index],
                     style: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
+                      color: selected ? Colors.white : _titleColor,
                       fontWeight:
                           selected ? FontWeight.w800 : FontWeight.w600,
                       fontSize: chipFontSize,
@@ -722,9 +729,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
         padding: EdgeInsets.all(_r(context, 12)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _cardBg,
           borderRadius: BorderRadius.circular(_r(context, 16)),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: _cardBorder.withOpacity(0.75)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -747,6 +754,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: _r(context, 16),
+                      color: _titleColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -764,7 +772,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     "Stock: ${product.quantity}",
                     style: TextStyle(
                       fontSize: _r(context, 12.5),
-                      color: Colors.black.withOpacity(0.55),
+                      color: _subtitleColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -861,9 +869,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         vertical: _r(context, 2),
       ),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: _cardBorder),
         borderRadius: BorderRadius.circular(_r(context, 50)),
-        color: Colors.white,
+        color: _cardBg,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -878,33 +886,51 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           ),
           SizedBox(
             width: _isTablet(context) ? _r(context, 52) : _r(context, 44),
-            child: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: _r(context, 14),
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(6),
-              ],
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: _r(context, 8)),
-              ),
-              onChanged: (value) {
-                vm.setTypedQuantity(product, value);
-              },
-              onEditingComplete: () {
-                if (controller.text.trim().isEmpty) {
+            child: Focus(
+              onFocusChange: (hasFocus) {
+                if (!hasFocus && controller.text.trim().isEmpty) {
                   vm.setTypedQuantity(product, '0');
                 }
-                FocusScope.of(context).unfocus();
               },
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: _r(context, 14),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: _r(context, 8)),
+                ),
+                onChanged: (value) {
+                  vm.setTypedQuantity(product, value);
+                },
+                onTapOutside: (_) {
+                  if (controller.text.trim().isEmpty) {
+                    vm.setTypedQuantity(product, '0');
+                  }
+                  FocusScope.of(context).unfocus();
+                },
+                onSubmitted: (_) {
+                  if (controller.text.trim().isEmpty) {
+                    vm.setTypedQuantity(product, '0');
+                  }
+                },
+                onEditingComplete: () {
+                  if (controller.text.trim().isEmpty) {
+                    vm.setTypedQuantity(product, '0');
+                  }
+                  FocusScope.of(context).unfocus();
+                },
+              ),
             ),
           ),
           InkWell(
@@ -1021,9 +1047,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         ),
         margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _cardBg,
           borderRadius: BorderRadius.circular(_r(context, 16)),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: _cardBorder.withOpacity(0.75)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.03),
@@ -1053,6 +1079,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     style: TextStyle(
                       fontSize: _r(context, 16),
                       fontWeight: FontWeight.w900,
+                      color: _titleColor,
                     ),
                   ),
                   SizedBox(height: _r(context, 4)),
@@ -1060,7 +1087,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     "Available Credit: ₱${availableCredit.toStringAsFixed(2)}",
                     style: TextStyle(
                       fontSize: _r(context, 13.5),
-                      color: Colors.black.withOpacity(0.55),
+                      color: _subtitleColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1086,10 +1113,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           horizontal: _r(context, 14),
           vertical: _r(context, 12),
         ),
-        decoration: BoxDecoration(
-          color: Colors.white,
+      decoration: BoxDecoration(
+          color: _cardBg,
           borderRadius: BorderRadius.circular(_r(context, 16)),
-          border: Border.all(color: Colors.grey.shade300, width: 1),
+          border: Border.all(color: _cardBorder, width: 1.1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.03),
@@ -1103,7 +1130,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             Container(
               padding: EdgeInsets.all(_r(context, 8)),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Colors.white.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(_r(context, 10)),
               ),
               child: Icon(
@@ -1152,8 +1179,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         _r(context, 14) + bottomPadding,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        color: _cardBg,
+        border: Border(top: BorderSide(color: _cardBorder.withOpacity(0.75))),
       ),
       child: Row(
         children: [
@@ -1164,9 +1191,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 horizontal: _r(context, 12),
               ),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Colors.white.withOpacity(0.78),
                 borderRadius: BorderRadius.circular(_r(context, 16)),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: _cardBorder.withOpacity(0.75)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1319,7 +1346,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   ),
                                 ),
                                 subtitle: Text(
-                                  '${currencyFormatter.format(product.sellingPrice)} × $qty',
+                                  '${currencyFormatter.format(product.sellingPrice)} Ã— $qty',
                                   style: TextStyle(
                                     fontSize: _r(context, 13.5),
                                     fontWeight: FontWeight.w700,
@@ -1545,3 +1572,4 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 }
+

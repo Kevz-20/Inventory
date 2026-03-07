@@ -79,6 +79,12 @@ class UtangSummaryPage extends StatefulWidget {
 }
 
 class _UtangSummaryPageState extends State<UtangSummaryPage> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   List<UtangItem> customerItems = [];
   List<CustomerPayment> customerPayments = [];
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
@@ -504,20 +510,25 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   // ================================
   // PAYMENTS APPLIED PER DATE
   // ================================
-  List<CustomerPayment> paymentsAppliedToDate(String dateKey) {
-    final dateItems = groupItemsByDate()[dateKey]!;
-    double remaining = dateItems.fold(0.0, (sum, item) => sum + item.amount);
-    List<CustomerPayment> appliedPayments = [];
+  Map<String, double> remainingPerDate(
+    Map<String, List<UtangItem>> groupedItems,
+    List<String> sortedDates,
+  ) {
+    final result = <String, double>{};
+    double paymentPool = customerPayments.fold(0.0, (sum, pay) => sum + pay.amount);
 
-    for (var pay in customerPayments) {
-      if (remaining <= 0) break;
-      final applyAmount = (pay.amount <= remaining) ? pay.amount : remaining;
-      if (applyAmount > 0) {
-        appliedPayments.add(pay);
-        remaining -= applyAmount;
-      }
+    // Apply payments FIFO to oldest utang date first.
+    for (final dateKey in sortedDates) {
+      final items = groupedItems[dateKey] ?? const <UtangItem>[];
+      final totalPerDate = items.fold(0.0, (sum, item) => sum + item.amount);
+
+      final paidForDate = paymentPool >= totalPerDate ? totalPerDate : paymentPool;
+      paymentPool = (paymentPool - paidForDate).clamp(0.0, double.infinity);
+
+      result[dateKey] = (totalPerDate - paidForDate).clamp(0.0, double.infinity);
     }
-    return appliedPayments;
+
+    return result;
   }
 
   String _paymentTypeLabel(int index) {
@@ -628,6 +639,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   Widget build(BuildContext context) {
     final groupedItems = groupItemsByDate();
     final sortedDates = groupedItems.keys.toList()..sort((a, b) => a.compareTo(b));
+    final remainingByDate = remainingPerDate(groupedItems, sortedDates);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -649,7 +661,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
         final double gap24 = (24 * scale).clamp(18, 30);
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: _pageBg,
           appBar: AppHeader(
             title: widget.customer.fullName,
             showBackButton: true,
@@ -661,8 +673,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
           body: SafeArea(
             child: Padding(
               padding: EdgeInsets.all(pad),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
                 children: [
                   // ================= TOTAL UTANG CARD =================
                   Container(
@@ -672,8 +684,9 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                       vertical: (26 * scale).clamp(18, 30),
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _cardBg,
                       borderRadius: BorderRadius.circular(cardRadius),
+                      border: Border.all(color: _cardBorder.withOpacity(0.8)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.grey.withAlpha(51),
@@ -694,7 +707,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 style: TextStyle(
                                   fontSize: labelFs,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF555555),
+                                  color: _subtitleColor,
                                 ),
                               ),
                             ),
@@ -730,6 +743,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                               fontSize: bigFs,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.6,
+                              color: _titleColor,
                             ),
                           ),
                         ),
@@ -790,7 +804,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 child: ElevatedButton(
                                   onPressed: totalUtang > 0 ? addPartialPayment : null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0C4B3E),
+                                    backgroundColor: AppColors.primary,
                                     padding: EdgeInsets.symmetric(
                                       horizontal: (16 * scale).clamp(14, 18),
                                       vertical: (10 * scale).clamp(10, 12),
@@ -814,8 +828,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 child: OutlinedButton(
                                   onPressed: adjustCreditLimit,
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF0C4B3E),
-                                    side: const BorderSide(color: Color(0xFF0C4B3E)),
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(color: AppColors.primary),
                                     padding: EdgeInsets.symmetric(
                                       horizontal: (16 * scale).clamp(14, 18),
                                       vertical: (10 * scale).clamp(10, 12),
@@ -842,47 +856,55 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                   SizedBox(height: gap24),
                   Text(
                     "Lista",
-                    style: TextStyle(fontSize: titleFs, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: titleFs,
+                      fontWeight: FontWeight.bold,
+                      color: _titleColor,
+                    ),
                   ),
                   SizedBox(height: gap12),
 
-                  Expanded(
-                    child: isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : groupedItems.isEmpty
-                            ? Center(
-                                child: Text(
-                                  "Walay item sa utangan",
-                                  style: TextStyle(
-                                    fontSize: (16 * scale).clamp(14, 18),
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: sortedDates.length,
-                                itemBuilder: (context, index) {
-                                  final dateKey = sortedDates[index];
-                                  final items = groupedItems[dateKey]!;
-                                  final date = DateTime.parse(dateKey);
-                                  final dateLabel = DateFormat('MMM dd, yyyy').format(date);
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (groupedItems.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: (20 * scale).clamp(14, 24)),
+                      child: Center(
+                        child: Text(
+                          "Walay item sa utangan",
+                          style: TextStyle(
+                            fontSize: (16 * scale).clamp(14, 18),
+                            color: _subtitleColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      itemCount: sortedDates.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        final dateKey = sortedDates[index];
+                        final items = groupedItems[dateKey]!;
+                        final date = DateTime.parse(dateKey);
+                        final dateLabel = DateFormat('MMM dd, yyyy').format(date);
 
-                                  final totalPerDate =
-                                      items.fold(0.0, (sum, item) => sum + item.amount);
-                                  final appliedPayments = paymentsAppliedToDate(dateKey);
-                                  final totalPaidForDate =
-                                      appliedPayments.fold(0.0, (sum, pay) => sum + pay.amount);
-                                  final remaining = totalPerDate - totalPaidForDate;
+                        final totalPerDate = items.fold(0.0, (sum, item) => sum + item.amount);
+                        final remaining = (remainingByDate[dateKey] ?? totalPerDate);
 
-                                  return Card(
-                                    color: Colors.white,
-                                    margin: EdgeInsets.symmetric(vertical: (8 * scale).clamp(6, 10)),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(tileRadius),
-                                    ),
-                                    elevation: 3,
-                                    child: ExpansionTile(
+                        return Card(
+                          color: _cardBg,
+                          margin: EdgeInsets.symmetric(vertical: (8 * scale).clamp(6, 10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(tileRadius),
+                          ),
+                          elevation: 3,
+                          child: ExpansionTile(
                                       tilePadding: EdgeInsets.symmetric(
                                         horizontal: (16 * scale).clamp(12, 18),
                                         vertical: (12 * scale).clamp(10, 14),
@@ -904,6 +926,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                   style: TextStyle(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: (16 * scale).clamp(14, 18),
+                                                    color: _titleColor,
                                                   ),
                                                 ),
                                                 if (items.first.dueDate != null)
@@ -921,7 +944,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                   "Total: ₱${currencyFormat.format(totalPerDate)}",
                                                   style: TextStyle(
                                                     fontSize: (14 * scale).clamp(12.5, 16),
-                                                    color: Colors.grey,
+                                                    color: _subtitleColor,
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
@@ -959,7 +982,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                             margin: EdgeInsets.symmetric(vertical: (4 * scale).clamp(3, 6)),
                                             padding: EdgeInsets.all((12 * scale).clamp(10, 14)),
                                             decoration: BoxDecoration(
-                                              color: Colors.white,
+                                              color: Colors.white.withOpacity(0.72),
                                               borderRadius: BorderRadius.circular((12 * scale).clamp(10, 14)),
                                               boxShadow: [
                                                 BoxShadow(
@@ -983,13 +1006,14 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                         style: TextStyle(
                                                           fontWeight: FontWeight.bold,
                                                           fontSize: (14 * scale).clamp(13, 16),
+                                                          color: _titleColor,
                                                         ),
                                                       ),
                                                       Text(
                                                         "${item.quantity} pcs",
                                                         style: TextStyle(
                                                           fontSize: (12 * scale).clamp(11, 14),
-                                                          color: Colors.grey,
+                                                          color: _subtitleColor,
                                                           fontWeight: FontWeight.w600,
                                                         ),
                                                       ),
@@ -1013,10 +1037,9 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                         }),
                                       ],
                                     ),
-                                  );
-                                },
-                              ),
-                  ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -1035,7 +1058,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   }) {
     return Row(
       children: [
-        Icon(icon, size: iconSize, color: Colors.grey),
+        Icon(icon, size: iconSize, color: _subtitleColor),
         SizedBox(width: (10 * scale).clamp(8, 12)),
         Expanded(
           child: Text(
@@ -1044,7 +1067,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: textSize,
-              color: Colors.black87,
+              color: _titleColor,
               fontWeight: FontWeight.w600,
             ),
           ),

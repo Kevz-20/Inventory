@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../models/notification_item.dart';
 import '../../providers/db_service_provider.dart';
@@ -18,7 +19,30 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   bool _didMarkSeen = false;
+  String _formatDueText(DateTime? dueDate) {
+    if (dueDate == null) return '';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final days = due.difference(today).inDays;
+
+    final status = days == 0
+        ? 'Due today'
+        : days > 0
+            ? 'Due in $days day${days == 1 ? '' : 's'}'
+            : 'Overdue by ${days.abs()} day${days.abs() == 1 ? '' : 's'}';
+
+    final dateLabel = DateFormat('MMM d, y').format(dueDate);
+    return '$status • $dateLabel';
+  }
 
   @override
   void initState() {
@@ -97,7 +121,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: _pageBg,
       appBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: true,
@@ -136,10 +160,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       height: 62,
                       width: 62,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.10),
+                        color: _cardBg,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.22),
+                          color: _cardBorder,
                         ),
                       ),
                       child: Icon(
@@ -153,7 +177,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       'No notifications right now.',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: Colors.black.withOpacity(0.75),
+                        color: _titleColor,
                         fontSize: 15.5,
                       ),
                     ),
@@ -162,7 +186,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       'You’re all caught up.',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Colors.black.withOpacity(0.50),
+                        color: _subtitleColor,
                       ),
                     ),
                   ],
@@ -194,7 +218,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   message: n.message,
                   dueText: n.dueDate == null
                       ? null
-                      : 'Due: ${n.dueDate!.toLocal().toString().split(" ").first}',
+                      : _formatDueText(n.dueDate),
                   onTap: () {
                     // Navigate specifically for Owner Payables
                     if (n.type == AppNotifType.ownerPayableSoon) {

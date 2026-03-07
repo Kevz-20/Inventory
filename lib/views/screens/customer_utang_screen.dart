@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+﻿// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +18,12 @@ class CustomerUtangScreen extends StatefulWidget {
 
 class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     with WidgetsBindingObserver {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
   final searchController = TextEditingController();
 
@@ -36,7 +42,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
   bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
 
-  /// ✅ Short, professional due label
+  /// âœ… Short, professional due label
   String _dueLabel(DateTime dueDate) {
     final daysLeft = _daysUntil(dueDate);
     if (daysLeft < 0) return "OVERDUE";
@@ -44,7 +50,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     return "$daysLeft DAY${daysLeft == 1 ? "" : "S"} LEFT";
   }
 
-  /// ✅ Keep your detailed text, but shorter
+  /// âœ… Keep your detailed text, but shorter
   String _dueSubText(DateTime dueDate) {
     final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
     return "Due: $formattedDueDate";
@@ -159,7 +165,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         final double topGap = (14 * scale).clamp(10, 18);
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: _pageBg,
           appBar: AppHeader(
             title: 'Customer Utang',
             showBackButton: true,
@@ -241,9 +247,9 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular((18 * scale).clamp(16, 22)),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -264,7 +270,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
           ),
           hintText: "Pangalan sa Utangan",
           hintStyle: TextStyle(
-            color: Colors.black.withOpacity(0.4),
+            color: _subtitleColor.withOpacity(0.75),
             fontSize: (14 * scale).clamp(12.5, 16),
             fontWeight: FontWeight.w600,
           ),
@@ -288,6 +294,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         style: TextStyle(
           fontSize: (14.5 * scale).clamp(13, 17),
           fontWeight: FontWeight.w700,
+          color: _titleColor,
         ),
       ),
     );
@@ -301,7 +308,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     final hasDebt = item.totalAmount > 0;
     final due = item.dueDate;
 
-    // ✅ NEW: hide status pill for brand-new customers (no transactions)
+    // âœ… NEW: hide status pill for brand-new customers (no transactions)
     final bool hidePill = (item.totalAmount <= 0) && (due == null);
 
     final bool overdue = due != null && _isOverdue(due);
@@ -324,7 +331,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                 : AppColors.primary;
 
     // Responsive: reserve a fixed-ish width for the right column
-    // so the left side (name/location) won’t get squeezed into overflow.
+    // so the left side (name/location) wonâ€™t get squeezed into overflow.
     final bool isNarrow = maxWidth < 360;
     final bool isTablet = maxWidth >= 700;
 
@@ -347,9 +354,9 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         margin: EdgeInsets.symmetric(vertical: (6 * scale).clamp(5, 9)),
         padding: EdgeInsets.all(pad),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _cardBg,
           borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: _cardBorder.withOpacity(0.8)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -386,6 +393,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                     style: TextStyle(
                       fontSize: (16 * scale).clamp(14.5, 20),
                       fontWeight: FontWeight.w900,
+                      color: _titleColor,
                     ),
                   ),
                   SizedBox(height: (4 * scale).clamp(3, 6)),
@@ -408,7 +416,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                       style: TextStyle(
                         fontSize: (12.5 * scale).clamp(11.5, 15),
                         fontWeight: FontWeight.w700,
-                        color: Colors.black.withOpacity(0.55),
+                        color: _subtitleColor,
                       ),
                     ),
                   ],
@@ -425,15 +433,16 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      "₱${currencyFormat.format(item.totalAmount)}",
+                      "\u20B1${currencyFormat.format(item.totalAmount)}",
                       style: TextStyle(
                         fontSize: (15.5 * scale).clamp(14, 20),
                         fontWeight: FontWeight.w900,
+                        color: _titleColor,
                       ),
                     ),
                   ),
 
-                  // ✅ only show pill when NOT brand-new customer
+                  // âœ… only show pill when NOT brand-new customer
                   if (!hidePill) ...[
                     SizedBox(height: (6 * scale).clamp(4, 8)),
                     Align(
@@ -470,7 +479,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                   Icon(
                     Icons.chevron_right,
                     size: (20 * scale).clamp(18, 26),
-                    color: Colors.black.withOpacity(0.35),
+                    color: _subtitleColor.withOpacity(0.8),
                   ),
                 ],
               ),
@@ -493,7 +502,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         Icon(
           icon,
           size: (16 * scale).clamp(14, 20),
-          color: Colors.black.withOpacity(0.45),
+          color: _subtitleColor.withOpacity(0.8),
         ),
         SizedBox(width: (6 * scale).clamp(5, 10)),
         Expanded(
@@ -504,7 +513,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
             style: TextStyle(
               fontSize: (12.8 * scale).clamp(11.5, 16),
               fontWeight: FontWeight.w600,
-              color: Colors.black.withOpacity(0.55),
+              color: _subtitleColor,
             ),
           ),
         ),
@@ -522,6 +531,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
       parts.add("Brgy. ${item.barangay!.trim()}");
     }
 
-    return parts.join(" • ");
+    return parts.join(" \u2022 ");
   }
 }
+

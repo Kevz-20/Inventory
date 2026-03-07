@@ -54,10 +54,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   bool _isLandscape(BuildContext context) =>
       MediaQuery.of(context).orientation == Orientation.landscape;
 
+  bool _isShortScreen(BuildContext context) => _screenHeight(context) < 500;
+
   bool _useSplitLayout(BuildContext context) {
     final width = _screenWidth(context);
     final height = _screenHeight(context);
-    return width >= 850 || (width >= 700 && height <= 600) || _isLandscape(context) && width >= 700;
+
+    // Only allow split layout if both width and height are enough.
+    // This prevents small landscape phones from being treated like tablets.
+    return width >= 900 && height >= 560;
   }
 
   double _responsiveScale(BuildContext context) {
@@ -75,7 +80,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final max = value * 1.28;
     return scaled.clamp(min, max);
   }
-
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
@@ -91,6 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 
     final isTablet = _isTablet(context);
     final isLandscape = _isLandscape(context);
+    final isShortScreen = _isShortScreen(context);
     final useSplitLayout = _useSplitLayout(context);
 
     final maxContentWidth = useSplitLayout
@@ -100,14 +105,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
             : double.infinity;
 
     final horizontalPadding = useSplitLayout
-        ? (isTablet ? 24.0 : 18.0)
+        ? 24.0
         : isTablet
             ? 18.0
             : isLandscape
                 ? 14.0
                 : 16.0;
 
-    final verticalPadding = useSplitLayout ? 14.0 : (isLandscape ? 10.0 : 12.0);
+    final verticalPadding = useSplitLayout
+        ? 14.0
+        : isShortScreen
+            ? 8.0
+            : isLandscape
+                ? 10.0
+                : 12.0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -145,10 +156,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 
                         final gap = useSplitLayout
                             ? (math.min(w, h) * 0.022).clamp(12.0, 18.0)
-                            : isLandscape
-                                ? (h * 0.022).clamp(8.0, 12.0)
-                                : (h * 0.026).clamp(10.0, 16.0);
+                            : isShortScreen
+                                ? 10.0
+                                : isLandscape
+                                    ? (h * 0.022).clamp(8.0, 12.0)
+                                    : (h * 0.026).clamp(10.0, 16.0);
 
+                        // ================= SHORT LANDSCAPE PHONE =================
+                        if (isLandscape && isShortScreen && !isTablet) {
+                          return SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  height: 108,
+                                  child: _bigActionTile(
+                                    label: "CUSTOMER",
+                                    subtitle: "Manage customers",
+                                    icon: Icons.people_alt_outlined,
+                                    onTap: () => context.push('/customer_menu'),
+                                  ),
+                                ),
+                                SizedBox(height: gap),
+                                SizedBox(
+                                  height: 108,
+                                  child: _bigActionTile(
+                                    label: "NEGOSYO",
+                                    subtitle: "Store & inventory",
+                                    icon: Icons.storefront_outlined,
+                                    onTap: () => context.push('/negosyo_menu'),
+                                  ),
+                                ),
+                                SizedBox(height: gap),
+                                SizedBox(
+                                  height: 220,
+                                  child: _SalesOnlyGraphCard(
+                                    salesPoints: homeState.income7Days,
+                                    loading: homeState.isGraphLoading,
+                                    error: homeState.graphError,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        // ================= LARGE / TABLET SPLIT LAYOUT =================
                         if (useSplitLayout) {
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -173,6 +225,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                           );
                         }
 
+                        // ================= NORMAL PHONE / NORMAL TABLET STACK =================
                         final tilesBlock = isTablet
                             ? (isLandscape
                                 ? (h * 0.36).clamp(220.0, 300.0)
@@ -264,6 +317,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     required VoidCallback onTap,
   }) {
     final radius = BorderRadius.circular(_r(context, 22));
+    final isCustomer = label.toUpperCase().contains('CUSTOMER');
+    final startColor = isCustomer
+        ? const Color(0xFFEAF7F3)
+        : const Color(0xFFE6F3F0);
+    final endColor = isCustomer
+        ? const Color(0xFFD8EEE8)
+        : const Color(0xFFD0E9E3);
+    const primaryTextColor = Color(0xFF0B3D35);
+    const secondaryTextColor = Color(0xFF2F5C54);
 
     return Material(
       color: Colors.transparent,
@@ -323,24 +385,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                 vertical: vPad,
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [startColor, endColor],
+                ),
                 borderRadius: radius,
-                border: Border.all(color: Colors.grey.shade300, width: 1),
+                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: _r(context, 18),
-                    offset: Offset(0, _r(context, 10)),
+                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
+                    blurRadius: _r(context, 16),
+                    offset: Offset(0, _r(context, 8)),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.80),
+                    blurRadius: _r(context, 5),
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: _r(context, compact ? 5 : 6),
-                    height: accentHeight,
+                    width: _r(context, compact ? 4 : 5),
+                    height: accentHeight * 0.9,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.primary.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -349,11 +420,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     width: iconBox,
                     height: iconBox,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(.10),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.96),
+                          Colors.white.withOpacity(0.82),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(_r(context, 18)),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(.25),
+                        color: const Color(0xFFB4D8CF),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
+                          blurRadius: _r(context, 8),
+                          offset: Offset(0, _r(context, 3)),
+                        ),
+                      ],
                     ),
                     child: Icon(
                       icon,
@@ -375,6 +460,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                             style: TextStyle(
                               fontSize: titleSize,
                               fontWeight: FontWeight.w900,
+                              color: primaryTextColor,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ),
@@ -386,10 +473,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                           style: TextStyle(
                             fontSize: subSize,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade700,
+                            color: secondaryTextColor,
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  SizedBox(width: _r(context, compact ? 8 : 10)),
+                  Container(
+                    width: _r(context, compact ? 32 : 38),
+                    height: _r(context, compact ? 32 : 38),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.88),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFB4D8CF),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.primary,
+                      size: _r(context, compact ? 18 : 20),
                     ),
                   ),
                 ],
@@ -420,6 +524,9 @@ class _SalesOnlyGraphCard extends StatelessWidget {
   bool _isLandscape(BuildContext context) =>
       MediaQuery.of(context).orientation == Orientation.landscape;
 
+  bool _isShortScreen(BuildContext context) =>
+      MediaQuery.of(context).size.height < 500;
+
   double _responsiveScale(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     if (width < 360) return 0.88;
@@ -435,16 +542,34 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     final max = value * 1.28;
     return scaled.clamp(min, max);
   }
+  double _totalSales() {
+    return salesPoints.fold<double>(0.0, (sum, p) => sum + p.net);
+  }
+
+  double _averageSales() {
+    if (salesPoints.isEmpty) return 0.0;
+    return _totalSales() / salesPoints.length;
+  }
+
+  String _pesoShort(double value) {
+    final sign = value < 0 ? '-' : '';
+    final abs = value.abs();
+    const peso = '\u20B1';
+    if (abs >= 1000000) return '${sign}$peso${(abs / 1000000).toStringAsFixed(1)}M';
+    if (abs >= 1000) return '${sign}$peso${(abs / 1000).toStringAsFixed(1)}K';
+    return '${sign}$peso${abs.toStringAsFixed(0)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final isTablet = _isTablet(context);
     final isLandscape = _isLandscape(context);
+    final isShortScreen = _isShortScreen(context);
 
     return LayoutBuilder(
       builder: (context, c) {
         final h = c.maxHeight;
-        final compact = h < 220;
+        final compact = h < 220 || (isLandscape && isShortScreen);
 
         return Container(
           padding: EdgeInsets.fromLTRB(
@@ -454,8 +579,13 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             _r(context, compact ? 8 : 10),
           ),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.white, Color(0xFFF7FBF9)],
+            ),
             borderRadius: BorderRadius.circular(_r(context, 18)),
+            border: Border.all(color: const Color(0xFFD8EAE4)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -467,49 +597,143 @@ class _SalesOnlyGraphCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Total Sales (Last 7 Days)',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: compact
-                      ? _r(context, 13)
-                      : isTablet
-                          ? _r(context, 15)
-                          : _r(context, 14),
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black.withOpacity(0.78),
-                ),
-              ),
-              SizedBox(height: _r(context, compact ? 6 : 8)),
               Row(
                 children: [
-                  Container(
-                    width: _r(context, 10),
-                    height: _r(context, 10),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
+                  Expanded(
+                    child: Text(
+                      'Sales',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: compact
+                            ? _r(context, 13)
+                            : isTablet
+                                ? _r(context, 15)
+                                : _r(context, 14),
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black.withOpacity(0.80),
+                      ),
                     ),
                   ),
-                  SizedBox(width: _r(context, 6)),
-                  Text(
-                    'Sales',
-                    style: TextStyle(
-                      fontSize: compact ? _r(context, 11.5) : _r(context, 12.5),
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black.withOpacity(0.65),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _r(context, 8),
+                      vertical: _r(context, 4),
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.22),
+                      ),
+                    ),
+                    child: Text(
+                      'Last 7 days',
+                      style: TextStyle(
+                        fontSize: compact ? _r(context, 9.5) : _r(context, 10.5),
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: _r(context, compact ? 8 : 10)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _r(context, 10),
+                        vertical: _r(context, 8),
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(_r(context, 10)),
+                        border: Border.all(color: const Color(0xFFE0ECE8)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.payments_outlined,
+                            size: _r(context, 14),
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(width: _r(context, 6)),
+                          Expanded(
+                            child: Text(
+                              'Total: ${_pesoShort(_totalSales())}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: compact ? _r(context, 10.5) : _r(context, 11.5),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black.withOpacity(0.72),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: _r(context, 8)),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _r(context, 10),
+                        vertical: _r(context, 8),
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(_r(context, 10)),
+                        border: Border.all(color: const Color(0xFFE0ECE8)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.insights_outlined,
+                            size: _r(context, 14),
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(width: _r(context, 6)),
+                          Expanded(
+                            child: Text(
+                              'Avg/day: ${_pesoShort(_averageSales())}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: compact ? _r(context, 10.5) : _r(context, 11.5),
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black.withOpacity(0.72),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
               SizedBox(height: _r(context, compact ? 6 : (isLandscape ? 8 : 10))),
               Expanded(
-                child: _buildChart(
-                  context: context,
-                  sales: salesPoints,
-                  loading: loading,
-                  error: error,
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                    _r(context, 6),
+                    _r(context, 4),
+                    _r(context, 6),
+                    _r(context, 2),
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(_r(context, 12)),
+                    border: Border.all(color: const Color(0xFFE3EFEB)),
+                  ),
+                  child: _buildChart(
+                    context: context,
+                    sales: salesPoints,
+                    loading: loading,
+                    error: error,
+                  ),
                 ),
               ),
             ],
@@ -563,6 +787,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
 
     final isTablet = _isTablet(context);
     final isLandscape = _isLandscape(context);
+    final isShortScreen = _isShortScreen(context);
 
     final len = sales.length;
 
@@ -603,15 +828,19 @@ class _SalesOnlyGraphCard extends StatelessWidget {
               showTitles: true,
               reservedSize: isTablet
                   ? (isLandscape ? 46 : 44)
-                  : 40,
+                  : (isShortScreen ? 34 : 40),
               interval: horizontalInterval,
               getTitlesWidget: (value, meta) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 4),
                   child: Text(
-                    value.toStringAsFixed(0),
+                    _pesoShort(value),
                     style: TextStyle(
-                      fontSize: isTablet ? 11 : 10.5,
+                      fontSize: isTablet
+                          ? 11
+                          : isShortScreen
+                              ? 9.5
+                              : 10.5,
                       fontWeight: FontWeight.w700,
                       color: Colors.black.withOpacity(0.35),
                     ),
@@ -638,9 +867,13 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                 return Padding(
                   padding: EdgeInsets.only(top: _r(context, 6)),
                   child: Text(
-                    '${d.day}',
+                    DateFormat('EEE').format(d),
                     style: TextStyle(
-                      fontSize: isTablet ? 11.5 : 11,
+                      fontSize: isTablet
+                          ? 11.5
+                          : isShortScreen
+                              ? 10
+                              : 11,
                       color: Colors.black.withOpacity(0.45),
                       fontWeight: FontWeight.w700,
                     ),
@@ -659,7 +892,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((s) {
                 return LineTooltipItem(
-                  'Sales: ₱${s.y.toStringAsFixed(2)}',
+                  'Sales: ${_pesoShort(s.y)}',
                   const TextStyle(fontWeight: FontWeight.w900),
                 );
               }).toList();
@@ -670,10 +903,36 @@ class _SalesOnlyGraphCard extends StatelessWidget {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: AppColors.primary,
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary,
+                AppColors.primary.withOpacity(0.72),
+              ],
+            ),
             barWidth: isTablet ? 4.0 : 3.6,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: false),
+            dotData: FlDotData(
+              show: true,
+              checkToShowDot: (spot, barData) => spot.x == (len - 1).toDouble(),
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: isTablet ? 4.2 : 3.8,
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.primary.withOpacity(0.22),
+                  AppColors.primary.withOpacity(0.02),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -682,3 +941,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     );
   }
 }
+
+
+
+

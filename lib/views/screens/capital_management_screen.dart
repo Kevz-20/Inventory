@@ -50,6 +50,13 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
 
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _fieldBg = Color(0xFFF6FBF9);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
 
@@ -118,7 +125,7 @@ class _CapitalManagementScreenState
             final double bottomBtnFs = (16 * s).clamp(14.5, 18);
 
             return Scaffold(
-              backgroundColor: AppColors.surface,
+              backgroundColor: _pageBg,
               appBar: const AppHeader(
                 title: 'Capital Management',
                 showBackButton: true,
@@ -178,7 +185,7 @@ class _CapitalManagementScreenState
                             'Enter the amount you want to add',
                             style: TextStyle(
                               fontSize: smallFs,
-                              color: Colors.grey.shade600,
+                              color: _subtitleColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -307,9 +314,9 @@ class _CapitalManagementScreenState
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
@@ -360,14 +367,14 @@ class _CapitalManagementScreenState
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: titleFs,
-                    color: Colors.black87,
+                    color: _titleColor,
                   ),
                 ),
               ),
             ],
           ),
           SizedBox(height: (10 * s).clamp(8, 12)),
-          Divider(color: Colors.grey.shade200, height: 1),
+          Divider(color: _cardBorder.withOpacity(0.8), height: 1),
           SizedBox(height: (12 * s).clamp(10, 14)),
           child,
         ],
@@ -389,9 +396,9 @@ class _CapitalManagementScreenState
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
@@ -424,7 +431,7 @@ class _CapitalManagementScreenState
                 Text(
                   title,
                   style: TextStyle(
-                    color: Colors.grey.shade700,
+                    color: _subtitleColor,
                     fontWeight: FontWeight.w800,
                     fontSize: labelFs,
                   ),
@@ -435,7 +442,7 @@ class _CapitalManagementScreenState
                   style: TextStyle(
                     fontSize: valueFs,
                     fontWeight: FontWeight.w900,
-                    color: Colors.black87,
+                    color: _titleColor,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -496,14 +503,14 @@ class _CapitalManagementScreenState
         ],
         onChanged: (_) => setState(() {}),
         style: TextStyle(
-          color: Colors.black87,
+          color: _titleColor,
           fontWeight: FontWeight.w800,
           fontSize: (14 * s).clamp(13, 16),
         ),
         decoration: InputDecoration(
           hintText: '0.00',
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _fieldBg,
           prefixIcon: Padding(
             padding: EdgeInsets.all((16 * s).clamp(14, 18)),
             child: Text(
@@ -517,7 +524,7 @@ class _CapitalManagementScreenState
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+            borderSide: BorderSide(color: _cardBorder, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
@@ -538,14 +545,14 @@ class _CapitalManagementScreenState
       child: TextField(
         controller: _remarksController,
         style: TextStyle(
-          color: Colors.black87,
+          color: _titleColor,
           fontWeight: FontWeight.w700,
           fontSize: (14 * s).clamp(13, 16),
         ),
         decoration: InputDecoration(
           hintText: 'Optional note',
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _fieldBg,
           prefixIcon: Icon(
             Icons.notes_rounded,
             color: AppColors.primary,
@@ -553,7 +560,7 @@ class _CapitalManagementScreenState
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.2),
+            borderSide: BorderSide(color: _cardBorder, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),

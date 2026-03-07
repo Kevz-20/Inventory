@@ -33,11 +33,11 @@ class AppColors {
   // Home / Dashboard specific (ADD ONLY)
   // ============================================================
 
-  /// Gradient top color for Home header
-  static const Color headerTop = Color(0xFF115242);
+  /// Gradient top color for Home header (tuned to match mint cards)
+  static const Color headerTop = Color(0xFF1A6A5A);
 
-  /// Gradient bottom color for Home header
-  static const Color headerBottom = Color(0xFF0B3A2D);
+  /// Gradient bottom color for Home header (kept deep enough for contrast)
+  static const Color headerBottom = Color(0xFF0F4E41);
 
   /// Soft background for icons/cards
   static const Color primarySoft = Color(0xFFE6F2EE);

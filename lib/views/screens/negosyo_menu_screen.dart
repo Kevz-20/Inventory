@@ -394,19 +394,23 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                 bottomPad,
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEAF7F3), Color(0xFFD8EEE8)],
+                ),
                 borderRadius: radius,
-                border: Border.all(color: Colors.grey.shade300, width: 1),
+                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: _r(context, 18),
-                    offset: Offset(0, _r(context, 10)),
+                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
+                    blurRadius: _r(context, 16),
+                    offset: Offset(0, _r(context, 8)),
                   ),
                   BoxShadow(
                     color: Colors.white.withOpacity(0.85),
-                    blurRadius: 1,
-                    offset: const Offset(0, -1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
@@ -425,7 +429,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                             ? _r(context, 5.0)
                             : _r(context, 6.0),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.primary.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -440,12 +444,26 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                     height: iconBox,
                     width: iconBox,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(.10),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.96),
+                          Colors.white.withOpacity(0.82),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(_r(context, 18)),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(.25),
+                        color: const Color(0xFFB4D8CF),
                         width: 1,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Icon(
                       icon,
@@ -469,6 +487,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                         fontSize: titleSize,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.6,
+                        color: const Color(0xFF0B3D35),
                       ),
                     ),
                   ),
@@ -482,7 +501,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                       fontSize: subSize,
                       height: 1.12,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black.withOpacity(0.65),
+                      color: const Color(0xFF2F5C54),
                     ),
                   ),
                 ],
@@ -540,19 +559,23 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
 
             return Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEAF7F3), Color(0xFFD8EEE8)],
+                ),
                 borderRadius: radius,
-                border: Border.all(color: Colors.grey.shade300, width: 1),
+                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: _r(context, 18),
-                    offset: Offset(0, _r(context, 10)),
+                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
+                    blurRadius: _r(context, 16),
+                    offset: Offset(0, _r(context, 8)),
                   ),
                   BoxShadow(
                     color: Colors.white.withOpacity(0.85),
-                    blurRadius: 1,
-                    offset: const Offset(0, -1),
+                    blurRadius: 5,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
@@ -563,7 +586,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                     width: _r(context, 6),
                     height: stripH,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.primary.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -572,12 +595,26 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                     height: iconBox,
                     width: iconBox,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(.10),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.96),
+                          Colors.white.withOpacity(0.82),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(_r(context, 18)),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(.25),
+                        color: const Color(0xFFB4D8CF),
                         width: 1,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Icon(icon, color: AppColors.primary, size: iconSize),
                   ),
@@ -595,6 +632,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                             fontSize: titleSize,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.5,
+                            color: const Color(0xFF0B3D35),
                           ),
                         ),
                         SizedBox(height: compact ? 4 : _r(context, 5)),
@@ -606,7 +644,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                             fontSize: subSize,
                             height: 1.15,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black.withOpacity(0.65),
+                            color: const Color(0xFF2F5C54),
                           ),
                         ),
                       ],

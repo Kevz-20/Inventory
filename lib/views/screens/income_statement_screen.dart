@@ -2,10 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/app_colors.dart';
-import '../widgets/header.dart';
 import 'package:intl/intl.dart';
+
+import '../../core/app_colors.dart';
 import '../../view_models/income_statement_view_model.dart';
+import '../widgets/header.dart';
 
 class IncomeStatementScreen extends ConsumerStatefulWidget {
   const IncomeStatementScreen({super.key});
@@ -17,16 +18,29 @@ class IncomeStatementScreen extends ConsumerStatefulWidget {
 
 class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
   static final DateFormat _dateFormat = DateFormat('MMMM d, yyyy');
+
   DateTime start = DateTime.now();
   DateTime end = DateTime.now();
 
   late final ScrollController _scrollController;
+  bool _didInitialLoad = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_didInitialLoad) {
+      _didInitialLoad = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadData();
+      });
+    }
   }
 
   @override
@@ -59,13 +73,13 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       setState(() {
         if (isStart) {
           start = picked;
-          // ✅ keep range valid
           if (start.isAfter(end)) end = start;
         } else {
           end = picked;
           if (end.isBefore(start)) start = end;
         }
       });
+
       _loadData();
     }
   }
@@ -86,8 +100,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Income Statement', showBackButton: true),
-
-      // ✅ Scrollbar hint (same styling as other screens)
       body: ScrollbarTheme(
         data: ScrollbarThemeData(
           thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
@@ -103,21 +115,20 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ==================== DATE RANGE CARD ====================
                 _dateRangeCard(
                   startLabel: _format(start),
                   endLabel: _format(end),
                   onStartTap: () => _selectDate(context, true),
                   onEndTap: () => _selectDate(context, false),
                 ),
-
                 const SizedBox(height: 14),
 
-                // ==================== DATA ====================
                 incomeState.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.only(top: 40),
-                    child: Center(child: CircularProgressIndicator()),
+                  loading: () => SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.45,
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.only(top: 40),
@@ -132,34 +143,30 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                       decimalDigits: 2,
                     );
 
-                    // optional empty-state check
-                    final isEmpty = income.sales == 0 &&
-                        income.kompra == 0 &&
-                        income.electricity == 0 &&
-                        income.transportation == 0 &&
-                        income.rentPayment == 0 &&
-                        income.miscExpenses == 0;
+                    final expenseEntries =
+                        income.expenseCategories.entries.toList()
+                          ..sort(
+                            (a, b) => a.key.toLowerCase().compareTo(
+                              b.key.toLowerCase(),
+                            ),
+                          );
+
+                    final isEmpty =
+                        income.sales == 0 && income.totalExpenses == 0;
 
                     return Column(
                       children: [
-                        // ==================== SUMMARY CARD ====================
                         _summaryCard(
                           sales: income.sales,
-                          totalExpenses: (income.kompra +
-                              income.electricity +
-                              income.transportation +
-                              income.rentPayment +
-                              income.miscExpenses),
+                          totalExpenses: income.totalExpenses,
                           netIncome: income.netIncome,
                           currency: currency,
                         ),
-
                         const SizedBox(height: 14),
 
                         if (isEmpty)
                           _emptyCard()
                         else ...[
-                          // ==================== SALES SECTION ====================
                           _buildFinancialSection(
                             title: 'Sales',
                             icon: Icons.point_of_sale_rounded,
@@ -179,35 +186,44 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                               ),
                             ],
                           ),
-
                           const SizedBox(height: 14),
 
-                          // ==================== EXPENSES SECTION ====================
                           _buildFinancialSection(
                             title: 'Expenses',
                             icon: Icons.payments_rounded,
-                            totalText: currency.format(
-                              income.kompra +
-                                  income.electricity +
-                                  income.transportation +
-                                  income.rentPayment +
-                                  income.miscExpenses,
-                            ),
+                            totalText: currency.format(income.totalExpenses),
                             children: [
-                              _itemRow(
-                                label: 'Kompra',
-                                value: income.kompra,
-                                currency: currency,
-                              ),
-                              _itemRow(
-                                label: 'Kuryente / Tubig',
-                                value: income.electricity,
-                                currency: currency,
-                              ),
-                              _itemRow(
-                                label: 'Transportation',
-                                value: income.transportation,
-                                currency: currency,
+                              if (expenseEntries.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  child: Text(
+                                    'No expense records',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.grey.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
+                              else
+                                ...expenseEntries.map(
+                                  (entry) => _itemRow(
+                                    label: entry.key,
+                                    value: entry.value,
+                                    currency: currency,
+                                  ),
+                                ),
+
+                              const SizedBox(height: 8),
+                              Divider(color: Colors.grey.shade200, height: 1),
+                              const SizedBox(height: 10),
+                              _totalRow(
+                                label: 'TOTAL EXPENSES',
+                                amountText: currency.format(
+                                  income.totalExpenses,
+                                ),
                               ),
                             ],
                           ),
@@ -225,8 +241,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
           ),
         ),
       ),
-
-      // ==================== BOTTOM BUTTON ====================
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
         child: Material(
@@ -266,7 +280,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     );
   }
 
-  // ==================== DATE RANGE CARD ====================
   Widget _dateRangeCard({
     required String startLabel,
     required String endLabel,
@@ -364,7 +377,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     );
   }
 
-  // ==================== SUMMARY CARD ====================
   Widget _summaryCard({
     required double sales,
     required double totalExpenses,
@@ -429,10 +441,14 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: highlight ? AppColors.primary.withOpacity(0.08) : Colors.grey.shade50,
+        color: highlight
+            ? AppColors.primary.withOpacity(0.08)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: highlight ? AppColors.primary.withOpacity(0.18) : Colors.grey.shade200,
+          color: highlight
+              ? AppColors.primary.withOpacity(0.18)
+              : Colors.grey.shade200,
         ),
       ),
       child: Row(
@@ -477,66 +493,62 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     );
   }
 
-  // ==================== SECTION CARD (LIKE BALANCE SHEET) ====================
-Widget _buildFinancialSection({
-  required String title,
-  required IconData icon,
-  required String totalText, // keep it for usage in children if you want
-  required List<Widget> children,
-}) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [
-        BoxShadow(
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-          color: Colors.black.withOpacity(0.04),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              height: 36,
-              width: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
+  Widget _buildFinancialSection({
+    required String title,
+    required IconData icon,
+    required String totalText,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 36,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 17,
-                  color: Colors.black87,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
-            ),
-
-            // ❌ Removed the header total here
-            // Text(totalText, ...),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Divider(color: Colors.grey.shade200, height: 1),
-        const SizedBox(height: 6),
-        ...children,
-      ],
-    ),
-  );
-}
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(color: Colors.grey.shade200, height: 1),
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
+    );
+  }
 
   Widget _itemRow({
     required String label,
@@ -588,7 +600,6 @@ Widget _buildFinancialSection({
     );
   }
 
-  // ==================== EMPTY CARD ====================
   Widget _emptyCard() {
     return Container(
       width: double.infinity,

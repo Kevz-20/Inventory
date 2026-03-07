@@ -17,6 +17,13 @@ class NewCustomerPage extends ConsumerStatefulWidget {
 }
 
 class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _fieldBg = Color(0xFFF6FBF9);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   List<String> filteredCities = [];
   List<String> filteredBarangays = [];
   List<BarangayModel> currentBarangays = [];
@@ -75,7 +82,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     final buttonH = (52.0 * s).clamp(52.0, 60.0);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: _pageBg,
       appBar: const AppHeader(title: 'Add New Customer', showBackButton: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(padH, padV, padH, 24),
@@ -318,15 +325,23 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
       width: double.infinity,
       padding: EdgeInsets.all((14 * s).clamp(14.0, 18.0)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular((16 * s).clamp(16.0, 20.0)),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Text(
         title,
         style: TextStyle(
           fontSize: (16 * s).clamp(16.0, 18.0),
           fontWeight: FontWeight.w900,
+          color: _titleColor,
         ),
       ),
     );
@@ -361,7 +376,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     final baseBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
-        color: showError ? AppColors.error : Colors.grey.shade300,
+        color: showError ? AppColors.error : _cardBorder,
         width: showError ? 1.4 : 1,
       ),
     );
@@ -379,6 +394,10 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
       child: TextFormField(
         controller: controller,
         cursorColor: AppColors.textPrimary,
+        style: const TextStyle(
+          color: _titleColor,
+          fontWeight: FontWeight.w600,
+        ),
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         onChanged: (_) {
@@ -389,16 +408,22 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
           floatingLabelBehavior: FloatingLabelBehavior.auto,
           labelText: label,
           hintText: hintText,
-          prefixIcon: icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
+          hintStyle: TextStyle(
+            color: _subtitleColor.withOpacity(0.65),
+            fontWeight: FontWeight.w500,
+          ),
+          prefixIcon: icon != null
+              ? Icon(icon, color: _subtitleColor.withOpacity(0.8))
+              : null,
           filled: true,
-          fillColor: const Color(0xFFF9FAFB),
+          fillColor: _fieldBg,
           contentPadding: EdgeInsets.symmetric(
             horizontal: (14 * s).clamp(14.0, 18.0),
             vertical: (14 * s).clamp(14.0, 18.0),
           ),
           labelStyle: TextStyle(
             fontWeight: FontWeight.w700,
-            color: showError ? AppColors.error : AppColors.textPrimary,
+            color: showError ? AppColors.error : _subtitleColor,
           ),
           floatingLabelStyle: TextStyle(
             fontWeight: FontWeight.w900,
@@ -438,7 +463,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     final baseBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
-        color: showError ? AppColors.error : Colors.grey.shade300,
+        color: showError ? AppColors.error : _cardBorder,
         width: showError ? 1.4 : 1,
       ),
     );
@@ -459,20 +484,30 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
           TextFormField(
             controller: controller,
             cursorColor: AppColors.textPrimary,
+            style: const TextStyle(
+              color: _titleColor,
+              fontWeight: FontWeight.w600,
+            ),
             decoration: InputDecoration(
               floatingLabelBehavior: FloatingLabelBehavior.auto,
               labelText: label,
               hintText: hintText,
-              prefixIcon: icon != null ? Icon(icon, color: Colors.grey.shade600) : null,
+              hintStyle: TextStyle(
+                color: _subtitleColor.withOpacity(0.65),
+                fontWeight: FontWeight.w500,
+              ),
+              prefixIcon: icon != null
+                  ? Icon(icon, color: _subtitleColor.withOpacity(0.8))
+                  : null,
               filled: true,
-              fillColor: const Color(0xFFF9FAFB),
+              fillColor: _fieldBg,
               contentPadding: EdgeInsets.symmetric(
                 horizontal: (14 * s).clamp(14.0, 18.0),
                 vertical: (14 * s).clamp(14.0, 18.0),
               ),
               labelStyle: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: showError ? AppColors.error : AppColors.textPrimary,
+                color: showError ? AppColors.error : _subtitleColor,
               ),
               floatingLabelStyle: TextStyle(
                 fontWeight: FontWeight.w900,
@@ -497,8 +532,8 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
               margin: const EdgeInsets.only(top: 6),
               constraints: BoxConstraints(maxHeight: suggestMaxHeight),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200),
+                color: _cardBg,
+                border: Border.all(color: _cardBorder.withOpacity(0.8)),
                 borderRadius: BorderRadius.circular(radius),
                 boxShadow: [
                   BoxShadow(

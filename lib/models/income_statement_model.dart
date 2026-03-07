@@ -1,33 +1,33 @@
 class IncomeStatementModel {
   final double merchandiseSales;
   final double sales;
-  final double kompra; // <- must exist
-  final double electricity; // <- must exist
-  final double transportation;
-  final double rentPayment;
-  final double miscExpenses;
+
+  // dynamic expense categories
+  final Map<String, double> expenseCategories;
+
   final double netIncome;
 
   IncomeStatementModel({
     required this.merchandiseSales,
     required this.sales,
-    required this.kompra,
-    required this.electricity,
-    required this.transportation,
-    required this.rentPayment,
-    required this.miscExpenses,
+    required this.expenseCategories,
     required this.netIncome,
   });
 
   factory IncomeStatementModel.fromMap(Map<String, dynamic> map) {
+    final categories = <String, double>{};
+
+    if (map['expense_categories'] != null) {
+      final raw = Map<String, dynamic>.from(map['expense_categories']);
+      raw.forEach((key, value) {
+        categories[key] = (value ?? 0).toDouble();
+      });
+    }
+
     return IncomeStatementModel(
       merchandiseSales: (map['merchandise_sales'] ?? 0).toDouble(),
       sales: (map['sales'] ?? 0).toDouble(),
-      kompra: (map['kompra'] ?? 0).toDouble(),
-      electricity: (map['electricity'] ?? 0).toDouble(),
-      transportation: (map['transportation'] ?? 0).toDouble(),
-      rentPayment: (map['rent_payment'] ?? 0).toDouble(),
-      miscExpenses: (map['misc_expenses'] ?? 0).toDouble(),
+      expenseCategories: categories,
       netIncome: (map['net_income'] ?? 0).toDouble(),
     );
   }
@@ -36,12 +36,11 @@ class IncomeStatementModel {
     return {
       'merchandise_sales': merchandiseSales,
       'sales': sales,
-      'kompra': kompra,
-      'electricity': electricity,
-      'transportation': transportation,
-      'rent_payment': rentPayment,
-      'misc_expenses': miscExpenses,
+      'expense_categories': expenseCategories,
       'net_income': netIncome,
     };
   }
+
+  double get totalExpenses =>
+      expenseCategories.values.fold(0.0, (sum, item) => sum + item);
 }

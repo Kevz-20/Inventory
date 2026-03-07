@@ -70,6 +70,13 @@ class OwnerUtangScreen extends StatefulWidget {
 
 class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     with WidgetsBindingObserver {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _fieldBg = Color(0xFFF6FBF9);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
 
   int selectedFilter = 0;
@@ -281,7 +288,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                         "Remaining: ${money(remaining)}",
                         style: TextStyle(
                           fontSize: t14,
-                          color: Colors.black87,
+                          color: _titleColor,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -317,22 +324,22 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             prefixText: "₱ ",
                             hintText: "Enter amount",
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: _fieldBg,
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: padH,
                               vertical: padV,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(r14),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(color: _cardBorder),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(r14),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
+                              borderSide: BorderSide(color: _cardBorder),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(r14),
-                              borderSide: BorderSide(color: Colors.grey.shade500),
+                              borderSide: const BorderSide(color: AppColors.primary),
                             ),
                           ),
                           onChanged: (v) => setState(() {
@@ -541,7 +548,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 builder: (context, scrollController) {
                   return Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF7F7F7),
+                      color: _pageBg,
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(r22),
                       ),
@@ -557,7 +564,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             width: (42 * s).clamp(36.0, 48.0),
                             height: (5 * s).clamp(4.0, 6.0),
                             decoration: BoxDecoration(
-                              color: Colors.black12,
+                              color: _cardBorder,
                               borderRadius: BorderRadius.circular(999),
                             ),
                           ),
@@ -611,8 +618,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                               Container(
                                 padding: EdgeInsets.all(pad14),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: _cardBg,
                                   borderRadius: BorderRadius.circular(r16),
+                                  border: Border.all(color: _cardBorder.withOpacity(0.8)),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.04),
@@ -640,7 +648,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                         fontSize: (14.5 * s).clamp(13.0, 16.0),
                                         fontWeight: FontWeight.w900,
                                         color: paidSoFar <= 0
-                                            ? Colors.black87
+                                            ? _titleColor
                                             : Colors.green.shade700,
                                       ),
                                     ),
@@ -662,7 +670,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                         "Recorded On: ${DateFormat('MMM dd, yyyy').format(item.createdAtDate!)}",
                                         style: TextStyle(
                                           fontSize: (13 * s).clamp(11.5, 14.0),
-                                          color: Colors.black54,
+                                          color: _subtitleColor,
                                         ),
                                       ),
                                     if (displayNextDue != null)
@@ -672,7 +680,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                           "Next Due: ${DateFormat('MMM dd, yyyy').format(displayNextDue)}",
                                           style: TextStyle(
                                             fontSize: (13 * s).clamp(11.5, 14.0),
-                                            color: Colors.black54,
+                                            color: _subtitleColor,
                                           ),
                                         ),
                                       ),
@@ -704,12 +712,13 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                 Container(
                                   padding: EdgeInsets.all(pad14),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: _cardBg,
                                     borderRadius: BorderRadius.circular(r16),
+                                    border: Border.all(color: _cardBorder.withOpacity(0.8)),
                                   ),
                                   child: const Text(
                                     "No payments recorded yet.",
-                                    style: TextStyle(color: Colors.black54),
+                                    style: TextStyle(color: _subtitleColor),
                                   ),
                                 ),
                               ...paymentHistory.map((payment) {
@@ -727,8 +736,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                   margin: EdgeInsets.only(bottom: (8 * s).clamp(6.0, 10.0)),
                                   padding: EdgeInsets.all((12 * s).clamp(10.0, 14.0)),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: _cardBg,
                                     borderRadius: BorderRadius.circular((14 * s).clamp(12.0, 16.0)),
+                                    border: Border.all(color: _cardBorder.withOpacity(0.8)),
                                   ),
                                   child: Row(
                                     children: [
@@ -738,7 +748,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                           style: TextStyle(
                                             fontSize: (13 * s).clamp(12.0, 14.0),
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
+                                            color: _titleColor,
                                           ),
                                         ),
                                       ),
@@ -747,7 +757,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                         paidLabel,
                                         style: TextStyle(
                                           fontSize: (12 * s).clamp(11.0, 13.0),
-                                          color: Colors.black54,
+                                          color: _subtitleColor,
                                         ),
                                       ),
                                     ],
@@ -767,7 +777,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                   MediaQuery.of(context).viewPadding.bottom,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: _cardBg,
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.06),
@@ -881,7 +891,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
           label,
           style: const TextStyle(
             fontSize: 13,
-            color: Colors.black54,
+            color: _subtitleColor,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -916,7 +926,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         final fabR = (18 * s).clamp(16.0, 22.0);
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: _pageBg,
           appBar: const AppHeader(title: 'Owner Utang', showBackButton: true),
 
           // ✅ Full-width Add button (same functionality)
@@ -1022,7 +1032,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
               style: TextStyle(
                 fontSize: (13.5 * s).clamp(12.0, 15.0),
                 fontWeight: FontWeight.w600,
-                color: Colors.black.withOpacity(0.55),
+                color: _subtitleColor,
               ),
             ),
           ],
@@ -1049,9 +1059,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             height: barH,
             padding: EdgeInsets.all(innerPad),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300.withOpacity(0.35),
+              color: _cardBg,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.grey.shade300.withOpacity(0.6)),
+              border: Border.all(color: _cardBorder),
             ),
             child: Stack(
               children: [
@@ -1102,7 +1112,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           style: TextStyle(
-            color: active ? Colors.white : Colors.black87,
+            color: active ? Colors.white : _titleColor,
             fontSize: textFs,
             fontWeight: FontWeight.w900,
           ),
@@ -1151,9 +1161,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         margin: EdgeInsets.only(bottom: (10 * s).clamp(8.0, 12.0)),
         padding: EdgeInsets.all(pad14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: _cardBg,
           borderRadius: BorderRadius.circular(r16),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: _cardBorder.withOpacity(0.8)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -1193,7 +1203,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                     valueColor: item.isInstallment
                         ? Colors.orange.shade900
                         : (paidSoFar <= 0
-                            ? Colors.black87
+                            ? _titleColor
                             : Colors.green.shade700),
                     s: s,
                   ),
@@ -1216,7 +1226,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 Icon(
                   Icons.calendar_month_rounded,
                   size: (18 * s).clamp(16.0, 20.0),
-                  color: Colors.black.withOpacity(0.55),
+                  color: _subtitleColor,
                 ),
                 SizedBox(width: (8 * s).clamp(6.0, 10.0)),
                 Expanded(
@@ -1225,13 +1235,13 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                     style: TextStyle(
                       fontSize: (13 * s).clamp(12.0, 14.5),
                       fontWeight: FontWeight.w700,
-                      color: Colors.black.withOpacity(0.60),
+                      color: _subtitleColor,
                     ),
                   ),
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: Colors.black.withOpacity(0.35),
+                  color: _subtitleColor.withOpacity(0.7),
                 ),
               ],
             ),
@@ -1253,9 +1263,9 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         vertical: (10 * s).clamp(9.0, 12.0),
       ),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: _fieldBg,
         borderRadius: BorderRadius.circular((14 * s).clamp(12.0, 16.0)),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1265,7 +1275,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             style: TextStyle(
               fontSize: (12 * s).clamp(11.0, 13.0),
               fontWeight: FontWeight.w700,
-              color: Colors.black.withOpacity(0.55),
+              color: _subtitleColor,
             ),
           ),
           SizedBox(height: (6 * s).clamp(4.0, 8.0)),
@@ -1274,7 +1284,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             style: TextStyle(
               fontSize: (14.5 * s).clamp(13.0, 16.0),
               fontWeight: FontWeight.w900,
-              color: valueColor ?? Colors.black87,
+              color: valueColor ?? _titleColor,
             ),
           ),
         ],
@@ -1316,7 +1326,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       case 'Paid':
         return const Color(0xFFE8F5E9);
       default:
-        return Colors.grey.shade200;
+        return _cardBorder.withOpacity(0.55);
     }
   }
 
@@ -1329,7 +1339,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       case 'Paid':
         return const Color(0xFF2E7D32);
       default:
-        return Colors.black54;
+        return _subtitleColor;
     }
   }
 }

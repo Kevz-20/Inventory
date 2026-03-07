@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+﻿// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +14,7 @@ class ReportsScreen extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
     final isTablet = width >= 700;
 
-    // ✅ same approach as HomeScreen: a bit wider on tablet
+    // âœ… same approach as HomeScreen: a bit wider on tablet
     final maxContentWidth = isTablet ? 760.0 : double.infinity;
 
     return Scaffold(
@@ -31,10 +31,10 @@ class ReportsScreen extends StatelessWidget {
                 builder: (context, c) {
                   final h = c.maxHeight;
 
-                  // ✅ similar spacing behavior as HomeScreen
+                  // âœ… similar spacing behavior as HomeScreen
                   final gap = (h * 0.02).clamp(10.0, 16.0);
 
-                  // ✅ tile height scales with space (still scrollable)
+                  // âœ… tile height scales with space (still scrollable)
                   final tileH = isTablet
                       ? (h * 0.18).clamp(110.0, 140.0)
                       : (h * 0.16).clamp(104.0, 130.0);
@@ -84,7 +84,7 @@ class ReportsScreen extends StatelessWidget {
     );
   }
 
-  // ✅ SAME LOOK AS HomeScreen._bigActionTile (uniform design)
+  // âœ… SAME LOOK AS HomeScreen._bigActionTile (uniform design)
   Widget _bigActionTile({
     required String label,
     required String subtitle,
@@ -113,46 +113,67 @@ class ReportsScreen extends StatelessWidget {
             return Container(
               padding: EdgeInsets.symmetric(horizontal: 18, vertical: vPad),
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEAF7F3), Color(0xFFD8EEE8)],
+                ),
                 borderRadius: radius,
-                border: Border.all(color: Colors.grey.shade300, width: 1),
+                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
+                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.80),
+                    blurRadius: 5,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  // ✅ left accent bar (same as Home)
+                  // âœ… left accent bar (same as Home)
                   Container(
-                    width: 6,
+                    width: 5,
                     height: (h * 0.55).clamp(48.0, 64.0),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.primary.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   const SizedBox(width: 16),
 
-                  // ✅ icon box (same as Home)
+                  // âœ… icon box (same as Home)
                   Container(
                     width: iconBox,
                     height: iconBox,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(.10),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(.25),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.96),
+                          Colors.white.withOpacity(0.82),
+                        ],
                       ),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFB4D8CF)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Icon(icon, color: AppColors.primary, size: iconSize),
                   ),
                   const SizedBox(width: 16),
 
-                  // ✅ text (same as Home)
+                  // âœ… text (same as Home)
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -166,6 +187,7 @@ class ReportsScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: titleSize,
                               fontWeight: FontWeight.w900,
+                              color: const Color(0xFF0B3D35),
                             ),
                           ),
                         ),
@@ -177,17 +199,26 @@ class ReportsScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: subSize,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade700,
+                            color: const Color(0xFF2F5C54),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // ✅ optional chevron (remove if Home doesn't have it)
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: Colors.black.withOpacity(0.25),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.88),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFB4D8CF)),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),

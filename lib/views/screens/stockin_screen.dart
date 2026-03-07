@@ -18,6 +18,13 @@ class StockInScreen extends ConsumerStatefulWidget {
 }
 
 class _StockInScreenState extends ConsumerState<StockInScreen> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _fieldBg = Color(0xFFF6FBF9);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   late final ScrollController _scrollController;
 
   @override
@@ -71,7 +78,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         final double gap10 = (10 * scale).clamp(8, 12);
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
+          backgroundColor: _pageBg,
           appBar: const AppHeader(title: 'Stock In', showBackButton: true),
 
           body: ScrollbarTheme(
@@ -283,7 +290,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       child: InputDecorator(
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _fieldBg,
           prefixIcon: Icon(
             Icons.category,
             color: AppColors.primary,
@@ -293,7 +300,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
-              color: isError ? Colors.red : Colors.grey.shade300,
+              color: isError ? Colors.red : _cardBorder,
             ),
           ),
           focusedBorder: OutlineInputBorder(
@@ -314,14 +321,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   fontSize: valueFs,
                   fontWeight: FontWeight.w800,
                   color: vm.selectedCategory == null
-                      ? Colors.grey.shade600
-                      : Colors.black,
+                      ? _subtitleColor
+                      : _titleColor,
                 ),
               ),
             ),
             Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: Colors.black54,
+              color: _subtitleColor,
               size: (22 * scale).clamp(20, 26),
             ),
           ],
@@ -354,7 +361,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: Container(
             constraints: BoxConstraints(maxHeight: maxHeight),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _cardBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
@@ -378,7 +385,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     height: 5,
                     width: (48 * s).clamp(44, 54),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: _cardBorder,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
@@ -406,7 +413,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           style: TextStyle(
                             fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                            color: _titleColor,
                           ),
                         ),
                       ),
@@ -463,14 +470,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 icon: const Icon(Icons.close_rounded),
                               ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: _fieldBg,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: (12 * s).clamp(10, 14),
                           vertical: (14 * s).clamp(12, 16),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
+                          borderSide: BorderSide(color: _cardBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -503,19 +510,19 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                     height: (56 * s).clamp(50, 66),
                                     width: (56 * s).clamp(50, 66),
                                     decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
+                                      color: _fieldBg,
                                       borderRadius: BorderRadius.circular(18),
                                     ),
                                     child: const Icon(
                                       Icons.search_off_rounded,
-                                      color: Colors.black54,
+                                      color: _subtitleColor,
                                     ),
                                   ),
                                   SizedBox(height: (10 * s).clamp(8, 12)),
                                   Text(
                                     'Walay match nga category.',
                                     style: TextStyle(
-                                      color: Colors.grey.shade700,
+                                      color: _subtitleColor,
                                       fontWeight: FontWeight.w800,
                                       fontSize: (13.5 * s).clamp(12.5, 15),
                                     ),
@@ -525,7 +532,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                     'Try lain nga keyword or add new category.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Colors.grey.shade600,
+                                      color: _subtitleColor,
                                       fontWeight: FontWeight.w600,
                                       fontSize: (12.8 * s).clamp(12, 14.5),
                                     ),
@@ -555,12 +562,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? AppColors.primary.withOpacity(0.10)
-                                      : Colors.white,
+                                      : _fieldBg,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: isSelected
                                         ? AppColors.primary.withOpacity(0.35)
-                                        : Colors.grey.shade200,
+                                        : _cardBorder.withOpacity(0.8),
                                   ),
                                 ),
                                 child: Row(
@@ -574,7 +581,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                           fontWeight: FontWeight.w900,
                                           color: isSelected
                                               ? AppColors.primary
-                                              : Colors.black87,
+                                              : _titleColor,
                                           fontSize: (14 * s).clamp(13, 16),
                                         ),
                                       ),
@@ -621,7 +628,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       barrierDismissible: true,
       builder: (dialogCtx) {
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: _cardBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
           ),
@@ -646,7 +653,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           style: TextStyle(
                             fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                            color: _titleColor,
                           ),
                         ),
                       ),
@@ -661,7 +668,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   Text(
                     "Example: Snacks, Inomnon, Pagkaon",
                     style: TextStyle(
-                      color: Colors.grey.shade700,
+                      color: _subtitleColor,
                       fontWeight: FontWeight.w600,
                       fontSize: (13.5 * s).clamp(12.5, 15),
                     ),
@@ -681,10 +688,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           labelText: "Category name",
                           hintText: "e.g. Frozen Foods",
                           filled: true,
-                          fillColor: Colors.grey.shade50,
+                          fillColor: _fieldBg,
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
+                            borderSide: BorderSide(color: _cardBorder),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
@@ -717,8 +724,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(dialogCtx),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black87,
-                            side: BorderSide(color: Colors.grey.shade300),
+                            foregroundColor: _titleColor,
+                            side: BorderSide(color: _cardBorder),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                             ),
@@ -804,9 +811,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
@@ -836,7 +843,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: titleFs,
-                    color: Colors.black87,
+                    color: _titleColor,
                   ),
                 ),
               ),
@@ -858,9 +865,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: _cardBorder.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
@@ -911,18 +918,18 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           if (picked != null) vm.pickDate(picked);
         },
         style: TextStyle(
-          color: Colors.black,
+          color: _titleColor,
           fontWeight: FontWeight.bold,
           fontSize: valueFs,
         ),
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _fieldBg,
           prefixIcon: const Icon(Icons.calendar_today, color: AppColors.primary),
           labelText: 'Petsa',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: _cardBorder),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
@@ -954,7 +961,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: Material(
             elevation: 6,
             borderRadius: BorderRadius.circular(radius),
-            color: Colors.white,
+            color: _cardBg,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.35,
@@ -965,7 +972,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 shrinkWrap: true,
                 itemCount: options.length,
                 separatorBuilder: (_, _) =>
-                    Divider(height: 1, color: Colors.grey.shade200),
+                    Divider(height: 1, color: _cardBorder.withOpacity(0.8)),
                 itemBuilder: (context, index) {
                   final option = options.elementAt(index);
                   return InkWell(
@@ -982,7 +989,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       child: Text(
                         option,
                         style: TextStyle(
-                          color: Colors.black,
+                          color: _titleColor,
                           fontWeight: FontWeight.bold,
                           fontSize: optionFs,
                         ),
@@ -1010,14 +1017,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               labelText: 'Pangalan sa produkto',
               prefixIcon: const Icon(Icons.edit, color: AppColors.primary),
               filled: true,
-              fillColor: Colors.grey.shade50,
+              fillColor: _fieldBg,
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(radius),
                 borderSide: BorderSide(
                   color: (vm.showValidationErrors &&
                           vm.effectiveProductName.trim().isEmpty)
                       ? Colors.red
-                      : Colors.grey.shade300,
+                      : _cardBorder,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -1098,7 +1105,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         ),
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: _fieldBg,
           prefixIcon: isPeso
               ? Padding(
                   padding: EdgeInsets.all((16 * s).clamp(14, 18)),
@@ -1120,7 +1127,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             borderSide: BorderSide(
               color: showError && controller.text.isEmpty
                   ? Colors.red
-                  : Colors.grey.shade300,
+                  : _cardBorder,
             ),
           ),
           focusedBorder: OutlineInputBorder(
@@ -1152,7 +1159,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       showDialog(
         context: context,
         builder: (_) => Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: _cardBg,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular((20 * scale).clamp(18, 24))),
           child: Padding(
             padding: EdgeInsets.all((20 * scale).clamp(16, 24)),
@@ -1206,9 +1213,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             height: imageHeight,
             width: double.infinity,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: _cardBorder),
               borderRadius: BorderRadius.circular(radius),
-              color: Colors.grey.shade50,
+              color: _fieldBg,
             ),
             child: vm.productImage != null
                 ? ClipRRect(
@@ -1235,7 +1242,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       Text(
                         "Tap para mag add og product image",
                         style: TextStyle(
-                          color: Colors.grey.shade700,
+                          color: _subtitleColor,
                           fontWeight: FontWeight.w700,
                           fontSize: valueFs,
                         ),
@@ -1370,3 +1377,4 @@ String _formatIntegerWithComma(String digits) {
       .reversed
       .join(',');
 }
+

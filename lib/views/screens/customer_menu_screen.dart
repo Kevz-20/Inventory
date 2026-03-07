@@ -153,6 +153,15 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
     required VoidCallback onTap,
   }) {
     final radius = BorderRadius.circular(22);
+    final isHalin = label.toUpperCase().contains('HALIN');
+    final startColor = isHalin
+        ? const Color(0xFFEAF7F3)
+        : const Color(0xFFE6F3F0);
+    final endColor = isHalin
+        ? const Color(0xFFD8EEE8)
+        : const Color(0xFFD0E9E3);
+    const primaryTextColor = Color(0xFF0B3D35);
+    const secondaryTextColor = Color(0xFF2F5C54);
 
     return Material(
       color: Colors.transparent,
@@ -169,30 +178,39 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
             final titleSize = (h * 0.18).clamp(18.0, 22.0);
             final subSize = (h * 0.13).clamp(12.5, 15.0);
 
-            final stripH = (h * 0.55).clamp(48.0, 64.0);
+            final stripH = (h * 0.55).clamp(44.0, 60.0);
             final vPad = (h * 0.12).clamp(12.0, 18.0);
 
             return Container(
               padding: EdgeInsets.symmetric(horizontal: 18, vertical: vPad),
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [startColor, endColor],
+                ),
                 borderRadius: radius,
-                border: Border.all(color: Colors.grey.shade300, width: 1),
+                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
+                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.80),
+                    blurRadius: 5,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 6,
+                    width: 5,
                     height: stripH,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.primary.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -202,13 +220,31 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                     width: iconBox,
                     height: iconBox,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(.10),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.96),
+                          Colors.white.withOpacity(0.82),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(.25),
+                        color: const Color(0xFFB4D8CF),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: Icon(icon, color: AppColors.primary, size: iconSize),
+                    child: Icon(
+                      icon,
+                      color: AppColors.primary,
+                      size: iconSize,
+                    ),
                   ),
                   const SizedBox(width: 16),
 
@@ -224,6 +260,8 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                             style: TextStyle(
                               fontSize: titleSize,
                               fontWeight: FontWeight.w900,
+                              color: primaryTextColor,
+                              letterSpacing: 0.2,
                             ),
                           ),
                         ),
@@ -235,10 +273,27 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                           style: TextStyle(
                             fontSize: subSize,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade700,
+                            color: secondaryTextColor,
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.88),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFB4D8CF),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: AppColors.primary,
+                      size: 20,
                     ),
                   ),
                 ],
