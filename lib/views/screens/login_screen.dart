@@ -1,5 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:math' as math;
+
 import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,7 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       duration: const Duration(milliseconds: 200),
     );
 
-    _shakeAnimation = TweenSequence([
+    _shakeAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -10.0), weight: 1),
       TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
       TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0), weight: 2),
@@ -35,20 +37,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       TweenSequenceItem(tween: Tween(begin: 10.0, end: 0.0), weight: 1),
     ]).animate(_shakeController);
 
-    // ✅ Auto-biometric login after first frame with delay
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final vm = ref.read(loginViewModelProvider);
       await vm.loadSavedMobile();
-      vm.clearPin(); // Reset PIN when page loads
+      vm.clearPin();
 
       if (vm.mobileNumber.isNotEmpty) {
-        // Delay slightly to ensure activity is attached
         await Future.delayed(const Duration(milliseconds: 300));
         try {
           await vm.loginWithBiometric(context, ref);
-        } catch (_) {
-          // ignore errors for now; will show Biometric failed message inside VM
-        }
+        } catch (_) {}
       }
     });
   }
@@ -61,219 +59,268 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   void triggerShake() => _shakeController.forward(from: 0);
 
-  @override
+   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(loginViewModelProvider);
-    final size = MediaQuery.of(context).size;
-    final scale = size.width > 600 ? 1.2 : 1.0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isSmallHeight = constraints.maxHeight < 600;
+            final width = constraints.maxWidth;
+            final height = constraints.maxHeight;
 
-            final mainContent = ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  /// LOGO
-                  Image.asset('lib/assets/logo.png', height: 80 * scale),
-                  const SizedBox(height: 10),
-                  Text(
-                    "E.M.P.O.W.E.R",
-                    style: TextStyle(
-                      fontSize: 20 * scale,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+            final isTablet = width >= 700;
+            final contentMaxWidth = isTablet ? 520.0 : 420.0;
+            final contentWidth = math.min(width, contentMaxWidth);
 
-                  /// MOBILE NUMBER
-                  GestureDetector(
-                    onTap: () =>
-                        viewModel.changeMobileNumber(context, ref: ref),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withAlpha(40),
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            "Mobile Number: ",
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          Text(
-                            viewModel.mobileNumber.isNotEmpty
-                                ? viewModel.mobileNumber
-                                : 'Not set',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.swap_horiz),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 25),
+            final horizontalPadding = isTablet ? 24.0 : 16.0;
 
-                  /// PIN INDICATOR
-                  const Text(
-                    "PIN",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            // Height-based scaling
+            final veryShort = height < 650;
+            final short = height < 730;
+
+            final logoHeight = veryShort
+                ? 50.0
+                : short
+                    ? 62.0
+                    : isTablet
+                        ? 88.0
+                        : 78.0;
+
+            final titleSize = veryShort
+                ? 16.0
+                : short
+                    ? 18.0
+                    : isTablet
+                        ? 23.0
+                        : 20.0;
+
+            final mobileFontSize = veryShort ? 13.0 : 16.0;
+            final pinLabelSize = veryShort ? 15.0 : 18.0;
+            final pinDotSize = veryShort ? 12.0 : 18.0;
+
+            final gap1 = veryShort ? 6.0 : 10.0;
+            final gap2 = veryShort ? 12.0 : 20.0;
+            final gap3 = veryShort ? 8.0 : 12.0;
+
+            final keypadSpacing = veryShort ? 8.0 : 12.0;
+
+            // Reserve space for non-keypad widgets so keypad can shrink to fit
+            final reservedHeight =
+                logoHeight +
+                gap1 +
+                titleSize +
+                gap2 +
+                54 + // mobile number box approx
+                gap2 +
+                pinLabelSize +
+                gap3 +
+                pinDotSize +
+                gap2 +
+                50; // bottom links safe area
+
+            final remainingHeight =
+                height - reservedHeight - 40; // extra breathing room
+
+            final widthBasedKeySize =
+                ((contentWidth - (horizontalPadding * 2) - (keypadSpacing * 2)) /
+                        3)
+                    .clamp(58.0, isTablet ? 105.0 : 90.0);
+
+            final heightBasedKeySize =
+                ((remainingHeight - (keypadSpacing * 3)) / 4).clamp(48.0, 90.0);
+
+            final keySize = math.min(widthBasedKeySize, heightBasedKeySize);
+            final keyFontSize = keySize * 0.32;
+            final backspaceIconSize = keySize * 0.34;
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: veryShort ? 8 : 14,
                   ),
-                  const SizedBox(height: 12),
-                  AnimatedBuilder(
-                    animation: _shakeAnimation,
-                    builder: (_, _) {
-                      return Transform.translate(
-                        offset: Offset(_shakeAnimation.value, 0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(4, (i) {
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                              width: 18 * scale,
-                              height: 18 * scale,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: i < viewModel.pin.length
-                                    ? AppColors.primaryLight
-                                    : Colors.transparent,
-                                border: Border.all(
-                                  color: Colors.black54,
-                                  width: 2,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'lib/assets/logo.png',
+                                height: logoHeight,
+                              ),
+                              SizedBox(height: gap1),
+                              Text(
+                                "E.M.P.O.W.E.R",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2,
                                 ),
                               ),
-                            );
-                          }),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 25),
+                              SizedBox(height: gap2),
 
-                  /// KEYPAD
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      children: [
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: 9,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
+                              GestureDetector(
+                                onTap: () => viewModel.changeMobileNumber(
+                                  context,
+                                  ref: ref,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: veryShort ? 10 : 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withAlpha(40),
+                                        blurRadius: 3,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          "Mobile Number: ",
+                                          style: TextStyle(
+                                            fontSize: mobileFontSize,
+                                          ),
+                                        ),
+                                        Text(
+                                          viewModel.mobileNumber.isNotEmpty
+                                              ? viewModel.mobileNumber
+                                              : 'Not set',
+                                          style: TextStyle(
+                                            fontSize: mobileFontSize,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.swap_horiz),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                          itemBuilder: (_, i) => _buildKey("${i + 1}", scale),
+
+                              SizedBox(height: gap2),
+
+                              Text(
+                                "PIN",
+                                style: TextStyle(
+                                  fontSize: pinLabelSize,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: gap3),
+
+                              AnimatedBuilder(
+                                animation: _shakeAnimation,
+                                builder: (_, _) {
+                                  return Transform.translate(
+                                    offset: Offset(_shakeAnimation.value, 0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(4, (i) {
+                                        return Container(
+                                          margin: EdgeInsets.symmetric(
+                                            horizontal: veryShort ? 5 : 8,
+                                          ),
+                                          width: pinDotSize,
+                                          height: pinDotSize,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: i < viewModel.pin.length
+                                                ? AppColors.primaryLight
+                                                : Colors.transparent,
+                                            border: Border.all(
+                                              color: Colors.black54,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              SizedBox(height: gap2),
+
+                              _buildKeypad(
+                                keySize: keySize,
+                                spacing: keypadSpacing,
+                                fontSize: keyFontSize,
+                                backspaceIconSize: backspaceIconSize,
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
                           children: [
-                            const SizedBox(),
-                            _buildKey("0", scale),
-                            viewModel.pin.isNotEmpty
-                                ? _buildBackspaceKey(scale)
-                                : const SizedBox(),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  ref.read(loginViewModelProvider).clearPin();
+                                  context.push('/create_account');
+                                },
+                                child: Text(
+                                  "BAG-ONG ACCOUNT",
+                                  textAlign: TextAlign.left,
+                                  style: TextStyle(
+                                    fontSize: veryShort ? 11.5 : 13,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  ref.read(loginViewModelProvider).clearPin();
+                                  context.push('/forgot_pin');
+                                },
+                                child: Text(
+                                  "NAKALIMOT SA PIN?",
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontSize: veryShort ? 11.5 : 13,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // 🔹 Fingerprint icon removed for auto login
-                ],
-              ),
-            );
-
-            final bottomLinks = Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      ref.read(loginViewModelProvider).clearPin();
-                      context.push('/create_account');
-                    },
-                    child: const Text(
-                      "BAG-ONG ACCOUNT",
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
                       ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      ref.read(loginViewModelProvider).clearPin();
-                      context.push('/forgot_pin');
-                    },
-                    child: const Text(
-                      "NAKALIMOT SA PIN?",
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-
-            if (isSmallHeight) {
-              return SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      children: [
-                        Expanded(child: Center(child: mainContent)),
-                        bottomLinks,
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-              );
-            }
-
-            return Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: Center(child: mainContent),
-                  ),
-                ),
-                bottomLinks,
-              ],
+              ),
             );
           },
         ),
@@ -281,8 +328,68 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildKey(String label, double scale) {
+  Widget _buildKeypad({
+    required double keySize,
+    required double spacing,
+    required double fontSize,
+    required double backspaceIconSize,
+  }) {
+    return Column(
+      children: [
+        for (int row = 0; row < 4; row++) ...[
+          if (row > 0) SizedBox(height: spacing),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (int col = 0; col < 3; col++) ...[
+                if (col > 0) SizedBox(width: spacing),
+                _buildKeypadItem(
+                  row: row,
+                  col: col,
+                  keySize: keySize,
+                  fontSize: fontSize,
+                  backspaceIconSize: backspaceIconSize,
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildKeypadItem({
+    required int row,
+    required int col,
+    required double keySize,
+    required double fontSize,
+    required double backspaceIconSize,
+  }) {
+    final keypad = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['', '0', 'back'],
+    ];
+
+    final value = keypad[row][col];
+
+    if (value.isEmpty) {
+      return SizedBox(width: keySize, height: keySize);
+    }
+
+    return SizedBox(
+      width: keySize,
+      height: keySize,
+      child: value == 'back'
+          ? _buildBackspaceKey(backspaceIconSize)
+          : _buildKey(value, fontSize),
+    );
+  }
+
+  Widget _buildKey(String label, double fontSize) {
     final vm = ref.read(loginViewModelProvider);
+
     return GestureDetector(
       onTapDown: (_) => vm.setPressed(label.hashCode, true),
       onTapUp: (_) {
@@ -309,7 +416,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 22 * scale,
+                fontSize: fontSize,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -319,8 +426,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildBackspaceKey(double scale) {
+  Widget _buildBackspaceKey(double iconSize) {
     final vm = ref.read(loginViewModelProvider);
+
     return GestureDetector(
       onTapDown: (_) => vm.setPressed(-1, true),
       onTapUp: (_) {
@@ -343,7 +451,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ],
           ),
-          child: Icon(Icons.backspace_outlined, size: 26 * scale),
+          child: Center(
+            child: Icon(Icons.backspace_outlined, size: iconSize),
+          ),
         ),
       ),
     );
