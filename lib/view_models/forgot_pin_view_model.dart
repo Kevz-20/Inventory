@@ -202,6 +202,12 @@ class ForgotPinViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearError() {
+    if (errorMessage == null) return;
+    errorMessage = null;
+    notifyListeners();
+  }
+
   void disposeVM() {
     mobileController.dispose();
     answerController.dispose();

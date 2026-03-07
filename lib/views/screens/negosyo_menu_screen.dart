@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +43,41 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
     ref.read(homeViewModelProvider.notifier).fetchHomeData();
   }
 
+  double _screenWidth(BuildContext context) => MediaQuery.of(context).size.width;
+
+  double _screenHeight(BuildContext context) =>
+      MediaQuery.of(context).size.height;
+
+  bool _isTablet(BuildContext context) => _screenWidth(context) >= 700;
+
+  bool _isLandscape(BuildContext context) =>
+      MediaQuery.of(context).orientation == Orientation.landscape;
+
+  bool _useSplitLayout(BuildContext context) {
+    final width = _screenWidth(context);
+    final height = _screenHeight(context);
+
+    return width >= 850 ||
+        (width >= 700 && height <= 700) ||
+        (_isLandscape(context) && width >= 600);
+  }
+
+  double _responsiveScale(BuildContext context) {
+    final width = _screenWidth(context);
+    if (width < 360) return 0.88;
+    if (width < 400) return 0.94;
+    if (width < 700) return 1.00;
+    if (width < 1000) return 1.10;
+    return 1.18;
+  }
+
+  double _r(BuildContext context, double value) {
+    final scaled = value * _responsiveScale(context);
+    final min = value * 0.82;
+    final max = value * 1.28;
+    return scaled.clamp(min, max);
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
@@ -54,172 +91,230 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
     final balanceText = pesoFormatter.format(homeState.cashOnHand);
     final mobileText = homeState.mobileNumber ?? "Not set";
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
+    final isTablet = _isTablet(context);
+    final isLandscape = _isLandscape(context);
+    final useSplitLayout = _useSplitLayout(context);
 
-        // Same style as your other pages: phone->tablet scaling, clamped.
-        final double scale = (w / 390).clamp(0.90, 1.20);
+    final maxContentWidth = useSplitLayout
+        ? 1240.0
+        : isTablet
+            ? 820.0
+            : double.infinity;
 
-        // Responsive spacing
-        final double padH = (16 * scale).clamp(14, 22);
-        final double padTop = (10 * scale).clamp(8, 14);
-        final double padBottom = (12 * scale).clamp(10, 16);
+    final horizontalPadding = useSplitLayout
+        ? (isTablet ? 24.0 : 16.0)
+        : isTablet
+            ? 18.0
+            : isLandscape
+                ? 14.0
+                : 16.0;
 
-        final double gap12 = (12 * scale).clamp(8, 14);
-        final double gap14 = (14 * scale).clamp(10, 18);
+    final verticalPadding = useSplitLayout ? 14.0 : (isLandscape ? 10.0 : 12.0);
 
-        // On very short screens, reduce gaps a bit to avoid overflow.
-        final bool shortScreen = h < 720;
-        final double actionsGap = shortScreen ? (10 * scale).clamp(8, 12) : gap14;
-
-        return Scaffold(
-          backgroundColor: AppColors.surface,
-          body: SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                HeroHeader(
-                  title: "Negosyo",
-                  balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
-                  mobileNumber: mobileText,
-                  centerTitle: true,
-                  showBack: true,
-                  onBackTap: () => context.go('/home'),
-                  onBellTap: () => context.push('/notifications'),
-                  onEyeTap: () => ref
-                      .read(homeViewModelProvider.notifier)
-                      .toggleMoneyVisibility(),
-                ),
-
-                // ✅ NO SCROLLVIEW: keep your Expanded layout, just responsive spacing
-                Expanded(
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            HeroHeader(
+              title: "Negosyo",
+              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+              mobileNumber: mobileText,
+              centerTitle: true,
+              showBack: true,
+              onBackTap: () => context.go('/home'),
+              onBellTap: () => context.push('/notifications'),
+              onEyeTap: () => ref
+                  .read(homeViewModelProvider.notifier)
+                  .toggleMoneyVisibility(),
+            ),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
-                    child: Column(
-                      children: [
-                        _dividerTitle("ACTIONS", scale: scale),
-                        SizedBox(height: actionsGap),
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      verticalPadding,
+                      horizontalPadding,
+                      verticalPadding,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final h = c.maxHeight;
+                        final w = c.maxWidth;
 
-                        // 2x2 Grid (fills available space)
-                        Expanded(
-                          flex: 7,
-                          child: Column(
+                        final gap = useSplitLayout
+                            ? (math.min(w, h) * 0.020).clamp(12.0, 18.0)
+                            : isLandscape
+                                ? (h * 0.018).clamp(8.0, 12.0)
+                                : (h * 0.022).clamp(10.0, 16.0);
+
+                        if (useSplitLayout) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Expanded(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: _actionTile(
-                                        title: "GASTO",
-                                        subtitle: "Track Expenses",
-                                        icon: Icons.payments_outlined,
-                                        onTap: () => context.push('/expenses'),
-                                        scale: scale,
-                                      ),
-                                    ),
-                                    SizedBox(width: gap12),
-                                    Expanded(
-                                      child: _actionTile(
-                                        title: "STOCK IN",
-                                        subtitle: "Add Products",
-                                        icon: Icons.inventory_2_outlined,
-                                        onTap: () => context.push('/stockin'),
-                                        scale: scale,
-                                      ),
-                                    ),
-                                  ],
+                                flex: 13,
+                                child: _buildActionsPanel(
+                                  gap: gap,
                                 ),
                               ),
-                              SizedBox(height: gap12),
+                              SizedBox(width: gap),
                               Expanded(
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: _actionTile(
-                                        title: "CAPITAL",
-                                        subtitle: "Add / Withdraw",
-                                        icon: Icons.savings_outlined,
-                                        onTap: () =>
-                                            context.push('/capital_management'),
-                                        scale: scale,
-                                      ),
-                                    ),
-                                    SizedBox(width: gap12),
-                                    Expanded(
-                                      child: _actionTile(
-                                        title: "OWNER UTANG",
-                                        subtitle: "Store Payables",
-                                        icon: Icons.receipt_long_outlined,
-                                        onTap: () =>
-                                            context.push('/owner_utang'),
-                                        scale: scale,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                flex: 10,
+                                child: _buildReportsPanel(),
                               ),
                             ],
-                          ),
-                        ),
+                          );
+                        }
 
-                        SizedBox(height: actionsGap),
-                        _dividerTitle("REPORTS", scale: scale),
-                        SizedBox(height: actionsGap),
-
-                        Expanded(
-                          flex: 3,
-                          child: _reportsCard(
-                            title: "REPORTS",
-                            subtitle: "Income, Balance Sheet, Cash Flow",
-                            icon: Icons.assessment_outlined,
-                            onTap: () => context.push('/reports'),
-                            scale: scale,
-                          ),
-                        ),
-                      ],
+                        return Column(
+                          children: [
+                            _dividerTitle("ACTIONS"),
+                            SizedBox(height: gap),
+                            Expanded(
+                              flex: 7,
+                              child: _buildActionsGrid(gap: gap),
+                            ),
+                            SizedBox(height: gap),
+                            _dividerTitle("REPORTS"),
+                            SizedBox(height: gap),
+                            Expanded(
+                              flex: 3,
+                              child: _reportsCard(
+                                title: "REPORTS",
+                                subtitle: "Income, Balance Sheet, Cash Flow",
+                                icon: Icons.assessment_outlined,
+                                onTap: () => context.push('/reports'),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          bottomNavigationBar: BottomNavBar(
-            currentIndex: homeState.selectedIndex,
-            noHighlight: true,
-          ),
-        );
-      },
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: homeState.selectedIndex,
+        noHighlight: true,
+      ),
     );
   }
 
-  // ============================================================
-  // UI: Divider Title (responsive)
-  // ============================================================
-  Widget _dividerTitle(String text, {double? scale}) {
+  Widget _buildActionsPanel({required double gap}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _dividerTitle("ACTIONS"),
+        SizedBox(height: gap),
+        Expanded(
+          child: _buildActionsGrid(gap: gap),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReportsPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _dividerTitle("REPORTS"),
+        SizedBox(height: _r(context, 14)),
+        Expanded(
+          child: _reportsCard(
+            title: "REPORTS",
+            subtitle: "Income, Balance Sheet, Cash Flow",
+            icon: Icons.assessment_outlined,
+            onTap: () => context.push('/reports'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionsGrid({required double gap}) {
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: _actionTile(
+                  title: "GASTO",
+                  subtitle: "Track Expenses",
+                  icon: Icons.payments_outlined,
+                  onTap: () => context.push('/expenses'),
+                ),
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: _actionTile(
+                  title: "STOCK IN",
+                  subtitle: "Add Products",
+                  icon: Icons.inventory_2_outlined,
+                  onTap: () => context.push('/stockin'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: gap),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: _actionTile(
+                  title: "CAPITAL",
+                  subtitle: "Add / Withdraw",
+                  icon: Icons.savings_outlined,
+                  onTap: () => context.push('/capital_management'),
+                ),
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: _actionTile(
+                  title: "OWNER UTANG",
+                  subtitle: "Store Payables",
+                  icon: Icons.receipt_long_outlined,
+                  onTap: () => context.push('/owner_utang'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _dividerTitle(String text) {
     return LayoutBuilder(
       builder: (context, c) {
         final w = c.maxWidth;
-        final sBase = (w / 360).clamp(1.0, 1.25);
-        final s = scale != null ? (sBase * (scale.clamp(0.9, 1.2))) : sBase;
+        final compact = w < 320;
 
         return Row(
           children: [
             Expanded(
               child: Container(height: 1, color: Colors.black.withOpacity(.10)),
             ),
-            SizedBox(width: (10 * s).clamp(10.0, 14.0)),
+            SizedBox(width: compact ? 8 : _r(context, 10)),
             Text(
               text,
               style: TextStyle(
-                fontSize: (12 * s).clamp(12.0, 15.0),
+                fontSize: compact ? 12 : _r(context, 12),
                 fontWeight: FontWeight.w900,
-                letterSpacing: (1.6 * s).clamp(1.6, 2.0),
+                letterSpacing: compact ? 1.4 : _r(context, 1.6),
                 color: Colors.black.withOpacity(.55),
               ),
             ),
-            SizedBox(width: (10 * s).clamp(10.0, 14.0)),
+            SizedBox(width: compact ? 8 : _r(context, 10)),
             Expanded(
               child: Container(height: 1, color: Colors.black.withOpacity(.10)),
             ),
@@ -229,17 +324,13 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
     );
   }
 
-  // ============================================================
-  // UI: Action Tile (NO fixed height)
-  // ============================================================
   Widget _actionTile({
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    double? scale,
   }) {
-    final radius = BorderRadius.circular(22);
+    final radius = BorderRadius.circular(_r(context, 22));
 
     return Material(
       color: Colors.transparent,
@@ -249,21 +340,59 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
         child: LayoutBuilder(
           builder: (context, c) {
             final h = c.maxHeight;
+            final w = c.maxWidth;
+            final compact = h < 150 || w < 150;
+            final veryCompact = h < 130 || w < 135;
 
-            // scale sizes based on available height (your original logic)
-            final iconSize = (h * 0.18).clamp(22.0, 30.0);
-            final iconBox = (h * 0.30).clamp(46.0, 60.0);
-            final titleSize = (h * 0.09).clamp(13.5, 16.0);
-            final subSize = (h * 0.075).clamp(11.0, 13.0);
+            final iconSize = veryCompact
+                ? (h * 0.16).clamp(_r(context, 18), _r(context, 24))
+                : compact
+                    ? (h * 0.17).clamp(_r(context, 20), _r(context, 26))
+                    : (h * 0.18).clamp(_r(context, 22), _r(context, 30));
 
-            // Responsive paddings (UI only)
-            final s = (scale ?? 1.0).clamp(0.9, 1.2);
-            final pL = (14 * s).clamp(12.0, 18.0);
-            final pT = (12 * s).clamp(10.0, 16.0);
-            final pB = (10 * s).clamp(8.0, 14.0);
+            final iconBox = veryCompact
+                ? (h * 0.24).clamp(_r(context, 36), _r(context, 44))
+                : compact
+                    ? (h * 0.26).clamp(_r(context, 40), _r(context, 50))
+                    : (h * 0.30).clamp(_r(context, 46), _r(context, 60));
+
+            final titleSize = veryCompact
+                ? (h * 0.075).clamp(_r(context, 11.5), _r(context, 13.5))
+                : compact
+                    ? (h * 0.082).clamp(_r(context, 12.2), _r(context, 14.5))
+                    : (h * 0.09).clamp(_r(context, 13.5), _r(context, 16.0));
+
+            final subSize = veryCompact
+                ? (h * 0.064).clamp(_r(context, 9.5), _r(context, 11.0))
+                : compact
+                    ? (h * 0.070).clamp(_r(context, 10.2), _r(context, 12.0))
+                    : (h * 0.075).clamp(_r(context, 11.0), _r(context, 13.0));
+
+            final horizontalPad = veryCompact
+                ? _r(context, 10)
+                : compact
+                    ? _r(context, 12)
+                    : _r(context, 14);
+
+            final topPad = veryCompact
+                ? _r(context, 8)
+                : compact
+                    ? _r(context, 10)
+                    : _r(context, 12);
+
+            final bottomPad = veryCompact
+                ? _r(context, 7)
+                : compact
+                    ? _r(context, 8)
+                    : _r(context, 10);
 
             return Container(
-              padding: EdgeInsets.fromLTRB(pL, pT, pL, pB),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPad,
+                topPad,
+                horizontalPad,
+                bottomPad,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: radius,
@@ -271,8 +400,8 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.10),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
+                    blurRadius: _r(context, 18),
+                    offset: Offset(0, _r(context, 10)),
                   ),
                   BoxShadow(
                     color: Colors.white.withOpacity(0.85),
@@ -285,28 +414,52 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: (46 * s).clamp(40.0, 52.0),
-                    height: (6 * s).clamp(5.5, 7.0),
+                    width: veryCompact
+                        ? _r(context, 32)
+                        : compact
+                            ? _r(context, 38)
+                            : _r(context, 46),
+                    height: veryCompact
+                        ? _r(context, 4.5)
+                        : compact
+                            ? _r(context, 5.0)
+                            : _r(context, 6.0),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  SizedBox(height: (h * 0.06).clamp(6.0, 10.0)),
+                  SizedBox(
+                    height: veryCompact
+                        ? _r(context, 5)
+                        : compact
+                            ? _r(context, 6)
+                            : (h * 0.06).clamp(6.0, 10.0),
+                  ),
                   Container(
                     height: iconBox,
                     width: iconBox,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(.10),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(_r(context, 18)),
                       border: Border.all(
                         color: AppColors.primary.withOpacity(.25),
                         width: 1,
                       ),
                     ),
-                    child: Icon(icon, color: AppColors.primary, size: iconSize),
+                    child: Icon(
+                      icon,
+                      color: AppColors.primary,
+                      size: iconSize,
+                    ),
                   ),
-                  SizedBox(height: (h * 0.06).clamp(6.0, 10.0)),
+                  SizedBox(
+                    height: veryCompact
+                        ? _r(context, 5)
+                        : compact
+                            ? _r(context, 6)
+                            : (h * 0.06).clamp(6.0, 10.0),
+                  ),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
@@ -319,11 +472,11 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: veryCompact ? 2 : 4),
                   Text(
                     subtitle,
                     textAlign: TextAlign.center,
-                    maxLines: 2,
+                    maxLines: veryCompact ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: subSize,
@@ -341,17 +494,13 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
     );
   }
 
-  // ============================================================
-  // UI: Reports Card (responsive height via Expanded)
-  // ============================================================
   Widget _reportsCard({
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    double? scale,
   }) {
-    final radius = BorderRadius.circular(24);
+    final radius = BorderRadius.circular(_r(context, 24));
 
     return Material(
       color: Colors.transparent,
@@ -361,16 +510,33 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
         child: LayoutBuilder(
           builder: (context, c) {
             final h = c.maxHeight;
+            final w = c.maxWidth;
+            final compact = h < 140 || w < 260;
 
-            final stripH = (h * 0.55).clamp(48.0, 70.0);
-            final iconBox = (h * 0.55).clamp(50.0, 72.0);
-            final iconSize = (h * 0.26).clamp(24.0, 32.0);
+            final stripH = compact
+                ? (h * 0.42).clamp(_r(context, 38), _r(context, 54))
+                : (h * 0.55).clamp(_r(context, 48), _r(context, 70));
 
-            final titleSize = (h * 0.18).clamp(15.0, 19.0);
-            final subSize = (h * 0.14).clamp(12.0, 15.0);
+            final iconBox = compact
+                ? (h * 0.42).clamp(_r(context, 40), _r(context, 54))
+                : (h * 0.55).clamp(_r(context, 50), _r(context, 72));
 
-            final s = (scale ?? 1.0).clamp(0.9, 1.2);
-            final padV = (h * 0.18).clamp(12.0, 18.0) * s;
+            final iconSize = compact
+                ? (h * 0.20).clamp(_r(context, 20), _r(context, 26))
+                : (h * 0.26).clamp(_r(context, 24), _r(context, 32));
+
+            final titleSize = compact
+                ? (h * 0.15).clamp(_r(context, 13), _r(context, 16))
+                : (h * 0.18).clamp(_r(context, 15), _r(context, 19));
+
+            final subSize = compact
+                ? (h * 0.11).clamp(_r(context, 10.5), _r(context, 12.5))
+                : (h * 0.14).clamp(_r(context, 12), _r(context, 15));
+
+            final padH = compact ? _r(context, 12) : _r(context, 16);
+            final padV = compact
+                ? (h * 0.11).clamp(_r(context, 8), _r(context, 12))
+                : (h * 0.18).clamp(_r(context, 12), _r(context, 18));
 
             return Container(
               decoration: BoxDecoration(
@@ -380,8 +546,8 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.10),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
+                    blurRadius: _r(context, 18),
+                    offset: Offset(0, _r(context, 10)),
                   ),
                   BoxShadow(
                     color: Colors.white.withOpacity(0.85),
@@ -390,29 +556,24 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                   ),
                 ],
               ),
-              padding: EdgeInsets.fromLTRB(
-                (16 * s).clamp(14.0, 22.0),
-                padV.clamp(12.0, 22.0),
-                (16 * s).clamp(14.0, 22.0),
-                padV.clamp(12.0, 22.0),
-              ),
+              padding: EdgeInsets.fromLTRB(padH, padV, padH, padV),
               child: Row(
                 children: [
                   Container(
-                    width: (6 * s).clamp(5.5, 7.0),
+                    width: _r(context, 6),
                     height: stripH,
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  SizedBox(width: (14 * s).clamp(12.0, 18.0)),
+                  SizedBox(width: compact ? _r(context, 10) : _r(context, 14)),
                   Container(
                     height: iconBox,
                     width: iconBox,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(.10),
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(_r(context, 18)),
                       border: Border.all(
                         color: AppColors.primary.withOpacity(.25),
                         width: 1,
@@ -420,7 +581,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                     ),
                     child: Icon(icon, color: AppColors.primary, size: iconSize),
                   ),
-                  SizedBox(width: (12 * s).clamp(10.0, 16.0)),
+                  SizedBox(width: compact ? _r(context, 10) : _r(context, 12)),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -436,10 +597,10 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
                             letterSpacing: 0.5,
                           ),
                         ),
-                        SizedBox(height: (5 * s).clamp(4.0, 8.0)),
+                        SizedBox(height: compact ? 4 : _r(context, 5)),
                         Text(
                           subtitle,
-                          maxLines: 2,
+                          maxLines: compact ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: subSize,

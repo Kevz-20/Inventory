@@ -66,6 +66,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                     child: Text(
                       'No cashflow records yet',
                       style: TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
                   )
                 : ListView.builder(
@@ -189,6 +190,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       const SizedBox(height: 10),
                       Text(
                         record.item,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
@@ -329,6 +332,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w800,
@@ -377,6 +382,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.grey[700],
                     fontWeight: FontWeight.w700,
@@ -420,6 +427,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             width: 90,
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.grey[700],
                 fontWeight: FontWeight.w700,
@@ -613,6 +622,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               text,
               textAlign: TextAlign.center,
               maxLines: 1,
+              softWrap: false,
               style: style,
             ),
           );
@@ -714,13 +724,20 @@ class _MarqueeTextState extends State<_MarqueeText>
                 alignment: Alignment.centerLeft,
                 minWidth: 0,
                 maxWidth: trackWidth,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(widget.text, maxLines: 1, style: widget.style),
-                    const SizedBox(width: _gap),
-                    Text(widget.text, maxLines: 1, style: widget.style),
-                  ],
+                child: SizedBox(
+                  width: trackWidth,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 0,
+                        child: Text(widget.text, maxLines: 1, style: widget.style),
+                      ),
+                      Positioned(
+                        left: textWidth + _gap,
+                        child: Text(widget.text, maxLines: 1, style: widget.style),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -759,11 +776,13 @@ class _HeaderCell extends StatelessWidget {
               ? Border(right: BorderSide(color: Colors.grey.withAlpha(90)))
               : null,
         ),
-        child: Text(
-          text,
-          textAlign: align,
-          style: TextStyle(
-            color: color,
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: align,
+              style: TextStyle(
+                color: color,
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),

@@ -260,13 +260,19 @@ class HeroHeader extends ConsumerWidget {
                             ),
                           ),
                           SizedBox(height: (10 * s).clamp(10.0, 14.0)),
-                          Text(
-                            balance,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: balanceSize,
-                              fontWeight: FontWeight.w900,
-                              height: 1.05,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              balance,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: balanceSize,
+                                fontWeight: FontWeight.w900,
+                                height: 1.05,
+                              ),
                             ),
                           ),
                           SizedBox(height: (12 * s).clamp(12.0, 16.0)),

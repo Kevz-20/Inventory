@@ -67,15 +67,18 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(forgotPinViewModelProvider);
 
-    ref.listen<ForgotPinViewModel>(forgotPinViewModelProvider, (_, state) {
+    ref.listen<String?>(
+      forgotPinViewModelProvider.select((state) => state.errorMessage),
+      (_, errorMessage) {
       if (!mounted) return;
-      if (state.errorMessage != null) {
+      if (errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(state.errorMessage!),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
           ),
         );
+        ref.read(forgotPinViewModelProvider).clearError();
       }
     });
 

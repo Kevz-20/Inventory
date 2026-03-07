@@ -115,34 +115,27 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                         child: LayoutBuilder(
                           builder: (context, c) {
-                            final isNarrow = c.maxWidth < 420;
+                            final isCompact = c.maxWidth < 420;
+                            final spacing = isCompact ? 8.0 : 12.0;
 
                             final startBox = _DatePickerBox(
                               title: 'Start Date',
                               date: vm.startDate ?? DateTime.now(),
                               onDateSelected: vm.setStartDate,
+                              compact: isCompact,
                             );
 
                             final endBox = _DatePickerBox(
                               title: 'End Date',
                               date: vm.endDate ?? DateTime.now(),
                               onDateSelected: vm.setEndDate,
+                              compact: isCompact,
                             );
-
-                            if (isNarrow) {
-                              return Column(
-                                children: [
-                                  startBox,
-                                  const SizedBox(height: 12),
-                                  endBox,
-                                ],
-                              );
-                            }
 
                             return Row(
                               children: [
                                 Expanded(child: startBox),
-                                const SizedBox(width: 12),
+                                SizedBox(width: spacing),
                                 Expanded(child: endBox),
                               ],
                             );
@@ -482,11 +475,13 @@ class _DatePickerBox extends StatelessWidget {
   final String title;
   final DateTime date;
   final ValueChanged<DateTime?> onDateSelected;
+  final bool compact;
 
   const _DatePickerBox({
     required this.title,
     required this.date,
     required this.onDateSelected,
+    this.compact = false,
   });
 
   @override
@@ -518,7 +513,10 @@ class _DatePickerBox extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        padding: EdgeInsets.symmetric(
+          vertical: compact ? 8 : 10,
+          horizontal: compact ? 10 : 12,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -539,17 +537,17 @@ class _DatePickerBox extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: TextStyle(
+                      fontSize: compact ? 12 : 13,
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: compact ? 2 : 4),
                   Text(
-                    DateFormat('MMMM d, y').format(date),
-                    style: const TextStyle(
-                      fontSize: 15,
+                    DateFormat(compact ? 'MMM d, y' : 'MMMM d, y').format(date),
+                    style: TextStyle(
+                      fontSize: compact ? 13 : 15,
                       color: Colors.black,
                       fontWeight: FontWeight.w700,
                     ),
@@ -559,8 +557,8 @@ class _DatePickerBox extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
-            const Icon(Icons.calendar_today, size: 18),
+            SizedBox(width: compact ? 6 : 10),
+            Icon(Icons.calendar_today, size: compact ? 16 : 18),
           ],
         ),
       ),
