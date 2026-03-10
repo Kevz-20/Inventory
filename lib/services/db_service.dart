@@ -742,6 +742,60 @@ class DBService {
     });
   }
 
+  Future<Map<String, dynamic>> fetchUtangReminder() async {
+    final db = await database;
+
+    final totalResult = await db.rawQuery('''
+    SELECT SUM(sc.amount) AS totalUtang
+    FROM sales_credit sc
+    WHERE sc.status_id IN (
+      SELECT id FROM credit_status WHERE code IN (0, 1)
+    )
+  ''');
+    final totalUtang = totalResult.first['totalUtang'] as double? ?? 0.0;
+
+    final customersResult = await db.rawQuery('''
+    SELECT COUNT(DISTINCT customer_id) AS customers 
+    FROM sales_credit
+    WHERE status_id IN (
+      SELECT id FROM credit_status WHERE code IN (0, 1)
+    )
+  ''');
+    final customers = customersResult.first['customers'] as int? ?? 0;
+
+    return {'totalUtang': totalUtang, 'customers': customers};
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCustomerUtangList() async {
+    final db = await database;
+
+    final result = await db.rawQuery('''
+    SELECT 
+      sc.customer_id,
+      sc.due_date,
+      c.first_name || ' ' || IFNULL(c.middle_name || ' ', '') || c.last_name AS customer_name,
+      SUM(sc.amount) AS total_amount
+    FROM sales_credit sc
+    JOIN customer c ON sc.customer_id = c.id
+    WHERE sc.status_id IN (
+      SELECT id FROM credit_status WHERE code IN (0, 1)
+    )
+    GROUP BY sc.customer_id, sc.due_date
+    ORDER BY sc.due_date ASC
+  ''');
+
+    return result.map((row) {
+      return {
+        'customer_id': row['customer_id'] as int? ?? 0,
+        'customer_name': (row['customer_name'] as String).trim(),
+        'total_amount': row['total_amount'] != null
+            ? (row['total_amount'] as num).toDouble()
+            : 0.0,
+        'due_date': row['due_date'] as String? ?? '',
+      };
+    }).toList();
+  }
+
   // Close database safely
   Future<void> close() async {
     final db = _database;
