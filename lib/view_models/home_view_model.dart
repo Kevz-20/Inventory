@@ -16,6 +16,22 @@ class CashflowPoint {
   const CashflowPoint({required this.day, required this.net});
 }
 
+class TopSellingProduct {
+  final int productId;
+  final String name;
+  final String? imagePath;
+  final int unitsSold;
+  final double totalSales;
+
+  const TopSellingProduct({
+    required this.productId,
+    required this.name,
+    required this.imagePath,
+    required this.unitsSold,
+    required this.totalSales,
+  });
+}
+
 /// ------------------------------
 /// STATE
 /// ------------------------------
@@ -35,6 +51,9 @@ class HomeState {
 
   final bool isGraphLoading;
   final String? graphError;
+  final List<TopSellingProduct> topSellingProducts;
+  final bool isTopProductsLoading;
+  final String? topProductsError;
 
   const HomeState({
     this.cashOnHand = 0.0,
@@ -48,6 +67,9 @@ class HomeState {
     this.expense7Days = const [],
     this.isGraphLoading = false,
     this.graphError,
+    this.topSellingProducts = const [],
+    this.isTopProductsLoading = false,
+    this.topProductsError,
   });
 
   HomeState copyWith({
@@ -62,6 +84,9 @@ class HomeState {
     List<CashflowPoint>? expense7Days,
     bool? isGraphLoading,
     String? graphError,
+    List<TopSellingProduct>? topSellingProducts,
+    bool? isTopProductsLoading,
+    String? topProductsError,
   }) {
     return HomeState(
       cashOnHand: cashOnHand ?? this.cashOnHand,
@@ -75,6 +100,9 @@ class HomeState {
       expense7Days: expense7Days ?? this.expense7Days,
       isGraphLoading: isGraphLoading ?? this.isGraphLoading,
       graphError: graphError,
+      topSellingProducts: topSellingProducts ?? this.topSellingProducts,
+      isTopProductsLoading: isTopProductsLoading ?? this.isTopProductsLoading,
+      topProductsError: topProductsError,
     );
   }
 }
@@ -99,8 +127,11 @@ class HomeViewModel extends StateNotifier<HomeState> {
         error: null,
       );
 
-      // ✅ graph from repository
-      await fetchGraph7Days();
+      // ✅ graph + top products from repository
+      await Future.wait([
+        fetchGraph7Days(),
+        fetchTopSellingProducts(),
+      ]);
     } catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -132,6 +163,27 @@ class HomeViewModel extends StateNotifier<HomeState> {
       state = state.copyWith(
         isGraphLoading: false,
         graphError: e.toString(),
+      );
+    }
+  }
+
+  Future<void> fetchTopSellingProducts() async {
+    state = state.copyWith(
+      isTopProductsLoading: true,
+      topProductsError: null,
+    );
+
+    try {
+      final topProducts = await _repo.getTopSellingProducts(limit: 5);
+      state = state.copyWith(
+        topSellingProducts: topProducts,
+        isTopProductsLoading: false,
+        topProductsError: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isTopProductsLoading: false,
+        topProductsError: e.toString(),
       );
     }
   }

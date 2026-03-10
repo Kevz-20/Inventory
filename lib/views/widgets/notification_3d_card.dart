@@ -4,18 +4,12 @@ import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 
 class Notification3DCard extends StatelessWidget {
-  static const Color _cardStart = Color(0xFFF6FBF9);
-  static const Color _cardEnd = Color(0xFFEAF6F2);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _messageColor = Color(0xFF244E47);
-  static const Color _mutedColor = Color(0xFF3E6A62);
-
   final IconData icon;
   final String badgeText;
   final double badgeOpacity;
   final String title;
   final String message;
+  final String createdText;
   final String? dueText;
   final VoidCallback onTap;
 
@@ -26,6 +20,7 @@ class Notification3DCard extends StatelessWidget {
     required this.badgeOpacity,
     required this.title,
     required this.message,
+    required this.createdText,
     required this.onTap,
     this.dueText,
   });
@@ -47,26 +42,23 @@ class Notification3DCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                _cardStart,
-                _cardEnd,
+                Colors.white.withOpacity(0.95),
+                Colors.white.withOpacity(0.88),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(0.14),
+                blurRadius: 22,
+                offset: const Offset(0, 14),
               ),
               BoxShadow(
-                color: Colors.white.withOpacity(0.65),
+                color: Colors.black.withOpacity(0.06),
                 blurRadius: 10,
-                offset: const Offset(-2, -2),
+                offset: const Offset(0, 6),
               ),
             ],
-            border: Border.all(
-              color: _cardBorder,
-              width: 1,
-            ),
+            border: Border.all(color: Colors.black.withOpacity(0.06), width: 1),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +95,6 @@ class Notification3DCard extends StatelessWidget {
                             style: const TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 15.8,
-                              color: _titleColor,
                             ),
                           ),
                         ),
@@ -134,13 +125,32 @@ class Notification3DCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       message,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: _messageColor,
+                        color: Colors.black.withOpacity(0.72),
                         fontWeight: FontWeight.w700,
                         height: 1.25,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 16,
+                          color: Colors.black.withOpacity(0.45),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            createdText,
+                            style: TextStyle(
+                              color: Colors.black.withOpacity(0.52),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.6,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     if (dueText != null) ...[
                       const SizedBox(height: 8),
@@ -149,14 +159,14 @@ class Notification3DCard extends StatelessWidget {
                           Icon(
                             Icons.schedule_rounded,
                             size: 16,
-                            color: _mutedColor,
+                            color: Colors.black.withOpacity(0.45),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               dueText!,
                               style: TextStyle(
-                                color: _mutedColor,
+                                color: Colors.black.withOpacity(0.52),
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12.6,
                               ),

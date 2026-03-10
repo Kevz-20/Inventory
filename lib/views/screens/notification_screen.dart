@@ -19,30 +19,8 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
-
   bool _didMarkSeen = false;
-  String _formatDueText(DateTime? dueDate) {
-    if (dueDate == null) return '';
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
-    final days = due.difference(today).inDays;
-
-    final status = days == 0
-        ? 'Due today'
-        : days > 0
-            ? 'Due in $days day${days == 1 ? '' : 's'}'
-            : 'Overdue by ${days.abs()} day${days.abs() == 1 ? '' : 's'}';
-
-    final dateLabel = DateFormat('MMM d, y').format(dueDate);
-    return '$status • $dateLabel';
-  }
+  final DateFormat _addedDateTimeFormat = DateFormat('MMM d, yyyy - h:mm a');
 
   @override
   void initState() {
@@ -68,11 +46,14 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final now = DateTime.now().toIso8601String();
 
     for (final n in items) {
-      batch.execute('''
+      batch.execute(
+        '''
         INSERT INTO notif_state (notif_id, seen, seen_at)
         VALUES (?, 1, ?)
         ON CONFLICT(notif_id) DO UPDATE SET seen=1, seen_at=?
-      ''', [n.id, now, now]);
+      ''',
+        [n.id, now, now],
+      );
     }
 
     await batch.commit(noResult: true);
@@ -121,7 +102,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
 
     return Scaffold(
-      backgroundColor: _pageBg,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: true,
@@ -160,10 +141,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       height: 62,
                       width: 62,
                       decoration: BoxDecoration(
-                        color: _cardBg,
+                        color: AppColors.primary.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: _cardBorder,
+                          color: AppColors.primary.withOpacity(0.22),
                         ),
                       ),
                       child: Icon(
@@ -177,7 +158,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       'No notifications right now.',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: _titleColor,
+                        color: Colors.black.withOpacity(0.75),
                         fontSize: 15.5,
                       ),
                     ),
@@ -186,7 +167,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       'You’re all caught up.',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: _subtitleColor,
+                        color: Colors.black.withOpacity(0.50),
                       ),
                     ),
                   ],
@@ -216,14 +197,15 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   badgeOpacity: _badgeOpacity(n.type),
                   title: n.title,
                   message: n.message,
+                  createdText: _addedDateTimeFormat.format(n.createdAt.toLocal()),
                   dueText: n.dueDate == null
                       ? null
-                      : _formatDueText(n.dueDate),
+                      : 'Due: ${n.dueDate!.toLocal().toString().split(" ").first}',
                   onTap: () {
                     // Navigate specifically for Owner Payables
                     if (n.type == AppNotifType.ownerPayableSoon) {
                       context.push('/owner_utang');
-                    } 
+                    }
                     // You can add other navigation logic here for different types
                     else if (n.type == AppNotifType.customerUtangDueToday) {
                       context.push('/customer_utang');

@@ -113,6 +113,34 @@ class HomeRepository {
     return (income: income, expense: expense);
   }
 
+  Future<List<TopSellingProduct>> getTopSellingProducts({int limit = 5}) async {
+    final db = await _dbService.database;
+
+    final rows = await db.rawQuery('''
+      SELECT
+        p.id AS product_id,
+        p.name AS product_name,
+        p.image AS product_image,
+        COALESCE(SUM(si.quantity), 0) AS units_sold,
+        COALESCE(SUM(si.subtotal), 0) AS total_sales
+      FROM sale_item si
+      INNER JOIN product p ON p.id = si.product_id
+      GROUP BY p.id, p.name, p.image
+      ORDER BY units_sold DESC, total_sales DESC
+      LIMIT ?
+    ''', [limit]);
+
+    return rows.map((row) {
+      return TopSellingProduct(
+        productId: (row['product_id'] as num?)?.toInt() ?? 0,
+        name: row['product_name']?.toString() ?? 'Unknown Product',
+        imagePath: row['product_image']?.toString(),
+        unitsSold: (row['units_sold'] as num?)?.toInt() ?? 0,
+        totalSales: _toDouble(row['total_sales']),
+      );
+    }).toList();
+  }
+
   // helpers
   static String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
