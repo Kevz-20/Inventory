@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../providers/capital_management_view_model_provider.dart';
 import '../../providers/capital_management_repository_provider.dart';
 import '../widgets/header.dart';
+import '../widgets/adaptive_digits_text.dart';
 
 class CapitalManagementScreen extends ConsumerStatefulWidget {
   const CapitalManagementScreen({super.key});
@@ -437,14 +438,13 @@ class _CapitalManagementScreenState
                   ),
                 ),
                 SizedBox(height: (4 * s).clamp(3, 6)),
-                Text(
+                AdaptiveDigitsText(
                   _currencyFormatter.format(value),
                   style: TextStyle(
                     fontSize: valueFs,
                     fontWeight: FontWeight.w900,
                     color: _titleColor,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

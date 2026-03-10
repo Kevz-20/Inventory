@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../view_models/balance_sheet_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
+import '../widgets/adaptive_digits_text.dart';
 
 final balanceSheetProvider = ChangeNotifierProvider(
   (ref) => BalanceSheetViewModel(),
@@ -252,14 +253,13 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AdaptiveDigitsText(
                   value,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: Colors.black87,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -7,6 +7,7 @@ import '../../core/app_colors.dart';
 import '../../models/cashflow_model.dart';
 import '../../view_models/cashflow_view_model.dart';
 import '../widgets/header.dart';
+import '../widgets/adaptive_digits_text.dart';
 
 class CashFlowScreen extends ConsumerStatefulWidget {
   const CashFlowScreen({super.key});
@@ -391,10 +392,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AdaptiveDigitsText(
                   value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w900,

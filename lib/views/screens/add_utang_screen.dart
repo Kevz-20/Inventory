@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
+import '../widgets/adaptive_digits_text.dart';
 import '../../services/db_service.dart';
 import '../../models/current_user.dart';
 
@@ -716,9 +717,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
         children: [
           Text(title, style: TextStyle(fontSize: tFs, color: Colors.grey)),
           SizedBox(height: (4 * s).clamp(3.0, 6.0)),
-          Text(
+          AdaptiveDigitsText(
             "₱${currencyFormat.format(amount)}",
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: vFs,
               fontWeight: FontWeight.bold,

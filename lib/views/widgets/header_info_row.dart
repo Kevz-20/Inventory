@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/home_view_model.dart';
+import './adaptive_digits_text.dart';
 
 class HomeInfoHeader extends ConsumerWidget {
   final VoidCallback? onBellTap;
@@ -63,14 +64,16 @@ class HomeInfoHeader extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                homeState.isMoneyVisible
-                    ? 'PHP ${NumberFormat.currency(locale: 'en_PH', symbol: '', decimalDigits: 2).format(homeState.cashOnHand)}'
-                    : 'PHP ****',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  fontSize: 28,
+              Expanded(
+                child: AdaptiveDigitsText(
+                  homeState.isMoneyVisible
+                      ? 'PHP ${NumberFormat.currency(locale: 'en_PH', symbol: '', decimalDigits: 2).format(homeState.cashOnHand)}'
+                      : 'PHP ****',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontSize: 28,
+                  ),
                 ),
               ),
               GestureDetector(

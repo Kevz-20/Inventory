@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/income_statement_view_model.dart';
 import '../widgets/header.dart';
+import '../widgets/adaptive_digits_text.dart';
 
 class IncomeStatementScreen extends ConsumerStatefulWidget {
   const IncomeStatementScreen({super.key});
@@ -476,14 +477,13 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                AdaptiveDigitsText(
                   value,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                     color: highlight ? AppColors.primary : Colors.black87,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

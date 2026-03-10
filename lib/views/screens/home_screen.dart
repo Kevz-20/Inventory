@@ -13,6 +13,7 @@ import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
 import '../../app_router.dart';
 import '../widgets/hero_header.dart';
+import '../widgets/adaptive_digits_text.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -661,10 +662,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                           ),
                           SizedBox(width: _r(context, 6)),
                           Expanded(
-                            child: Text(
+                            child: AdaptiveDigitsText(
                               'Total: ${_pesoShort(_totalSales())}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: compact ? _r(context, 10.5) : _r(context, 11.5),
                                 fontWeight: FontWeight.w800,
@@ -697,10 +696,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                           ),
                           SizedBox(width: _r(context, 6)),
                           Expanded(
-                            child: Text(
+                            child: AdaptiveDigitsText(
                               'Avg/day: ${_pesoShort(_averageSales())}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: compact ? _r(context, 10.5) : _r(context, 11.5),
                                 fontWeight: FontWeight.w800,
