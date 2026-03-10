@@ -72,6 +72,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               'Mobile Number',
                               vm.account!.mobileNumber,
                             ),
+                            _securityQuestionRow(vm.account!),
                             _securityAnswerRow(vm.account!),
                           ]),
 
@@ -179,6 +180,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
           ],
         ),
+      );
+
+  /// Displays the security question text (read-only — cannot be changed
+  /// after account creation).
+  Widget _securityQuestionRow(Account account) => Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.help_outline_rounded, color: AppColors.primaryLight),
+              const SizedBox(width: 10),
+              const Text('Security Question'),
+              const Spacer(),
+              Text(
+                account.securityQuestion ?? '-',
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+        ],
       );
 
   Widget _securityAnswerRow(Account account) => Column(

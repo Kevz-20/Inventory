@@ -5,6 +5,10 @@ class Account {
   final int? securityQuestionId;
   final String? securityAnswer;
 
+  /// The question text joined from the security_questions table.
+  /// Not stored in the account table — populated via JOIN queries only.
+  final String? securityQuestion;
+
   // User name fields
   final String firstName;
   final String? middleName;
@@ -19,13 +23,16 @@ class Account {
     required this.pin,
     this.securityQuestionId,
     this.securityAnswer,
+    this.securityQuestion,
     required this.firstName,
     this.middleName,
     required this.lastName,
     this.profileImage,
   });
 
-  /// Create Account from Map (DB / API)
+  /// Create Account from Map (DB / API).
+  /// If the map includes a joined `security_question` column it will be
+  /// picked up automatically — no schema change required.
   factory Account.fromMap(Map<String, dynamic> map) {
     return Account(
       id: map['id'] as int?,
@@ -33,6 +40,7 @@ class Account {
       pin: map['pin'] as String,
       securityQuestionId: map['security_question_id'] as int?,
       securityAnswer: map['security_answer'] as String?,
+      securityQuestion: map['security_question'] as String?,
       firstName: map['first_name'] as String,
       middleName: map['middle_name'] as String?,
       lastName: map['last_name'] as String,
@@ -40,7 +48,9 @@ class Account {
     );
   }
 
-  /// Convert Account to Map (for DB / API)
+  /// Convert Account to Map (for DB / API).
+  /// securityQuestion is intentionally excluded — it is read-only display
+  /// data derived from the JOIN, not a column in the account table.
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
@@ -58,8 +68,9 @@ class Account {
 
 extension AccountCopy on Account {
   Account copyWith({
-    String? mobileNumber, // <-- add this
+    String? mobileNumber,
     String? securityAnswer,
+    String? securityQuestion,
     String? firstName,
     String? middleName,
     String? lastName,
@@ -67,9 +78,11 @@ extension AccountCopy on Account {
   }) {
     return Account(
       id: id,
-      mobileNumber: mobileNumber ?? this.mobileNumber, // <-- update here
+      mobileNumber: mobileNumber ?? this.mobileNumber,
       pin: pin,
+      securityQuestionId: securityQuestionId,
       securityAnswer: securityAnswer ?? this.securityAnswer,
+      securityQuestion: securityQuestion ?? this.securityQuestion,
       firstName: firstName ?? this.firstName,
       middleName: middleName ?? this.middleName,
       lastName: lastName ?? this.lastName,
