@@ -40,6 +40,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xfff5f5f5),
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
           "Settings",
           style: TextStyle(fontWeight: FontWeight.w600),

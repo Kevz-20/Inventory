@@ -17,7 +17,8 @@ class NotificationRepository {
     // 1) OWNER PAYABLE due within 3 days
     // Table: payable
     // -------------------------
-    final ownerPayables = await db.rawQuery('''
+    final ownerPayables = await db.rawQuery(
+      '''
       SELECT
         p.id,
         p.supplier_name,
@@ -35,17 +36,16 @@ class NotificationRepository {
         AND due >= ?
         AND due <= ?
       ORDER BY due ASC
-    ''', [
-      todayStart.toIso8601String(),
-      threeDaysFromNow.toIso8601String(),
-    ]);
+    ''',
+      [todayStart.toIso8601String(), threeDaysFromNow.toIso8601String()],
+    );
 
     for (final row in ownerPayables) {
       final id = row['id'].toString();
       final supplier = (row['supplier_name'] ?? 'Supplier').toString();
       final itemName = (row['item'] ?? 'Item').toString();
       final amountDue = (row['current_due_amount'] as num?)?.toDouble() ?? 0.0;
-      
+
       // Installment Logic
       final totalMonths = row['plan_months'] as int?;
       final paymentsMade = row['payments_made'] as int? ?? 0;
@@ -68,7 +68,8 @@ class NotificationRepository {
           type: AppNotifType.ownerPayableSoon,
           title: 'Owner payable',
           // Keep only key details here; due date is displayed separately in UI.
-          message: '${supplier.toLowerCase() == 'owner' ? itemName : '$supplier • $itemName'}$installmentLabel • ₱${amountDue.toStringAsFixed(2)}',
+          message:
+              '${supplier.toLowerCase() == 'owner' ? itemName : '$supplier • $itemName'}$installmentLabel • ₱${amountDue.toStringAsFixed(2)}',
           createdAt: now,
           dueDate: due,
           refId: id,
@@ -79,7 +80,8 @@ class NotificationRepository {
     // -------------------------
     // 2) CUSTOMER UTANG due today
     // -------------------------
-    final customerDueToday = await db.rawQuery('''
+    final customerDueToday = await db.rawQuery(
+      '''
       SELECT
         sc.id AS sales_credit_id,
         sc.amount,
@@ -95,10 +97,9 @@ class NotificationRepository {
         AND sc.due_date < ?
         AND (cs.name = 'unpaid' OR cs.name = 'partial')
       ORDER BY sc.due_date ASC
-    ''', [
-      todayStart.toIso8601String(),
-      todayEnd.toIso8601String(),
-    ]);
+    ''',
+      [todayStart.toIso8601String(), todayEnd.toIso8601String()],
+    );
 
     for (final row in customerDueToday) {
       final id = row['sales_credit_id'].toString();
@@ -176,6 +177,9 @@ class NotificationRepository {
     // Keep notif_state aligned with currently active notifications.
     await _removeResolvedNotifState(items.map((e) => e.id).toList());
 
+    // Ensure notif_state has a stable created_at per notification and apply it.
+    await _applyStableCreatedAt(items, now);
+
     // Sort: dueDate first
     items.sort((a, b) {
       final ad = a.dueDate?.millisecondsSinceEpoch ?? 9999999999999;
@@ -184,6 +188,57 @@ class NotificationRepository {
     });
 
     return items;
+  }
+
+  Future<void> _applyStableCreatedAt(
+    List<AppNotificationItem> items,
+    DateTime now,
+  ) async {
+    if (items.isEmpty) return;
+
+    final ids = items.map((e) => e.id).toList();
+    final placeholders = List.filled(ids.length, '?').join(',');
+    final rows = await db.rawQuery(
+      'SELECT notif_id, created_at FROM notif_state WHERE notif_id IN ($placeholders)',
+      ids,
+    );
+
+    final createdAtMap = <String, DateTime>{};
+    for (final r in rows) {
+      final id = r['notif_id']?.toString();
+      final raw = r['created_at']?.toString();
+      if (id == null || raw == null || raw.isEmpty) continue;
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) createdAtMap[id] = parsed;
+    }
+
+    final batch = db.batch();
+    final nowIso = now.toIso8601String();
+
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      final stored = createdAtMap[item.id];
+      final effectiveCreatedAt = stored ?? now;
+
+      items[i] = AppNotificationItem(
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        message: item.message,
+        createdAt: effectiveCreatedAt,
+        dueDate: item.dueDate,
+        refId: item.refId,
+      );
+
+      if (stored == null) {
+        batch.execute(
+          'INSERT OR IGNORE INTO notif_state (notif_id, seen, created_at) VALUES (?, 0, ?)',
+          [item.id, nowIso],
+        );
+      }
+    }
+
+    await batch.commit(noResult: true);
   }
 
   Future<void> _removeResolvedNotifState(List<String> activeIds) async {

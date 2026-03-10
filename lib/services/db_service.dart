@@ -173,16 +173,15 @@ class DBService {
         }
 
         if (oldVersion < 10) {
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE IF NOT EXISTS notif_state (
             notif_id TEXT PRIMARY KEY,
             seen INTEGER NOT NULL DEFAULT 0,
-            seen_at TEXT
+            seen_at TEXT,
+            created_at TEXT
           )
         ''');
-      }
-
-
+        }
       },
 
       onConfigure: (db) async {
@@ -226,7 +225,7 @@ class DBService {
     )
   ''');
 
-  await db.execute('''
+    await db.execute('''
   CREATE TABLE expense_category (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -249,8 +248,6 @@ class DBService {
     seen_at TEXT
   )
 ''');
-
-    
 
     await db.execute('''
       CREATE TABLE type_choices (
@@ -677,18 +674,14 @@ class DBService {
       'Gamit sa Eskwelahan',
     ];
 
-    const defaultExpenseCats = [
-        'Kumpra',
-        'Tubig / Kuryente',
-        'Transportasyon',
-      ];
+    const defaultExpenseCats = ['Kumpra', 'Tubig / Kuryente', 'Transportasyon'];
 
-      for (final c in defaultExpenseCats) {
-        await db.rawInsert(
-          'INSERT OR IGNORE INTO expense_category(name, created_at) VALUES(?, ?)',
-          [c, DateTime.now().toIso8601String()],
-        );
-      }
+    for (final c in defaultExpenseCats) {
+      await db.rawInsert(
+        'INSERT OR IGNORE INTO expense_category(name, created_at) VALUES(?, ?)',
+        [c, DateTime.now().toIso8601String()],
+      );
+    }
 
     for (final c in defaultProductCats) {
       await db.rawInsert(
@@ -696,7 +689,6 @@ class DBService {
         [c, DateTime.now().toIso8601String()],
       );
     }
-
   }
 
   // for testing

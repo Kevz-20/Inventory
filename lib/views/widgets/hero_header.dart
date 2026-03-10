@@ -92,7 +92,9 @@ class HeroHeader extends ConsumerWidget {
                                   onTap: onBackTap,
                                   borderRadius: BorderRadius.circular(14),
                                   child: Padding(
-                                    padding: EdgeInsets.all((6 * s).clamp(6.0, 10.0)),
+                                    padding: EdgeInsets.all(
+                                      (6 * s).clamp(6.0, 10.0),
+                                    ),
                                     child: Icon(
                                       Icons.arrow_back_ios_new_rounded,
                                       color: Colors.white,
@@ -110,7 +112,9 @@ class HeroHeader extends ConsumerWidget {
                             child: Padding(
                               // ✅ if logo is shown, add a tiny left padding so title won't collide
                               padding: EdgeInsets.only(
-                                left: showLogoSafe ? (logoSize + 10) : 0,
+                                left: (!centerTitle && showLogoSafe)
+                                    ? (logoSize + 10)
+                                    : 0,
                               ),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
@@ -146,43 +150,53 @@ class HeroHeader extends ConsumerWidget {
                                     color: Colors.white,
                                     size: (26 * s).clamp(26.0, 32.0),
                                   ),
-                                  ref.watch(unreadNotifCountProvider).when(
-                                    loading: () => const SizedBox.shrink(),
-                                    error: (_, _) => const SizedBox.shrink(),
-                                    data: (count) {
-                                      if (count <= 0) return const SizedBox.shrink();
-                                      return Positioned(
-                                        right: -6,
-                                        top: -6,
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal:
-                                                (6 * s).clamp(6.0, 9.0),
-                                            vertical:
-                                                (2 * s).clamp(2.0, 4.0),
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            borderRadius:
-                                                BorderRadius.circular(999),
-                                            border: Border.all(
-                                              color: Colors.white,
-                                              width: 2,
+                                  ref
+                                      .watch(unreadNotifCountProvider)
+                                      .when(
+                                        loading: () => const SizedBox.shrink(),
+                                        error: (_, _) =>
+                                            const SizedBox.shrink(),
+                                        data: (count) {
+                                          if (count <= 0)
+                                            return const SizedBox.shrink();
+                                          return Positioned(
+                                            right: -6,
+                                            top: -6,
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: (6 * s).clamp(
+                                                  6.0,
+                                                  9.0,
+                                                ),
+                                                vertical: (2 * s).clamp(
+                                                  2.0,
+                                                  4.0,
+                                                ),
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                count > 99 ? '99+' : '$count',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: (10.5 * s).clamp(
+                                                    10.5,
+                                                    13.0,
+                                                  ),
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                          child: Text(
-                                            count > 99 ? '99+' : '$count',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize:
-                                                  (10.5 * s).clamp(10.5, 13.0),
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                          );
+                                        },
+                                      ),
                                 ],
                               ),
                             ),

@@ -59,7 +59,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   void triggerShake() => _shakeController.forward(from: 0);
 
-   @override
+  @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(loginViewModelProvider);
 
@@ -84,18 +84,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             final logoHeight = veryShort
                 ? 50.0
                 : short
-                    ? 62.0
-                    : isTablet
-                        ? 88.0
-                        : 78.0;
+                ? 62.0
+                : isTablet
+                ? 88.0
+                : 78.0;
 
             final titleSize = veryShort
                 ? 16.0
                 : short
-                    ? 18.0
-                    : isTablet
-                        ? 23.0
-                        : 20.0;
+                ? 18.0
+                : isTablet
+                ? 23.0
+                : 20.0;
 
             final mobileFontSize = veryShort ? 13.0 : 16.0;
             final pinLabelSize = veryShort ? 15.0 : 18.0;
@@ -125,7 +125,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 height - reservedHeight - 40; // extra breathing room
 
             final widthBasedKeySize =
-                ((contentWidth - (horizontalPadding * 2) - (keypadSpacing * 2)) /
+                ((contentWidth -
+                            (horizontalPadding * 2) -
+                            (keypadSpacing * 2)) /
                         3)
                     .clamp(58.0, isTablet ? 105.0 : 90.0);
 
@@ -365,6 +367,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     required double fontSize,
     required double backspaceIconSize,
   }) {
+    final vm = ref.watch(loginViewModelProvider);
+
     final keypad = [
       ['1', '2', '3'],
       ['4', '5', '6'],
@@ -375,6 +379,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final value = keypad[row][col];
 
     if (value.isEmpty) {
+      return SizedBox(width: keySize, height: keySize);
+    }
+
+    if (value == 'back' && vm.pin.isEmpty) {
       return SizedBox(width: keySize, height: keySize);
     }
 
@@ -415,10 +423,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           child: Center(
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500),
             ),
           ),
         ),
@@ -451,9 +456,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ],
           ),
-          child: Center(
-            child: Icon(Icons.backspace_outlined, size: iconSize),
-          ),
+          child: Center(child: Icon(Icons.backspace_outlined, size: iconSize)),
         ),
       ),
     );

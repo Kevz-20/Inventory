@@ -27,7 +27,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   final NumberFormat _currencyFormatter = NumberFormat.currency(
     locale: 'en_PH',
-    symbol: '?',
+    symbol: '\u20B1 ',
     decimalDigits: 2,
   );
 
@@ -176,7 +176,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             vm.setSelectedCategory(_historyCategories[index]);
                             _autoScrollChips(index);
                           },
-                          itemBuilder: (context, index) => _buildHistoryList(vm),
+                          itemBuilder: (context, index) =>
+                              _buildHistoryList(vm),
                         ),
                       ),
                     ],
@@ -250,18 +251,18 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final typeLabel = isDownpayment
         ? 'Owner Payment'
         : isHalinUtang
-            ? 'Halin (Utang)'
-            : isHalin
-                ? 'Halin'
-                : isExpense
-                    ? 'Gasto'
-                    : isCapital
-                        ? 'Capital'
-                        : isCustomerPayment
-                            ? 'Customer Payment'
-                            : isOwnerPayment
-                                ? 'Owner Payment'
-                                : tx.type;
+        ? 'Halin (Utang)'
+        : isHalin
+        ? 'Halin'
+        : isExpense
+        ? 'Gasto'
+        : isCapital
+        ? 'Capital'
+        : isCustomerPayment
+        ? 'Customer Payment'
+        : isOwnerPayment
+        ? 'Owner Payment'
+        : tx.type;
 
     final descriptionLabel = isDownpayment
         ? '${tx.description ?? ''} downpayment'
@@ -356,8 +357,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                             isDownpayment)
                         ? descriptionLabel
                         : isCapital
-                            ? ''
-                            : (tx.productName ?? 'Product'),
+                        ? ''
+                        : (tx.productName ?? 'Product'),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -405,7 +406,10 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           'View Receipt',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -688,7 +692,7 @@ class _TransactionDetailsSheet extends StatelessWidget {
 
     final NumberFormat currency = NumberFormat.currency(
       locale: 'en_PH',
-      symbol: '?',
+      symbol: '\u20B1 ',
       decimalDigits: 2,
     );
 
@@ -737,12 +741,12 @@ class _TransactionDetailsSheet extends StatelessWidget {
                     color: isHalin
                         ? Colors.green
                         : isExpense
-                            ? Colors.red
-                            : isCustomerPayment
-                                ? Colors.green
-                                : (isOwnerPayment || isDownpayment)
-                                    ? Colors.red
-                                    : Colors.green,
+                        ? Colors.red
+                        : isCustomerPayment
+                        ? Colors.green
+                        : (isOwnerPayment || isDownpayment)
+                        ? Colors.red
+                        : Colors.green,
                   ),
                 ),
               ],
@@ -768,7 +772,10 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Category:', style: TextStyle(fontSize: 16)),
-                  Text(transaction.category!, style: const TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.category!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ],
               ),
 
@@ -777,7 +784,10 @@ class _TransactionDetailsSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Quantity:', style: TextStyle(fontSize: 16)),
-                  Text(transaction.quantity.toString(), style: const TextStyle(fontSize: 16)),
+                  Text(
+                    transaction.quantity.toString(),
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ],
               ),
 
@@ -859,5 +869,3 @@ class _TransactionDetailsSheet extends StatelessWidget {
     );
   }
 }
-
-

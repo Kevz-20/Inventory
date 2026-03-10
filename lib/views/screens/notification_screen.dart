@@ -19,8 +19,30 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+  static const Color _pageBg = Color(0xFFF2F7F5);
+  static const Color _cardBg = Color(0xFFEFF8F4);
+  static const Color _cardBorder = Color(0xFFBFDCD4);
+  static const Color _titleColor = Color(0xFF0B3D35);
+  static const Color _subtitleColor = Color(0xFF2F5C54);
+
   bool _didMarkSeen = false;
-  final DateFormat _addedDateTimeFormat = DateFormat('MMM d, yyyy - h:mm a');
+  String _formatDueText(DateTime? dueDate) {
+    if (dueDate == null) return '';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
+    final days = due.difference(today).inDays;
+
+    final status = days == 0
+        ? 'Due today'
+        : days > 0
+        ? 'Due in $days day${days == 1 ? '' : 's'}'
+        : 'Overdue by ${days.abs()} day${days.abs() == 1 ? '' : 's'}';
+
+    final dateLabel = DateFormat('MMM d, y').format(dueDate);
+    return '$status • $dateLabel';
+  }
 
   @override
   void initState() {
@@ -48,11 +70,11 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     for (final n in items) {
       batch.execute(
         '''
-        INSERT INTO notif_state (notif_id, seen, seen_at)
-        VALUES (?, 1, ?)
+        INSERT INTO notif_state (notif_id, seen, seen_at, created_at)
+        VALUES (?, 1, ?, ?)
         ON CONFLICT(notif_id) DO UPDATE SET seen=1, seen_at=?
       ''',
-        [n.id, now, now],
+        [n.id, now, now, now, now],
       );
     }
 
@@ -102,7 +124,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: _pageBg,
       appBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: true,
@@ -130,7 +152,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           ),
         ),
         data: (items) {
-          if (items.isEmpty) {
+          final sortedItems = [...items]
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+          if (sortedItems.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -141,11 +166,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       height: 62,
                       width: 62,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.10),
+                        color: _cardBg,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: AppColors.primary.withOpacity(0.22),
-                        ),
+                        border: Border.all(color: _cardBorder),
                       ),
                       child: Icon(
                         Icons.notifications_none_rounded,
@@ -158,7 +181,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       'No notifications right now.',
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: Colors.black.withOpacity(0.75),
+                        color: _titleColor,
                         fontSize: 15.5,
                       ),
                     ),
@@ -167,7 +190,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       'You’re all caught up.',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Colors.black.withOpacity(0.50),
+                        color: _subtitleColor,
                       ),
                     ),
                   ],
@@ -185,10 +208,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
             },
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-              itemCount: items.length,
+              itemCount: sortedItems.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, i) {
-                final n = items[i];
+                final n = sortedItems[i];
 
                 // Inside notification_screen.dart -> ListView.separated -> itemBuilder
                 return Notification3DCard(
@@ -197,10 +220,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   badgeOpacity: _badgeOpacity(n.type),
                   title: n.title,
                   message: n.message,
-                  createdText: _addedDateTimeFormat.format(n.createdAt.toLocal()),
-                  dueText: n.dueDate == null
-                      ? null
-                      : 'Due: ${n.dueDate!.toLocal().toString().split(" ").first}',
+                  createdAtText: DateFormat(
+                    'MMM d, y • h:mm a',
+                  ).format(n.createdAt),
+                  dueText: n.dueDate == null ? null : _formatDueText(n.dueDate),
                   onTap: () {
                     // Navigate specifically for Owner Payables
                     if (n.type == AppNotifType.ownerPayableSoon) {
