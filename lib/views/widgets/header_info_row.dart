@@ -107,10 +107,7 @@ class HomeInfoHeader extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'Error: ${homeState.error}',
-                style: const TextStyle(
-                  color: Colors.redAccent,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
               ),
             ),
         ],

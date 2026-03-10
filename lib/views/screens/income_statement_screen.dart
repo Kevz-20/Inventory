@@ -127,9 +127,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                 incomeState.when(
                   loading: () => SizedBox(
                     height: MediaQuery.of(context).size.height * 0.45,
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.only(top: 40),
@@ -145,12 +143,11 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                     );
 
                     final expenseEntries =
-                        income.expenseCategories.entries.toList()
-                          ..sort(
-                            (a, b) => a.key.toLowerCase().compareTo(
-                              b.key.toLowerCase(),
-                            ),
-                          );
+                        income.expenseCategories.entries.toList()..sort(
+                          (a, b) => a.key.toLowerCase().compareTo(
+                            b.key.toLowerCase(),
+                          ),
+                        );
 
                     final isEmpty =
                         income.sales == 0 && income.totalExpenses == 0;

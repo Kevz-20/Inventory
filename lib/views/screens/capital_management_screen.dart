@@ -176,11 +176,7 @@ class _CapitalManagementScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _amountInput(
-                            s: s,
-                            height: fieldH,
-                            radius: r12,
-                          ),
+                          _amountInput(s: s, height: fieldH, radius: r12),
                           SizedBox(height: (8 * s).clamp(6, 10)),
                           Text(
                             'Enter the amount you want to add',
@@ -204,11 +200,7 @@ class _CapitalManagementScreenState
                           ),
 
                           SizedBox(height: gap14),
-                          _remarksInput(
-                            s: s,
-                            height: fieldH,
-                            radius: r12,
-                          ),
+                          _remarksInput(s: s, height: fieldH, radius: r12),
                         ],
                       ),
                     ),
@@ -252,7 +244,9 @@ class _CapitalManagementScreenState
                                 setState(() {});
                                 messenger.showSnackBar(
                                   const SnackBar(
-                                    content: Text('Capital added successfully!'),
+                                    content: Text(
+                                      'Capital added successfully!',
+                                    ),
                                     backgroundColor: AppColors.success,
                                   ),
                                 );
@@ -471,7 +465,9 @@ class _CapitalManagementScreenState
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
         side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
         padding: EdgeInsets.symmetric(
           horizontal: (14 * s).clamp(12, 18),
           vertical: (12 * s).clamp(10, 14),

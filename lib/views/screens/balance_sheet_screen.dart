@@ -163,9 +163,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
   }
 
   // ==================== SUMMARY CARD ====================
-  Widget _summaryCard({
-    required BalanceSheetViewModel vm,
-  }) {
+  Widget _summaryCard({required BalanceSheetViewModel vm}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -271,105 +269,105 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
 
   // ---------------- Financial Section ----------------
   Widget _buildFinancialSection({
-  required String title,
-  required IconData icon,
-  required Map<String, double> items,
-  required double total,
-  required BalanceSheetViewModel vm,
-}) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [
-        BoxShadow(
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-          color: Colors.black.withOpacity(0.04),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Row(
-          children: [
-            Container(
-              height: 36,
-              width: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
+    required String title,
+    required IconData icon,
+    required Map<String, double> items,
+    required double total,
+    required BalanceSheetViewModel vm,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                height: 36,
+                width: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 17,
-                  color: Colors.black87,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
-            ),
 
-            // ❌ Removed the header total amount here
-          ],
-        ),
-        const SizedBox(height: 10),
-        Divider(color: Colors.grey.shade200, height: 1),
-        const SizedBox(height: 6),
-
-        // Items (List style)
-        if (items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Text(
-              'No records yet.',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          )
-        else
-          ...items.entries.map(
-            (e) => _itemRow(label: e.key, amount: e.value, vm: vm),
+              // ❌ Removed the header total amount here
+            ],
           ),
+          const SizedBox(height: 10),
+          Divider(color: Colors.grey.shade200, height: 1),
+          const SizedBox(height: 6),
 
-        const SizedBox(height: 6),
-        Divider(color: Colors.grey.shade200, height: 1),
-        const SizedBox(height: 10),
-
-        // Total row (✅ still kept at the bottom)
-        Row(
-          children: [
-            const Expanded(
+          // Items (List style)
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Text(
-                'Total',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                'No records yet.',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
+            )
+          else
+            ...items.entries.map(
+              (e) => _itemRow(label: e.key, amount: e.value, vm: vm),
             ),
-            Text(
-              vm.formatCurrency(total),
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                color: AppColors.primary,
+
+          const SizedBox(height: 6),
+          Divider(color: Colors.grey.shade200, height: 1),
+          const SizedBox(height: 10),
+
+          // Total row (✅ still kept at the bottom)
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Total',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+              Text(
+                vm.formatCurrency(total),
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _itemRow({
     required String label,

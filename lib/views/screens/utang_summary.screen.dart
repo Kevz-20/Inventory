@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿// ignore_for_file: deprecated_member_use
+
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_colors.dart';
@@ -986,7 +988,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                               borderRadius: BorderRadius.circular((12 * scale).clamp(10, 14)),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  // ignore: deprecated_member_use
                                                   color: Colors.grey.withOpacity(0.05),
                                                   blurRadius: (2 * scale).clamp(2, 6),
                                                   offset: const Offset(0, 1),

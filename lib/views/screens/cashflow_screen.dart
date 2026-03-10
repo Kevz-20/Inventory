@@ -729,11 +729,19 @@ class _MarqueeTextState extends State<_MarqueeText>
                     children: [
                       Positioned(
                         left: 0,
-                        child: Text(widget.text, maxLines: 1, style: widget.style),
+                        child: Text(
+                          widget.text,
+                          maxLines: 1,
+                          style: widget.style,
+                        ),
                       ),
                       Positioned(
                         left: textWidth + _gap,
-                        child: Text(widget.text, maxLines: 1, style: widget.style),
+                        child: Text(
+                          widget.text,
+                          maxLines: 1,
+                          style: widget.style,
+                        ),
                       ),
                     ],
                   ),
@@ -775,13 +783,13 @@ class _HeaderCell extends StatelessWidget {
               ? Border(right: BorderSide(color: Colors.grey.withAlpha(90)))
               : null,
         ),
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: align,
-              style: TextStyle(
-                color: color,
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: align,
+          style: TextStyle(
+            color: color,
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),

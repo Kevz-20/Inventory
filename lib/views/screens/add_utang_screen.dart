@@ -34,7 +34,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
   final TextEditingController downpaymentController = TextEditingController();
   final TextEditingController durationController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
-  final TextEditingController dueDateController = TextEditingController(); // ✅ single date
+  final TextEditingController dueDateController =
+      TextEditingController(); // ✅ single date
 
   double remainingBalance = 0.0;
   double monthlyPayment = 0.0;
@@ -85,7 +86,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     setState(() {
       remainingBalance = total - down;
-      monthlyPayment = months > 0 ? remainingBalance / months : remainingBalance;
+      monthlyPayment = months > 0
+          ? remainingBalance / months
+          : remainingBalance;
     });
   }
 
@@ -180,11 +183,15 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     try {
       final total =
-          double.tryParse(totalCostController.text.replaceAll(',', '').trim()) ??
-              0;
+          double.tryParse(
+            totalCostController.text.replaceAll(',', '').trim(),
+          ) ??
+          0;
       final down =
-          double.tryParse(downpaymentController.text.replaceAll(',', '').trim()) ??
-              0;
+          double.tryParse(
+            downpaymentController.text.replaceAll(',', '').trim(),
+          ) ??
+          0;
 
       if (total <= 0) {
         if (!mounted) return;
@@ -237,7 +244,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'item': itemController.text,
           'original_amount': total,
           'remaining_amount': remaining,
-          'due_date': DateFormat('yyyy-MM-dd').format(finalDueDate), // end of plan
+          'due_date': DateFormat(
+            'yyyy-MM-dd',
+          ).format(finalDueDate), // end of plan
           'note': notes,
           'is_paid': 0,
           'has_plan': 1,
@@ -654,18 +663,22 @@ class _AddUtangPageState extends State<AddUtangPage> {
         errorText: errorText,
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
-                ? Padding(
-                    padding: EdgeInsets.all((14 * s).clamp(12.0, 16.0)),
-                    child: Text(
-                      "₱",
-                      style: TextStyle(
-                        fontSize: (20 * s).clamp(16.0, 22.0),
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                  ? Padding(
+                      padding: EdgeInsets.all((14 * s).clamp(12.0, 16.0)),
+                      child: Text(
+                        "₱",
+                        style: TextStyle(
+                          fontSize: (20 * s).clamp(16.0, 22.0),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
                       ),
-                    ),
-                  )
-                : Icon(icon, color: Colors.grey, size: (22 * s).clamp(20.0, 26.0)))
+                    )
+                  : Icon(
+                      icon,
+                      color: Colors.grey,
+                      size: (22 * s).clamp(20.0, 26.0),
+                    ))
             : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
         contentPadding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
@@ -715,7 +728,10 @@ class _AddUtangPageState extends State<AddUtangPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: tFs, color: Colors.grey)),
+          Text(
+            title,
+            style: TextStyle(fontSize: tFs, color: Colors.grey),
+          ),
           SizedBox(height: (4 * s).clamp(3.0, 6.0)),
           AdaptiveDigitsText(
             "₱${currencyFormat.format(amount)}",

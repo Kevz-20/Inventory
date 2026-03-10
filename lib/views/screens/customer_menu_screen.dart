@@ -669,7 +669,7 @@ class _TopSellingProductsPanel extends StatelessWidget {
     return ListView.separated(
       padding: EdgeInsets.zero,
       itemCount: products.length,
-      separatorBuilder: (_, __) => SizedBox(height: _r(context, compact ? 7 : 10)),
+      separatorBuilder: (_, _) => SizedBox(height: _r(context, compact ? 7 : 10)),
       itemBuilder: (context, i) {
         final product = products[i];
         final ratio = (product.unitsSold / topUnits).clamp(0.0, 1.0);
@@ -814,7 +814,7 @@ class _TopSellingProductsPanel extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _fallbackImage(context, compact: compact),
+          errorBuilder: (_, _, _) => _fallbackImage(context, compact: compact),
         ),
       );
     }
@@ -826,7 +826,7 @@ class _TopSellingProductsPanel extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallbackImage(context, compact: compact),
+        errorBuilder: (_, _, _) => _fallbackImage(context, compact: compact),
       ),
     );
   }

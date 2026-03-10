@@ -81,6 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final max = value * 1.28;
     return scaled.clamp(min, max);
   }
+
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
@@ -102,24 +103,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final maxContentWidth = useSplitLayout
         ? 1240.0
         : isTablet
-            ? 780.0
-            : double.infinity;
+        ? 780.0
+        : double.infinity;
 
     final horizontalPadding = useSplitLayout
         ? 24.0
         : isTablet
-            ? 18.0
-            : isLandscape
-                ? 14.0
-                : 16.0;
+        ? 18.0
+        : isLandscape
+        ? 14.0
+        : 16.0;
 
     final verticalPadding = useSplitLayout
         ? 14.0
         : isShortScreen
-            ? 8.0
-            : isLandscape
-                ? 10.0
-                : 12.0;
+        ? 8.0
+        : isLandscape
+        ? 10.0
+        : 12.0;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -158,10 +159,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         final gap = useSplitLayout
                             ? (math.min(w, h) * 0.022).clamp(12.0, 18.0)
                             : isShortScreen
-                                ? 10.0
-                                : isLandscape
-                                    ? (h * 0.022).clamp(8.0, 12.0)
-                                    : (h * 0.026).clamp(10.0, 16.0);
+                            ? 10.0
+                            : isLandscape
+                            ? (h * 0.022).clamp(8.0, 12.0)
+                            : (h * 0.026).clamp(10.0, 16.0);
 
                         // ================= SHORT LANDSCAPE PHONE =================
                         if (isLandscape && isShortScreen && !isTablet) {
@@ -229,11 +230,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         // ================= NORMAL PHONE / NORMAL TABLET STACK =================
                         final tilesBlock = isTablet
                             ? (isLandscape
-                                ? (h * 0.36).clamp(220.0, 300.0)
-                                : (h * 0.40).clamp(280.0, 380.0))
+                                  ? (h * 0.36).clamp(220.0, 300.0)
+                                  : (h * 0.40).clamp(280.0, 380.0))
                             : (isLandscape
-                                ? (h * 0.42).clamp(190.0, 260.0)
-                                : (h * 0.34).clamp(220.0, 320.0));
+                                  ? (h * 0.42).clamp(190.0, 260.0)
+                                  : (h * 0.34).clamp(220.0, 320.0));
 
                         return Column(
                           children: [
@@ -246,7 +247,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                                       label: "CUSTOMER",
                                       subtitle: "Manage customers",
                                       icon: Icons.people_alt_outlined,
-                                      onTap: () => context.push('/customer_menu'),
+                                      onTap: () =>
+                                          context.push('/customer_menu'),
                                     ),
                                   ),
                                   SizedBox(height: gap),
@@ -255,7 +257,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                                       label: "NEGOSYO",
                                       subtitle: "Store & inventory",
                                       icon: Icons.storefront_outlined,
-                                      onTap: () => context.push('/negosyo_menu'),
+                                      onTap: () =>
+                                          context.push('/negosyo_menu'),
                                     ),
                                   ),
                                 ],
@@ -344,38 +347,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
             final iconSize = compact
                 ? (h * 0.22).clamp(_r(context, 22), _r(context, 30))
                 : isTablet
-                    ? (h * 0.24).clamp(_r(context, 28), _r(context, 40))
-                    : (h * 0.28).clamp(_r(context, 26), _r(context, 34));
+                ? (h * 0.24).clamp(_r(context, 28), _r(context, 40))
+                : (h * 0.28).clamp(_r(context, 26), _r(context, 34));
 
             final iconBox = compact
                 ? (h * 0.42).clamp(_r(context, 42), _r(context, 56))
                 : isTablet
-                    ? (h * 0.56).clamp(_r(context, 56), _r(context, 82))
-                    : (h * 0.60).clamp(_r(context, 54), _r(context, 74));
+                ? (h * 0.56).clamp(_r(context, 56), _r(context, 82))
+                : (h * 0.60).clamp(_r(context, 54), _r(context, 74));
 
             final titleSize = compact
                 ? (h * 0.15).clamp(_r(context, 15), _r(context, 18))
                 : isLandscape
-                    ? (h * 0.17).clamp(_r(context, 17), _r(context, 22))
-                    : (h * 0.18).clamp(_r(context, 18), _r(context, 22));
+                ? (h * 0.17).clamp(_r(context, 17), _r(context, 22))
+                : (h * 0.18).clamp(_r(context, 18), _r(context, 22));
 
             final subSize = compact
                 ? (h * 0.10).clamp(_r(context, 10.5), _r(context, 12.5))
                 : isLandscape
-                    ? (h * 0.12).clamp(_r(context, 12), _r(context, 14.5))
-                    : (h * 0.13).clamp(_r(context, 12.5), _r(context, 15));
+                ? (h * 0.12).clamp(_r(context, 12), _r(context, 14.5))
+                : (h * 0.13).clamp(_r(context, 12.5), _r(context, 15));
 
             final vPad = compact
                 ? (h * 0.08).clamp(_r(context, 8), _r(context, 12))
                 : isLandscape
-                    ? (h * 0.10).clamp(_r(context, 10), _r(context, 16))
-                    : (h * 0.12).clamp(_r(context, 12), _r(context, 18));
+                ? (h * 0.10).clamp(_r(context, 10), _r(context, 16))
+                : (h * 0.12).clamp(_r(context, 12), _r(context, 18));
 
             final accentHeight = compact
                 ? (h * 0.35).clamp(_r(context, 32), _r(context, 44))
                 : isLandscape
-                    ? (h * 0.50).clamp(_r(context, 42), _r(context, 60))
-                    : (h * 0.55).clamp(_r(context, 48), _r(context, 64));
+                ? (h * 0.50).clamp(_r(context, 42), _r(context, 60))
+                : (h * 0.55).clamp(_r(context, 48), _r(context, 64));
 
             final horizontalPad = compact ? _r(context, 12) : _r(context, 18);
             final gapBetween = compact ? _r(context, 10) : _r(context, 16);
@@ -430,9 +433,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         ],
                       ),
                       borderRadius: BorderRadius.circular(_r(context, 18)),
-                      border: Border.all(
-                        color: const Color(0xFFB4D8CF),
-                      ),
+                      border: Border.all(color: const Color(0xFFB4D8CF)),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(0xFF0C4B3E).withOpacity(0.16),
@@ -441,11 +442,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         ),
                       ],
                     ),
-                    child: Icon(
-                      icon,
-                      color: AppColors.primary,
-                      size: iconSize,
-                    ),
+                    child: Icon(icon, color: AppColors.primary, size: iconSize),
                   ),
                   SizedBox(width: gapBetween),
                   Expanded(
@@ -487,9 +484,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.88),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFB4D8CF),
-                      ),
+                      border: Border.all(color: const Color(0xFFB4D8CF)),
                     ),
                     child: Icon(
                       Icons.arrow_forward_rounded,
@@ -520,7 +515,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     required this.error,
   });
 
-  bool _isTablet(BuildContext context) => MediaQuery.of(context).size.width >= 700;
+  bool _isTablet(BuildContext context) =>
+      MediaQuery.of(context).size.width >= 700;
 
   bool _isLandscape(BuildContext context) =>
       MediaQuery.of(context).orientation == Orientation.landscape;
@@ -543,6 +539,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     final max = value * 1.28;
     return scaled.clamp(min, max);
   }
+
   double _totalSales() {
     return salesPoints.fold<double>(0.0, (sum, p) => sum + p.net);
   }
@@ -556,9 +553,11 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     final sign = value < 0 ? '-' : '';
     final abs = value.abs();
     const peso = '\u20B1';
-    if (abs >= 1000000) return '${sign}$peso${(abs / 1000000).toStringAsFixed(1)}M';
-    if (abs >= 1000) return '${sign}$peso${(abs / 1000).toStringAsFixed(1)}K';
-    return '${sign}$peso${abs.toStringAsFixed(0)}';
+    if (abs >= 1000000) {
+      return '$sign$peso${(abs / 1000000).toStringAsFixed(1)}M';
+    }
+    if (abs >= 1000) return '$sign$peso${(abs / 1000).toStringAsFixed(1)}K';
+    return '$sign$peso${abs.toStringAsFixed(0)}';
   }
 
   @override
@@ -609,8 +608,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                         fontSize: compact
                             ? _r(context, 13)
                             : isTablet
-                                ? _r(context, 15)
-                                : _r(context, 14),
+                            ? _r(context, 15)
+                            : _r(context, 14),
                         fontWeight: FontWeight.w900,
                         color: Colors.black.withOpacity(0.80),
                       ),
@@ -631,7 +630,9 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                     child: Text(
                       'Last 7 days',
                       style: TextStyle(
-                        fontSize: compact ? _r(context, 9.5) : _r(context, 10.5),
+                        fontSize: compact
+                            ? _r(context, 9.5)
+                            : _r(context, 10.5),
                         fontWeight: FontWeight.w800,
                         color: AppColors.primary,
                       ),
@@ -665,7 +666,9 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                             child: AdaptiveDigitsText(
                               'Total: ${_pesoShort(_totalSales())}',
                               style: TextStyle(
-                                fontSize: compact ? _r(context, 10.5) : _r(context, 11.5),
+                                fontSize: compact
+                                    ? _r(context, 10.5)
+                                    : _r(context, 11.5),
                                 fontWeight: FontWeight.w800,
                                 color: Colors.black.withOpacity(0.72),
                               ),
@@ -699,7 +702,9 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                             child: AdaptiveDigitsText(
                               'Avg/day: ${_pesoShort(_averageSales())}',
                               style: TextStyle(
-                                fontSize: compact ? _r(context, 10.5) : _r(context, 11.5),
+                                fontSize: compact
+                                    ? _r(context, 10.5)
+                                    : _r(context, 11.5),
                                 fontWeight: FontWeight.w800,
                                 color: Colors.black.withOpacity(0.72),
                               ),
@@ -711,7 +716,9 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: _r(context, compact ? 6 : (isLandscape ? 8 : 10))),
+              SizedBox(
+                height: _r(context, compact ? 6 : (isLandscape ? 8 : 10)),
+              ),
               Expanded(
                 child: Container(
                   padding: EdgeInsets.fromLTRB(
@@ -813,10 +820,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: horizontalInterval,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: Colors.black.withOpacity(0.06),
-            strokeWidth: 1,
-          ),
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: Colors.black.withOpacity(0.06), strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -836,8 +841,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                       fontSize: isTablet
                           ? 11
                           : isShortScreen
-                              ? 9.5
-                              : 10.5,
+                          ? 9.5
+                          : 10.5,
                       fontWeight: FontWeight.w700,
                       color: Colors.black.withOpacity(0.35),
                     ),
@@ -869,8 +874,8 @@ class _SalesOnlyGraphCard extends StatelessWidget {
                       fontSize: isTablet
                           ? 11.5
                           : isShortScreen
-                              ? 10
-                              : 11,
+                          ? 10
+                          : 11,
                       color: Colors.black.withOpacity(0.45),
                       fontWeight: FontWeight.w700,
                     ),
@@ -901,10 +906,7 @@ class _SalesOnlyGraphCard extends StatelessWidget {
             spots: spots,
             isCurved: true,
             gradient: LinearGradient(
-              colors: [
-                AppColors.primary,
-                AppColors.primary.withOpacity(0.72),
-              ],
+              colors: [AppColors.primary, AppColors.primary.withOpacity(0.72)],
             ),
             barWidth: isTablet ? 4.0 : 3.6,
             dotData: FlDotData(
@@ -938,7 +940,3 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     );
   }
 }
-
-
-
-

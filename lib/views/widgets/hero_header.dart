@@ -157,8 +157,9 @@ class HeroHeader extends ConsumerWidget {
                                         error: (_, _) =>
                                             const SizedBox.shrink(),
                                         data: (count) {
-                                          if (count <= 0)
+                                          if (count <= 0) {
                                             return const SizedBox.shrink();
+                                          }
                                           return Positioned(
                                             right: -6,
                                             top: -6,
