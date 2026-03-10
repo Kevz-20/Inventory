@@ -3,14 +3,24 @@ import '../services/db_service.dart';
 class ChangePinRepository {
   final DBService _db = DBService.instance;
 
+  /// Returns the account row joined with its security question text.
+  /// The result map includes all account columns plus `security_question`
+  /// (the text from the security_questions table).
   Future<Map<String, dynamic>> getAccountByMobile(String mobile) async {
     final db = await _db.database;
 
-    final result = await db.query(
-      'account',
-      where: 'mobile_number = ?',
-      whereArgs: [mobile.trim()],
-      limit: 1,
+    // Raw query so we can join security_questions and surface the
+    // question text in a single round-trip.
+    final result = await db.rawQuery(
+      '''
+      SELECT a.*, sq.question AS security_question
+      FROM   account a
+      LEFT JOIN security_questions sq
+             ON sq.id = a.security_question_id
+      WHERE  a.mobile_number = ?
+      LIMIT  1
+      ''',
+      [mobile.trim()],
     );
 
     if (result.isEmpty) {
@@ -69,4 +79,3 @@ class ChangePinRepository {
     }
   }
 }
- 

@@ -13,6 +13,7 @@ class ChangePinViewModel extends ChangeNotifier {
   final answerController = TextEditingController();
 
   bool isLoading = false;
+  bool isPinChangedSuccessfully = false;
   String? errorMessage;
 
   Map<String, dynamic>? _account;
@@ -23,6 +24,12 @@ class ChangePinViewModel extends ChangeNotifier {
   // toggle visibility
   bool showOldPin = false;
   bool showNewPin = false;
+
+  /// The security question the user chose during account creation.
+  /// Available as soon as [verifyMobile] succeeds.
+  /// Returns null if the mobile hasn't been verified yet.
+  String? get userSecurityQuestion =>
+      _account?['security_question'] as String?;
 
   void toggleOldPin() {
     showOldPin = !showOldPin;
@@ -141,14 +148,10 @@ class ChangePinViewModel extends ChangeNotifier {
         newPin: newPin,
       );
 
-      clearAll();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('PIN saved successfully!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      // Signal the screen to show snackbar and navigate.
+      // Navigation stays in the widget tree where GoRouter context is valid.
+      isPinChangedSuccessfully = true;
+      notifyListeners();
     } catch (e) {
       _showError(context, _friendlyError(e));
     } finally {
@@ -162,6 +165,7 @@ class ChangePinViewModel extends ChangeNotifier {
     isMobileVerified = false;
     isSecurityVerified = false;
     isOldPinVerified = false;
+    isPinChangedSuccessfully = false;
     oldPinController.clear();
     newPinController.clear();
     mobileController.clear();
@@ -180,7 +184,9 @@ class ChangePinViewModel extends ChangeNotifier {
 
   String _friendlyError(Object e) {
     final msg = e.toString();
-    return msg.startsWith('Exception: ') ? msg.replaceFirst('Exception: ', '') : msg;
+    return msg.startsWith('Exception: ')
+        ? msg.replaceFirst('Exception: ', '')
+        : msg;
   }
 
   @override

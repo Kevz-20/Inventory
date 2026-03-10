@@ -33,15 +33,20 @@ class AccountRepository {
     return result.first['id'] as int;
   }
 
-  /// Get full account details
   Future<Account> getAccountDetails() async {
     final accountId = await getAccountId();
     final db = await dbService.database;
-    final result = await db.query(
-      'account',
-      where: 'id = ?',
-      whereArgs: [accountId],
-      limit: 1,
+
+    final result = await db.rawQuery(
+      '''
+      SELECT a.*, sq.question AS security_question
+      FROM   account a
+      LEFT JOIN security_questions sq
+             ON sq.id = a.security_question_id
+      WHERE  a.id = ?
+      LIMIT  1
+      ''',
+      [accountId],
     );
 
     if (result.isEmpty) {
@@ -60,7 +65,7 @@ class AccountRepository {
   }
 
   Future<Map<String, String>> getNameParts() async {
-    final fullName = await getFullName(); // "John M Doe"
+    final fullName = await getFullName();
     final parts = fullName.split(' ');
     return {
       'first': parts.isNotEmpty ? parts[0] : '',
@@ -69,14 +74,11 @@ class AccountRepository {
     };
   }
 
-
-  
-
   /// Update account info and save mobile number + full name to SharedPreferences
   Future<void> updateAccount(Account updated) async {
     final db = await dbService.database;
 
-    // Update account table
+    // Update account table (toMap() excludes security_question — safe to use)
     await db.update(
       'account',
       updated.toMap(),
