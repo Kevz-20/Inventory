@@ -520,7 +520,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   }
 
   Widget _buildRow(CashflowRecord r) {
-    final isInstallment = r.item.toLowerCase().contains('downpayment');
+    r.item.toLowerCase().contains('downpayment');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
