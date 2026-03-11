@@ -132,6 +132,7 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                   ? balanceText
                   : '\u20B1 \u2022\u2022\u2022\u2022\u2022',
               mobileNumber: mobileText,
+              isBalanceVisible: homeState.isMoneyVisible,
               centerTitle: true,
               showBack: true,
               onBackTap: () => context.go('/home'),

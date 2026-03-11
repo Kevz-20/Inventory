@@ -9,6 +9,7 @@ class HeroHeader extends ConsumerWidget {
   final String title;
   final String balance;
   final String mobileNumber;
+  final bool isBalanceVisible;
   final VoidCallback onBellTap;
   final VoidCallback onEyeTap;
 
@@ -23,6 +24,7 @@ class HeroHeader extends ConsumerWidget {
     required this.title,
     required this.balance,
     required this.mobileNumber,
+    required this.isBalanceVisible,
     required this.onBellTap,
     required this.onEyeTap,
     this.showBack = false,
@@ -307,33 +309,12 @@ class HeroHeader extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(
                         (18 * s).clamp(18.0, 22.0),
                       ),
-                      child: Container(
+                      child: Padding(
                         padding: EdgeInsets.all(eyePad),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white.withOpacity(0.35),
-                              Colors.white.withOpacity(0.20),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(
-                            (18 * s).clamp(18.0, 22.0),
-                          ),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.30),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: (16 * s).clamp(16.0, 22.0),
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
                         child: Icon(
-                          Icons.visibility_outlined,
+                          isBalanceVisible
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                           color: Colors.white,
                           size: eyeIconSize,
                         ),

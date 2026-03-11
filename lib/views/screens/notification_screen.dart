@@ -37,8 +37,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final status = days == 0
         ? 'Due today'
         : days > 0
-        ? 'Due in $days day${days == 1 ? '' : 's'}'
-        : 'Overdue by ${days.abs()} day${days.abs() == 1 ? '' : 's'}';
+            ? 'Due in $days day${days == 1 ? '' : 's'}'
+            : 'Overdue by ${days.abs()} day${days.abs() == 1 ? '' : 's'}';
 
     final dateLabel = DateFormat('MMM d, y').format(dueDate);
     return '$status • $dateLabel';
@@ -68,14 +68,11 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final now = DateTime.now().toIso8601String();
 
     for (final n in items) {
-      batch.execute(
-        '''
+      batch.execute('''
         INSERT INTO notif_state (notif_id, seen, seen_at, created_at)
         VALUES (?, 1, ?, ?)
         ON CONFLICT(notif_id) DO UPDATE SET seen=1, seen_at=?
-      ''',
-        [n.id, now, now, now, now],
-      );
+      ''', [n.id, now, now, now, now]);
     }
 
     await batch.commit(noResult: true);
@@ -168,7 +165,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       decoration: BoxDecoration(
                         color: _cardBg,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: _cardBorder),
+                        border: Border.all(
+                          color: _cardBorder,
+                        ),
                       ),
                       child: Icon(
                         Icons.notifications_none_rounded,
@@ -220,15 +219,16 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   badgeOpacity: _badgeOpacity(n.type),
                   title: n.title,
                   message: n.message,
-                  createdAtText: DateFormat(
-                    'MMM d, y • h:mm a',
-                  ).format(n.createdAt),
-                  dueText: n.dueDate == null ? null : _formatDueText(n.dueDate),
+                  createdAtText:
+                      DateFormat('MMM d, y • h:mm a').format(n.createdAt),
+                  dueText: n.dueDate == null
+                      ? null
+                      : _formatDueText(n.dueDate),
                   onTap: () {
                     // Navigate specifically for Owner Payables
                     if (n.type == AppNotifType.ownerPayableSoon) {
                       context.push('/owner_utang');
-                    }
+                    } 
                     // You can add other navigation logic here for different types
                     else if (n.type == AppNotifType.customerUtangDueToday) {
                       context.push('/customer_utang');

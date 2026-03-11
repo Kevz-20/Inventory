@@ -231,8 +231,14 @@ final router = GoRouter(
 
     GoRoute(
       path: '/customer_utang',
-      builder: (context, state) => const CustomerUtangScreen(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final int? customerId = extra is int ? extra : null;
+        return CustomerUtangScreen(initialCustomerId: customerId);
+      },
     ),
+
+
     GoRoute(
       path: '/owner_utang',
       builder: (context, state) => const OwnerUtangScreen(),

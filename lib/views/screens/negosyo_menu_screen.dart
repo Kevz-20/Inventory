@@ -121,6 +121,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
               title: "Negosyo",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
+              isBalanceVisible: homeState.isMoneyVisible,
               centerTitle: true,
               showBack: true,
               onBackTap: () => context.go('/home'),

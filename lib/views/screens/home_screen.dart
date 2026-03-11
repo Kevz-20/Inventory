@@ -132,6 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               title: "Home",
               balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
               mobileNumber: mobileText,
+              isBalanceVisible: homeState.isMoneyVisible,
               centerTitle: true,
               showBack: false,
               showLogo: true,

@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import '../models/utang_customer_model.dart';
+
 class DBService {
   static final DBService instance = DBService._init();
   static Database? _database;
@@ -799,6 +801,49 @@ class DBService {
         'due_date': row['due_date'] as String? ?? '',
       };
     }).toList();
+  }
+
+  Future<UtangCustomer?> fetchUtangCustomerById(int customerId) async {
+    final db = await database;
+
+    const sql = '''
+    SELECT
+      c.id,
+      c.first_name,
+      c.middle_name,
+      c.last_name,
+      c.municipality,
+      c.barangay,
+      c.phone_number,
+      COALESCE(sc.total_amount, 0) AS total_amount,
+      COALESCE(cp.total_paid, 0) AS total_paid,
+      sc.min_due_date AS due_date
+    FROM customer c
+    LEFT JOIN (
+      SELECT
+        customer_id,
+        SUM(amount) AS total_amount,
+        MIN(due_date) AS min_due_date
+      FROM sales_credit
+      WHERE status_id IN (
+        SELECT id FROM credit_status WHERE code IN (0, 1)
+      )
+      GROUP BY customer_id
+    ) sc ON sc.customer_id = c.id
+    LEFT JOIN (
+      SELECT
+        customer_id,
+        SUM(amount) AS total_paid
+      FROM customer_payment
+      GROUP BY customer_id
+    ) cp ON cp.customer_id = c.id
+    WHERE c.id = ?
+    LIMIT 1
+    ''';
+
+    final rows = await db.rawQuery(sql, [customerId]);
+    if (rows.isEmpty) return null;
+    return UtangCustomer.fromMap(rows.first);
   }
 
   // Close database safely

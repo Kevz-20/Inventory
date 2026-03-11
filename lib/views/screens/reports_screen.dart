@@ -76,12 +76,18 @@ class ReportsScreen extends StatelessWidget {
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
+                              return const Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               );
                             } else if (snapshot.hasError) {
-                              return const Center(
-                                child: Text("Error loading utang"),
+                              return const Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Center(
+                                  child: Text("Error loading utang"),
+                                ),
                               );
                             } else {
                               final utangList = snapshot.data ?? [];
@@ -90,6 +96,7 @@ class ReportsScreen extends StatelessWidget {
                                 (prev, e) =>
                                     prev + (e['total_amount'] as double? ?? 0),
                               );
+
                               return UtangCalendarCard(
                                 utangList: utangList,
                                 totalUtang: totalUtang,
