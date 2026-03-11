@@ -32,7 +32,8 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
   bool _loadedOnce = false;
 
-  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  DateTime _dateOnly(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   int _daysUntil(DateTime dueDate) {
     final today = _dateOnly(DateTime.now());
@@ -91,38 +92,132 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
   Future<void> fetchUtangan() async {
     final db = await DBService.instance.database;
 
-    const sql = '''
-  SELECT
-    c.id,
-    c.first_name,
-    c.middle_name,
-    c.last_name,
-    c.municipality,
-    c.barangay,
-    c.phone_number,
-    MAX(0, COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) AS total_amount,
-    sc.min_due_date AS due_date
-  FROM customer c
-  LEFT JOIN (
-    SELECT
-      customer_id,
-      SUM(amount) AS total_amount,
-      MIN(due_date) AS min_due_date
-    FROM sales_credit
-    GROUP BY customer_id
-  ) sc ON sc.customer_id = c.id
-  LEFT JOIN (
-    SELECT
-      customer_id,
-      SUM(amount) AS total_paid
-    FROM customer_payment
-    GROUP BY customer_id
-  ) cp ON cp.customer_id = c.id
-  ORDER BY total_amount DESC, c.last_name ASC, c.first_name ASC
-''';
-
     try {
-      final result = await db.rawQuery(sql);
+      final customers = await db.query(
+        'customer',
+        columns: [
+          'id',
+          'first_name',
+          'middle_name',
+          'last_name',
+          'municipality',
+          'barangay',
+          'phone_number',
+        ],
+        orderBy: 'last_name ASC, first_name ASC',
+      );
+
+      final creditRows = await db.query(
+        'sales_credit',
+        columns: ['customer_id', 'amount', 'credit_date', 'due_date'],
+        orderBy: 'customer_id ASC, credit_date ASC, id ASC',
+      );
+
+      final paymentRows = await db.rawQuery('''
+        SELECT customer_id, SUM(amount) AS total_paid
+        FROM customer_payment
+        GROUP BY customer_id
+      ''');
+
+      final totalPaidByCustomer = <int, double>{
+        for (final row in paymentRows)
+          (row['customer_id'] as num?)?.toInt() ?? 0:
+              (row['total_paid'] as num?)?.toDouble() ?? 0.0,
+      };
+
+      final creditBucketsByCustomer = <int, Map<String, _CreditBucket>>{};
+      for (final row in creditRows) {
+        final customerId = (row['customer_id'] as num?)?.toInt();
+        final creditDateRaw = row['credit_date']?.toString();
+        if (customerId == null ||
+            creditDateRaw == null ||
+            creditDateRaw.isEmpty) {
+          continue;
+        }
+
+        final creditDate = DateTime.tryParse(creditDateRaw);
+        if (creditDate == null) continue;
+
+        final dateKey = DateFormat('yyyy-MM-dd').format(creditDate);
+        final customerBuckets = creditBucketsByCustomer.putIfAbsent(
+          customerId,
+          () => <String, _CreditBucket>{},
+        );
+
+        final bucket = customerBuckets.putIfAbsent(
+          dateKey,
+          () => _CreditBucket(),
+        );
+
+        bucket.total += (row['amount'] as num?)?.toDouble() ?? 0.0;
+
+        final dueRaw = row['due_date']?.toString();
+        final dueDate = dueRaw == null || dueRaw.isEmpty
+            ? null
+            : DateTime.tryParse(dueRaw);
+        if (bucket.dueDate == null ||
+            (dueDate != null && dueDate.isBefore(bucket.dueDate!))) {
+          bucket.dueDate = dueDate;
+        }
+      }
+
+      final result =
+          customers.map((customer) {
+            final customerId = (customer['id'] as num?)?.toInt() ?? 0;
+            final buckets =
+                creditBucketsByCustomer[customerId] ??
+                const <String, _CreditBucket>{};
+            final sortedKeys = buckets.keys.toList()..sort();
+
+            var totalCredit = 0.0;
+            for (final key in sortedKeys) {
+              totalCredit += buckets[key]?.total ?? 0.0;
+            }
+
+            var paymentPool = totalPaidByCustomer[customerId] ?? 0.0;
+            DateTime? nextDueDate;
+            for (final key in sortedKeys) {
+              final bucket = buckets[key]!;
+              final applied = paymentPool >= bucket.total
+                  ? bucket.total
+                  : paymentPool;
+              paymentPool = (paymentPool - applied).clamp(0.0, double.infinity);
+              final remaining = (bucket.total - applied).clamp(
+                0.0,
+                double.infinity,
+              );
+              if (remaining > 0) {
+                nextDueDate = bucket.dueDate;
+                break;
+              }
+            }
+
+            final totalAmount =
+                (totalCredit - (totalPaidByCustomer[customerId] ?? 0.0)).clamp(
+                  0.0,
+                  double.infinity,
+                );
+
+            return {
+              ...customer,
+              'total_amount': totalAmount,
+              'due_date': nextDueDate?.toIso8601String(),
+            };
+          }).toList()..sort((a, b) {
+            final amountA = (a['total_amount'] as num?)?.toDouble() ?? 0.0;
+            final amountB = (b['total_amount'] as num?)?.toDouble() ?? 0.0;
+            final byAmount = amountB.compareTo(amountA);
+            if (byAmount != 0) return byAmount;
+
+            final lastA = (a['last_name'] ?? '').toString().toLowerCase();
+            final lastB = (b['last_name'] ?? '').toString().toLowerCase();
+            final byLast = lastA.compareTo(lastB);
+            if (byLast != 0) return byLast;
+
+            final firstA = (a['first_name'] ?? '').toString().toLowerCase();
+            final firstB = (b['first_name'] ?? '').toString().toLowerCase();
+            return firstA.compareTo(firstB);
+          });
 
       if (!mounted) return;
       setState(() {
@@ -317,18 +412,18 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     final Color pillBg = !hasDebt
         ? Colors.green.withOpacity(0.12)
         : overdue
-            ? Colors.red.withOpacity(0.12)
-            : dueToday
-                ? Colors.orange.withOpacity(0.14)
-                : AppColors.primary.withOpacity(0.12);
+        ? Colors.red.withOpacity(0.12)
+        : dueToday
+        ? Colors.orange.withOpacity(0.14)
+        : AppColors.primary.withOpacity(0.12);
 
     final Color pillFg = !hasDebt
         ? Colors.green.shade700
         : overdue
-            ? Colors.red.shade700
-            : dueToday
-                ? Colors.orange.shade800
-                : AppColors.primary;
+        ? Colors.red.shade700
+        : dueToday
+        ? Colors.orange.shade800
+        : AppColors.primary;
 
     // Responsive: reserve a fixed-ish width for the right column
     // so the left side (name/location) wonâ€™t get squeezed into overflow.
@@ -338,8 +433,8 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     final double rightColWidth = isTablet
         ? 220
         : isNarrow
-            ? 125
-            : 150;
+        ? 125
+        : 150;
 
     final double avatarSize = (44 * scale).clamp(38, 52);
     final double radius = (18 * scale).clamp(16, 22);
@@ -462,7 +557,9 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                           child: Text(
                             !hasDebt
                                 ? "PAID"
-                                : (due == null ? "NO DUE DATE" : _dueLabel(due)),
+                                : (due == null
+                                      ? "NO DUE DATE"
+                                      : _dueLabel(due)),
                             style: TextStyle(
                               fontSize: (11.5 * scale).clamp(10.5, 14),
                               fontWeight: FontWeight.w900,
@@ -535,3 +632,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
   }
 }
 
+class _CreditBucket {
+  double total = 0.0;
+  DateTime? dueDate;
+}
