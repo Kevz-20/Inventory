@@ -19,7 +19,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -182,6 +182,10 @@ class DBService {
           )
         ''');
         }
+
+        if (oldVersion < 11) {
+          await addColumnIfMissing('notif_state', 'created_at', 'TEXT');
+        }
       },
 
       onConfigure: (db) async {
@@ -245,7 +249,8 @@ class DBService {
   CREATE TABLE notif_state (
     notif_id TEXT PRIMARY KEY,
     seen INTEGER NOT NULL DEFAULT 0,
-    seen_at TEXT
+    seen_at TEXT,
+    created_at TEXT
   )
 ''');
 
