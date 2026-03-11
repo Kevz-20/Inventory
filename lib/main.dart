@@ -14,9 +14,7 @@ void main() async {
 
   if (deviceWidth < 600) {
     // Phone: portrait only
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   } else {
     // Tablet: portrait + landscape
     await SystemChrome.setPreferredOrientations([

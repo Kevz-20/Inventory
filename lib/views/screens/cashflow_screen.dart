@@ -18,11 +18,18 @@ class CashFlowScreen extends ConsumerStatefulWidget {
 
 class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   bool _loading = true;
+  final ScrollController _listController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadCashflows();
+  }
+
+  @override
+  void dispose() {
+    _listController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCashflows() async {
@@ -70,9 +77,14 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       textAlign: TextAlign.center,
                     ),
                   )
-                : ListView.builder(
-                    itemCount: records.length,
-                    itemBuilder: (_, i) => _buildRow(records[i]),
+                : Scrollbar(
+                    controller: _listController,
+                    thumbVisibility: true,
+                    child: ListView.builder(
+                      controller: _listController,
+                      itemCount: records.length,
+                      itemBuilder: (_, i) => _buildRow(records[i]),
+                    ),
                   ),
           ),
         ],
@@ -213,7 +225,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                         value: record.cashIn == 0
                             ? '—'
                             : _formatCurrency(record.cashIn),
-                        color: isInstallment ? Colors.blue : Colors.green,
+                        color: Colors.green,
                         icon: Icons.arrow_downward_rounded,
                       ),
                     ),
@@ -280,7 +292,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                         record.cashIn == 0
                             ? '—'
                             : _formatCurrency(record.cashIn),
-                        valueColor: isInstallment ? Colors.blue : Colors.green,
+                        valueColor: Colors.green,
                         boldValue: true,
                       ),
                       _divider(),
@@ -460,39 +472,47 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   // ============================================================
 
   Widget _buildHeader() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.withAlpha(90)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Row(
-        children: const [
-          _HeaderCell(
-            'Item',
-            flex: 4,
-            align: TextAlign.center,
-            color: Colors.white,
-            showRightBorder: true,
-          ),
-          _HeaderCell(
-            'In',
-            flex: 3,
-            align: TextAlign.center,
-            color: Colors.green,
-            showRightBorder: true,
-          ),
-          _HeaderCell(
-            'Out',
-            flex: 3,
-            align: TextAlign.center,
-            color: Colors.red,
-            showRightBorder: true,
-          ),
-          _HeaderCell(
-            'Balance',
-            flex: 3,
-            align: TextAlign.center,
-            color: Colors.white,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.withAlpha(90)),
+              ),
+              child: Row(
+                children: const [
+                  _HeaderCell(
+                    'Item',
+                    flex: 4,
+                    align: TextAlign.center,
+                    color: Colors.white,
+                    showRightBorder: true,
+                  ),
+                  _HeaderCell(
+                    'In',
+                    flex: 3,
+                    align: TextAlign.center,
+                    color: Colors.green,
+                    showRightBorder: true,
+                  ),
+                  _HeaderCell(
+                    'Out',
+                    flex: 3,
+                    align: TextAlign.center,
+                    color: Colors.red,
+                    showRightBorder: true,
+                  ),
+                  _HeaderCell(
+                    'Balance',
+                    flex: 3,
+                    align: TextAlign.center,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -528,7 +548,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               showRightBorder: true,
               child: _buildAmountCell(
                 r.cashIn == 0 ? '-' : _formatCurrency(r.cashIn),
-                color: isInstallment ? Colors.blue : Colors.green,
+                color: Colors.green,
                 bold: true,
                 forceAnimateWhenEligible: true,
               ),
