@@ -51,5 +51,5 @@ flutter:
 
   assets:
     - lib/assets/
+    - lib/assets/product_images/
     - lib/assets/fonts/Roboto-Regular.ttf
-

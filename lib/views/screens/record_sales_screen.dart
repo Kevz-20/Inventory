@@ -1,7 +1,5 @@
 ﻿// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,7 +85,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
   // ---------------------------- Responsive Helpers ----------------------------
 
-  double _screenWidth(BuildContext context) => MediaQuery.of(context).size.width;
+  double _screenWidth(BuildContext context) =>
+      MediaQuery.of(context).size.width;
   bool _isLandscape(BuildContext context) =>
       MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -138,9 +137,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             onPrimary: Colors.white,
             onSurface: AppColors.textPrimary,
           ),
-          dialogTheme: DialogThemeData(
-            backgroundColor: Colors.grey.shade100,
-          ),
+          dialogTheme: DialogThemeData(backgroundColor: Colors.grey.shade100),
         ),
         child: child!,
       ),
@@ -168,9 +165,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(_r(context, 16)),
-        border: Border.all(
-          color: Colors.grey.shade200,
-        ),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -184,10 +179,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         children: [
           Text(
             'Customer: ${selectedCustomer['first_name']} ${selectedCustomer['last_name']}',
-            style: TextStyle(
-              fontSize: titleSize,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(fontSize: titleSize, fontWeight: FontWeight.w800),
           ),
           SizedBox(height: _r(context, 4)),
           Text(
@@ -233,8 +225,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _pickDueDate,
-                  icon:
-                      Icon(Icons.calendar_month_outlined, size: _r(context, 18)),
+                  icon: Icon(
+                    Icons.calendar_month_outlined,
+                    size: _r(context, 18),
+                  ),
                   label: Text(
                     'Edit Due Date',
                     style: TextStyle(
@@ -281,8 +275,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             _cashUtangSwitch(vm),
                             if (!isCash && vm.selectedCustomer != null)
                               Padding(
-                                padding:
-                                    EdgeInsets.only(top: _r(context, 8.0)),
+                                padding: EdgeInsets.only(top: _r(context, 8.0)),
                                 child: _selectedUtangInfoCard(vm),
                               ),
                             SizedBox(height: _r(context, 10)),
@@ -313,7 +306,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   // ---------------------------- Helper Widgets ----------------------------
 
   Widget _cashUtangSwitch(SalesViewModel vm) {
-    final double toggleWidth = _screenWidth(context) - (_pagePadding(context).horizontal);
+    final double toggleWidth =
+        _screenWidth(context) - (_pagePadding(context).horizontal);
     final double sliderWidth = toggleWidth / 2;
     final height = _r(context, 50);
 
@@ -403,46 +397,45 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final double height = _r(context, 55);
 
     BoxDecoration boxDecoration(Color color) => BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(_r(context, 16)),
-          border: Border.all(color: _cardBorder, width: 1.1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: _r(context, 8),
-              offset: Offset(0, _r(context, 6)),
-            ),
-          ],
-        );
+      color: color,
+      borderRadius: BorderRadius.circular(_r(context, 16)),
+      border: Border.all(color: _cardBorder, width: 1.1),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.03),
+          blurRadius: _r(context, 8),
+          offset: Offset(0, _r(context, 6)),
+        ),
+      ],
+    );
 
     InputDecoration inputDecoration(
       String hint,
       IconData icon,
       TextEditingController controller,
       VoidCallback onClear,
-    ) =>
-        InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: _subtitleColor.withOpacity(0.85),
-            fontSize: _r(context, 14),
-          ),
-          prefixIcon: Icon(icon, size: _r(context, 22), color: _titleColor),
-          border: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(vertical: _r(context, 14)),
-          suffixIcon: controller.text.isNotEmpty
-              ? GestureDetector(
-                  onTap: onClear,
-                  child: Icon(
-                    Icons.clear,
-                    size: _r(context, 22),
-                    color: Colors.black54,
-                  ),
-                )
-              : null,
-        );
+    ) => InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(
+        color: _subtitleColor.withOpacity(0.85),
+        fontSize: _r(context, 14),
+      ),
+      prefixIcon: Icon(icon, size: _r(context, 22), color: _titleColor),
+      border: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(vertical: _r(context, 14)),
+      suffixIcon: controller.text.isNotEmpty
+          ? GestureDetector(
+              onTap: onClear,
+              child: Icon(
+                Icons.clear,
+                size: _r(context, 22),
+                color: Colors.black54,
+              ),
+            )
+          : null,
+    );
 
     if (isCash || (!isCash && isProductMode)) {
       return Container(
@@ -584,8 +577,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     color: selected ? AppColors.primary : _cardBg,
                     borderRadius: BorderRadius.circular(chipRadius),
                     border: Border.all(
-                      color:
-                          selected ? Colors.transparent : _cardBorder,
+                      color: selected ? Colors.transparent : _cardBorder,
                       width: 1,
                     ),
                     boxShadow: [
@@ -600,8 +592,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     vm.categoryNames[index],
                     style: TextStyle(
                       color: selected ? Colors.white : _titleColor,
-                      fontWeight:
-                          selected ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                       fontSize: chipFontSize,
                     ),
                   ),
@@ -639,7 +630,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         vm.selectCategory(index);
 
         final screenWidth = MediaQuery.of(context).size.width;
-        final scrollTo = (index * _r(context, 110)) - (screenWidth / 2) + _r(context, 55);
+        final scrollTo =
+            (index * _r(context, 110)) - (screenWidth / 2) + _r(context, 55);
 
         if (_categoryScrollController.hasClients) {
           _categoryScrollController.animateTo(
@@ -730,97 +722,97 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   }
 
   Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
-        margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
-        padding: EdgeInsets.all(_r(context, 12)),
-        decoration: BoxDecoration(
-          color: _cardBg,
-          borderRadius: BorderRadius.circular(_r(context, 16)),
-          border: Border.all(color: _cardBorder.withOpacity(0.75)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: _r(context, 12),
-              offset: Offset(0, _r(context, 8)),
-            ),
-          ],
+    margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
+    padding: EdgeInsets.all(_r(context, 12)),
+    decoration: BoxDecoration(
+      color: _cardBg,
+      borderRadius: BorderRadius.circular(_r(context, 16)),
+      border: Border.all(color: _cardBorder.withOpacity(0.75)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: _r(context, 12),
+          offset: Offset(0, _r(context, 8)),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _productImage(product),
-            SizedBox(width: _r(context, 12)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: _r(context, 16),
-                      color: _titleColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: _r(context, 4)),
-                  Text(
-                    currencyFormatter.format(product.sellingPrice),
-                    style: TextStyle(
-                      fontSize: _r(context, 15),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: _r(context, 2)),
-                  Text(
-                    "Stock: ${product.quantity}",
-                    style: TextStyle(
-                      fontSize: _r(context, 12.5),
-                      color: _subtitleColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+      ],
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _productImage(product),
+        SizedBox(width: _r(context, 12)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                product.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: _r(context, 16),
+                  color: _titleColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            SizedBox(width: _r(context, 8)),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: _isTablet(context) ? _r(context, 130) : _r(context, 110),
-                maxWidth: _isLandscape(context)
-                    ? _r(context, 170)
-                    : (_isTablet(context) ? _r(context, 150) : _r(context, 130)),
+              SizedBox(height: _r(context, 4)),
+              Text(
+                currencyFormatter.format(product.sellingPrice),
+                style: TextStyle(
+                  fontSize: _r(context, 15),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _quantitySelector(product, vm),
-                  SizedBox(height: _r(context, 8)),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      currencyFormatter.format(vm.getSubtotal(product)),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: _r(context, 14.5),
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    "Subtotal",
-                    style: TextStyle(
-                      fontSize: _r(context, 11.5),
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black.withOpacity(0.5),
-                    ),
-                  ),
-                ],
+              SizedBox(height: _r(context, 2)),
+              Text(
+                "Stock: ${product.quantity}",
+                style: TextStyle(
+                  fontSize: _r(context, 12.5),
+                  color: _subtitleColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+        SizedBox(width: _r(context, 8)),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: _isTablet(context) ? _r(context, 130) : _r(context, 110),
+            maxWidth: _isLandscape(context)
+                ? _r(context, 170)
+                : (_isTablet(context) ? _r(context, 150) : _r(context, 130)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _quantitySelector(product, vm),
+              SizedBox(height: _r(context, 8)),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  currencyFormatter.format(vm.getSubtotal(product)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: _r(context, 14.5),
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Text(
+                "Subtotal",
+                style: TextStyle(
+                  fontSize: _r(context, 11.5),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _productImage(ProductModel product) {
     final double size = _isTablet(context)
@@ -831,7 +823,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: Colors.white,
         borderRadius: BorderRadius.circular(_r(context, 10)),
       ),
       child: Icon(
@@ -847,17 +839,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(_r(context, 10)),
-      child: Image.file(
-        File(product.image!),
+      child: Image.asset(
+        product.image!,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).toInt(),
-        cacheHeight: (size * MediaQuery.devicePixelRatioOf(context)).toInt(),
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (wasSynchronouslyLoaded || frame != null) return child;
-          return placeholder;
-        },
         errorBuilder: (context, _, _) => placeholder,
       ),
     );
@@ -911,8 +897,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
-                  contentPadding:
-                      EdgeInsets.symmetric(vertical: _r(context, 8)),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: _r(context, 8),
+                  ),
                 ),
                 onChanged: (value) {
                   vm.setTypedQuantity(product, value);
@@ -997,12 +984,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       return Column(
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: _pagePadding(context).left),
+            padding: EdgeInsets.symmetric(
+              horizontal: _pagePadding(context).left,
+            ),
             child: _selectedUtangInfoCard(vm),
           ),
           SizedBox(height: _r(context, 10)),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: _pagePadding(context).left),
+            padding: EdgeInsets.symmetric(
+              horizontal: _pagePadding(context).left,
+            ),
             child: Column(
               children: [
                 _searchBar(vm),
@@ -1117,7 +1108,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           horizontal: _r(context, 14),
           vertical: _r(context, 12),
         ),
-      decoration: BoxDecoration(
+        decoration: BoxDecoration(
           color: _cardBg,
           borderRadius: BorderRadius.circular(_r(context, 16)),
           border: Border.all(color: _cardBorder, width: 1.1),
@@ -1232,8 +1223,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             child: ElevatedButton(
               onPressed: canCheckout ? () => _showSummary(context, vm) : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    canCheckout ? AppColors.primary : Colors.grey.shade400,
+                backgroundColor: canCheckout
+                    ? AppColors.primary
+                    : Colors.grey.shade400,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(_r(context, 16)),
                 ),
@@ -1439,8 +1431,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           style: OutlinedButton.styleFrom(
                             minimumSize: Size.fromHeight(_r(context, 52)),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(_r(context, 20)),
+                              borderRadius: BorderRadius.circular(
+                                _r(context, 20),
+                              ),
                             ),
                           ),
                           child: Text(
@@ -1532,8 +1525,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content:
-                                      const Text('Sale successfully recorded!'),
+                                  content: const Text(
+                                    'Sale successfully recorded!',
+                                  ),
                                   duration: const Duration(seconds: 2),
                                   backgroundColor: AppColors.success,
                                 ),
@@ -1552,8 +1546,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             minimumSize: Size.fromHeight(_r(context, 52)),
                             backgroundColor: AppColors.primary,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(_r(context, 20)),
+                              borderRadius: BorderRadius.circular(
+                                _r(context, 20),
+                              ),
                             ),
                           ),
                           child: Text(
@@ -1576,4 +1571,3 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 }
-

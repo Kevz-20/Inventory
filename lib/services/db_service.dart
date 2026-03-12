@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import '../core/product_seed.dart';
 import '../models/utang_customer_model.dart';
 
 class DBService {
@@ -21,7 +22,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -187,6 +188,17 @@ class DBService {
 
         if (oldVersion < 11) {
           await addColumnIfMissing('notif_state', 'created_at', 'TEXT');
+        }
+
+        if (oldVersion < 12) {
+          // Add 'Uban Pa' in case it's missing
+          await db.rawInsert(
+            'INSERT OR IGNORE INTO product_category(name, created_at) VALUES(?, ?)',
+            ['Uban Pa', DateTime.now().toIso8601String()],
+          );
+
+          const bool seedProducts = true;
+          if (seedProducts) await _seedProducts(db); // uses the fixed version
         }
       },
 
@@ -618,9 +630,9 @@ class DBService {
     // Insert predefined data
     await _insertDefaultData(db);
 
-    // // for testing
-    // const bool seedProducts = true; // set to false to disable seeding
-    // if (seedProducts) await _seedProducts(db);
+    // for testing
+    const bool seedProducts = true; // set to false to disable seeding
+    if (seedProducts) await _seedProducts(db);
   }
 
   // Seed initial reference data
@@ -699,17 +711,25 @@ class DBService {
   }
 
   // for testing
-  // Future<void> _seedProducts(Database db) async {
-  //   final count = Sqflite.firstIntValue(
-  //     await db.rawQuery('SELECT COUNT(*) FROM product'),
-  //   );
+  Future<void> _seedProducts(Database db) async {
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM product'),
+    );
 
-  //   if (count == 0) {
-  //     for (final product in productSeeds) {
-  //       await db.insert('product', product.toMap());
-  //     }
-  //   }
-  // }
+    if (count == 0) {
+      final cats = await db.query('product_category');
+      final catMap = {
+        for (final c in cats) c['name'] as String: c['id'] as int,
+      };
+
+      for (final product in productSeeds) {
+        final map = product.toMap();
+        map['category_id'] = catMap[product.category]; // resolve name → id
+        map.remove('category'); // remove raw string if present
+        await db.insert('product', map);
+      }
+    }
+  }
 
   Future<void> clearData() async {
     final db = await database;
