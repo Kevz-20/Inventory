@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../models/notification_item.dart';
+import '../../models/utang_customer_model.dart';
 import '../../providers/db_service_provider.dart';
 import '../../providers/notification_provider';
 import '../../providers/unread_notif_count_provider.dart';
@@ -84,8 +85,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     switch (type) {
       case AppNotifType.ownerPayableSoon:
         return Icons.event_available_rounded;
+      case AppNotifType.customerUtangOverdue:
+        return Icons.error_outline_rounded;
       case AppNotifType.customerUtangDueToday:
         return Icons.warning_amber_rounded;
+      case AppNotifType.customerUtangDueSoon:
+        return Icons.schedule_rounded;
       case AppNotifType.lowStock:
         return Icons.inventory_2_rounded;
     }
@@ -95,8 +100,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     switch (type) {
       case AppNotifType.ownerPayableSoon:
         return 'PAYABLE';
+      case AppNotifType.customerUtangOverdue:
+        return 'OVERDUE';
       case AppNotifType.customerUtangDueToday:
         return 'DUE TODAY';
+      case AppNotifType.customerUtangDueSoon:
+        return 'DUE SOON';
       case AppNotifType.lowStock:
         return 'LOW STOCK';
     }
@@ -104,21 +113,112 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   double _badgeOpacity(AppNotifType type) {
     switch (type) {
+      case AppNotifType.customerUtangOverdue:
+        return 0.22;
       case AppNotifType.customerUtangDueToday:
         return 0.18;
-      case AppNotifType.ownerPayableSoon:
+      case AppNotifType.customerUtangDueSoon:
         return 0.14;
+      case AppNotifType.ownerPayableSoon:
+        return 0.12;
       case AppNotifType.lowStock:
         return 0.12;
+    }
+  }
+
+  bool _isCustomerUtangNotif(AppNotifType type) {
+    switch (type) {
+      case AppNotifType.customerUtangOverdue:
+      case AppNotifType.customerUtangDueToday:
+      case AppNotifType.customerUtangDueSoon:
+        return true;
+      case AppNotifType.ownerPayableSoon:
+      case AppNotifType.lowStock:
+        return false;
+    }
+  }
+
+  Future<UtangCustomer?> _loadUtangCustomer(int customerId) async {
+    final db = await ref.read(databaseProvider.future);
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        c.id,
+        c.first_name,
+        c.middle_name,
+        c.last_name,
+        c.municipality,
+        c.barangay,
+        c.phone_number,
+        COALESCE(sc.total_amount, 0) AS total_amount,
+        COALESCE(cp.total_paid, 0) AS total_paid,
+        sc.min_due_date AS due_date
+      FROM customer c
+      LEFT JOIN (
+        SELECT
+          sc.customer_id,
+          SUM(sc.amount) AS total_amount,
+          MIN(sc.due_date) AS min_due_date
+        FROM sales_credit sc
+        LEFT JOIN credit_status cs ON cs.id = sc.status_id
+        WHERE sc.due_date IS NOT NULL
+          AND (cs.name = 'unpaid' OR cs.name = 'partial')
+        GROUP BY sc.customer_id
+      ) sc ON sc.customer_id = c.id
+      LEFT JOIN (
+        SELECT
+          customer_id,
+          SUM(amount) AS total_paid
+        FROM customer_payment
+        GROUP BY customer_id
+      ) cp ON cp.customer_id = c.id
+      WHERE c.id = ?
+      LIMIT 1
+      ''',
+      [customerId],
+    );
+
+    if (rows.isEmpty) return null;
+    return UtangCustomer.fromMap(rows.first);
+  }
+
+  Future<void> _handleNotificationTap(
+    BuildContext context,
+    AppNotificationItem n,
+  ) async {
+    if (n.type == AppNotifType.ownerPayableSoon) {
+      context.push('/owner_utang');
+      return;
+    }
+
+    if (_isCustomerUtangNotif(n.type)) {
+      final customerId = int.tryParse(n.refId ?? '');
+      if (customerId == null) {
+        context.push('/customer_utang');
+        return;
+      }
+
+      final customer = await _loadUtangCustomer(customerId);
+      if (!mounted) return;
+
+      if (customer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Customer not found.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      await context.push('/utang_summary', extra: customer);
+      return;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(notificationsStreamProvider);
-    final width = MediaQuery.of(context).size.width;
-    final isTablet = width >= 700;
-    final maxContentWidth = isTablet ? 780.0 : double.infinity;
 
     // ✅ once it becomes data, mark seen
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
@@ -146,12 +246,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxContentWidth),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Error: $e', textAlign: TextAlign.center),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Error: $e', textAlign: TextAlign.center),
           ),
         ),
         data: (items) {
@@ -160,9 +257,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
           if (sortedItems.isEmpty) {
             return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxContentWidth),
-                child: Padding(
+              child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -203,7 +298,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   ],
                 ),
               ),
-              ),
             );
           }
 
@@ -214,10 +308,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               _didMarkSeen = false; // allow re-mark after refresh
               await _markSeenIfPossible();
             },
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxContentWidth),
-                child: ListView.separated(
+            child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
               itemCount: sortedItems.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -229,6 +320,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   icon: _iconFor(n.type),
                   badgeText: _badgeText(n.type),
                   badgeOpacity: _badgeOpacity(n.type),
+                  badgeColor: n.type == AppNotifType.customerUtangOverdue
+                      ? Colors.red.shade700
+                      : null,
                   title: n.title,
                   message: n.message,
                   createdAtText:
@@ -237,19 +331,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       ? null
                       : _formatDueText(n.dueDate),
                   onTap: () {
-                    // Navigate specifically for Owner Payables
-                    if (n.type == AppNotifType.ownerPayableSoon) {
-                      context.push('/owner_utang');
-                    } 
-                    // You can add other navigation logic here for different types
-                    else if (n.type == AppNotifType.customerUtangDueToday) {
-                      context.push('/customer_utang');
-                    }
+                    _handleNotificationTap(context, n);
                   },
                 );
               },
-            ),
-              ),
             ),
           );
         },

@@ -1,6 +1,8 @@
 enum AppNotifType {
   ownerPayableSoon,
+  customerUtangOverdue,
   customerUtangDueToday,
+  customerUtangDueSoon,
   lowStock,
 }
 

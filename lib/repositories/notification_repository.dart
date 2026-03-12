@@ -8,7 +8,6 @@ class NotificationRepository {
   Future<List<AppNotificationItem>> buildNotifications() async {
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
     final threeDaysFromNow = todayStart.add(const Duration(days: 3));
 
     final items = <AppNotificationItem>[];
@@ -25,7 +24,7 @@ class NotificationRepository {
         p.remaining_amount,
         p.plan_monthly,
         p.plan_months, -- Total months in plan
-        COALESCE(p.plan_monthly, p.remaining_amount) AS current_due_amount, 
+        COALESCE(p.plan_monthly, p.remaining_amount) AS current_due_amount,
         COALESCE(p.next_due_date, p.due_date) AS due,
         -- Count existing payments for this payable to determine current installment number
         (SELECT COUNT(*) FROM payable_payment WHERE payable_id = p.id) AS payments_made
@@ -45,16 +44,14 @@ class NotificationRepository {
       final supplier = (row['supplier_name'] ?? 'Supplier').toString();
       final itemName = (row['item'] ?? 'Item').toString();
       final amountDue = (row['current_due_amount'] as num?)?.toDouble() ?? 0.0;
-      
-      // Installment Logic
+
       final totalMonths = row['plan_months'] as int?;
       final paymentsMade = row['payments_made'] as int? ?? 0;
-      String installmentLabel = "";
+      var installmentLabel = '';
 
       if (totalMonths != null && totalMonths > 0) {
-        // Current installment is payments made + 1
-        int currentInstallment = paymentsMade + 1;
-        installmentLabel = " ($currentInstallment/$totalMonths)";
+        final currentInstallment = paymentsMade + 1;
+        installmentLabel = ' ($currentInstallment/$totalMonths)';
       }
 
       final dueStr = row['due']?.toString();
@@ -67,8 +64,8 @@ class NotificationRepository {
           id: 'owner_$id',
           type: AppNotifType.ownerPayableSoon,
           title: 'Owner payable',
-          // Keep only key details here; due date is displayed separately in UI.
-          message: '${supplier.toLowerCase() == 'owner' ? itemName : '$supplier • $itemName'}$installmentLabel • ₱${amountDue.toStringAsFixed(2)}',
+          message:
+              '${supplier.toLowerCase() == 'owner' ? itemName : '$supplier \u2022 $itemName'}$installmentLabel \u2022 \u20B1${amountDue.toStringAsFixed(2)}',
           createdAt: now,
           dueDate: due,
           refId: id,
@@ -77,56 +74,79 @@ class NotificationRepository {
     }
 
     // -------------------------
-    // 2) CUSTOMER UTANG due today
+    // 2) CUSTOMER UTANG (overdue / today / due soon)
     // -------------------------
-    final customerDueToday = await db.rawQuery('''
+    final customerUtang = await db.rawQuery('''
       SELECT
-        sc.customer_id,
-        SUM(sc.amount) AS total_amount,
-        sc.due_date,
+        c.id AS customer_id,
         c.first_name,
         c.middle_name,
-        c.last_name
-      FROM sales_credit sc
-      LEFT JOIN credit_status cs ON cs.id = sc.status_id
-      LEFT JOIN customer c ON c.id = sc.customer_id
-      WHERE sc.due_date >= ?
-        AND sc.due_date < ?
-        AND (cs.name = 'unpaid' OR cs.name = 'partial')
-      GROUP BY
-        sc.customer_id,
-        sc.due_date,
-        c.first_name,
-        c.middle_name,
-        c.last_name
-      ORDER BY sc.due_date ASC
+        c.last_name,
+        MAX(0, COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) AS total_balance,
+        sc.min_due_date AS due_date
+      FROM customer c
+      LEFT JOIN (
+        SELECT
+          sc.customer_id,
+          SUM(sc.amount) AS total_amount,
+          MIN(sc.due_date) AS min_due_date
+        FROM sales_credit sc
+        LEFT JOIN credit_status cs ON cs.id = sc.status_id
+        WHERE sc.due_date IS NOT NULL
+          AND (cs.name = 'unpaid' OR cs.name = 'partial')
+        GROUP BY sc.customer_id
+      ) sc ON sc.customer_id = c.id
+      LEFT JOIN (
+        SELECT
+          customer_id,
+          SUM(amount) AS total_paid
+        FROM customer_payment
+        GROUP BY customer_id
+      ) cp ON cp.customer_id = c.id
+      WHERE sc.min_due_date IS NOT NULL
+        AND sc.min_due_date <= ?
+        AND (COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) > 0
+      ORDER BY sc.min_due_date ASC
+      LIMIT 100
     ''', [
-      todayStart.toIso8601String(),
-      todayEnd.toIso8601String(),
+      threeDaysFromNow.toIso8601String(),
     ]);
 
-    for (final row in customerDueToday) {
-      final customerId = (row['customer_id'] as num?)?.toInt() ?? 0;
-      final amount = (row['total_amount'] as num?)?.toDouble() ?? 0.0;
+    for (final row in customerUtang) {
+      final customerIdRaw = row['customer_id'];
+      if (customerIdRaw == null) continue;
+      final customerId = (customerIdRaw as num).toInt();
+
+      final dueStr = row['due_date']?.toString();
+      if (dueStr == null) continue;
+      final due = DateTime.tryParse(dueStr);
+      if (due == null) continue;
+
+      final balance = (row['total_balance'] as num?)?.toDouble() ?? 0.0;
 
       final first = (row['first_name'] ?? '').toString().trim();
       final mid = (row['middle_name'] ?? '').toString().trim();
       final last = (row['last_name'] ?? '').toString().trim();
       final fullName = [first, mid, last].where((e) => e.isNotEmpty).join(' ');
       final name = fullName.isEmpty ? 'Customer' : fullName;
-      final dueRaw = row['due_date']?.toString();
-      final dueDate = dueRaw == null ? todayStart : (DateTime.tryParse(dueRaw) ?? todayStart);
-      final dueKey =
-          '${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}-${dueDate.day.toString().padLeft(2, '0')}';
+
+      final dueOnly = DateTime(due.year, due.month, due.day);
+      final days = dueOnly.difference(todayStart).inDays;
+
+      final AppNotifType type = days < 0
+          ? AppNotifType.customerUtangOverdue
+          : days == 0
+              ? AppNotifType.customerUtangDueToday
+              : AppNotifType.customerUtangDueSoon;
 
       items.add(
         AppNotificationItem(
-          id: 'cust_${customerId}_$dueKey',
-          type: AppNotifType.customerUtangDueToday,
+          id: 'cust_$customerId',
+          type: type,
           title: 'Customer utang',
-          message: '$name • ₱${amount.toStringAsFixed(2)}',
+          message: '$name \u2022 \u20B1${balance.toStringAsFixed(2)}',
           createdAt: now,
-          dueDate: dueDate,
+          dueDate: due,
           refId: customerId.toString(),
         ),
       );
@@ -141,8 +161,6 @@ class NotificationRepository {
       orderBy: 'quantity ASC',
     );
 
-    // When stock recovers above threshold, clear old seen-state so the same
-    // product can trigger a new unread alert if it becomes low-stock again.
     final recoveredNotifIds = <String>[];
     for (final row in allProducts) {
       final productId = row['id'];
@@ -175,20 +193,16 @@ class NotificationRepository {
           id: 'stock_$id',
           type: AppNotifType.lowStock,
           title: 'Low stock',
-          message: '$name • $qty pcs left',
+          message: '$name \u2022 $qty pcs left',
           createdAt: now,
           refId: id,
         ),
       );
     }
 
-    // Keep notif_state aligned with currently active notifications.
     await _removeResolvedNotifState(items.map((e) => e.id).toList());
-
-    // Ensure notif_state has a stable created_at per notification and apply it.
     await _applyStableCreatedAt(items, now);
 
-    // Sort: dueDate first
     items.sort((a, b) {
       final ad = a.dueDate?.millisecondsSinceEpoch ?? 9999999999999;
       final bd = b.dueDate?.millisecondsSinceEpoch ?? 9999999999999;

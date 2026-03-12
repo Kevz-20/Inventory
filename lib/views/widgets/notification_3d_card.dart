@@ -14,6 +14,7 @@ class Notification3DCard extends StatelessWidget {
   final IconData icon;
   final String badgeText;
   final double badgeOpacity;
+  final Color? badgeColor;
   final String title;
   final String message;
   final String createdAtText;
@@ -25,6 +26,7 @@ class Notification3DCard extends StatelessWidget {
     required this.icon,
     required this.badgeText,
     required this.badgeOpacity,
+    this.badgeColor,
     required this.title,
     required this.message,
     required this.createdAtText,
@@ -35,6 +37,7 @@ class Notification3DCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(20);
+    final effectiveBadgeColor = badgeColor ?? AppColors.primary;
 
     return Material(
       color: Colors.transparent,
@@ -109,10 +112,10 @@ class Notification3DCard extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(badgeOpacity),
+                            color: effectiveBadgeColor.withOpacity(badgeOpacity),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: AppColors.primary.withOpacity(0.18),
+                              color: effectiveBadgeColor.withOpacity(0.18),
                             ),
                           ),
                           child: Text(
@@ -120,7 +123,7 @@ class Notification3DCard extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 11.2,
-                              color: AppColors.primary,
+                              color: effectiveBadgeColor,
                               letterSpacing: 0.3,
                             ),
                           ),
