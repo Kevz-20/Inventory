@@ -1,5 +1,7 @@
 ﻿// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +18,16 @@ class RecordSalesScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<RecordSalesScreen> createState() => _RecordSalesScreenState();
+}
+
+class _ProductImageRef {
+  const _ProductImageRef({
+    required this.path,
+    required this.isFile,
+  });
+
+  final String path;
+  final bool isFile;
 }
 
 final currencyFormatter = NumberFormat.currency(
@@ -833,20 +845,76 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       ),
     );
 
-    if (product.image == null || product.image!.isEmpty) {
+    final imageRef = _resolveProductImageRef(product);
+    if (imageRef == null) {
       return placeholder;
+    }
+
+    if (imageRef.isFile) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(_r(context, 10)),
+        child: Image.file(
+          File(imageRef.path),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, _, _) => placeholder,
+        ),
+      );
     }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(_r(context, 10)),
       child: Image.asset(
-        product.image!,
+        imageRef.path,
         width: size,
         height: size,
         fit: BoxFit.cover,
         errorBuilder: (context, _, _) => placeholder,
       ),
     );
+  }
+
+  _ProductImageRef? _resolveProductImageRef(ProductModel product) {
+    final raw = product.image?.trim();
+    if (raw == null || raw.isEmpty) return null;
+
+    if (raw.startsWith('file://')) {
+      final filePath = raw.replaceFirst('file://', '');
+      if (filePath.isNotEmpty) {
+        return _ProductImageRef(path: filePath, isFile: true);
+      }
+    }
+
+    if (_looksLikeFilePath(raw)) {
+      return _ProductImageRef(path: raw, isFile: true);
+    }
+
+    if (raw.startsWith('lib/assets/')) {
+      return _ProductImageRef(path: raw, isFile: false);
+    }
+
+    final normalized = raw.replaceAll('\\', '/');
+    const marker = 'product_images/';
+    final markerIndex = normalized.lastIndexOf(marker);
+    if (markerIndex >= 0) {
+      final fileName = normalized.substring(markerIndex + marker.length);
+      if (fileName.isNotEmpty) {
+        return _ProductImageRef(
+          path: 'lib/assets/product_images/$fileName',
+          isFile: false,
+        );
+      }
+    }
+
+    return null;
+  }
+
+  bool _looksLikeFilePath(String path) {
+    final normalized = path.replaceAll('\\', '/');
+    return normalized.startsWith('/') ||
+        normalized.startsWith('file:/') ||
+        RegExp(r'^[A-Za-z]:/').hasMatch(normalized);
   }
 
   Widget _quantitySelector(ProductModel product, SalesViewModel vm) {

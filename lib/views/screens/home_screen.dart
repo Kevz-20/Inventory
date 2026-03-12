@@ -561,6 +561,35 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     return '$sign$peso${abs.toStringAsFixed(0)}';
   }
 
+  double _leftAxisReservedSize(
+    BuildContext context, {
+    required List<double> axisValues,
+    required double fontSize,
+  }) {
+    final textDirection = Directionality.of(context);
+    double widest = 0;
+
+    for (final value in axisValues) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: _pesoShort(value),
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        maxLines: 1,
+        textDirection: textDirection,
+      )..layout();
+
+      if (painter.width > widest) {
+        widest = painter.width;
+      }
+    }
+
+    return widest + _r(context, 10);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = _isTablet(context);
@@ -810,6 +839,25 @@ class _SalesOnlyGraphCard extends StatelessWidget {
     final high = maxY + (pad == 0 ? 10 : pad);
 
     final horizontalInterval = ((high - low) / 3).clamp(1.0, double.infinity);
+    final yAxisValues = <double>[
+      low,
+      low + horizontalInterval,
+      low + (horizontalInterval * 2),
+      high,
+    ];
+    final leftTitleFontSize = isTablet
+        ? 11.0
+        : isShortScreen
+        ? 9.5
+        : 10.5;
+    final leftReservedSize = _leftAxisReservedSize(
+      context,
+      axisValues: yAxisValues,
+      fontSize: leftTitleFontSize,
+    ).clamp(
+      isTablet ? 52.0 : 46.0,
+      isTablet ? 88.0 : 76.0,
+    );
 
     return LineChart(
       LineChartData(
@@ -829,23 +877,23 @@ class _SalesOnlyGraphCard extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: isTablet
-                  ? (isLandscape ? 46 : 44)
-                  : (isShortScreen ? 34 : 40),
+              reservedSize: leftReservedSize,
               interval: horizontalInterval,
               getTitlesWidget: (value, meta) {
                 return Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Text(
-                    _pesoShort(value),
-                    style: TextStyle(
-                      fontSize: isTablet
-                          ? 11
-                          : isShortScreen
-                          ? 9.5
-                          : 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black.withOpacity(0.35),
+                  padding: EdgeInsets.only(right: _r(context, 4)),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _pesoShort(value),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.visible,
+                      style: TextStyle(
+                        fontSize: leftTitleFontSize,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.35),
+                      ),
                     ),
                   ),
                 );
