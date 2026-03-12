@@ -731,6 +731,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         height: _r(context, 54),
         padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
         alignment: Alignment.center,
+        clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
           border: showRightBorder
               ? Border(
@@ -747,15 +748,13 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
   Widget _buildItemCell(String text) {
     final forceAnimate = _hasTenOrMoreLetters(text);
-    return ClipRect(
-      child: _MarqueeText(
-        text: text,
-        textAlign: TextAlign.center,
-        forceAnimate: forceAnimate,
-        style: const TextStyle(
-          color: Color(0xFF143D34),
-          fontWeight: FontWeight.w700,
-        ),
+    return _MarqueeText(
+      text: text,
+      textAlign: TextAlign.center,
+      forceAnimate: forceAnimate,
+      style: const TextStyle(
+        color: Color(0xFF143D34),
+        fontWeight: FontWeight.w700,
       ),
     );
   }
@@ -853,6 +852,10 @@ class _MarqueeTextState extends State<_MarqueeText>
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
+        if (maxWidth <= 0 || !maxWidth.isFinite) {
+          return const SizedBox.shrink();
+        }
+
         final tp = TextPainter(
           text: TextSpan(text: widget.text, style: widget.style),
           maxLines: 1,
@@ -860,13 +863,18 @@ class _MarqueeTextState extends State<_MarqueeText>
         )..layout();
 
         final textWidth = tp.width;
-        if (!widget.forceAnimate && textWidth <= maxWidth) {
-          return Text(
-            widget.text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: widget.textAlign,
-            style: widget.style,
+        final shouldAnimate = widget.forceAnimate && textWidth > maxWidth;
+
+        if (!shouldAnimate) {
+          return SizedBox(
+            width: maxWidth,
+            child: Text(
+              widget.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: widget.textAlign,
+              style: widget.style,
+            ),
           );
         }
 
