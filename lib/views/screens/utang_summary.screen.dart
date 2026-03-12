@@ -841,7 +841,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     ),
                                   ),
                                   child: Text(
-                                    "Add Credit",
+                                    "Add Credit Limit",
                                     style: TextStyle(
                                       fontSize: (14 * scale).clamp(13, 16),
                                       fontWeight: FontWeight.w700,

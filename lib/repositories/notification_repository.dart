@@ -81,10 +81,9 @@ class NotificationRepository {
     // -------------------------
     final customerDueToday = await db.rawQuery('''
       SELECT
-        sc.id AS sales_credit_id,
-        sc.amount,
+        sc.customer_id,
+        SUM(sc.amount) AS total_amount,
         sc.due_date,
-        cs.name AS status_name,
         c.first_name,
         c.middle_name,
         c.last_name
@@ -94,6 +93,12 @@ class NotificationRepository {
       WHERE sc.due_date >= ?
         AND sc.due_date < ?
         AND (cs.name = 'unpaid' OR cs.name = 'partial')
+      GROUP BY
+        sc.customer_id,
+        sc.due_date,
+        c.first_name,
+        c.middle_name,
+        c.last_name
       ORDER BY sc.due_date ASC
     ''', [
       todayStart.toIso8601String(),
@@ -101,24 +106,28 @@ class NotificationRepository {
     ]);
 
     for (final row in customerDueToday) {
-      final id = row['sales_credit_id'].toString();
-      final amount = (row['amount'] as num?)?.toDouble() ?? 0.0;
+      final customerId = (row['customer_id'] as num?)?.toInt() ?? 0;
+      final amount = (row['total_amount'] as num?)?.toDouble() ?? 0.0;
 
       final first = (row['first_name'] ?? '').toString().trim();
       final mid = (row['middle_name'] ?? '').toString().trim();
       final last = (row['last_name'] ?? '').toString().trim();
       final fullName = [first, mid, last].where((e) => e.isNotEmpty).join(' ');
       final name = fullName.isEmpty ? 'Customer' : fullName;
+      final dueRaw = row['due_date']?.toString();
+      final dueDate = dueRaw == null ? todayStart : (DateTime.tryParse(dueRaw) ?? todayStart);
+      final dueKey =
+          '${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}-${dueDate.day.toString().padLeft(2, '0')}';
 
       items.add(
         AppNotificationItem(
-          id: 'cust_$id',
+          id: 'cust_${customerId}_$dueKey',
           type: AppNotifType.customerUtangDueToday,
           title: 'Customer utang',
           message: '$name • ₱${amount.toStringAsFixed(2)}',
           createdAt: now,
-          dueDate: todayStart,
-          refId: id,
+          dueDate: dueDate,
+          refId: customerId.toString(),
         ),
       );
     }

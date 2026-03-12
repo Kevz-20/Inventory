@@ -19,6 +19,7 @@ class CashFlowScreen extends ConsumerStatefulWidget {
 class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   bool _loading = true;
   final ScrollController _listController = ScrollController();
+  final ScrollController _horizontalController = ScrollController();
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   @override
   void dispose() {
     _listController.dispose();
+    _horizontalController.dispose();
     super.dispose();
   }
 
@@ -55,39 +57,61 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     return formatter.format(value);
   }
 
+  Size _screenSize(BuildContext context) => MediaQuery.of(context).size;
+
+  double _screenWidth(BuildContext context) => _screenSize(context).width;
+
+  bool _isTablet(BuildContext context) => _screenWidth(context) >= 700;
+
+  double _responsiveScale(BuildContext context) {
+    final width = _screenWidth(context);
+    if (width < 360) return 0.88;
+    if (width < 400) return 0.94;
+    if (width < 700) return 1.00;
+    if (width < 1000) return 1.10;
+    return 1.18;
+  }
+
+  double _r(BuildContext context, double value) {
+    final scaled = value * _responsiveScale(context);
+    final min = value * 0.82;
+    final max = value * 1.28;
+    return scaled.clamp(min, max);
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(cashflowViewModelProvider);
     final records = vm.filteredRecords;
+    final isTablet = _isTablet(context);
+    final maxContentWidth = isTablet ? 980.0 : double.infinity;
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: const AppHeader(title: 'Cash Flow', showBackButton: true),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : records.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No cashflow records yet',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : Scrollbar(
-                    controller: _listController,
-                    thumbVisibility: true,
-                    child: ListView.builder(
-                      controller: _listController,
-                      itemCount: records.length,
-                      itemBuilder: (_, i) => _buildRow(records[i]),
-                    ),
-                  ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxContentWidth),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              _r(context, 16),
+              _r(context, 12),
+              _r(context, 16),
+              _r(context, 16),
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : records.isEmpty
+                      ? _buildEmptyState(context)
+                      : _buildCashflowTable(context, records),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -471,65 +495,179 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   // TABLE HEADER + ROW (Date column removed)
   // ============================================================
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(_r(context, 20)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(_r(context, 18)),
+          border: Border.all(color: const Color(0xFFD5E7E1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: _r(context, 54),
+              height: _r(context, 54),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withAlpha(90)),
+                color: AppColors.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(_r(context, 16)),
               ),
-              child: Row(
-                children: const [
-                  _HeaderCell(
-                    'Item',
-                    flex: 4,
-                    align: TextAlign.center,
-                    color: Colors.white,
-                    showRightBorder: true,
-                  ),
-                  _HeaderCell(
-                    'In',
-                    flex: 3,
-                    align: TextAlign.center,
-                    color: Colors.green,
-                    showRightBorder: true,
-                  ),
-                  _HeaderCell(
-                    'Out',
-                    flex: 3,
-                    align: TextAlign.center,
-                    color: Colors.red,
-                    showRightBorder: true,
-                  ),
-                  _HeaderCell(
-                    'Balance',
-                    flex: 3,
-                    align: TextAlign.center,
-                    color: Colors.white,
-                  ),
-                ],
+              child: Icon(
+                Icons.bar_chart_rounded,
+                color: AppColors.primary,
+                size: _r(context, 28),
               ),
             ),
+            SizedBox(height: _r(context, 12)),
+            Text(
+              'No cashflow records yet',
+              style: TextStyle(
+                fontSize: _r(context, 16),
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF143D34),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: _r(context, 4)),
+            Text(
+              'Transactions will appear here once cash movement is recorded.',
+              style: TextStyle(
+                fontSize: _r(context, 12.5),
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF6A8580),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCashflowTable(
+    BuildContext context,
+    List<CashflowRecord> records,
+  ) {
+    final minTableWidth = _isTablet(context) ? 0.0 : 620.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(_r(context, 18)),
+            border: Border.all(color: const Color(0xFFD5E7E1)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0C4B3E).withOpacity(0.05),
+                blurRadius: _r(context, 14),
+                offset: Offset(0, _r(context, 8)),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_r(context, 18)),
+            child: Scrollbar(
+              controller: _horizontalController,
+              thumbVisibility: true,
+              notificationPredicate: (notification) => notification.depth == 1,
+              child: SingleChildScrollView(
+                controller: _horizontalController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: constraints.maxWidth < minTableWidth
+                      ? minTableWidth
+                      : constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: Column(
+                    children: [
+                      _buildHeader(context),
+                      Expanded(
+                        child: Scrollbar(
+                          controller: _listController,
+                          thumbVisibility: true,
+                          child: ListView.builder(
+                            controller: _listController,
+                            itemCount: records.length,
+                            itemBuilder: (_, i) =>
+                                _buildRow(context, records[i], i),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.headerTop, AppColors.headerBottom],
+        ),
+      ),
+      child: Row(
+        children: [
+          _HeaderCell(
+            'Item',
+            flex: 4,
+            align: TextAlign.center,
+            color: Colors.white,
+            showRightBorder: true,
+            height: _r(context, 48),
+            fontSize: _r(context, 13),
+          ),
+          _HeaderCell(
+            'In',
+            flex: 3,
+            align: TextAlign.center,
+            color: const Color(0xFF86F0A5),
+            showRightBorder: true,
+            height: _r(context, 48),
+            fontSize: _r(context, 13),
+          ),
+          _HeaderCell(
+            'Out',
+            flex: 3,
+            align: TextAlign.center,
+            color: const Color(0xFFFF9A94),
+            showRightBorder: true,
+            height: _r(context, 48),
+            fontSize: _r(context, 13),
+          ),
+          _HeaderCell(
+            'Balance',
+            flex: 3,
+            align: TextAlign.center,
+            color: Colors.white,
+            height: _r(context, 48),
+            fontSize: _r(context, 13),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRow(CashflowRecord r) {
+  Widget _buildRow(BuildContext context, CashflowRecord r, int index) {
     r.item.toLowerCase().contains('downpayment');
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: index.isEven ? const Color(0xFFFCFEFD) : const Color(0xFFF5FAF8),
         border: Border(
-          left: BorderSide(color: Colors.grey.withAlpha(90)),
-          right: BorderSide(color: Colors.grey.withAlpha(90)),
-          bottom: BorderSide(color: Colors.grey.withAlpha(90)),
+          bottom: BorderSide(color: const Color(0xFFD6E6E0).withOpacity(0.9)),
         ),
       ),
       child: InkWell(
@@ -539,11 +677,13 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         child: Row(
           children: [
             _buildTableRowCell(
+              context: context,
               flex: 4,
               showRightBorder: true,
               child: _buildItemCell(r.item),
             ),
             _buildTableRowCell(
+              context: context,
               flex: 3,
               showRightBorder: true,
               child: _buildAmountCell(
@@ -554,6 +694,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               ),
             ),
             _buildTableRowCell(
+              context: context,
               flex: 3,
               showRightBorder: true,
               child: _buildAmountCell(
@@ -564,6 +705,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               ),
             ),
             _buildTableRowCell(
+              context: context,
               flex: 3,
               child: _buildAmountCell(
                 _formatCurrency(r.balance),
@@ -578,6 +720,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   }
 
   Widget _buildTableRowCell({
+    required BuildContext context,
     required int flex,
     required Widget child,
     bool showRightBorder = false,
@@ -585,12 +728,16 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     return Expanded(
       flex: flex,
       child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        height: _r(context, 54),
+        padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           border: showRightBorder
-              ? Border(right: BorderSide(color: Colors.grey.withAlpha(90)))
+              ? Border(
+                  right: BorderSide(
+                    color: const Color(0xFFD6E6E0).withOpacity(0.9),
+                  ),
+                )
               : null,
         ),
         child: child,
@@ -606,8 +753,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         textAlign: TextAlign.center,
         forceAnimate: forceAnimate,
         style: const TextStyle(
-          color: Colors.black87,
-          fontWeight: FontWeight.w600,
+          color: Color(0xFF143D34),
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -781,6 +928,8 @@ class _HeaderCell extends StatelessWidget {
   final TextAlign align;
   final Color color;
   final bool showRightBorder;
+  final double height;
+  final double fontSize;
 
   const _HeaderCell(
     this.text, {
@@ -788,6 +937,8 @@ class _HeaderCell extends StatelessWidget {
     this.align = TextAlign.center,
     this.color = Colors.white,
     this.showRightBorder = false,
+    this.height = 42,
+    this.fontSize = 14,
   });
 
   @override
@@ -795,10 +946,9 @@ class _HeaderCell extends StatelessWidget {
     return Expanded(
       flex: flex,
       child: Container(
-        height: 42,
+        height: height,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.primary,
           border: showRightBorder
               ? Border(right: BorderSide(color: Colors.grey.withAlpha(90)))
               : null,
@@ -811,7 +961,7 @@ class _HeaderCell extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.bold,
-            fontSize: 14,
+            fontSize: fontSize,
           ),
         ),
       ),

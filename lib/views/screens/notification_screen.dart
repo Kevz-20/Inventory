@@ -116,6 +116,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(notificationsStreamProvider);
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width >= 700;
+    final maxContentWidth = isTablet ? 780.0 : double.infinity;
 
     // ✅ once it becomes data, mark seen
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
@@ -143,9 +146,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('Error: $e', textAlign: TextAlign.center),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error: $e', textAlign: TextAlign.center),
+            ),
           ),
         ),
         data: (items) {
@@ -154,7 +160,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
           if (sortedItems.isEmpty) {
             return Center(
-              child: Padding(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -195,6 +203,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   ],
                 ),
               ),
+              ),
             );
           }
 
@@ -205,7 +214,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               _didMarkSeen = false; // allow re-mark after refresh
               await _markSeenIfPossible();
             },
-            child: ListView.separated(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
               itemCount: sortedItems.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -236,6 +248,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   },
                 );
               },
+            ),
+              ),
             ),
           );
         },

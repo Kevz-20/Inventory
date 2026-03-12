@@ -649,7 +649,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          "Add New Category",
+                          "Pagdugang ug Bag-ong Kategorya",
                           style: TextStyle(
                             fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
@@ -685,7 +685,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         decoration: InputDecoration(
                           counterText: "",
                           prefixIcon: const Icon(Icons.category_rounded),
-                          labelText: "Category name",
+                          labelText: "Ngalan sa Kategorya",
                           hintText: "e.g. Frozen Foods",
                           filled: true,
                           fillColor: _fieldBg,

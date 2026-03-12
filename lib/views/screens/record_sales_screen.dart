@@ -527,7 +527,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   ),
                 ],
               ),
-              child: Icon(Icons.add, color: Colors.white, size: _r(context, 24)),
+              child: Icon(
+                Icons.person_add_alt_1,
+                color: Colors.white,
+                size: _r(context, 22),
+              ),
             ),
           ),
         ],
@@ -1346,7 +1350,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   ),
                                 ),
                                 subtitle: Text(
-                                  '${currencyFormatter.format(product.sellingPrice)} Ã— $qty',
+                                    '${currencyFormatter.format(product.sellingPrice)} x $qty',
                                   style: TextStyle(
                                     fontSize: _r(context, 13.5),
                                     fontWeight: FontWeight.w700,

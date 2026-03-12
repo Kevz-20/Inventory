@@ -463,6 +463,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 DateTime.now();
         final nextDue = addMonths(baseDate, 1);
         updateMap['next_due_date'] = DateFormat('yyyy-MM-dd').format(nextDue);
+      } else if (item.isInstallment) {
+        updateMap['next_due_date'] = null;
       }
 
       await db.update(
@@ -673,7 +675,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                           color: _subtitleColor,
                                         ),
                                       ),
-                                    if (displayNextDue != null)
+                                    if (!isFullyPaid && displayNextDue != null)
                                       Padding(
                                         padding: EdgeInsets.only(top: (4 * s).clamp(3.0, 6.0)),
                                         child: Text(
@@ -1145,10 +1147,6 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
       else if (daysLeft <= 7) status = "Due Soon";
     }
 
-    final dueText = (due != null)
-        ? DateFormat('MMM dd, yyyy').format(due)
-        : "No due date";
-
     final double monthly = item.isInstallment ? (item.planMonthly ?? 0.0) : 0.0;
 
     final pad14 = (14 * s).clamp(12.0, 18.0);
@@ -1221,30 +1219,39 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
               ],
             ),
             SizedBox(height: (10 * s).clamp(8.0, 12.0)),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_month_rounded,
-                  size: (18 * s).clamp(16.0, 20.0),
-                  color: _subtitleColor,
-                ),
-                SizedBox(width: (8 * s).clamp(6.0, 10.0)),
-                Expanded(
-                  child: Text(
-                    "Next Due: $dueText",
-                    style: TextStyle(
-                      fontSize: (13 * s).clamp(12.0, 14.5),
-                      fontWeight: FontWeight.w700,
-                      color: _subtitleColor,
+            if (!isFullyPaid && due != null)
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_month_rounded,
+                    size: (18 * s).clamp(16.0, 20.0),
+                    color: _subtitleColor,
+                  ),
+                  SizedBox(width: (8 * s).clamp(6.0, 10.0)),
+                  Expanded(
+                    child: Text(
+                      "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}",
+                      style: TextStyle(
+                        fontSize: (13 * s).clamp(12.0, 14.5),
+                        fontWeight: FontWeight.w700,
+                        color: _subtitleColor,
+                      ),
                     ),
                   ),
-                ),
-                Icon(
+                  Icon(
+                    Icons.chevron_right,
+                    color: _subtitleColor.withOpacity(0.7),
+                  ),
+                ],
+              )
+            else
+              Align(
+                alignment: Alignment.centerRight,
+                child: Icon(
                   Icons.chevron_right,
                   color: _subtitleColor.withOpacity(0.7),
                 ),
-              ],
-            ),
+              ),
           ],
         ),
       ),

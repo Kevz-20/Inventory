@@ -9,20 +9,12 @@ import 'app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final view = WidgetsBinding.instance.platformDispatcher.views.first;
-  final deviceWidth = view.physicalSize.width / view.devicePixelRatio;
-
-  if (deviceWidth < 600) {
-    // Phone: portrait only
-    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  } else {
-    // Tablet: portrait + landscape
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-  }
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
 
   await DBService.instance.database;
   runApp(const ProviderScope(child: MyApp()));

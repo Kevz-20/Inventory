@@ -273,7 +273,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
               Expanded(
                 child: _actionTile(
                   title: "CAPITAL",
-                  subtitle: "Add / Withdraw",
+                  subtitle: "Add",
                   icon: Icons.savings_outlined,
                   onTap: () => context.push('/capital_management'),
                 ),

@@ -662,7 +662,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          "Add New Category",
+                          "Pagdugang ug Bag-ong Kategorya",
                           style: TextStyle(
                             fontSize: (16 * s).clamp(14, 18),
                             fontWeight: FontWeight.w900,
@@ -698,7 +698,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         decoration: InputDecoration(
                           counterText: "",
                           prefixIcon: const Icon(Icons.category_rounded),
-                          labelText: "Category name",
+                          labelText: "Ngalan sa Kategorya",
                           hintText: "e.g. Uban pa",
                           filled: true,
                           fillColor: _cardBgAlt,

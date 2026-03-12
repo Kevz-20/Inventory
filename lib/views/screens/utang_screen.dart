@@ -562,6 +562,8 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
             DateTime.now();
         final nextDue = addMonths(baseDate, 1);
         updateMap['next_due_date'] = DateFormat('yyyy-MM-dd').format(nextDue);
+      } else if (item.isInstallment) {
+        updateMap['next_due_date'] = null;
       }
 
       await db.update(
@@ -764,7 +766,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
                                       color: Colors.black54,
                                     ),
                                   ),
-                                if (displayNextDue != null)
+                                if (!isFullyPaid && displayNextDue != null)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
                                     child: Text(
@@ -1356,7 +1358,7 @@ class _UtangScreenState extends State<UtangScreen> with WidgetsBindingObserver {
     String status = isFullyPaid ? "Paid" : "";
     final nextDateStr = item.isInstallment ? item.nextDueDate : item.dueDate;
 
-    if (nextDateStr != null) {
+    if (!isFullyPaid && nextDateStr != null) {
       final due = DateTime.tryParse(nextDateStr);
       if (due != null) {
         nextDueDisplay = "Next Due: ${DateFormat('MMM dd, yyyy').format(due)}";
