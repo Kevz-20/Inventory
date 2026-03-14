@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,14 +40,23 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  Timer? _backgroundSyncTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (SupabaseService.isConfigured) {
+      _backgroundSyncTimer = Timer.periodic(
+        const Duration(minutes: 2),
+        (_) => SyncService.instance.triggerBackgroundSync(),
+      );
+    }
   }
 
   @override
   void dispose() {
+    _backgroundSyncTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

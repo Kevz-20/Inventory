@@ -10,8 +10,6 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../providers/app_session_provider.dart';
-import '../../providers/sync_provider.dart';
-import '../../services/sync_service.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/nav_bar.dart';
 import '../../app_router.dart';
@@ -26,28 +24,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
-  Future<void> _runManualSync() async {
-    await ref.read(syncControllerProvider.notifier).syncNow();
-    if (!mounted) return;
-
-    final controllerState = ref.read(syncControllerProvider);
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-
-    controllerState.whenOrNull(
-      data: (_) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Sync completed.')),
-        );
-      },
-      error: (error, _) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('Sync failed: $error')),
-        );
-      },
-    );
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -111,9 +87,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
     final appSession = ref.watch(currentAppSessionProvider);
-    final syncSummary = ref.watch(syncQueueSummaryProvider);
-    final auditLogs = ref.watch(auditLogEntriesProvider);
-    final syncController = ref.watch(syncControllerProvider);
 
     appSession.whenData((session) {
       final orgName = session.selectedOrganization?.name;
@@ -203,20 +176,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                             ? (h * 0.022).clamp(8.0, 12.0)
                             : (h * 0.026).clamp(10.0, 16.0);
 
-                        final summaryBar = _buildSyncStatusBar(
-                          context: context,
-                          syncSummary: syncSummary,
-                          auditLogs: auditLogs,
-                          syncController: syncController,
-                        );
-
                         // ================= SHORT LANDSCAPE PHONE =================
                         if (isLandscape && isShortScreen && !isTablet) {
                           return SingleChildScrollView(
                             child: Column(
                               children: [
-                                summaryBar,
-                                SizedBox(height: gap),
                                 SizedBox(
                                   height: 108,
                                   child: _bigActionTile(
@@ -254,8 +218,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                         if (useSplitLayout) {
                           return Column(
                             children: [
-                              summaryBar,
-                              SizedBox(height: gap),
                               Expanded(
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -294,8 +256,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 
                         return Column(
                           children: [
-                            summaryBar,
-                            SizedBox(height: gap),
                             SizedBox(
                               height: tilesBlock,
                               child: Column(
@@ -369,176 +329,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSyncStatusBar({
-    required BuildContext context,
-    required AsyncValue<dynamic> syncSummary,
-    required AsyncValue<List<AuditLogEntry>> auditLogs,
-    required AsyncValue<void> syncController,
-  }) {
-    final isSyncing = syncController.isLoading;
-
-    final pendingCount = syncSummary.maybeWhen(
-      data: (summary) => summary.pendingCount as int,
-      orElse: () => 0,
-    );
-    final failedCount = syncSummary.maybeWhen(
-      data: (summary) => summary.failedCount as int,
-      orElse: () => 0,
-    );
-
-    final statusLabel = syncSummary.when(
-      data: (_) {
-        if (failedCount > 0) return '$failedCount failed';
-        if (pendingCount > 0) return '$pendingCount pending';
-        return 'All synced';
-      },
-      loading: () => 'Checking sync status',
-      error: (_, _) => 'Sync status unavailable',
-    );
-
-    final chipColor = failedCount > 0
-        ? const Color(0xFFFCE8E6)
-        : pendingCount > 0
-        ? const Color(0xFFFFF4DB)
-        : const Color(0xFFE8F5EC);
-    final chipTextColor = failedCount > 0
-        ? const Color(0xFF9C2B1F)
-        : pendingCount > 0
-        ? const Color(0xFF8A5A00)
-        : const Color(0xFF1E6B3A);
-    final latestAudit = auditLogs.maybeWhen(
-      data: (entries) => entries.isNotEmpty ? entries.first : null,
-      orElse: () => null,
-    );
-    final auditLabel = auditLogs.when(
-      data: (entries) {
-        if (entries.isEmpty) return 'Audit: no recent backend events';
-        final latest = entries.first;
-        return 'Audit: ${latest.action} ${latest.entityType.replaceAll('_', ' ')}';
-      },
-      loading: () => 'Audit: loading recent events',
-      error: (_, _) => 'Audit: unavailable',
-    );
-    final auditTime = latestAudit?.occurredAt?.toLocal().toString();
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: _r(context, 14),
-        vertical: _r(context, 10),
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(_r(context, 16)),
-        border: Border.all(color: const Color(0xFFDCEAE4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: _r(context, 10),
-            offset: Offset(0, _r(context, 6)),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: _r(context, 10),
-                  vertical: _r(context, 6),
-                ),
-                decoration: BoxDecoration(
-                  color: chipColor,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    fontSize: _r(context, 11),
-                    fontWeight: FontWeight.w800,
-                    color: chipTextColor,
-                  ),
-                ),
-              ),
-              SizedBox(width: _r(context, 10)),
-              Expanded(
-                child: Text(
-                  'Queue: $pendingCount pending, $failedCount failed',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: _r(context, 12),
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black.withValues(alpha: 0.62),
-                  ),
-                ),
-              ),
-              SizedBox(width: _r(context, 10)),
-              FilledButton.icon(
-                onPressed: isSyncing ? null : _runManualSync,
-                icon: isSyncing
-                    ? SizedBox(
-                        height: _r(context, 14),
-                        width: _r(context, 14),
-                        child: const CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync_rounded),
-                label: Text(isSyncing ? 'Syncing' : 'Sync now'),
-              ),
-              SizedBox(width: _r(context, 8)),
-              OutlinedButton(
-                onPressed: () => context.push('/sync_history'),
-                child: const Text('Queue'),
-              ),
-            ],
-          ),
-          SizedBox(height: _r(context, 10)),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      auditLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: _r(context, 12),
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black.withValues(alpha: 0.68),
-                      ),
-                    ),
-                    if (auditTime != null && auditTime.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(top: _r(context, 2)),
-                        child: Text(
-                          auditTime,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: _r(context, 11),
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black.withValues(alpha: 0.54),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              SizedBox(width: _r(context, 8)),
-              OutlinedButton(
-                onPressed: () => context.push('/audit_logs'),
-                child: const Text('Audit Log'),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 

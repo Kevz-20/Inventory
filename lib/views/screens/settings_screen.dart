@@ -147,28 +147,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => GoRouter.of(context).push('/about_app'),
           ),
 
-          const SizedBox(height: _sectionSpacing),
-          _sectionTitle("Sync"),
-          const SizedBox(height: _itemSpacing),
-
-          _settingsTile(
-            title: "Sync History",
-            icon: Icons.sync_alt_rounded,
-            onTap: () => GoRouter.of(context).push('/sync_history'),
-          ),
-          const SizedBox(height: _itemSpacing),
-          _settingsTile(
-            title: "Sync Diagnostics",
-            icon: Icons.fact_check_outlined,
-            onTap: () => GoRouter.of(context).push('/sync_diagnostics'),
-          ),
-          const SizedBox(height: _itemSpacing),
-          _settingsTile(
-            title: "Audit Log",
-            icon: Icons.history_edu_outlined,
-            onTap: () => GoRouter.of(context).push('/audit_logs'),
-          ),
           if (canOpenAdminMonitoring) ...[
+            const SizedBox(height: _sectionSpacing),
+            _sectionTitle("Admin Tools"),
+            const SizedBox(height: _itemSpacing),
+            _settingsTile(
+              title: "Audit Log",
+              icon: Icons.history_edu_outlined,
+              onTap: () => GoRouter.of(context).push('/audit_logs'),
+            ),
             const SizedBox(height: _itemSpacing),
             _settingsTile(
               title: "Admin Monitoring",

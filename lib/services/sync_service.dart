@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -101,13 +102,15 @@ class SyncService {
     required String localUuid,
     Map<String, dynamic>? payload,
   }) async {
-    return _enqueue(
+    final queueId = await _enqueue(
       entityType: entityType,
       operation: 'upsert',
       localUuid: localUuid,
       organizationId: await _selectedOrganizationId(),
       payload: payload,
     );
+    _scheduleBackgroundSync();
+    return queueId;
   }
 
   Future<int> enqueueDelete({
@@ -115,13 +118,22 @@ class SyncService {
     required String localUuid,
     Map<String, dynamic>? payload,
   }) async {
-    return _enqueue(
+    final queueId = await _enqueue(
       entityType: entityType,
       operation: 'delete',
       localUuid: localUuid,
       organizationId: await _selectedOrganizationId(),
       payload: payload,
     );
+    _scheduleBackgroundSync();
+    return queueId;
+  }
+
+  void _scheduleBackgroundSync() {
+    if (!SupabaseService.isConfigured) {
+      return;
+    }
+    unawaited(triggerBackgroundSync());
   }
 
   Future<int> _enqueue({
