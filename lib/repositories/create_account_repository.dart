@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import '../models/create_account_model.dart';
+import '../services/audit_log_service.dart';
+import '../services/auto_sync_service.dart';
 import '../services/db_service.dart';
 
 class CreateAccountRepository {
@@ -6,31 +10,13 @@ class CreateAccountRepository {
 
   CreateAccountRepository(this._dbService);
 
-  // ---------------- CHECK IF PHONE NUMBER EXISTS ----------------
-  Future<bool> isPhoneNumberExists(String mobileNumber) async {
+  // ---------------- CHECK IF SLPA NAME EXISTS ----------------
+  Future<bool> isSlpaNameExists(String slpaName) async {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
-      where: 'mobile_number = ?',
-      whereArgs: [mobileNumber.trim()],
-      limit: 1,
-    );
-    return result.isNotEmpty;
-  }
-
-  // ---------------- CHECK IF FULL NAME EXISTS ----------------
-  Future<bool> isFullNameExists(
-    String firstName,
-    String? middleName,
-    String lastName,
-  ) async {
-    final db = await _dbService.database;
-
-    // Use COALESCE to treat NULL middle names as empty string
-    final result = await db.query(
-      'account',
-      where: 'first_name = ? AND COALESCE(middle_name, "") = ? AND last_name = ?',
-      whereArgs: [firstName.trim(), middleName?.trim() ?? '', lastName.trim()],
+      where: 'slpa_name = ?',
+      whereArgs: [slpaName.trim()],
       limit: 1,
     );
 
@@ -40,35 +26,52 @@ class CreateAccountRepository {
   // ---------------- CREATE NEW ACCOUNT ----------------
   Future<int> createAccount(Account account) async {
     final db = await _dbService.database;
-
-    // Insert account into DB (will fail if primary key exists)
-    return await db.insert('account', account.toMap());
+    final now = DateTime.now().toIso8601String();
+    final data = {
+      ...account.toMap(),
+      'created_at': now,
+      'updated_at': now,
+      'sync_status': 'pending',
+      'last_synced_at': null,
+      'is_deleted': 0,
+    };
+    final accountId = await db.insert('account', data);
+    await AuditLogService.instance.log(
+      accountId: accountId,
+      module: 'association_setup',
+      tableName: 'account',
+      recordId: accountId.toString(),
+      action: 'create',
+      newValue: {'slpa_name': account.slpaName},
+    );
+    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
+    return accountId;
   }
 
   // ---------------- FETCH ACCOUNT BY PHONE NUMBER ----------------
   Future<Account?> getAccountByPhone(String phoneNumber) async {
     final db = await _dbService.database;
-    final result = await db.query(
-      'account',
-      where: 'mobile_number = ?',
-      whereArgs: [phoneNumber.trim()],
-      limit: 1,
+    final result = await db.rawQuery(
+      '''
+      SELECT a.*
+      FROM slpa_member m
+      INNER JOIN account a ON a.id = m.account_id
+      WHERE m.mobile_number = ?
+      LIMIT 1
+      ''',
+      [phoneNumber.trim()],
     );
     if (result.isNotEmpty) return Account.fromMap(result.first);
     return null;
   }
 
-  // ---------------- FETCH ACCOUNT BY FULL NAME ----------------
-  Future<Account?> getAccountByFullName(
-    String firstName,
-    String? middleName,
-    String lastName,
-  ) async {
+  // ---------------- FETCH ACCOUNT BY SLPA NAME ----------------
+  Future<Account?> getAccountBySlpaName(String slpaName) async {
     final db = await _dbService.database;
     final result = await db.query(
       'account',
-      where: 'first_name = ? AND middle_name = ? AND last_name = ?',
-      whereArgs: [firstName.trim(), middleName?.trim() ?? '', lastName.trim()],
+      where: 'slpa_name = ?',
+      whereArgs: [slpaName.trim()],
       limit: 1,
     );
     if (result.isNotEmpty) return Account.fromMap(result.first);

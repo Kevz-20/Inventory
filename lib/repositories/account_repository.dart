@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/account_model.dart';
+import '../services/audit_log_service.dart';
+import '../services/auto_sync_service.dart';
 import '../services/db_service.dart';
 
 class AccountRepository {
@@ -20,8 +24,8 @@ class AccountRepository {
     final mobileNumber = await getMobileNumber();
     final db = await dbService.database;
     final result = await db.query(
-      'account',
-      columns: ['id'],
+      'slpa_member',
+      columns: ['account_id'],
       where: 'mobile_number = ?',
       whereArgs: [mobileNumber],
       limit: 1,
@@ -30,7 +34,24 @@ class AccountRepository {
     if (result.isEmpty) {
       throw Exception('No account found for mobile number $mobileNumber');
     }
-    return result.first['id'] as int;
+    return result.first['account_id'] as int;
+  }
+
+  Future<Map<String, dynamic>> getCurrentMemberRow() async {
+    final mobileNumber = await getMobileNumber();
+    final db = await dbService.database;
+    final result = await db.query(
+      'slpa_member',
+      columns: ['id', 'account_id', 'first_name', 'middle_name', 'last_name', 'mobile_number'],
+      where: 'mobile_number = ?',
+      whereArgs: [mobileNumber],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      throw Exception('No member found for mobile number $mobileNumber');
+    }
+    return result.first;
   }
 
   Future<Account> getAccountDetails() async {
@@ -55,47 +76,72 @@ class AccountRepository {
     return Account.fromMap(result.first);
   }
 
-  /// Get the full name of the current user (First + Middle + Last)
   Future<String> getFullName() async {
+    final member = await getCurrentMemberRow();
+    return [
+      (member['first_name'] ?? '').toString(),
+      (member['middle_name'] ?? '').toString(),
+      (member['last_name'] ?? '').toString(),
+    ].where((part) => part.trim().isNotEmpty).join(' ');
+  }
+
+  Future<String> getSlpaName() async {
     final account = await getAccountDetails();
-    final middle = account.middleName != null && account.middleName!.isNotEmpty
-        ? ' ${account.middleName}'
-        : '';
-    return '${account.firstName}$middle ${account.lastName}';
+    return account.slpaName;
   }
 
   Future<Map<String, String>> getNameParts() async {
-    final fullName = await getFullName();
-    final parts = fullName.split(' ');
+    final member = await getCurrentMemberRow();
     return {
-      'first': parts.isNotEmpty ? parts[0] : '',
-      'middle': parts.length == 3 ? parts[1] : '',
-      'last': parts.length >= 2 ? parts.last : '',
+      'first': (member['first_name'] ?? '').toString(),
+      'middle': (member['middle_name'] ?? '').toString(),
+      'last': (member['last_name'] ?? '').toString(),
     };
   }
 
   /// Update account info and save mobile number + full name to SharedPreferences
   Future<void> updateAccount(Account updated) async {
     final db = await dbService.database;
+    final previous = await getAccountDetails();
+    final now = DateTime.now().toIso8601String();
 
     // Update account table (toMap() excludes security_question — safe to use)
     await db.update(
       'account',
-      updated.toMap(),
+      {
+        ...updated.toMap(),
+        'updated_at': now,
+        'sync_status': 'pending',
+        'last_synced_at': null,
+      },
       where: 'id = ?',
       whereArgs: [updated.id],
     );
 
     // Save current mobile number
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('mobileNumber', updated.mobileNumber);
+    final currentMobile = await getMobileNumber();
+    await prefs.setString('mobileNumber', currentMobile ?? updated.mobileNumber);
 
-    // Save full name for creator tracking
-    final fullNameParts = [
-      updated.firstName,
-      if ((updated.middleName ?? '').isNotEmpty) updated.middleName!,
-      updated.lastName,
-    ];
-    await prefs.setString('fullName', fullNameParts.join(' '));
+    // Keep session identity aligned with the current member and updated SLPA.
+    await prefs.setString('slpaName', updated.slpaName);
+
+    await AuditLogService.instance.log(
+      accountId: updated.id,
+      module: 'association_profile',
+      tableName: 'account',
+      recordId: updated.id?.toString(),
+      action: 'update',
+      oldValue: {
+        'slpa_name': previous.slpaName,
+        'profile_image': previous.profileImage,
+      },
+      newValue: {
+        'slpa_name': updated.slpaName,
+        'profile_image': updated.profileImage,
+      },
+    );
+
+    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
   }
 }

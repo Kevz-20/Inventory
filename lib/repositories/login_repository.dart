@@ -12,11 +12,24 @@ class LoginRepository {
   Future<LoginModel?> getAccount(String mobileNumber, String pin) async {
     final db = await _dbService.database;
 
-    final result = await db.query(
-      'account',
-      columns: ['id', 'first_name', 'middle_name', 'last_name', 'mobile_number', 'pin'],
-      where: 'mobile_number = ? AND pin = ?',
-      whereArgs: [mobileNumber.trim(), pin.trim()],
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        m.id AS member_id,
+        a.id AS account_id,
+        a.id AS id,
+        a.slpa_name,
+        m.first_name,
+        m.middle_name,
+        m.last_name,
+        m.mobile_number,
+        m.pin
+      FROM slpa_member m
+      INNER JOIN account a ON a.id = m.account_id
+      WHERE m.mobile_number = ? AND m.pin = ?
+      LIMIT 1
+      ''',
+      [mobileNumber.trim(), pin.trim()],
     );
 
     if (result.isNotEmpty) {
@@ -31,11 +44,24 @@ class LoginRepository {
   Future<LoginModel?> getAccountByMobileNumber(String mobileNumber) async {
     final db = await _dbService.database;
 
-    final result = await db.query(
-      'account',
-      columns: ['id', 'first_name', 'middle_name', 'last_name', 'mobile_number', 'pin'],
-      where: 'mobile_number = ?',
-      whereArgs: [mobileNumber.trim()],
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        m.id AS member_id,
+        a.id AS account_id,
+        a.id AS id,
+        a.slpa_name,
+        m.first_name,
+        m.middle_name,
+        m.last_name,
+        m.mobile_number,
+        m.pin
+      FROM slpa_member m
+      INNER JOIN account a ON a.id = m.account_id
+      WHERE m.mobile_number = ?
+      LIMIT 1
+      ''',
+      [mobileNumber.trim()],
     );
 
     if (result.isNotEmpty) {
@@ -59,7 +85,6 @@ class LoginRepository {
   Future<String?> getFullName(String mobileNumber) async {
     final account = await getAccountByMobileNumber(mobileNumber.trim());
     if (account == null) return null;
-    final middle = account.middleName?.isNotEmpty == true ? ' ${account.middleName}' : '';
-    return '${account.firstName}$middle ${account.lastName}';
+    return account.fullName;
   }
 }

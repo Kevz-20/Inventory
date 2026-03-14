@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../models/product_model.dart';
 import '../repositories/account_repository.dart';
+import '../services/audit_log_service.dart';
 
 class ProductRepository {
   final Database db;
@@ -15,8 +16,19 @@ class ProductRepository {
     final data = product.toMap();
     data['created_by'] = fullName;
     data['updated_by'] = fullName;
+    data['sync_status'] = 'pending';
+    data['last_synced_at'] = null;
+    data['is_deleted'] = 0;
 
-    return await db.insert('product', data);
+    final productId = await db.insert('product', data);
+    await AuditLogService.instance.log(
+      module: 'product',
+      tableName: 'product',
+      recordId: productId.toString(),
+      action: 'create',
+      newValue: data,
+    );
+    return productId;
   }
 
   Future<List<ProductModel>> getProducts() async {
@@ -45,23 +57,48 @@ class ProductRepository {
 
   Future<int> updateProduct(ProductModel product) async {
     final fullName = await accountRepo.getFullName();
+    final previous = product.id == null ? null : await getProductById(product.id!);
     final data = product.toMap();
     data['updated_by'] = fullName;
+    data['sync_status'] = 'pending';
+    data['last_synced_at'] = null;
 
-    return await db.update(
+    final updated = await db.update(
       'product',
       data,
       where: 'id = ?',
       whereArgs: [product.id],
     );
+    if (updated > 0) {
+      await AuditLogService.instance.log(
+        module: 'product',
+        tableName: 'product',
+        recordId: product.id?.toString(),
+        action: 'update',
+        oldValue: previous?.toMap(),
+        newValue: data,
+      );
+    }
+    return updated;
   }
 
   Future<int> deleteProduct(int id) async {
-    return await db.delete(
+    final previous = await getProductById(id);
+    final deleted = await db.delete(
       'product',
       where: 'id = ?',
       whereArgs: [id],
     );
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'product',
+        tableName: 'product',
+        recordId: id.toString(),
+        action: 'delete',
+        oldValue: previous?.toMap(),
+      );
+    }
+    return deleted;
   }
 
   Future<ProductModel?> getProductById(int id) async {
@@ -93,6 +130,9 @@ class ProductRepository {
         'updated_at': now,
         'created_by': fullName,
         'updated_by': fullName,
+        'sync_status': 'pending',
+        'last_synced_at': null,
+        'is_deleted': 0,
       });
 
       // Update product stock
@@ -103,6 +143,16 @@ class ProductRepository {
     }
 
     await batch.commit(noResult: true);
+    await AuditLogService.instance.log(
+      module: 'stock_in',
+      tableName: 'stock_in',
+      action: 'create',
+      newValue: {
+        'items': purchasedItems,
+        'created_at': now,
+        'created_by': fullName,
+      },
+    );
   }
 
   Future<void> updateProductStock(int productId, int quantitySold) async {
@@ -138,6 +188,9 @@ class ProductRepository {
       'created_by_first_name': nameParts['first'],
       'created_by_middle_name': nameParts['middle'],
       'created_by_last_name': nameParts['last'],
+      'sync_status': 'pending',
+      'last_synced_at': null,
+      'is_deleted': 0,
     });
 
     // Insert each sale item and update stock
@@ -171,6 +224,20 @@ class ProductRepository {
       // Update stock
       await updateProductStock(productId, quantity);
     }
+
+    await AuditLogService.instance.log(
+      module: 'sales_cash',
+      tableName: 'sales',
+      recordId: saleId.toString(),
+      action: 'create',
+      newValue: {
+        'sale_id': saleId,
+        'sale_type': 'cash',
+        'total': total,
+        'items': items,
+        'created_at': now,
+      },
+    );
   }
 
   // Credit checkout
@@ -183,6 +250,9 @@ class ProductRepository {
     final now = DateTime.now().toIso8601String();
     final due = dueDate?.toIso8601String() ??
         DateTime.now().add(const Duration(days: 30)).toIso8601String();
+
+    int? saleId;
+    double totalAmount = 0;
 
     await db.transaction((txn) async {
       // Verify customer exists
@@ -206,7 +276,7 @@ class ProductRepository {
       final statusId = statusResult.first['id'] as int;
 
       // Insert main sale record (updated created_by fields)
-      final saleId = await txn.insert('sales', {
+      saleId = await txn.insert('sales', {
         'customer_id': customerId,
         'sale_type': 'credit',
         'total': items.fold<int>(0, (sum, item) => sum + (item['subtotal'] as num).toInt()),
@@ -214,6 +284,9 @@ class ProductRepository {
         'created_by_first_name': nameParts['first'],
         'created_by_middle_name': nameParts['middle'],
         'created_by_last_name': nameParts['last'],
+        'sync_status': 'pending',
+        'last_synced_at': null,
+        'is_deleted': 0,
       });
 
       // Insert sale items and sales_credit
@@ -256,15 +329,36 @@ class ProductRepository {
       }
 
       // Update customer's available credit
-      final totalAmount = items.fold<double>(0, (sum, item) => sum + (item['subtotal'] as num).toDouble());
+      totalAmount = items.fold<double>(0, (sum, item) => sum + (item['subtotal'] as num).toDouble());
       final newCredit = (currentCredit - totalAmount).clamp(0, double.infinity);
 
       await txn.update(
         'customer',
-        {'available_credit': newCredit},
+        {
+          'available_credit': newCredit,
+          'updated_at': now,
+          'sync_status': 'pending',
+          'last_synced_at': null,
+        },
         where: 'id = ?',
         whereArgs: [customerId],
       );
     });
+
+    await AuditLogService.instance.log(
+      module: 'sales_credit',
+      tableName: 'sales',
+      recordId: saleId?.toString(),
+      action: 'create',
+      newValue: {
+        'sale_id': saleId,
+        'customer_id': customerId,
+        'sale_type': 'credit',
+        'total': totalAmount,
+        'due_date': due,
+        'items': items,
+        'created_at': now,
+      },
+    );
   }
 }

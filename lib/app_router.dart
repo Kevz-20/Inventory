@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'core/page_transitions.dart';
 import 'models/utang_customer_model.dart';
+import 'services/db_service.dart';
 import 'views/screens/about_app_screen.dart';
+import 'views/screens/activity_log_screen.dart';
+import 'views/screens/add_member_screen.dart';
 import 'views/screens/cashflow_screen.dart';
 import 'views/screens/change_pin_screen.dart';
 import 'views/screens/existing_expense_screen.dart';
@@ -15,7 +18,9 @@ import 'views/screens/expenses_screen.dart';
 import 'views/screens/new_customer.dart';
 import 'views/screens/profile_screen.dart';
 import 'views/screens/settings_screen.dart';
+import 'views/screens/manage_inventory_screen.dart';
 import 'views/screens/stockin_screen.dart';
+import 'views/screens/sync_center_screen.dart';
 import 'views/screens/transaction_record_screen.dart';
 import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
@@ -31,9 +36,49 @@ import 'views/screens/owner_utang_screen.dart';
 import 'views/screens/notification_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
+
+Future<({int accountCount, int memberCount, int? firstAccountId})>
+    _loadSetupState() async {
+  final db = await DBService.instance.database;
+  final accountRows = await db.rawQuery(
+    'SELECT id FROM account ORDER BY id ASC LIMIT 1',
+  );
+  final memberRows = await db.rawQuery(
+    'SELECT COUNT(*) AS count FROM slpa_member',
+  );
+  return (
+    accountCount: accountRows.isEmpty ? 0 : 1,
+    memberCount: (memberRows.first['count'] as num?)?.toInt() ?? 0,
+    firstAccountId:
+        accountRows.isEmpty ? null : (accountRows.first['id'] as num).toInt(),
+  );
+}
+
 final router = GoRouter(
   initialLocation: '/login',
   observers: [routeObserver],
+  redirect: (context, state) async {
+    final setup = await _loadSetupState();
+    final path = state.matchedLocation;
+    final isFirstMemberPath =
+        path == '/add_member' && state.uri.queryParameters['first'] == '1';
+
+    if (setup.accountCount == 0) {
+      return path == '/create_account' ? null : '/create_account';
+    }
+
+    if (setup.memberCount == 0) {
+      if (path == '/add_member') return null;
+      return '/add_member?first=1';
+    }
+
+    if ((path == '/create_account' || isFirstMemberPath) &&
+        setup.memberCount > 0) {
+      return '/login';
+    }
+
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/login',
@@ -65,6 +110,23 @@ final router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/add_member',
+      pageBuilder: (context, state) {
+        final extra = state.extra;
+        final data = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+        final firstFromQuery = state.uri.queryParameters['first'] == '1';
+        return customPage(
+          state,
+          AddMemberScreen(
+            accountId: data['accountId'] as int?,
+            isFirstMember:
+                data['isFirstMember'] as bool? ?? firstFromQuery,
+          ),
+          transition: PageTransitionType.forward,
+        );
+      },
+    ),
+    GoRoute(
       path: '/home',
       pageBuilder: (context, state) {
         final fromLogin = state.extra == 'fromLogin';
@@ -76,6 +138,14 @@ final router = GoRouter(
               : PageTransitionType.none,
         );
       },
+    ),
+    GoRoute(
+      path: '/activity_log',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const ActivityLogScreen(),
+        transition: PageTransitionType.forward,
+      ),
     ),
     GoRoute(
       path: '/profile',
@@ -94,6 +164,14 @@ final router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/sync_center',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const SyncCenterScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
       path: '/expenses',
       pageBuilder: (context, state) => customPage(
         state,
@@ -106,6 +184,14 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const StockInScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/manage_inventory',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const ManageInventoryScreen(),
         transition: PageTransitionType.forward,
       ),
     ),

@@ -47,14 +47,9 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Get the mobile number used in login (from SharedPreferences or AccountRepository)
-      final currentMobile = await accountRepository!.getMobileNumber();
-
       // Fetch full account details
       final accountDetails = await accountRepository!.getAccountDetails();
-
-      // Override mobileNumber to match logged-in number
-      account = accountDetails.copyWith(mobileNumber: currentMobile);
+      account = accountDetails;
 
       error = null;
     } catch (e) {

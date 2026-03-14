@@ -19,20 +19,18 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _editMode = false;
-  bool _editingAnswer = false;
-
-  late final TextEditingController answerCtrl;
+  late final TextEditingController slpaNameCtrl;
   File? _selectedImage;
 
   @override
   void initState() {
     super.initState();
-    answerCtrl = TextEditingController();
+    slpaNameCtrl = TextEditingController();
   }
 
   @override
   void dispose() {
-    answerCtrl.dispose();
+    slpaNameCtrl.dispose();
     super.dispose();
   }
 
@@ -50,7 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
-      appBar: const AppHeader(title: "Profile", showBackButton: true),
+      appBar: const AppHeader(title: 'Profile', showBackButton: true),
       body: vm.isLoading
           ? const Center(child: CircularProgressIndicator())
           : vm.error != null
@@ -63,44 +61,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           _profileImage(vm.account!),
                           const SizedBox(height: 25),
-
-                          _sectionTitle('Account Information'),
-
+                          _sectionTitle('Association Information'),
                           _infoCard([
-                            _infoRow(
-                              Icons.numbers,
-                              'Mobile Number',
-                              vm.account!.mobileNumber,
-                            ),
-                            _securityQuestionRow(vm.account!),
-                            _securityAnswerRow(vm.account!),
+                            _slpaNameRow(vm.account!),
                           ]),
-
                           const SizedBox(height: 20),
-
-                          /// EDIT / CANCEL BUTTON
                           ElevatedButton(
                             style: _primaryLightButtonStyle,
                             onPressed: () {
                               setState(() {
+                                if (!_editMode) {
+                                  slpaNameCtrl.text = vm.account!.slpaName;
+                                }
                                 _editMode = !_editMode;
-                                _editingAnswer = false;
                               });
                             },
-                            child: Text(_editMode ? 'Cancel' : 'Edit Profile'),
+                            child: Text(_editMode ? 'Cancel' : 'Edit Association'),
                           ),
-
-                          /// SAVE CHANGES BUTTON
                           if (_editMode) ...[
                             const SizedBox(height: 20),
                             ElevatedButton(
                               style: _primaryButtonStyle,
                               onPressed: () async {
                                 String? imagePath = vm.account!.profileImage;
-
                                 if (_selectedImage != null) {
-                                  final dir = await getApplicationDocumentsDirectory();
-                                  final fileName = DateTime.now().millisecondsSinceEpoch;
+                                  final dir =
+                                      await getApplicationDocumentsDirectory();
+                                  final fileName =
+                                      DateTime.now().millisecondsSinceEpoch;
                                   final savedFile = await _selectedImage!.copy(
                                     '${dir.path}/profile_$fileName.jpg',
                                   );
@@ -108,7 +96,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 }
 
                                 final updated = vm.account!.copyWith(
-                                  securityAnswer: answerCtrl.text,
+                                  slpaName: slpaNameCtrl.text.trim().isEmpty
+                                      ? vm.account!.slpaName
+                                      : slpaNameCtrl.text.trim(),
                                   profileImage: imagePath,
                                 );
 
@@ -116,7 +106,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 if (!success) return;
 
                                 setState(() {
-                                  _editingAnswer = false;
                                   _editMode = false;
                                   _selectedImage = null;
                                 });
@@ -155,7 +144,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ? FileImage(File(account.profileImage!))
                       : null,
               child: account.profileImage == null && _selectedImage == null
-                  ? const Icon(Icons.person, size: 50)
+                  ? const Icon(Icons.groups_rounded, size: 50)
                   : null,
             ),
             if (_editMode)
@@ -182,70 +171,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       );
 
-  /// Displays the security question text (read-only — cannot be changed
-  /// after account creation).
-  Widget _securityQuestionRow(Account account) => Column(
+  Widget _slpaNameRow(Account account) => Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.help_outline_rounded, color: AppColors.primaryLight),
+              Icon(Icons.groups_rounded, color: AppColors.primaryLight),
               const SizedBox(width: 10),
-              const Text('Security Question'),
-              const Spacer(),
-              Text(
-                account.securityQuestion ?? '-',
-                textAlign: TextAlign.end,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const Divider(height: 20),
-        ],
-      );
-
-  Widget _securityAnswerRow(Account account) => Column(
-        children: [
-          Row(
-            children: [
-              Icon(Icons.question_answer, color: AppColors.primaryLight),
-              const SizedBox(width: 10),
-              const Expanded(child: Text('Security Answer')),
-              if (!_editingAnswer) ...[
-                Text(
-                  account.securityAnswer ?? '-',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if (_editMode)
-                  IconButton(
-                    icon: const Icon(Icons.edit, size: 18),
-                    onPressed: () {
-                      setState(() {
-                        answerCtrl.text = account.securityAnswer ?? '';
-                        _editingAnswer = true;
-                      });
-                    },
+              const Expanded(child: Text('SLPA Name')),
+              if (!_editMode)
+                Flexible(
+                  child: Text(
+                    account.slpaName,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-              ],
+                ),
             ],
           ),
-          if (_editingAnswer)
+          if (_editMode)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: TextField(
-                controller: answerCtrl,
+                controller: slpaNameCtrl,
                 decoration: const InputDecoration(
-                  hintText: 'Enter new security answer',
+                  hintText: 'Enter SLPA name',
                   border: OutlineInputBorder(),
                 ),
               ),
             ),
-          const Divider(height: 20),
         ],
       );
 }
 
-/// ---------------- UI HELPERS ----------------
 final _primaryButtonStyle = ElevatedButton.styleFrom(
   backgroundColor: AppColors.primary,
   minimumSize: const Size(double.infinity, 48),
@@ -282,18 +240,4 @@ Widget _infoCard(List<Widget> children) => Container(
         ],
       ),
       child: Column(children: children),
-    );
-
-Widget _infoRow(IconData icon, String label, String value) => Column(
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: AppColors.primaryLight),
-            const SizedBox(width: 10),
-            Expanded(child: Text(label)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        const Divider(height: 20),
-      ],
     );

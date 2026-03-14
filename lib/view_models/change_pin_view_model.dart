@@ -144,7 +144,7 @@ class ChangePinViewModel extends ChangeNotifier {
 
     try {
       await _repo.updatePinById(
-        accountId: _account!['id'] as int,
+        memberId: _account!['id'] as int,
         newPin: newPin,
       );
 

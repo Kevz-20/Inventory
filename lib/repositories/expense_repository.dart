@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../models/expense_model.dart';
 import '../providers/account_provider.dart';
 import '../providers/database_provider.dart';
+import '../services/audit_log_service.dart';
 
 
 // -----------------------------
@@ -39,12 +40,24 @@ class ExpenseRepository {
   data['created_at'] = expense.createdAt.isNotEmpty
       ? expense.createdAt
       : DateTime.now().toIso8601String();
+  data['updated_at'] = DateTime.now().toIso8601String();
+  data['sync_status'] = 'pending';
+  data['last_synced_at'] = null;
+  data['is_deleted'] = 0;
 
-  return await db.insert(
+  final expenseId = await db.insert(
     'expenses',
     data,
     conflictAlgorithm: ConflictAlgorithm.replace,
   );
+  await AuditLogService.instance.log(
+    module: 'expense',
+    tableName: 'expenses',
+    recordId: expenseId.toString(),
+    action: 'create',
+    newValue: data,
+  );
+  return expenseId;
 }
 
 
@@ -71,28 +84,54 @@ class ExpenseRepository {
 
   /// Update an expense
   Future<int> updateExpense(ExpenseModel expense) async {
+  final previous = expense.id == null ? null : await fetchExpense(expense.id!);
   final data = expense.toMap();
 
   // Keep the original creator
   data['created_by_first_name'] = expense.createdByFirstName;
   data['created_by_middle_name'] = expense.createdByMiddleName ?? '';
   data['created_by_last_name'] = expense.createdByLastName;
+  data['updated_at'] = DateTime.now().toIso8601String();
+  data['sync_status'] = 'pending';
+  data['last_synced_at'] = null;
 
-  return await db.update(
+  final updated = await db.update(
     'expenses',
     data,
     where: 'id = ?',
     whereArgs: [expense.id],
   );
+  if (updated > 0) {
+    await AuditLogService.instance.log(
+      module: 'expense',
+      tableName: 'expenses',
+      recordId: expense.id?.toString(),
+      action: 'update',
+      oldValue: previous?.toMap(),
+      newValue: data,
+    );
+  }
+  return updated;
 }
 
   /// Delete an expense
   Future<int> deleteExpense(int id) async {
-    return await db.delete(
+    final previous = await fetchExpense(id);
+    final deleted = await db.delete(
       'expenses',
       where: 'id = ?',
       whereArgs: [id],
     );
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'expense',
+        tableName: 'expenses',
+        recordId: id.toString(),
+        action: 'delete',
+        oldValue: previous?.toMap(),
+      );
+    }
+    return deleted;
   }
 
   /// Fetch total expenses

@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-import '../core/product_seed.dart';
 import '../models/utang_customer_model.dart';
 
 class DBService {
@@ -22,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 12,
+      version: 16,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -35,6 +34,30 @@ class DBService {
           if (!exists) {
             await db.execute(
               'ALTER TABLE $table ADD COLUMN $column $definition',
+            );
+          }
+        }
+
+        Future<void> addSyncColumns(
+          String table, {
+          bool includeUpdatedAt = true,
+          bool includeSoftDelete = true,
+        }) async {
+          await addColumnIfMissing(table, 'server_id', 'TEXT');
+          await addColumnIfMissing(
+            table,
+            'sync_status',
+            "TEXT NOT NULL DEFAULT 'pending'",
+          );
+          await addColumnIfMissing(table, 'last_synced_at', 'TEXT');
+          if (includeUpdatedAt) {
+            await addColumnIfMissing(table, 'updated_at', 'TEXT');
+          }
+          if (includeSoftDelete) {
+            await addColumnIfMissing(
+              table,
+              'is_deleted',
+              'INTEGER NOT NULL DEFAULT 0',
             );
           }
         }
@@ -197,8 +220,154 @@ class DBService {
             ['Uban Pa', DateTime.now().toIso8601String()],
           );
 
-          const bool seedProducts = true;
-          if (seedProducts) await _seedProducts(db); // uses the fixed version
+        }
+
+        if (oldVersion < 13) {
+          await addColumnIfMissing('account', 'slpa_name', 'TEXT');
+          await db.execute('''
+            UPDATE account
+            SET slpa_name = TRIM(
+              COALESCE(first_name, '') ||
+              CASE
+                WHEN middle_name IS NOT NULL AND TRIM(middle_name) <> '' THEN ' ' || middle_name
+                ELSE ''
+              END ||
+              CASE
+                WHEN last_name IS NOT NULL AND TRIM(last_name) <> '' THEN ' ' || last_name
+                ELSE ''
+              END
+            )
+            WHERE slpa_name IS NULL OR TRIM(slpa_name) = ''
+          ''');
+        }
+
+        if (oldVersion < 14) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS slpa_member (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              account_id INTEGER NOT NULL,
+              first_name TEXT NOT NULL,
+              middle_name TEXT,
+              last_name TEXT,
+              mobile_number TEXT NOT NULL UNIQUE,
+              pin TEXT NOT NULL,
+              security_question_id INTEGER,
+              security_answer TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              FOREIGN KEY (account_id) REFERENCES account(id) ON DELETE CASCADE
+            )
+          ''');
+
+          await db.execute('''
+            INSERT OR IGNORE INTO slpa_member (
+              account_id,
+              first_name,
+              middle_name,
+              last_name,
+              mobile_number,
+              pin,
+              security_question_id,
+              security_answer,
+              created_at,
+              updated_at
+            )
+            SELECT
+              id,
+              COALESCE(NULLIF(first_name, ''), COALESCE(slpa_name, 'Member')),
+              middle_name,
+              last_name,
+              mobile_number,
+              pin,
+              security_question_id,
+              security_answer,
+              DATETIME('now'),
+              DATETIME('now')
+            FROM account
+            WHERE mobile_number IS NOT NULL AND TRIM(mobile_number) <> ''
+          ''');
+        }
+
+        if (oldVersion < 15) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS audit_log (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              account_id INTEGER,
+              member_id INTEGER,
+              member_name TEXT,
+              module TEXT NOT NULL,
+              table_name TEXT,
+              record_id TEXT,
+              action TEXT NOT NULL,
+              old_value TEXT,
+              new_value TEXT,
+              created_at TEXT NOT NULL,
+              FOREIGN KEY (account_id) REFERENCES account(id),
+              FOREIGN KEY (member_id) REFERENCES slpa_member(id)
+            )
+          ''');
+        }
+
+        if (oldVersion < 16) {
+          await addSyncColumns('account');
+          await addSyncColumns('slpa_member');
+          await addSyncColumns(
+            'audit_log',
+            includeUpdatedAt: false,
+            includeSoftDelete: false,
+          );
+          await addSyncColumns('product');
+          await addSyncColumns('customer');
+          await addSyncColumns('expenses');
+          await addSyncColumns('payable');
+          await addSyncColumns('capital_management');
+          await addSyncColumns('fixed_asset');
+          await addSyncColumns('sales', includeUpdatedAt: false);
+          await addSyncColumns('stock_in');
+
+          final now = DateTime.now().toIso8601String();
+          const syncTables = [
+            'account',
+            'slpa_member',
+            'audit_log',
+            'product',
+            'customer',
+            'expenses',
+            'payable',
+            'capital_management',
+            'fixed_asset',
+            'sales',
+            'stock_in',
+          ];
+
+          for (final table in syncTables) {
+            await db.execute(
+              "UPDATE $table SET sync_status = COALESCE(NULLIF(sync_status, ''), 'pending')",
+            );
+          }
+
+          const updatedAtTables = [
+            'account',
+            'slpa_member',
+            'product',
+            'customer',
+            'expenses',
+            'payable',
+            'capital_management',
+            'fixed_asset',
+            'stock_in',
+          ];
+
+          for (final table in updatedAtTables) {
+            await db.execute('''
+              UPDATE $table
+              SET updated_at = COALESCE(
+                NULLIF(updated_at, ''),
+                created_at,
+                '$now'
+              )
+            ''');
+          }
         }
       },
 
@@ -214,6 +383,7 @@ class DBService {
     await db.execute('''
       CREATE TABLE account (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slpa_name TEXT NOT NULL,
         first_name TEXT NOT NULL,
         middle_name TEXT,
         last_name TEXT,
@@ -222,7 +392,55 @@ class DBService {
         security_question_id INTEGER,
         security_answer TEXT,
         profile_image TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         UNIQUE(first_name, middle_name, last_name)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE slpa_member (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        first_name TEXT NOT NULL,
+        middle_name TEXT,
+        last_name TEXT,
+        mobile_number TEXT NOT NULL UNIQUE,
+        pin TEXT NOT NULL,
+        security_question_id INTEGER,
+        security_answer TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (account_id) REFERENCES account(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER,
+        member_id INTEGER,
+        member_name TEXT,
+        module TEXT NOT NULL,
+        table_name TEXT,
+        record_id TEXT,
+        action TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        created_at TEXT NOT NULL,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        FOREIGN KEY (account_id) REFERENCES account(id),
+        FOREIGN KEY (member_id) REFERENCES slpa_member(id)
       )
     ''');
 
@@ -306,9 +524,14 @@ class DBService {
         bank_cash REAL,
         remarks TEXT,
         created_at TEXT,
+        updated_at TEXT,
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (account_id) REFERENCES account(id)
 
       )
@@ -329,6 +552,10 @@ class DBService {
         available_credit REAL DEFAULT 1000,
         created_at TEXT,
         updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         UNIQUE(first_name, middle_name, last_name, municipality)
       )
     ''');
@@ -346,6 +573,10 @@ class DBService {
         image TEXT,
         created_at TEXT,
         updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (category_id) REFERENCES product_category(id)
       )
     ''');
@@ -375,6 +606,10 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
@@ -447,6 +682,10 @@ class DBService {
         accumulated_depreciation REAL,
         created_at TEXT,
         updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (account_id) REFERENCES account (id)
       )
     ''');
@@ -463,6 +702,10 @@ class DBService {
         image TEXT,
         created_at TEXT,
         updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (account_id) REFERENCES account (id),
         FOREIGN KEY (product_id) REFERENCES product (id)
       )
@@ -564,7 +807,11 @@ class DBService {
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -607,7 +854,12 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
-        created_at TEXT
+        created_at TEXT,
+        updated_at TEXT,
+        server_id TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -630,9 +882,6 @@ class DBService {
     // Insert predefined data
     await _insertDefaultData(db);
 
-    // for testing
-    const bool seedProducts = true; // set to false to disable seeding
-    if (seedProducts) await _seedProducts(db);
   }
 
   // Seed initial reference data
@@ -707,27 +956,6 @@ class DBService {
         'INSERT OR IGNORE INTO product_category(name, created_at) VALUES(?, ?)',
         [c, DateTime.now().toIso8601String()],
       );
-    }
-  }
-
-  // for testing
-  Future<void> _seedProducts(Database db) async {
-    final count = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM product'),
-    );
-
-    if (count == 0) {
-      final cats = await db.query('product_category');
-      final catMap = {
-        for (final c in cats) c['name'] as String: c['id'] as int,
-      };
-
-      for (final product in productSeeds) {
-        final map = product.toMap();
-        map['category_id'] = catMap[product.category]; // resolve name → id
-        map.remove('category'); // remove raw string if present
-        await db.insert('product', map);
-      }
     }
   }
 

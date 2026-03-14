@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PDO Access Portal</title>
+    <style>
+      :root{--bg:#edf3ee;--card:rgba(255,255,255,.94);--line:#d7e2d8;--ink:#173025;--muted:#68796f;--brand:#12563f;--brand2:#0b3f2f;--soft:#e1efe5;--accent:#d98d3d;--danger:#b94a4a;--shadow:0 26px 60px rgba(14,47,34,.12)}
+      *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:"Trebuchet MS","Segoe UI",Tahoma,sans-serif;color:var(--ink);background:radial-gradient(circle at top left,rgba(18,86,63,.16),transparent 26%),radial-gradient(circle at bottom right,rgba(217,141,61,.12),transparent 22%),linear-gradient(180deg,#f9fbf9 0%,var(--bg) 100%)}
+      .layout{width:min(1080px,calc(100vw - 32px));display:grid;grid-template-columns:1.08fr .92fr;border-radius:30px;overflow:hidden;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,.5);background:var(--card);backdrop-filter:blur(10px)}
+      .hero{padding:42px 38px;display:flex;flex-direction:column;justify-content:space-between;color:#fff;background:radial-gradient(circle at top right,rgba(255,255,255,.08),transparent 24%),linear-gradient(160deg,rgba(12,69,52,.96),rgba(17,92,68,.92))}
+      .mark{width:56px;height:56px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);font-weight:800;letter-spacing:.08em}.hero h1{margin:18px 0 10px;font-size:38px;line-height:1.05}.hero p{margin:0;max-width:470px;color:rgba(255,255,255,.8);line-height:1.65}
+      .badge{display:inline-flex;align-items:center;gap:8px;margin-top:24px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.badge:before{content:"";width:8px;height:8px;border-radius:999px;background:#79d69a;box-shadow:0 0 0 4px rgba(121,214,154,.18)}
+      .grid{display:grid;gap:12px;margin-top:28px}.hero-card{padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}.hero-card b{display:block;color:rgba(255,255,255,.62);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.hero-card span{display:block;margin-top:6px;font-size:14px;font-weight:700}
+      .auth{padding:42px 38px;display:flex;flex-direction:column;justify-content:center}.auth-card{padding:30px;border-radius:24px;background:rgba(255,255,255,.9);border:1px solid #e4ece6}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}.auth h2{margin:10px 0 8px;font-size:32px}.auth p{margin:0 0 26px;color:var(--muted);line-height:1.6}
+      label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}input{width:100%;border-radius:16px;border:1px solid var(--line);background:#f9fcfa;padding:13px 15px;margin-bottom:18px;font-size:14px;color:var(--ink)}
+      button{width:100%;padding:14px 16px;border:0;border-radius:16px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 16px 30px rgba(18,86,63,.16)}button:disabled{opacity:.7;cursor:wait}
+      .status{min-height:22px;margin-top:14px;color:var(--danger);font-size:13px}.helper{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;color:var(--muted);font-size:12px}.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#f6faf7;border:1px solid var(--line);font-weight:700}.chip:before{content:"";width:8px;height:8px;border-radius:999px;background:var(--accent)}
+      .note{margin-top:20px;padding:14px 16px;border-radius:16px;background:var(--soft);border:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.6}code{font-family:Consolas,monospace;color:var(--ink)}
+      @media (max-width:920px){.layout{grid-template-columns:1fr}.hero,.auth{padding:30px 24px}.hero h1,.auth h2{font-size:28px}.helper{flex-direction:column;align-items:flex-start}}
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <section class="hero">
+        <div>
+          <div class="mark">PDO</div>
+          <h1>Association Monitoring Portal</h1>
+          <p>Centralized access for PDO staff to review synced associations, member-level accountability, recent activity, and overall sync health across the field deployment.</p>
+          <div class="badge">Staff portal ready for monitoring and review</div>
+          <div class="grid">
+            <div class="hero-card"><b>Coverage</b><span>Association sync, members, activity, and monitoring</span></div>
+            <div class="hero-card"><b>Security</b><span>Protected PDO routes with authenticated staff sessions</span></div>
+            <div class="hero-card"><b>Purpose</b><span>Professional oversight for SLPA operations and changes</span></div>
+          </div>
+        </div>
+      </section>
+      <section class="auth">
+        <div class="auth-card">
+          <div class="eyebrow">Secure Access</div>
+          <h2>Sign In to Continue</h2>
+          <p>Use your PDO staff account to open the monitoring dashboard.</p>
+          <form id="loginForm">
+            <label for="email">Email Address</label>
+            <input id="email" type="email" autocomplete="username" required />
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="current-password" required />
+            <button id="submitBtn" type="submit">Open Dashboard</button>
+          </form>
+          <div id="status" class="status"></div>
+          <div class="helper"><div class="chip">Protected PDO session</div><div>Use only authorized staff credentials.</div></div>
+          <div class="note">Default first-run credentials are auto-created by the backend if no PDO user exists:<br /><code>pdo@inventory.local</code> / <code>ChangeMe123!</code></div>
+        </div>
+      </section>
+    </div>
+    <script>
+      async function checkSession(){const r=await fetch("/api/pdo/session",{credentials:"same-origin"});const d=await r.json();if(d.authenticated)location.href="/pdo";}
+      async function login(event){event.preventDefault();const status=document.getElementById("status");const submit=document.getElementById("submitBtn");status.textContent="";submit.disabled=true;submit.textContent="Signing In...";try{const r=await fetch("/api/pdo/login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({email:document.getElementById("email").value.trim(),password:document.getElementById("password").value})});const d=await r.json();if(!r.ok||d.success===false)throw new Error(d.message||"Login failed.");location.href="/pdo";}catch(error){status.textContent=error.message||"Login failed.";}finally{submit.disabled=false;submit.textContent="Open Dashboard";}}
+      document.getElementById("loginForm").addEventListener("submit",login);checkSession().catch(()=>{});
+    </script>
+  </body>
+</html>
+
+
+
+
+
+

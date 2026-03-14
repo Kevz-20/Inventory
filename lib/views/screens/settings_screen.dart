@@ -29,7 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     settingsVM = SettingsViewModel(AccountRepository());
-    settingsVM.loadFullName(); // Load full name of current account
+    settingsVM.loadFullName();
   }
 
   @override
@@ -54,11 +54,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           AnimatedBuilder(
             animation: settingsVM,
             builder: (context, child) {
-              // Show loading indicator if fullName not yet loaded
               final isLoading = settingsVM.isLoading;
               final nameToShow = isLoading
                   ? 'Loading...'
-                  : settingsVM.fullName ?? '—'; // <-- updated
+                  : settingsVM.fullName ?? '-';
 
               return Container(
                 padding: const EdgeInsets.all(16),
@@ -95,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          "Account",
+                          "SLPA Account",
                           style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                       ],
@@ -114,6 +113,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: "Profile",
             icon: Icons.person,
             onTap: () => GoRouter.of(context).push('/profile'),
+          ),
+          const SizedBox(height: _itemSpacing),
+          _settingsTile(
+            title: "Add Member",
+            icon: Icons.group_add,
+            onTap: () => GoRouter.of(context).push('/add_member'),
+          ),
+          const SizedBox(height: _itemSpacing),
+          _settingsTile(
+            title: "Activity Log",
+            icon: Icons.fact_check_outlined,
+            onTap: () => GoRouter.of(context).push('/activity_log'),
+          ),
+          const SizedBox(height: _itemSpacing),
+          _settingsTile(
+            title: "Sync Center",
+            icon: Icons.sync_alt,
+            onTap: () => GoRouter.of(context).push('/sync_center'),
           ),
           const SizedBox(height: _itemSpacing),
           _settingsTile(

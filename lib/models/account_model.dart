@@ -1,5 +1,6 @@
 class Account {
   final int? id;
+  final String slpaName;
   final String mobileNumber;
   final String pin;
   final int? securityQuestionId;
@@ -19,6 +20,7 @@ class Account {
 
   Account({
     this.id,
+    required this.slpaName,
     required this.mobileNumber,
     required this.pin,
     this.securityQuestionId,
@@ -36,14 +38,21 @@ class Account {
   factory Account.fromMap(Map<String, dynamic> map) {
     return Account(
       id: map['id'] as int?,
+      slpaName: (map['slpa_name'] as String?)?.trim().isNotEmpty == true
+          ? map['slpa_name'] as String
+          : [
+              map['first_name'] as String?,
+              map['middle_name'] as String?,
+              map['last_name'] as String?,
+            ].where((part) => (part ?? '').trim().isNotEmpty).join(' '),
       mobileNumber: map['mobile_number'] as String,
       pin: map['pin'] as String,
       securityQuestionId: map['security_question_id'] as int?,
       securityAnswer: map['security_answer'] as String?,
       securityQuestion: map['security_question'] as String?,
-      firstName: map['first_name'] as String,
+      firstName: (map['first_name'] as String?) ?? '',
       middleName: map['middle_name'] as String?,
-      lastName: map['last_name'] as String,
+      lastName: (map['last_name'] as String?) ?? '',
       profileImage: map['profile_image'] as String?,
     );
   }
@@ -54,6 +63,7 @@ class Account {
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
+      'slpa_name': slpaName,
       'mobile_number': mobileNumber,
       'pin': pin,
       'security_question_id': securityQuestionId,
@@ -68,6 +78,7 @@ class Account {
 
 extension AccountCopy on Account {
   Account copyWith({
+    String? slpaName,
     String? mobileNumber,
     String? securityAnswer,
     String? securityQuestion,
@@ -78,6 +89,7 @@ extension AccountCopy on Account {
   }) {
     return Account(
       id: id,
+      slpaName: slpaName ?? this.slpaName,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       pin: pin,
       securityQuestionId: securityQuestionId,

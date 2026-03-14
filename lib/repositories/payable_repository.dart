@@ -1,5 +1,6 @@
 import '../models/payable_model.dart';
 import '../services/db_service.dart';
+import '../services/audit_log_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 class PayableRepository {
@@ -34,6 +35,10 @@ class PayableRepository {
   Future<int> addPayable(Payable payable) async {
   final db = await DBService.instance.database;
   final map = payable.toMap();
+  map['updated_at'] ??= map['created_at'] ?? DateTime.now().toIso8601String();
+  map['sync_status'] = 'pending';
+  map['last_synced_at'] = null;
+  map['is_deleted'] = 0;
 
   // Fill creator info if null
   if (payable.createdByFirstName == null || payable.createdByMiddleName == null || payable.createdByLastName == null) {
@@ -53,16 +58,25 @@ class PayableRepository {
     }
   }
 
-  return await db.insert(
+  final payableId = await db.insert(
     'payable',
     map,
     conflictAlgorithm: ConflictAlgorithm.replace,
   );
+  await AuditLogService.instance.log(
+    module: 'payable',
+    tableName: 'payable',
+    recordId: payableId.toString(),
+    action: 'create',
+    newValue: map,
+  );
+  return payableId;
 }
 
   /// Update an existing payable
   Future<int> updatePayable(Payable payable) async {
     final db = await DBService.instance.database;
+    final previous = payable.id == null ? null : await getPayableById(payable.id!);
     final map = payable.toMap();
 
     // ✅ Get current logged-in user from DB if creator info is null
@@ -79,23 +93,48 @@ class PayableRepository {
       map['created_by_middle_name'] ??= user['middle_name'];
       map['created_by_last_name'] ??= user['last_name'];
     }
+    map['updated_at'] = DateTime.now().toIso8601String();
+    map['sync_status'] = 'pending';
+    map['last_synced_at'] = null;
 
-    return await db.update(
+    final updated = await db.update(
       'payable',
       map,
       where: 'id = ?',
       whereArgs: [payable.id],
     );
+    if (updated > 0) {
+      await AuditLogService.instance.log(
+        module: 'payable',
+        tableName: 'payable',
+        recordId: payable.id?.toString(),
+        action: 'update',
+        oldValue: previous?.toMap(),
+        newValue: map,
+      );
+    }
+    return updated;
   }
 
   /// Delete a payable
   Future<int> deletePayable(int id) async {
     final db = await DBService.instance.database;
-    return await db.delete(
+    final previous = await getPayableById(id);
+    final deleted = await db.delete(
       'payable',
       where: 'id = ?',
       whereArgs: [id],
     );
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'payable',
+        tableName: 'payable',
+        recordId: id.toString(),
+        action: 'delete',
+        oldValue: previous?.toMap(),
+      );
+    }
+    return deleted;
   }
 
   /// Get total unpaid payables (optional helper for reports)

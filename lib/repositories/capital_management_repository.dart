@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/capital_management_model.dart';
+import '../services/audit_log_service.dart';
 
 class CapitalManagementRepository {
   final Database database;
@@ -13,10 +14,22 @@ class CapitalManagementRepository {
   Future<int> insertCapital(CapitalManagementModel model) async {
     final map = model.toMap();
     map['created_at'] = model.createdAt.toIso8601String();
+    map['updated_at'] = model.createdAt.toIso8601String();
+    map['sync_status'] = 'pending';
+    map['last_synced_at'] = null;
+    map['is_deleted'] = 0;
     await _attachCreatorInfo(map);
 
     debugPrint('>> Inserting capital globally: $map');
-    return await database.insert('capital_management', map);
+    final capitalId = await database.insert('capital_management', map);
+    await AuditLogService.instance.log(
+      module: 'capital_management',
+      tableName: 'capital_management',
+      recordId: capitalId.toString(),
+      action: 'create',
+      newValue: map,
+    );
+    return capitalId;
   }
 
   Future<void> _attachCreatorInfo(Map<String, dynamic> map) async {
@@ -25,8 +38,8 @@ class CapitalManagementRepository {
     if (mobileNumber == null || mobileNumber.trim().isEmpty) return;
 
     final userRows = await database.query(
-      'account',
-      columns: ['id', 'first_name', 'middle_name', 'last_name'],
+      'slpa_member',
+      columns: ['account_id', 'first_name', 'middle_name', 'last_name'],
       where: 'mobile_number = ?',
       whereArgs: [mobileNumber.trim()],
       limit: 1,
@@ -34,7 +47,7 @@ class CapitalManagementRepository {
     if (userRows.isEmpty) return;
 
     final user = userRows.first;
-    map['account_id'] = user['id'];
+    map['account_id'] = user['account_id'];
     map['created_by_first_name'] = user['first_name'] ?? '';
     map['created_by_middle_name'] = user['middle_name'] ?? '';
     map['created_by_last_name'] = user['last_name'] ?? '';
@@ -67,22 +80,60 @@ class CapitalManagementRepository {
     if (model.id == null) {
       throw Exception('Cannot update a record without ID');
     }
+    final previous = await database.query(
+      'capital_management',
+      where: 'id = ?',
+      whereArgs: [model.id],
+      limit: 1,
+    );
     final data = model.toMap()..remove('created_at');
-    return await database.update(
+    data['updated_at'] = DateTime.now().toIso8601String();
+    data['sync_status'] = 'pending';
+    data['last_synced_at'] = null;
+    final updated = await database.update(
       'capital_management',
       data,
       where: 'id = ?',
       whereArgs: [model.id],
     );
+    if (updated > 0) {
+      await AuditLogService.instance.log(
+        module: 'capital_management',
+        tableName: 'capital_management',
+        recordId: model.id.toString(),
+        action: 'update',
+        oldValue: previous.isNotEmpty
+            ? Map<String, dynamic>.from(previous.first)
+            : null,
+        newValue: data,
+      );
+    }
+    return updated;
   }
 
   // ---------------- DELETE CAPITAL RECORD ----------------
   Future<int> deleteCapital(int id) async {
-    return await database.delete(
+    final previous = await database.query(
+      'capital_management',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    final deleted = await database.delete(
       'capital_management',
       where: 'id = ?',
       whereArgs: [id],
     );
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'capital_management',
+        tableName: 'capital_management',
+        recordId: id.toString(),
+        action: 'delete',
+        oldValue: previous.isNotEmpty ? previous.first : null,
+      );
+    }
+    return deleted;
   }
 
   // ---------------- GET TOTAL BALANCE ----------------
@@ -111,6 +162,7 @@ class CapitalManagementRepository {
   Future<void> deductCash({required double amount}) async {
     if (amount <= 0) return;
 
+    final beforeTotal = await getTotalCashOnHand();
     await database.transaction((txn) async {
       final totalRes = await txn.rawQuery('''
         SELECT IFNULL(SUM(cash_on_hand), 0) AS total_cash
@@ -141,7 +193,12 @@ class CapitalManagementRepository {
 
         await txn.update(
           'capital_management',
-          {'cash_on_hand': newCash},
+          {
+            'cash_on_hand': newCash,
+            'updated_at': DateTime.now().toIso8601String(),
+            'sync_status': 'pending',
+            'last_synced_at': null,
+          },
           where: 'id = ?',
           whereArgs: [id],
         );
@@ -155,6 +212,13 @@ class CapitalManagementRepository {
     });
 
     final updatedTotal = await getTotalCashOnHand();
+    await AuditLogService.instance.log(
+      module: 'capital_management',
+      tableName: 'capital_management',
+      action: 'deduct_cash',
+      oldValue: {'cash_on_hand': beforeTotal},
+      newValue: {'cash_on_hand': updatedTotal, 'amount': amount},
+    );
     debugPrint(
       '>> Expense deducted: $amount | Remaining cash (global): $updatedTotal',
     );

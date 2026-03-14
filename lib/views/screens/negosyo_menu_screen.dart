@@ -290,6 +290,15 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
             ],
           ),
         ),
+        SizedBox(height: gap),
+        Expanded(
+          child: _reportsCard(
+            title: "MANAGE INVENTORY",
+            subtitle: "Update Products and Stock",
+            icon: Icons.inventory_2_outlined,
+            onTap: () => context.push('/manage_inventory'),
+          ),
+        ),
       ],
     );
   }

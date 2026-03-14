@@ -23,7 +23,7 @@ class TransactionHistoryRepository {
 
     final db = await dbService.database;
     final rows = await db.query(
-      'account',
+      'slpa_member',
       columns: ['first_name', 'middle_name', 'last_name'],
       where: 'mobile_number = ?',
       whereArgs: [mobile.trim()],

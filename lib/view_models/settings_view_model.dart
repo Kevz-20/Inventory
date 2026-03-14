@@ -16,7 +16,7 @@ class SettingsViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Load current account's full name (first + middle + last)
+  /// Load current account's SLPA name for the settings header.
   Future<void> loadFullName() async {
     debugPrint('[VM] loadFullName called');
 
@@ -29,8 +29,7 @@ class SettingsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Use getFullName from AccountRepository
-      final name = await repository.getFullName();
+      final name = await repository.getSlpaName();
       debugPrint('[VM] fetched fullName=$name');
 
       _fullName = name;

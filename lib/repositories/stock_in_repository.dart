@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/product_model.dart';
+import '../services/audit_log_service.dart';
 
 class StockInRepository {
   final Database db;
@@ -35,11 +36,19 @@ class StockInRepository {
       // 'created_by_last_name': 'Doe',
     };
 
-    return await db.insert(
+    final productId = await db.insert(
       'product',
       data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await AuditLogService.instance.log(
+      module: 'stock_in_product',
+      tableName: 'product',
+      recordId: productId.toString(),
+      action: 'create',
+      newValue: data,
+    );
+    return productId;
   }
 
   // Get products
@@ -55,6 +64,14 @@ class StockInRepository {
   // Update product
   Future<int> updateProduct(ProductModel product) async {
     final now = _now();
+    final previous = product.id == null
+        ? null
+        : await db.query(
+            'product',
+            where: 'id = ?',
+            whereArgs: [product.id],
+            limit: 1,
+          );
 
     final data = {
       'name': product.name,
@@ -67,21 +84,52 @@ class StockInRepository {
       'updated_at': now,
     };
 
-    return await db.update(
+    final updated = await db.update(
       'product',
       data,
       where: 'id = ?',
       whereArgs: [product.id],
     );
+    if (updated > 0) {
+      await AuditLogService.instance.log(
+        module: 'stock_in_product',
+        tableName: 'product',
+        recordId: product.id?.toString(),
+        action: 'update',
+        oldValue: previous?.isNotEmpty == true
+            ? Map<String, dynamic>.from(previous!.first)
+            : null,
+        newValue: data,
+      );
+    }
+    return updated;
   }
 
   // Delete product
   Future<int> deleteProduct(int productId) async {
-    return await db.delete(
+    final previous = await db.query(
+      'product',
+      where: 'id = ?',
+      whereArgs: [productId],
+      limit: 1,
+    );
+    final deleted = await db.delete(
       'product',
       where: 'id = ?',
       whereArgs: [productId],
     );
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'stock_in_product',
+        tableName: 'product',
+        recordId: productId.toString(),
+        action: 'delete',
+        oldValue: previous.isNotEmpty
+            ? Map<String, dynamic>.from(previous.first)
+            : null,
+      );
+    }
+    return deleted;
   }
 
   // Check if product name already exists
@@ -109,7 +157,20 @@ class StockInRepository {
 
   // Delete all products
   Future<int> deleteAllProducts() async {
-    return await db.delete('product');
+    final products = await db.query('product');
+    final deleted = await db.delete('product');
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'stock_in_product',
+        tableName: 'product',
+        action: 'bulk_delete',
+        oldValue: {
+          'count': deleted,
+          'records': products,
+        },
+      );
+    }
+    return deleted;
   }
 
   // Clear cache (no longer needed for accountId)

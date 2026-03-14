@@ -1,4 +1,3 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import '../repositories/create_account_repository.dart';
@@ -21,14 +20,7 @@ class CreateAccountViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    // Dispose controllers
-    mobileController.dispose();
-    pinController.dispose();
-    confirmPinController.dispose();
-    firstNameController.dispose();
-    middleNameController.dispose();
-    lastNameController.dispose();
-    answerController.dispose();
+    slpaNameController.dispose();
     super.dispose();
   }
 
@@ -38,151 +30,67 @@ class CreateAccountViewModel extends ChangeNotifier {
 
   // ========================================================
   CreateAccountViewModel(this._repository) {
-    loadSecurityQuestions();
-
-    // Real-time validation listeners
-    mobileController.addListener(() {
-      if (mobileError != null) _validateMobile();
-    });
-    pinController.addListener(() {
-      if (pinError != null || confirmPinError != null) _validatePin();
-    });
-    confirmPinController.addListener(() {
-      if (confirmPinError != null) _validatePin();
-    });
-    firstNameController.addListener(() {
-      if (firstNameError != null) _validateNameFields();
-    });
-    middleNameController.addListener(() {
-      if (middleNameError != null) _validateNameFields();
-    });
-    lastNameController.addListener(() {
-      if (lastNameError != null) _validateNameFields();
-    });
-    answerController.addListener(() {
-      if (answerError != null) _validateAnswer();
+    slpaNameController.addListener(() {
+      if (slpaNameError != null) _validateSlpaName();
     });
   }
 
   // ================== CONTROLLERS ==================
   final formKey = GlobalKey<FormState>();
 
-  final mobileController = TextEditingController();
-  final pinController = TextEditingController();
-  final confirmPinController = TextEditingController();
-
-  final firstNameController = TextEditingController();
-  final middleNameController = TextEditingController();
-  final lastNameController = TextEditingController();
-
-  final answerController = TextEditingController();
-
-  // ================== DROPDOWN ==================
-  String? selectedQuestion;
-  List<String> questions = [];
+  final slpaNameController = TextEditingController();
 
   // ================== STATE ==================
   bool isLoading = false;
   bool submitted = false;
-  bool isLoadingQuestions = true;
   bool isSuccessMessage = false;
 
   // ================== FIELD ERRORS ==================
-  String? mobileError;
-  String? pinError;
-  String? confirmPinError;
-  String? firstNameError;
-  String? middleNameError;
-  String? lastNameError;
-  String? answerError;
-  String? questionError;
+  String? slpaNameError;
 
   String? errorMessage;
 
-  // ================== SECURITY QUESTIONS ==================
-  Future<void> loadSecurityQuestions() async {
-    setLoading(true);
-    questions = await _repository.getSecurityQuestions();
-    isLoadingQuestions = false;
-    setLoading(false);
-  }
-
-  void setSelectedQuestion(String? value) {
-    selectedQuestion = value;
-    questionError = null;
-    safeNotifyListeners();
-  }
-
   // ================== CREATE ACCOUNT ==================
-  Future<bool> createAccount(BuildContext context) async {
+  Future<int?> createAccount(BuildContext context) async {
     submitted = true;
-    if (!_validateForm()) return false;
+    if (!_validateForm()) return null;
 
-    final mobile = mobileController.text.trim();
-    final firstName = firstNameController.text.trim();
-    final middleName = middleNameController.text.trim().isEmpty
-        ? null
-        : middleNameController.text.trim();
-    final lastName = lastNameController.text.trim();
+    final slpaName = slpaNameController.text.trim();
 
-    if (await _repository.isPhoneNumberExists(mobile)) {
+    if (await _repository.isSlpaNameExists(slpaName)) {
       // ignore: use_build_context_synchronously
-      showSnackBar(context, 'Mobile Number Already Exist');
-      return false;
-    }
-
-    if (await _repository.isFullNameExists(firstName, middleName, lastName)) {
-      // ignore: use_build_context_synchronously
-      showSnackBar(context, 'Full Name Already Exist');
-      return false;
+      showSnackBar(context, 'SLPA Name Already Exists');
+      return null;
     }
 
     setLoading(true);
 
     try {
+      final generatedKey = DateTime.now().millisecondsSinceEpoch;
       final account = Account(
-        mobileNumber: mobile,
-        pin: pinController.text.trim(),
-        firstName: firstName,
-        middleName: middleName,
-        lastName: lastName,
-        securityQuestionId: selectedQuestion != null
-            ? questions.indexOf(selectedQuestion!) + 1
-            : null,
-        securityAnswer: answerController.text.trim(),
+        slpaName: slpaName,
+        mobileNumber: 'slpa_$generatedKey',
+        pin: '0000',
+        firstName: slpaName,
+        middleName: null,
+        lastName: '',
       );
 
-      await _repository.createAccount(account);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('mobileNumber', account.mobileNumber);
-      final fullNameParts = [
-        account.firstName,
-        if ((account.middleName ?? '').isNotEmpty) account.middleName!,
-        account.lastName,
-      ];
-      await prefs.setString('fullName', fullNameParts.join(' '));
-
-      clearFields();
-      // ignore: use_build_context_synchronously
-      showSnackBar(context, "Account created successfully!", success: true);
-      return true;
-    } catch (e) {
-      final error = e.toString().toLowerCase();
-      final isDuplicateMobile =
-          error.contains('mobile number already exists') ||
-          error.contains('mobile number already exist') ||
-          (error.contains('unique constraint failed') &&
-              error.contains('account.mobile_number'));
-
+      final accountId = await _repository.createAccount(account);
       showSnackBar(
         // ignore: use_build_context_synchronously
         context,
-        isDuplicateMobile
-            ? 'Mobile Number Already Exist'
-            : 'Failed to create account',
+        'Association saved successfully!',
+        success: true,
       );
-      return false;
+      return accountId;
+    } catch (e) {
+      showSnackBar(
+        // ignore: use_build_context_synchronously
+        context,
+        'Failed to save association',
+      );
+      return null;
     } finally {
       setLoading(false);
     }
@@ -190,103 +98,27 @@ class CreateAccountViewModel extends ChangeNotifier {
 
   // ================== VALIDATION ==================
   bool _validateForm() {
-    _validateMobile();
-    _validatePin();
-    _validateNameFields();
-    _validateAnswer();
-    _validateQuestion();
+    _validateSlpaName();
 
-    bool valid =
-        mobileError == null &&
-        pinError == null &&
-        confirmPinError == null &&
-        firstNameError == null &&
-        lastNameError == null &&
-        answerError == null &&
-        questionError == null;
+    bool valid = slpaNameError == null;
 
     safeNotifyListeners();
     return valid;
   }
 
-  void _validateMobile() {
-    final mobile = mobileController.text.trim();
+  void _validateSlpaName() {
+    final value = slpaNameController.text.trim();
+    final slpaRegex = RegExp(r'^[a-zA-Z0-9\s\.\,&/\-\(\)]+$');
 
-    if (mobile.isEmpty) {
-      mobileError = 'Please enter mobile number';
-    } else if (!RegExp(r'^09\d{9}$').hasMatch(mobile)) {
-      mobileError = 'Mobile number must start with 09 and be 11 digits';
+    if (value.isEmpty) {
+      slpaNameError = 'Please enter SLPA name';
+    } else if (!slpaRegex.hasMatch(value)) {
+      slpaNameError =
+          'Only letters, numbers, spaces, and . , & / - ( ) are allowed';
     } else {
-      mobileError = null;
+      slpaNameError = null;
     }
 
-    safeNotifyListeners();
-  }
-
-  void _validatePin() {
-    if (pinController.text.isEmpty) {
-      pinError = 'Please enter PIN';
-    } else if (pinController.text.length != 4 ||
-        !RegExp(r'^[0-9]+$').hasMatch(pinController.text)) {
-      pinError = 'PIN must be 4 digits';
-    } else {
-      pinError = null;
-    }
-
-    if (confirmPinController.text.isEmpty) {
-      confirmPinError = 'Please confirm PIN';
-    } else if (pinController.text != confirmPinController.text) {
-      confirmPinError = 'PINs do not match';
-    } else {
-      confirmPinError = null;
-    }
-    safeNotifyListeners();
-  }
-
-  void _validateNameFields() {
-    // Allow letters, spaces, hyphens, and dots (for Jr., Sr., etc.)
-    final nameRegex = RegExp(r'^[a-zA-Z\s\.-]+$');
-
-    // First Name
-    if (firstNameController.text.isEmpty) {
-      firstNameError = 'Please enter first name';
-    } else if (!nameRegex.hasMatch(firstNameController.text)) {
-      firstNameError = 'Only letters, spaces, hyphens, or dots allowed';
-    } else {
-      firstNameError = null;
-    }
-
-    // Middle Name (optional)
-    if (middleNameController.text.isNotEmpty &&
-        !nameRegex.hasMatch(middleNameController.text)) {
-      middleNameError = 'Only letters, spaces, hyphens, or dots allowed';
-    } else {
-      middleNameError = null;
-    }
-
-    // Last Name
-    if (lastNameController.text.isEmpty) {
-      lastNameError = 'Please enter last name';
-    } else if (!nameRegex.hasMatch(lastNameController.text)) {
-      lastNameError = 'Only letters, spaces, hyphens, or dots allowed';
-    } else {
-      lastNameError = null;
-    }
-
-    safeNotifyListeners();
-  }
-
-  void _validateAnswer() {
-    answerError = answerController.text.isEmpty
-        ? 'Please enter your answer'
-        : null;
-    safeNotifyListeners();
-  }
-
-  void _validateQuestion() {
-    questionError = (selectedQuestion == null || selectedQuestion!.isEmpty)
-        ? 'Please select a question'
-        : null;
     safeNotifyListeners();
   }
 
@@ -297,13 +129,7 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void clearFieldError(TextEditingController controller) {
-    if (controller == mobileController) mobileError = null;
-    if (controller == pinController) pinError = null;
-    if (controller == confirmPinController) confirmPinError = null;
-    if (controller == firstNameController) firstNameError = null;
-    if (controller == middleNameController) middleNameError = null;
-    if (controller == lastNameController) lastNameError = null;
-    if (controller == answerController) answerError = null;
+    if (controller == slpaNameController) slpaNameError = null;
     safeNotifyListeners();
   }
 
@@ -348,23 +174,8 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void clearFields() {
-    mobileController.clear();
-    pinController.clear();
-    confirmPinController.clear();
-    firstNameController.clear();
-    middleNameController.clear();
-    lastNameController.clear();
-    answerController.clear();
-    selectedQuestion = null;
-
-    mobileError = null;
-    pinError = null;
-    confirmPinError = null;
-    firstNameError = null;
-    middleNameError = null;
-    lastNameError = null;
-    answerError = null;
-    questionError = null;
+    slpaNameController.clear();
+    slpaNameError = null;
     errorMessage = null;
     isSuccessMessage = false;
 

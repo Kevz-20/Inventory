@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_colors.dart';
+import '../models/login_model.dart';
+import '../models/current_user.dart';
 import '../providers/current_mobile_number_provider.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
@@ -60,6 +62,18 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _persistLoggedInMember(LoginModel account, WidgetRef ref) async {
+    await saveMobileNumber(account.mobileNumber, ref: ref);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('fullName', account.fullName);
+    await prefs.setString('slpaName', account.slpaName);
+    CurrentUser.setFromAccount(
+      first: account.firstName,
+      middle: account.middleName,
+      last: account.lastName,
+    );
+  }
+
   /// ✅ Updated Biometric Login
   Future<void> loginWithBiometric(BuildContext context, WidgetRef ref) async {
     if (mobileNumber.isEmpty) {
@@ -113,7 +127,7 @@ class LoginViewModel extends ChangeNotifier {
       }
 
       // 5️⃣ Successful login
-      await saveMobileNumber(account.mobileNumber, ref: ref);
+      await _persistLoggedInMember(account, ref);
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
         await Future.delayed(const Duration(milliseconds: 500));
@@ -182,7 +196,7 @@ class LoginViewModel extends ChangeNotifier {
     if (account != null && account.pin == pin) {
       shakePin = false;
       notifyListeners();
-      await saveMobileNumber(account.mobileNumber, ref: ref);
+      await _persistLoggedInMember(account, ref);
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
         await Future.delayed(const Duration(milliseconds: 500));

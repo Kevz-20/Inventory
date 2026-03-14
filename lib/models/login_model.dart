@@ -1,5 +1,8 @@
 class LoginModel {
+  final int accountId;
+  final int memberId;
   final int id;
+  final String slpaName;
   final String firstName;
   final String? middleName;
   final String lastName;
@@ -7,7 +10,10 @@ class LoginModel {
   final String pin;
 
   LoginModel({
+    required this.accountId,
+    required this.memberId,
     required this.id,
+    required this.slpaName,
     required this.firstName,
     this.middleName,
     required this.lastName,
@@ -17,10 +23,19 @@ class LoginModel {
 
   factory LoginModel.fromMap(Map<String, dynamic> map) {
     return LoginModel(
+      accountId: (map['account_id'] as num?)?.toInt() ?? 0,
+      memberId: (map['member_id'] as num?)?.toInt() ?? (map['id'] as num?)?.toInt() ?? 0,
       id: map['id'] as int,
-      firstName: map['first_name'] as String,
+      slpaName: (map['slpa_name'] as String?)?.trim().isNotEmpty == true
+          ? map['slpa_name'] as String
+          : [
+              map['first_name'] as String?,
+              map['middle_name'] as String?,
+              map['last_name'] as String?,
+            ].where((part) => (part ?? '').trim().isNotEmpty).join(' '),
+      firstName: (map['first_name'] as String?) ?? '',
       middleName: map['middle_name'] as String?,
-      lastName: map['last_name'] as String,
+      lastName: (map['last_name'] as String?) ?? '',
       mobileNumber: map['mobile_number'] as String,
       pin: map['pin'] as String,
     );
@@ -28,7 +43,10 @@ class LoginModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'account_id': accountId,
+      'member_id': memberId,
       'id': id,
+      'slpa_name': slpaName,
       'first_name': firstName,
       'middle_name': middleName,
       'last_name': lastName,
@@ -37,9 +55,9 @@ class LoginModel {
     };
   }
 
-  /// Optional helper: get full name
   String get fullName {
-    final middle = middleName != null && middleName!.isNotEmpty ? ' $middleName' : '';
-    return '$firstName$middle $lastName';
+    return [firstName, middleName, lastName]
+        .where((part) => (part ?? '').trim().isNotEmpty)
+        .join(' ');
   }
 }

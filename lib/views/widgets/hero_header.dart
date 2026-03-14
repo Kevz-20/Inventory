@@ -41,11 +41,11 @@ class HeroHeader extends ConsumerWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
 
-        // ✅ SCALE FACTOR (phone → tablet)
+        // SCALE FACTOR (phone to tablet)
         // 360 = small phone baseline, 900 = tablet cap
         final s = (w / 360).clamp(1.0, 1.35);
 
-        // ✅ Responsive sizes (same layout)
+        // Responsive sizes (same layout)
         final sideSlot = (40 * s).clamp(40.0, 54.0);
         final logoSize = (40 * s).clamp(40.0, 54.0);
         final topRowHeight = (40 * s).clamp(40.0, 56.0);
@@ -63,7 +63,7 @@ class HeroHeader extends ConsumerWidget {
         final eyePad = (12 * s).clamp(12.0, 16.0);
         final eyeIconSize = (26 * s).clamp(24.0, 30.0);
 
-        // ✅ Avoid logo overlapping title on very small width
+        // Avoid logo overlapping title on very small width
         final showLogoSafe = showLogo && w >= 360;
 
         return Container(
@@ -112,7 +112,7 @@ class HeroHeader extends ConsumerWidget {
                                 ? Alignment.center
                                 : Alignment.centerLeft,
                             child: Padding(
-                              // ✅ if logo is shown, add a tiny left padding so title won't collide
+                              // if logo is shown, add a tiny left padding so title won't collide
                               padding: EdgeInsets.only(
                                 left: (!centerTitle && showLogoSafe)
                                     ? (logoSize + 10)
@@ -136,7 +136,7 @@ class HeroHeader extends ConsumerWidget {
                           ),
                         ),
 
-                        // ✅ BELL WITH BADGE
+                        // BELL WITH BADGE
                         SizedBox(
                           width: sideSlot,
                           child: InkWell(
@@ -224,7 +224,7 @@ class HeroHeader extends ConsumerWidget {
 
               SizedBox(height: (14 * s).clamp(14.0, 20.0)),
 
-              // ✅ 3D card (same style, responsive sizes)
+              // 3D card (same style, responsive sizes)
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.fromLTRB(

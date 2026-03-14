@@ -1,5 +1,6 @@
 import '../services/db_service.dart';
 import '../view_models/home_view_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeRepository {
   HomeRepository(this._dbService);
@@ -48,17 +49,8 @@ class HomeRepository {
 }
 
   Future<String?> getMobileNumber() async {
-    final db = await _dbService.database;
-
-    final rows = await db.rawQuery('''
-      SELECT mobile_number
-      FROM account
-      ORDER BY id DESC
-      LIMIT 1
-    ''');
-
-    if (rows.isEmpty) return null;
-    return rows.first['mobile_number']?.toString();
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('mobileNumber');
   }
 
   Future<({List<CashflowPoint> income, List<CashflowPoint> expense})>

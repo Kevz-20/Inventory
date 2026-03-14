@@ -7,6 +7,7 @@ import '../../core/app_colors.dart';
 import '../../models/utang_customer_model.dart';
 import '../../repositories/capital_management_repository.dart';
 import '../../repositories/customer_repository.dart';
+import '../../services/audit_log_service.dart';
 import '../../services/db_service.dart';
 import '../widgets/header.dart';
 
@@ -254,8 +255,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     final prefs = await SharedPreferences.getInstance();
                                     final mobileNumber = prefs.getString('mobileNumber') ?? '';
                                     final accountRows = await db.query(
-                                      'account',
-                                      columns: ['id', 'first_name', 'middle_name', 'last_name'],
+                                      'slpa_member',
+                                      columns: ['account_id', 'first_name', 'middle_name', 'last_name'],
                                       where: 'mobile_number = ?',
                                       whereArgs: [mobileNumber],
                                       limit: 1,
@@ -266,13 +267,26 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
                                     await db.insert('customer_payment', {
                                       'customer_id': widget.customer.id,
-                                      'account_id': account['id'],
+                                      'account_id': account['account_id'],
                                       'amount': enteredAmount,
                                       'paid_at': DateTime.now().toIso8601String(),
                                       'created_by_first_name': account['first_name'] ?? '',
                                       'created_by_middle_name': account['middle_name'] ?? '',
                                       'created_by_last_name': account['last_name'] ?? '',
                                     });
+
+                                    await AuditLogService.instance.log(
+                                      accountId: (account['account_id'] as num?)?.toInt(),
+                                      module: 'customer_payment',
+                                      tableName: 'customer_payment',
+                                      recordId: widget.customer.id.toString(),
+                                      action: 'create',
+                                      newValue: {
+                                        'customer_id': widget.customer.id,
+                                        'customer_name': widget.customer.fullName,
+                                        'amount': enteredAmount,
+                                      },
+                                    );
 
                                     final customerRepo = CustomerRepository(db);
                                     final currentCredit =

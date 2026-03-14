@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import '../services/audit_log_service.dart';
 
 class CustomerRepository {
   final Database _db;
@@ -13,32 +14,72 @@ class CustomerRepository {
       'available_credit': customer['available_credit'] ?? 1000.0, // default
       'created_at': customer['created_at'] ?? DateTime.now().toIso8601String(),
       'updated_at': customer['updated_at'] ?? DateTime.now().toIso8601String(),
+      'sync_status': 'pending',
+      'last_synced_at': null,
+      'is_deleted': 0,
     };
 
-    return await _db.insert(
+    final customerId = await _db.insert(
       'customer',
       customerWithDefaults,
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
+    await AuditLogService.instance.log(
+      module: 'customer',
+      tableName: 'customer',
+      recordId: customerId.toString(),
+      action: 'create',
+      newValue: customerWithDefaults,
+    );
+    return customerId;
   }
 
   /// Update an existing customer by ID
   Future<int> updateCustomer(int id, Map<String, dynamic> updatedCustomer) async {
-    return await _db.update(
+    final previous = await getCustomerById(id);
+    final data = {
+      ...updatedCustomer,
+      'updated_at': DateTime.now().toIso8601String(),
+      'sync_status': 'pending',
+      'last_synced_at': null,
+    };
+    final updated = await _db.update(
       'customer',
-      updatedCustomer,
+      data,
       where: 'id = ?',
       whereArgs: [id],
     );
+    if (updated > 0) {
+      await AuditLogService.instance.log(
+        module: 'customer',
+        tableName: 'customer',
+        recordId: id.toString(),
+        action: 'update',
+        oldValue: previous,
+        newValue: data,
+      );
+    }
+    return updated;
   }
 
   /// Delete a customer by ID
   Future<int> deleteCustomer(int id) async {
-    return await _db.delete(
+    final previous = await getCustomerById(id);
+    final deleted = await _db.delete(
       'customer',
       where: 'id = ?',
       whereArgs: [id],
     );
+    if (deleted > 0) {
+      await AuditLogService.instance.log(
+        module: 'customer',
+        tableName: 'customer',
+        recordId: id.toString(),
+        action: 'delete',
+        oldValue: previous,
+      );
+    }
+    return deleted;
   }
 
   /// Get all customers
@@ -84,7 +125,12 @@ class CustomerRepository {
     // 3️⃣ Update in DB
     await _db.update(
       'customer',
-      {'available_credit': newCredit},
+      {
+        'available_credit': newCredit,
+        'updated_at': DateTime.now().toIso8601String(),
+        'sync_status': 'pending',
+        'last_synced_at': null,
+      },
       where: 'id = ?',
       whereArgs: [customerId],
     );
