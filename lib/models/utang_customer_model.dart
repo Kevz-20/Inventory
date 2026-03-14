@@ -7,6 +7,10 @@ class UtangCustomer {
   final String? municipality;
   final String? barangay;
   final DateTime? dueDate; // keep DateTime for easier calculations
+  final String? localUuid;
+  final String? serverId;
+  final String? syncStatus;
+  final String? lastSyncedAt;
   int remainingDays; // mutable
   double balance; // mutable, for remaining balance
   final double totalAmount;
@@ -20,6 +24,10 @@ class UtangCustomer {
     this.municipality,
     this.barangay,
     this.dueDate,
+    this.localUuid,
+    this.serverId,
+    this.syncStatus,
+    this.lastSyncedAt,
     this.remainingDays = 0,
     required this.balance,
     required this.totalAmount,
@@ -67,6 +75,10 @@ class UtangCustomer {
       municipality: map['municipality'],
       barangay: map['barangay'],
       dueDate: parsedDueDate,
+      localUuid: map['local_uuid'] as String?,
+      serverId: map['server_id'] as String?,
+      syncStatus: map['sync_status'] as String?,
+      lastSyncedAt: map['last_synced_at'] as String?,
       remainingDays: parsedDueDate != null
           ? DateTime(parsedDueDate.year, parsedDueDate.month, parsedDueDate.day)
                 .difference(

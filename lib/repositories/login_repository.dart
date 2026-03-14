@@ -1,5 +1,6 @@
 import '../services/db_service.dart';
 import '../models/login_model.dart';
+import '../models/create_account_model.dart' as create_account;
 
 class LoginRepository {
   final DBService _dbService;
@@ -61,5 +62,27 @@ class LoginRepository {
     if (account == null) return null;
     final middle = account.middleName?.isNotEmpty == true ? ' ${account.middleName}' : '';
     return '${account.firstName}$middle ${account.lastName}';
+  }
+
+  Future<void> upsertLocalAccountCache(create_account.Account account) async {
+    final db = await _dbService.database;
+    final existing = await db.query(
+      'account',
+      where: 'mobile_number = ?',
+      whereArgs: [account.mobileNumber.trim()],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      await db.insert('account', account.toMap());
+      return;
+    }
+
+    await db.update(
+      'account',
+      account.toMap(),
+      where: 'mobile_number = ?',
+      whereArgs: [account.mobileNumber.trim()],
+    );
   }
 }

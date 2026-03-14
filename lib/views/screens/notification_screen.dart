@@ -199,7 +199,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       }
 
       final customer = await _loadUtangCustomer(customerId);
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       if (customer == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -211,6 +211,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return;
       }
 
+      if (!context.mounted) return;
       await context.push('/utang_summary', extra: customer);
       return;
     }

@@ -1,20 +1,25 @@
 ﻿// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_colors.dart';
 import '../../models/utang_customer_model.dart';
 import '../../repositories/capital_management_repository.dart';
 import '../../repositories/customer_repository.dart';
 import '../../services/db_service.dart';
 import '../widgets/header.dart';
+import '../widgets/sync_status_badge.dart';
 
 // ================================
 // MODEL FOR INDIVIDUAL UTANG ITEMS
 // ================================
 class UtangItem {
   final int salesCreditId;
+  final String? localUuid;
+  final String? serverId;
+  final String? syncStatus;
+  final String? lastSyncedAt;
   final String itemName;
   final double amount;
   final int quantity;
@@ -23,6 +28,10 @@ class UtangItem {
 
   UtangItem({
     required this.salesCreditId,
+    this.localUuid,
+    this.serverId,
+    this.syncStatus,
+    this.lastSyncedAt,
     required this.itemName,
     required this.amount,
     required this.quantity,
@@ -33,6 +42,10 @@ class UtangItem {
   factory UtangItem.fromMap(Map<String, dynamic> map) {
     return UtangItem(
       salesCreditId: map['sales_credit_id'],
+      localUuid: map['local_uuid'] as String?,
+      serverId: map['server_id'] as String?,
+      syncStatus: map['sync_status'] as String?,
+      lastSyncedAt: map['last_synced_at'] as String?,
       itemName: map['item_name'] ?? '',
       amount: (map['amount'] ?? 0).toDouble(),
       quantity: map['quantity'] ?? 0,
@@ -47,12 +60,20 @@ class UtangItem {
 // ================================
 class CustomerPayment {
   final int id;
+  final String? localUuid;
+  final String? serverId;
+  final String? syncStatus;
+  final String? lastSyncedAt;
   final double amount;
   final DateTime paidAt;
   final int? creditDateId;
 
   CustomerPayment({
     required this.id,
+    this.localUuid,
+    this.serverId,
+    this.syncStatus,
+    this.lastSyncedAt,
     required this.amount,
     required this.paidAt,
     this.creditDateId,
@@ -61,6 +82,10 @@ class CustomerPayment {
   factory CustomerPayment.fromMap(Map<String, dynamic> map) {
     return CustomerPayment(
       id: map['id'],
+      localUuid: map['local_uuid'] as String?,
+      serverId: map['server_id'] as String?,
+      syncStatus: map['sync_status'] as String?,
+      lastSyncedAt: map['last_synced_at'] as String?,
       amount: (map['amount'] ?? 0).toDouble(),
       paidAt: DateTime.tryParse(map['paid_at'] ?? '') ?? DateTime.now(),
       creditDateId: map['credit_date_id'],
@@ -134,6 +159,10 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
       '''
       SELECT
         sc.id AS sales_credit_id,
+        sc.local_uuid,
+        sc.server_id,
+        sc.sync_status,
+        sc.last_synced_at,
         p.name AS item_name,
         sc.amount,
         sc.quantity,
@@ -251,37 +280,11 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ? null
                                 : () async {
                                     final db = await DBService.instance.database;
-                                    final prefs = await SharedPreferences.getInstance();
-                                    final mobileNumber = prefs.getString('mobileNumber') ?? '';
-                                    final accountRows = await db.query(
-                                      'account',
-                                      columns: ['id', 'first_name', 'middle_name', 'last_name'],
-                                      where: 'mobile_number = ?',
-                                      whereArgs: [mobileNumber],
-                                      limit: 1,
-                                    );
-                                    final account = accountRows.isNotEmpty
-                                        ? accountRows.first
-                                        : <String, Object?>{};
-
-                                    await db.insert('customer_payment', {
-                                      'customer_id': widget.customer.id,
-                                      'account_id': account['id'],
-                                      'amount': enteredAmount,
-                                      'paid_at': DateTime.now().toIso8601String(),
-                                      'created_by_first_name': account['first_name'] ?? '',
-                                      'created_by_middle_name': account['middle_name'] ?? '',
-                                      'created_by_last_name': account['last_name'] ?? '',
-                                    });
-
                                     final customerRepo = CustomerRepository(db);
-                                    final currentCredit =
-                                        await customerRepo.getAvailableCredit(widget.customer.id);
-
-                                    await customerRepo.updateCustomer(widget.customer.id, {
-                                      'available_credit': currentCredit + enteredAmount,
-                                      'updated_at': DateTime.now().toIso8601String(),
-                                    });
+                                    await customerRepo.addCustomerPayment(
+                                      customerId: widget.customer.id,
+                                      amount: enteredAmount,
+                                    );
 
                                     final capitalRepo = CapitalManagementRepository(db);
                                     await capitalRepo.addCustomerPaymentCash(enteredAmount);
@@ -428,19 +431,14 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ? null
                                 : () async {
                                     Navigator.pop(context);
-                                    final amountToAdd = selectedAmount;
+                                    final amountToAdd = selectedAmount.toDouble();
 
                                     try {
                                       final db = await DBService.instance.database;
-
-                                      await db.rawUpdate(
-                                        '''
-                                  UPDATE customer
-                                  SET credit_limit = credit_limit + ?,
-                                      available_credit = available_credit + ?
-                                  WHERE id = ?
-                                  ''',
-                                        [amountToAdd, amountToAdd, widget.customer.id],
+                                      final customerRepo = CustomerRepository(db);
+                                      await customerRepo.increaseCreditLimit(
+                                        customerId: widget.customer.id,
+                                        amount: amountToAdd,
                                       );
 
                                       await fetchCustomerData();
@@ -612,7 +610,24 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                     color: paymentTypeColor,
                                   ),
                                 ),
-                                subtitle: Text(payTime),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(payTime),
+                                    const SizedBox(height: 6),
+                                    SyncStatusBadge(
+                                      syncStatus: pay.syncStatus,
+                                      lastSyncedAt: pay.lastSyncedAt,
+                                      onTap: pay.localUuid == null ||
+                                              pay.localUuid!.isEmpty
+                                          ? null
+                                          : () => context.push(
+                                                '/sync_diagnostics?entityType=payments&localUuid=${Uri.encodeComponent(pay.localUuid!)}',
+                                              ),
+                                    ),
+                                  ],
+                                ),
                                 trailing: Text(
                                   '₱${currencyFormat.format(pay.amount)}',
                                   style: const TextStyle(
@@ -786,6 +801,22 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             iconSize: iconFs,
                             textSize: (15 * scale).clamp(13, 17),
                           ),
+
+                        SizedBox(height: (10 * scale).clamp(8, 14)),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: SyncStatusBadge(
+                            syncStatus: widget.customer.syncStatus,
+                            lastSyncedAt: widget.customer.lastSyncedAt,
+                            compact: false,
+                            onTap: widget.customer.localUuid == null ||
+                                    widget.customer.localUuid!.isEmpty
+                                ? null
+                                : () => context.push(
+                                      '/sync_diagnostics?entityType=customer&localUuid=${Uri.encodeComponent(widget.customer.localUuid!)}',
+                                    ),
+                          ),
+                        ),
 
                         if (widget.customer.phoneNumber != null) SizedBox(height: gap12),
 
@@ -1017,6 +1048,17 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                           color: _subtitleColor,
                                                           fontWeight: FontWeight.w600,
                                                         ),
+                                                      ),
+                                                      SizedBox(height: (6 * scale).clamp(4, 8)),
+                                                      SyncStatusBadge(
+                                                        syncStatus: item.syncStatus,
+                                                        lastSyncedAt: item.lastSyncedAt,
+                                                        onTap: item.localUuid == null ||
+                                                                item.localUuid!.isEmpty
+                                                            ? null
+                                                            : () => context.push(
+                                                                  '/sync_diagnostics?entityType=receivables&localUuid=${Uri.encodeComponent(item.localUuid!)}',
+                                                                ),
                                                       ),
                                                     ],
                                                   ),

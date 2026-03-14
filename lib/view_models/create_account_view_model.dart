@@ -1,48 +1,42 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
-import '../repositories/create_account_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/create_account_model.dart';
+import '../repositories/auth_repository.dart';
+import '../repositories/create_account_repository.dart';
 import '../services/db_service.dart';
+import '../services/supabase_service.dart';
 
 final createAccountProvider =
     ChangeNotifierProvider.autoDispose<CreateAccountViewModel>((ref) {
       final dbService = DBService.instance;
       final repository = CreateAccountRepository(dbService);
-      return CreateAccountViewModel(repository);
+      return CreateAccountViewModel(repository, const AuthRepository());
     });
 
 class CreateAccountViewModel extends ChangeNotifier {
   final CreateAccountRepository _repository;
+  final AuthRepository _authRepository;
 
-  // -------------------- Dispose Safety --------------------
   bool _disposed = false;
 
-  @override
-  void dispose() {
-    _disposed = true;
-    // Dispose controllers
-    mobileController.dispose();
-    pinController.dispose();
-    confirmPinController.dispose();
-    firstNameController.dispose();
-    middleNameController.dispose();
-    lastNameController.dispose();
-    answerController.dispose();
-    super.dispose();
-  }
-
-  void safeNotifyListeners() {
-    if (!_disposed) notifyListeners();
-  }
-
-  // ========================================================
-  CreateAccountViewModel(this._repository) {
+  CreateAccountViewModel(this._repository, this._authRepository) {
     loadSecurityQuestions();
 
-    // Real-time validation listeners
     mobileController.addListener(() {
       if (mobileError != null) _validateMobile();
+    });
+    emailController.addListener(() {
+      if (emailError != null) _validateEmail();
+    });
+    passwordController.addListener(() {
+      if (passwordError != null || confirmPasswordError != null) {
+        _validatePasswordFields();
+      }
+    });
+    confirmPasswordController.addListener(() {
+      if (confirmPasswordError != null) _validatePasswordFields();
     });
     pinController.addListener(() {
       if (pinError != null || confirmPinError != null) _validatePin();
@@ -64,31 +58,33 @@ class CreateAccountViewModel extends ChangeNotifier {
     });
   }
 
-  // ================== CONTROLLERS ==================
   final formKey = GlobalKey<FormState>();
 
   final mobileController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
   final pinController = TextEditingController();
   final confirmPinController = TextEditingController();
-
   final firstNameController = TextEditingController();
   final middleNameController = TextEditingController();
   final lastNameController = TextEditingController();
-
   final answerController = TextEditingController();
 
-  // ================== DROPDOWN ==================
   String? selectedQuestion;
   List<String> questions = [];
 
-  // ================== STATE ==================
   bool isLoading = false;
   bool submitted = false;
   bool isLoadingQuestions = true;
   bool isSuccessMessage = false;
 
-  // ================== FIELD ERRORS ==================
+  bool get usesBackendAuth => SupabaseService.isConfigured;
+
   String? mobileError;
+  String? emailError;
+  String? passwordError;
+  String? confirmPasswordError;
   String? pinError;
   String? confirmPinError;
   String? firstNameError;
@@ -96,10 +92,28 @@ class CreateAccountViewModel extends ChangeNotifier {
   String? lastNameError;
   String? answerError;
   String? questionError;
-
   String? errorMessage;
 
-  // ================== SECURITY QUESTIONS ==================
+  @override
+  void dispose() {
+    _disposed = true;
+    mobileController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    pinController.dispose();
+    confirmPinController.dispose();
+    firstNameController.dispose();
+    middleNameController.dispose();
+    lastNameController.dispose();
+    answerController.dispose();
+    super.dispose();
+  }
+
+  void safeNotifyListeners() {
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> loadSecurityQuestions() async {
     setLoading(true);
     questions = await _repository.getSecurityQuestions();
@@ -113,7 +127,6 @@ class CreateAccountViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  // ================== CREATE ACCOUNT ==================
   Future<bool> createAccount(BuildContext context) async {
     submitted = true;
     if (!_validateForm()) return false;
@@ -126,13 +139,13 @@ class CreateAccountViewModel extends ChangeNotifier {
     final lastName = lastNameController.text.trim();
 
     if (await _repository.isPhoneNumberExists(mobile)) {
-      // ignore: use_build_context_synchronously
+      if (!context.mounted) return false;
       showSnackBar(context, 'Mobile Number Already Exist');
       return false;
     }
 
     if (await _repository.isFullNameExists(firstName, middleName, lastName)) {
-      // ignore: use_build_context_synchronously
+      if (!context.mounted) return false;
       showSnackBar(context, 'Full Name Already Exist');
       return false;
     }
@@ -152,10 +165,25 @@ class CreateAccountViewModel extends ChangeNotifier {
         securityAnswer: answerController.text.trim(),
       );
 
-      await _repository.createAccount(account);
+      if (usesBackendAuth) {
+        await _authRepository.signUpWithEmail(
+          email: emailController.text.trim(),
+          password: passwordController.text,
+          firstName: firstName,
+          middleName: middleName,
+          lastName: lastName,
+          mobileNumber: mobile,
+        );
+      }
+
+      await _repository.upsertLocalAccount(account);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('mobileNumber', account.mobileNumber);
+      if (usesBackendAuth) {
+        await prefs.setString('lastLoginEmail', emailController.text.trim());
+      }
+
       final fullNameParts = [
         account.firstName,
         if ((account.middleName ?? '').isNotEmpty) account.middleName!,
@@ -164,8 +192,8 @@ class CreateAccountViewModel extends ChangeNotifier {
       await prefs.setString('fullName', fullNameParts.join(' '));
 
       clearFields();
-      // ignore: use_build_context_synchronously
-      showSnackBar(context, "Account created successfully!", success: true);
+      if (!context.mounted) return false;
+      showSnackBar(context, 'Account created successfully!', success: true);
       return true;
     } catch (e) {
       final error = e.toString().toLowerCase();
@@ -175,8 +203,8 @@ class CreateAccountViewModel extends ChangeNotifier {
           (error.contains('unique constraint failed') &&
               error.contains('account.mobile_number'));
 
+      if (!context.mounted) return false;
       showSnackBar(
-        // ignore: use_build_context_synchronously
         context,
         isDuplicateMobile
             ? 'Mobile Number Already Exist'
@@ -188,16 +216,20 @@ class CreateAccountViewModel extends ChangeNotifier {
     }
   }
 
-  // ================== VALIDATION ==================
   bool _validateForm() {
     _validateMobile();
+    _validateEmail();
+    _validatePasswordFields();
     _validatePin();
     _validateNameFields();
     _validateAnswer();
     _validateQuestion();
 
-    bool valid =
+    final valid =
         mobileError == null &&
+        emailError == null &&
+        passwordError == null &&
+        confirmPasswordError == null &&
         pinError == null &&
         confirmPinError == null &&
         firstNameError == null &&
@@ -218,6 +250,52 @@ class CreateAccountViewModel extends ChangeNotifier {
       mobileError = 'Mobile number must start with 09 and be 11 digits';
     } else {
       mobileError = null;
+    }
+
+    safeNotifyListeners();
+  }
+
+  void _validateEmail() {
+    if (!usesBackendAuth) {
+      emailError = null;
+      safeNotifyListeners();
+      return;
+    }
+
+    final email = emailController.text.trim();
+    if (email.isEmpty) {
+      emailError = 'Please enter email';
+    } else if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      emailError = 'Enter a valid email address';
+    } else {
+      emailError = null;
+    }
+
+    safeNotifyListeners();
+  }
+
+  void _validatePasswordFields() {
+    if (!usesBackendAuth) {
+      passwordError = null;
+      confirmPasswordError = null;
+      safeNotifyListeners();
+      return;
+    }
+
+    if (passwordController.text.isEmpty) {
+      passwordError = 'Please enter password';
+    } else if (passwordController.text.length < 8) {
+      passwordError = 'Password must be at least 8 characters';
+    } else {
+      passwordError = null;
+    }
+
+    if (confirmPasswordController.text.isEmpty) {
+      confirmPasswordError = 'Please confirm password';
+    } else if (passwordController.text != confirmPasswordController.text) {
+      confirmPasswordError = 'Passwords do not match';
+    } else {
+      confirmPasswordError = null;
     }
 
     safeNotifyListeners();
@@ -244,10 +322,8 @@ class CreateAccountViewModel extends ChangeNotifier {
   }
 
   void _validateNameFields() {
-    // Allow letters, spaces, hyphens, and dots (for Jr., Sr., etc.)
     final nameRegex = RegExp(r'^[a-zA-Z\s\.-]+$');
 
-    // First Name
     if (firstNameController.text.isEmpty) {
       firstNameError = 'Please enter first name';
     } else if (!nameRegex.hasMatch(firstNameController.text)) {
@@ -256,7 +332,6 @@ class CreateAccountViewModel extends ChangeNotifier {
       firstNameError = null;
     }
 
-    // Middle Name (optional)
     if (middleNameController.text.isNotEmpty &&
         !nameRegex.hasMatch(middleNameController.text)) {
       middleNameError = 'Only letters, spaces, hyphens, or dots allowed';
@@ -264,7 +339,6 @@ class CreateAccountViewModel extends ChangeNotifier {
       middleNameError = null;
     }
 
-    // Last Name
     if (lastNameController.text.isEmpty) {
       lastNameError = 'Please enter last name';
     } else if (!nameRegex.hasMatch(lastNameController.text)) {
@@ -290,7 +364,6 @@ class CreateAccountViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  // ================== HELPERS ==================
   void setLoading(bool value) {
     isLoading = value;
     safeNotifyListeners();
@@ -298,6 +371,9 @@ class CreateAccountViewModel extends ChangeNotifier {
 
   void clearFieldError(TextEditingController controller) {
     if (controller == mobileController) mobileError = null;
+    if (controller == emailController) emailError = null;
+    if (controller == passwordController) passwordError = null;
+    if (controller == confirmPasswordController) confirmPasswordError = null;
     if (controller == pinController) pinError = null;
     if (controller == confirmPinController) confirmPinError = null;
     if (controller == firstNameController) firstNameError = null;
@@ -330,25 +406,11 @@ class CreateAccountViewModel extends ChangeNotifier {
     );
   }
 
-  void showResponseMessage(
-    String message, {
-    bool success = false,
-    int durationSeconds = 3,
-  }) {
-    errorMessage = message;
-    isSuccessMessage = success;
-    safeNotifyListeners();
-
-    Future.delayed(Duration(seconds: durationSeconds), () {
-      if (_disposed) return;
-      errorMessage = null;
-      isSuccessMessage = false;
-      safeNotifyListeners();
-    });
-  }
-
   void clearFields() {
     mobileController.clear();
+    emailController.clear();
+    passwordController.clear();
+    confirmPasswordController.clear();
     pinController.clear();
     confirmPinController.clear();
     firstNameController.clear();
@@ -358,6 +420,9 @@ class CreateAccountViewModel extends ChangeNotifier {
     selectedQuestion = null;
 
     mobileError = null;
+    emailError = null;
+    passwordError = null;
+    confirmPasswordError = null;
     pinError = null;
     confirmPinError = null;
     firstNameError = null;

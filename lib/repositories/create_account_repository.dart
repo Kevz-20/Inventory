@@ -45,6 +45,28 @@ class CreateAccountRepository {
     return await db.insert('account', account.toMap());
   }
 
+  Future<void> upsertLocalAccount(Account account) async {
+    final db = await _dbService.database;
+    final existing = await db.query(
+      'account',
+      where: 'mobile_number = ?',
+      whereArgs: [account.mobileNumber.trim()],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      await db.insert('account', account.toMap());
+      return;
+    }
+
+    await db.update(
+      'account',
+      account.toMap(),
+      where: 'mobile_number = ?',
+      whereArgs: [account.mobileNumber.trim()],
+    );
+  }
+
   // ---------------- FETCH ACCOUNT BY PHONE NUMBER ----------------
   Future<Account?> getAccountByPhone(String phoneNumber) async {
     final db = await _dbService.database;

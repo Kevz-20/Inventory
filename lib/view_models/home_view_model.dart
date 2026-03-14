@@ -39,6 +39,7 @@ class HomeState {
   final double cashOnHand;
   final bool isMoneyVisible;
   final String? mobileNumber;
+  final String? organizationName;
   final String? error;
   final int selectedIndex;
 
@@ -59,6 +60,7 @@ class HomeState {
     this.cashOnHand = 0.0,
     this.isMoneyVisible = true,
     this.mobileNumber,
+    this.organizationName,
     this.error,
     this.selectedIndex = 0,
     this.graphMode = HomeGraphMode.net,
@@ -76,6 +78,7 @@ class HomeState {
     double? cashOnHand,
     bool? isMoneyVisible,
     String? mobileNumber,
+    String? organizationName,
     String? error,
     int? selectedIndex,
     HomeGraphMode? graphMode,
@@ -92,6 +95,7 @@ class HomeState {
       cashOnHand: cashOnHand ?? this.cashOnHand,
       isMoneyVisible: isMoneyVisible ?? this.isMoneyVisible,
       mobileNumber: mobileNumber ?? this.mobileNumber,
+      organizationName: organizationName ?? this.organizationName,
       error: error ?? this.error,
       selectedIndex: selectedIndex ?? this.selectedIndex,
       graphMode: graphMode ?? this.graphMode,
@@ -198,6 +202,10 @@ class HomeViewModel extends StateNotifier<HomeState> {
 
   void setGraphMode(HomeGraphMode mode) {
     state = state.copyWith(graphMode: mode);
+  }
+
+  void setOrganizationName(String? organizationName) {
+    state = state.copyWith(organizationName: organizationName);
   }
 }
 

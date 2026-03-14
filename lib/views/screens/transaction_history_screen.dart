@@ -3,6 +3,7 @@
 import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +11,7 @@ import '../../core/app_colors.dart';
 import '../../models/current_user.dart';
 import '../../view_models/transaction_history_view_model.dart';
 import '../widgets/nav_bar.dart';
+import '../widgets/sync_status_badge.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -277,6 +279,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     final amountText = isIncome
         ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
         : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}';
+    final showSyncBadge = isHalin || isHalinUtang || isCustomerPayment;
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
@@ -413,6 +416,22 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ],
               ],
             ),
+
+            if (showSyncBadge) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SyncStatusBadge(
+                  syncStatus: tx.syncStatus,
+                  lastSyncedAt: tx.lastSyncedAt,
+                  onTap: tx.localUuid == null || tx.localUuid!.isEmpty
+                      ? null
+                      : () => context.push(
+                            '/sync_diagnostics?entityType=${Uri.encodeComponent(isCustomerPayment ? 'payments' : 'sales')}&localUuid=${Uri.encodeComponent(tx.localUuid!)}',
+                          ),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 8),
 

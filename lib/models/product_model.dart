@@ -1,5 +1,9 @@
 class ProductModel {
   int? id;
+  String? localUuid;
+  String? serverId;
+  String? syncStatus;
+  String? lastSyncedAt;
   String name;
   String category;
   int? categoryId; // ✅ keep this
@@ -12,6 +16,10 @@ class ProductModel {
 
   ProductModel({
     this.id,
+    this.localUuid,
+    this.serverId,
+    this.syncStatus,
+    this.lastSyncedAt,
     required this.name,
     required this.category,
     this.categoryId, // ✅ add in constructor
@@ -26,6 +34,10 @@ class ProductModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'local_uuid': localUuid,
+      'server_id': serverId,
+      'sync_status': syncStatus,
+      'last_synced_at': lastSyncedAt,
       'name': name,
       'category': category,
       'category_id': categoryId, // ✅ NEW
@@ -41,6 +53,10 @@ class ProductModel {
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     return ProductModel(
       id: map['id'] as int?,
+      localUuid: map['local_uuid'] as String?,
+      serverId: map['server_id'] as String?,
+      syncStatus: map['sync_status'] as String?,
+      lastSyncedAt: map['last_synced_at'] as String?,
       name: (map['name'] ?? '') as String,
       category: (map['category'] ?? '') as String,
       categoryId: map['category_id'] as int?, // ✅ NEW

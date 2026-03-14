@@ -49,6 +49,7 @@ A Flutter-based mobile application for the Department of Social Welfare and Deve
 - **Charts**: fl_chart
 - **PDF Generation**: pdf
 - **Authentication**: local_auth
+- **Backend Ready**: Supabase bootstrap via `--dart-define`
 
 ## Project Structure
 
@@ -92,6 +93,27 @@ lib/
    ```bash
    flutter run
    ```
+
+### Optional Supabase Configuration
+
+The app now supports conditional Supabase initialization for the upcoming
+server-backed deployment. If these values are not provided, the app continues
+to run in local-only mode.
+
+```bash
+flutter run ^
+  --dart-define=SUPABASE_URL=your-project-url ^
+  --dart-define=SUPABASE_ANON_KEY=your-anon-key
+```
+
+Current status:
+- local mobile-number/PIN auth still runs the app today
+- Supabase session/profile loading is now available in code for the migration
+- the UI has not been switched to email/password yet
+
+For real backend integration and deployment testing, use:
+
+- `docs/supabase_deployment_qa_checklist.md`
 
 ### Building APK
 

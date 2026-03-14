@@ -26,12 +26,14 @@ dependencies:
   path: ^1.9.0
   pdf: ^3.11.3
   fl_chart: ^0.68.0
+  supabase_flutter: ^2.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_native_splash: ^2.4.7
+  sqflite_common_ffi: ^2.3.6
 
 flutter_native_splash:
   color: "#ffffff"

@@ -512,7 +512,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               width: _r(context, 54),
               height: _r(context, 54),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
+                color: AppColors.primary.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(_r(context, 16)),
               ),
               child: Icon(
@@ -563,7 +563,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             border: Border.all(color: const Color(0xFFD5E7E1)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0C4B3E).withOpacity(0.05),
+                color: const Color(0xFF0C4B3E).withValues(alpha: 0.05),
                 blurRadius: _r(context, 14),
                 offset: Offset(0, _r(context, 8)),
               ),
@@ -667,7 +667,9 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       decoration: BoxDecoration(
         color: index.isEven ? const Color(0xFFFCFEFD) : const Color(0xFFF5FAF8),
         border: Border(
-          bottom: BorderSide(color: const Color(0xFFD6E6E0).withOpacity(0.9)),
+          bottom: BorderSide(
+            color: const Color(0xFFD6E6E0).withValues(alpha: 0.9),
+          ),
         ),
       ),
       child: InkWell(
@@ -736,7 +738,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
           border: showRightBorder
               ? Border(
                   right: BorderSide(
-                    color: const Color(0xFFD6E6E0).withOpacity(0.9),
+                    color: const Color(0xFFD6E6E0).withValues(alpha: 0.9),
                   ),
                 )
               : null,

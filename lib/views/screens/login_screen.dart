@@ -6,6 +6,7 @@ import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../view_models/login_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       await vm.loadSavedMobile();
       vm.clearPin();
 
-      if (vm.mobileNumber.isNotEmpty) {
+      if (!vm.usesBackendAuth && vm.mobileNumber.isNotEmpty) {
         await Future.delayed(const Duration(milliseconds: 300));
         try {
           await vm.loginWithBiometric(context, ref);
@@ -62,7 +63,80 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(loginViewModelProvider);
+    if (viewModel.usesBackendAuth) {
+      return _buildBackendLogin(context, viewModel);
+    }
+    return _buildPinLogin(context, viewModel);
+  }
 
+  Widget _buildBackendLogin(BuildContext context, LoginViewModel viewModel) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text('Login'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Image.asset('lib/assets/logo.png', height: 88),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Backend Login',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Use your email and password to access the shared system.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: viewModel.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: viewModel.passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () =>
+                        viewModel.loginWithEmailPassword(context, ref),
+                    child: const Text('Login'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => context.push('/create_account'),
+                    child: const Text('Create backend account'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPinLogin(BuildContext context, LoginViewModel viewModel) {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -74,10 +148,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             final isTablet = width >= 700;
             final contentMaxWidth = isTablet ? 520.0 : 420.0;
             final contentWidth = math.min(width, contentMaxWidth);
-
             final horizontalPadding = isTablet ? 24.0 : 16.0;
 
-            // Height-based scaling
             final veryShort = height < 650;
             final short = height < 730;
 
@@ -104,32 +176,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             final gap1 = veryShort ? 6.0 : 10.0;
             final gap2 = veryShort ? 12.0 : 20.0;
             final gap3 = veryShort ? 8.0 : 12.0;
-
             final keypadSpacing = veryShort ? 8.0 : 12.0;
 
-            // Reserve space for non-keypad widgets so keypad can shrink to fit
             final reservedHeight =
-                logoHeight +
-                gap1 +
-                titleSize +
-                gap2 +
-                54 + // mobile number box approx
-                gap2 +
-                pinLabelSize +
-                gap3 +
-                pinDotSize +
-                gap2 +
-                50; // bottom links safe area
+                logoHeight + gap1 + titleSize + gap2 + 54 + gap2 + pinLabelSize + gap3 + pinDotSize + gap2 + 50;
 
-            final remainingHeight =
-                height - reservedHeight - 40; // extra breathing room
+            final remainingHeight = height - reservedHeight - 40;
 
             final widthBasedKeySize =
                 ((contentWidth -
-                            (horizontalPadding * 2) -
-                            (keypadSpacing * 2)) /
-                        3)
-                    .clamp(58.0, isTablet ? 105.0 : 90.0);
+                                (horizontalPadding * 2) -
+                                (keypadSpacing * 2)) /
+                            3)
+                        .clamp(58.0, isTablet ? 105.0 : 90.0);
 
             final heightBasedKeySize =
                 ((remainingHeight - (keypadSpacing * 3)) / 4).clamp(48.0, 90.0);
@@ -153,13 +212,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Image.asset(
-                                'lib/assets/logo.png',
-                                height: logoHeight,
-                              ),
+                              Image.asset('lib/assets/logo.png', height: logoHeight),
                               SizedBox(height: gap1),
                               Text(
-                                "E.M.P.O.W.E.R",
+                                'E.M.P.O.W.E.R',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: titleSize,
@@ -168,12 +224,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               SizedBox(height: gap2),
-
                               GestureDetector(
-                                onTap: () => viewModel.changeMobileNumber(
-                                  context,
-                                  ref: ref,
-                                ),
+                                onTap: () =>
+                                    viewModel.changeMobileNumber(context, ref: ref),
                                 child: Container(
                                   width: double.infinity,
                                   padding: EdgeInsets.symmetric(
@@ -197,10 +250,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          "Mobile Number: ",
-                                          style: TextStyle(
-                                            fontSize: mobileFontSize,
-                                          ),
+                                          'Mobile Number: ',
+                                          style: TextStyle(fontSize: mobileFontSize),
                                         ),
                                         Text(
                                           viewModel.mobileNumber.isNotEmpty
@@ -218,26 +269,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   ),
                                 ),
                               ),
-
                               SizedBox(height: gap2),
-
                               Text(
-                                "PIN",
+                                'PIN',
                                 style: TextStyle(
                                   fontSize: pinLabelSize,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               SizedBox(height: gap3),
-
                               AnimatedBuilder(
                                 animation: _shakeAnimation,
                                 builder: (_, _) {
                                   return Transform.translate(
                                     offset: Offset(_shakeAnimation.value, 0),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: List.generate(4, (i) {
                                         return Container(
                                           margin: EdgeInsets.symmetric(
@@ -261,9 +308,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   );
                                 },
                               ),
-
                               SizedBox(height: gap2),
-
                               _buildKeypad(
                                 keySize: keySize,
                                 spacing: keypadSpacing,
@@ -274,7 +319,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                         ),
                       ),
-
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
@@ -286,7 +330,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   context.push('/create_account');
                                 },
                                 child: Text(
-                                  "BAG-ONG ACCOUNT",
+                                  'BAG-ONG ACCOUNT',
                                   textAlign: TextAlign.left,
                                   style: TextStyle(
                                     fontSize: veryShort ? 11.5 : 13,
@@ -305,7 +349,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   context.push('/forgot_pin');
                                 },
                                 child: Text(
-                                  "NAKALIMOT SA PIN?",
+                                  'NAKALIMOT SA PIN?',
                                   textAlign: TextAlign.right,
                                   style: TextStyle(
                                     fontSize: veryShort ? 11.5 : 13,
@@ -369,7 +413,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }) {
     final vm = ref.watch(loginViewModelProvider);
 
-    final keypad = [
+    const keypad = [
       ['1', '2', '3'],
       ['4', '5', '6'],
       ['7', '8', '9'],

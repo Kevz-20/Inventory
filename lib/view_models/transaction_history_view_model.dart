@@ -14,6 +14,10 @@ class TransactionItem {
   final int? quantity;
   final String? receiptImagePath;
   final String? category;
+  final String? localUuid;
+  final String? serverId;
+  final String? syncStatus;
+  final String? lastSyncedAt;
 
   // NEW FIELD
   final String? recordedBy;
@@ -29,6 +33,10 @@ class TransactionItem {
     this.quantity,
     this.receiptImagePath,
     this.category,
+    this.localUuid,
+    this.serverId,
+    this.syncStatus,
+    this.lastSyncedAt,
     this.recordedBy,
     this.isUtangSale = false,
   });
@@ -80,6 +88,10 @@ class TransactionItem {
       quantity: (map['quantity'] as num?)?.toInt(),
       receiptImagePath: receiptImagePath,
       category: map['category'],
+      localUuid: map['local_uuid']?.toString(),
+      serverId: map['server_id']?.toString(),
+      syncStatus: map['sync_status']?.toString(),
+      lastSyncedAt: map['last_synced_at']?.toString(),
       recordedBy: recordedBy.isNotEmpty ? recordedBy : null,
       isUtangSale: isUtangSale, // NEW
     );

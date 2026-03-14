@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 import '../core/product_seed.dart';
+import '../core/sync_identity.dart';
 import '../models/utang_customer_model.dart';
 
 class DBService {
@@ -22,7 +23,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 12,
+      version: 15,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -200,6 +201,78 @@ class DBService {
           const bool seedProducts = true;
           if (seedProducts) await _seedProducts(db); // uses the fixed version
         }
+
+        if (oldVersion < 13) {
+          for (final table in [
+            'product',
+            'customer',
+            'sales',
+            'sale_item',
+            'sales_credit',
+            'customer_payment',
+          ]) {
+            await addColumnIfMissing(table, 'local_uuid', 'TEXT');
+            await addColumnIfMissing(table, 'server_id', 'TEXT');
+            await addColumnIfMissing(table, 'sync_status', 'TEXT');
+            await addColumnIfMissing(table, 'last_synced_at', 'TEXT');
+            await addColumnIfMissing(table, 'deleted_at', 'TEXT');
+          }
+
+          await db.execute(
+            "UPDATE product SET local_uuid = COALESCE(local_uuid, 'migrate_product_' || id), sync_status = COALESCE(sync_status, 'local_only')",
+          );
+          await db.execute(
+            "UPDATE customer SET local_uuid = COALESCE(local_uuid, 'migrate_customer_' || id), sync_status = COALESCE(sync_status, 'local_only')",
+          );
+          await db.execute(
+            "UPDATE sales SET local_uuid = COALESCE(local_uuid, 'migrate_sales_' || id), sync_status = COALESCE(sync_status, 'local_only')",
+          );
+          await db.execute(
+            "UPDATE sale_item SET local_uuid = COALESCE(local_uuid, 'migrate_sale_item_' || id), sync_status = COALESCE(sync_status, 'local_only')",
+          );
+          await db.execute(
+            "UPDATE sales_credit SET local_uuid = COALESCE(local_uuid, 'migrate_sales_credit_' || id), sync_status = COALESCE(sync_status, 'local_only')",
+          );
+          await db.execute(
+            "UPDATE customer_payment SET local_uuid = COALESCE(local_uuid, 'migrate_customer_payment_' || id), sync_status = COALESCE(sync_status, 'local_only')",
+          );
+        }
+
+        if (oldVersion < 14) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS sync_queue (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              organization_id TEXT,
+              entity_type TEXT NOT NULL,
+              operation TEXT NOT NULL,
+              local_uuid TEXT NOT NULL,
+              payload TEXT,
+              status TEXT NOT NULL DEFAULT 'pending',
+              retry_count INTEGER NOT NULL DEFAULT 0,
+              last_error TEXT,
+              scheduled_at TEXT NOT NULL,
+              processed_at TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_sync_queue_status_scheduled_at '
+            'ON sync_queue(status, scheduled_at)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_sync_queue_entity_local_uuid '
+            'ON sync_queue(entity_type, local_uuid)',
+          );
+        }
+
+        if (oldVersion < 15) {
+          await addColumnIfMissing('sync_queue', 'organization_id', 'TEXT');
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_sync_queue_org_status '
+            'ON sync_queue(organization_id, status, scheduled_at)',
+          );
+        }
       },
 
       onConfigure: (db) async {
@@ -329,6 +402,11 @@ class DBService {
         available_credit REAL DEFAULT 1000,
         created_at TEXT,
         updated_at TEXT,
+        local_uuid TEXT,
+        server_id TEXT,
+        sync_status TEXT,
+        last_synced_at TEXT,
+        deleted_at TEXT,
         UNIQUE(first_name, middle_name, last_name, municipality)
       )
     ''');
@@ -346,6 +424,11 @@ class DBService {
         image TEXT,
         created_at TEXT,
         updated_at TEXT,
+        local_uuid TEXT,
+        server_id TEXT,
+        sync_status TEXT,
+        last_synced_at TEXT,
+        deleted_at TEXT,
         FOREIGN KEY (category_id) REFERENCES product_category(id)
       )
     ''');
@@ -375,6 +458,11 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        local_uuid TEXT,
+        server_id TEXT,
+        sync_status TEXT,
+        last_synced_at TEXT,
+        deleted_at TEXT,
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
     ''');
@@ -430,6 +518,11 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        local_uuid TEXT,
+        server_id TEXT,
+        sync_status TEXT,
+        last_synced_at TEXT,
+        deleted_at TEXT,
         FOREIGN KEY (account_id) REFERENCES account(id),
         FOREIGN KEY (customer_id) REFERENCES customer(id)
       )
@@ -480,6 +573,11 @@ class DBService {
         created_by_first_name TEXT,   -- new
         created_by_middle_name TEXT,  -- new
         created_by_last_name TEXT,    -- new
+        local_uuid TEXT,
+        server_id TEXT,
+        sync_status TEXT,
+        last_synced_at TEXT,
+        deleted_at TEXT,
         FOREIGN KEY (sale_id) REFERENCES sales(id),
         FOREIGN KEY (product_id) REFERENCES product(id)
       )
@@ -534,6 +632,11 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        local_uuid TEXT,
+        server_id TEXT,
+        sync_status TEXT,
+        last_synced_at TEXT,
+        deleted_at TEXT,
         FOREIGN KEY (account_id) REFERENCES account (id),
         FOREIGN KEY (sale_id) REFERENCES sales (id),
         FOREIGN KEY (product_id) REFERENCES product (id),
@@ -626,6 +729,36 @@ class DBService {
         FOREIGN KEY (account_id) REFERENCES account(id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id TEXT,
+        entity_type TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        local_uuid TEXT NOT NULL,
+        payload TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        retry_count INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        scheduled_at TEXT NOT NULL,
+        processed_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX idx_sync_queue_status_scheduled_at '
+      'ON sync_queue(status, scheduled_at)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sync_queue_entity_local_uuid '
+      'ON sync_queue(entity_type, local_uuid)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sync_queue_org_status '
+      'ON sync_queue(organization_id, status, scheduled_at)',
+    );
 
     // Insert predefined data
     await _insertDefaultData(db);
@@ -726,6 +859,8 @@ class DBService {
         final map = product.toMap();
         map['category_id'] = catMap[product.category]; // resolve name → id
         map.remove('category'); // remove raw string if present
+        map['local_uuid'] = SyncIdentity.newLocalUuid();
+        map['sync_status'] = 'local_only';
         await db.insert('product', map);
       }
     }

@@ -103,8 +103,13 @@ class TransactionHistoryRepository {
         sc.created_by_first_name,
         sc.created_by_middle_name,
         sc.created_by_last_name,
+        s.local_uuid,
+        s.server_id,
+        s.sync_status,
+        s.last_synced_at,
         p.name AS product_name
       FROM sales_cash sc
+      LEFT JOIN sales s ON s.created_at = sc.created_at AND s.sale_type = 'cash'
       JOIN product p ON p.id = sc.product_id
       ORDER BY sc.created_at DESC
     ''');
@@ -119,6 +124,10 @@ class TransactionHistoryRepository {
         sc.created_by_first_name,
         sc.created_by_middle_name,
         sc.created_by_last_name,
+        sc.local_uuid,
+        sc.server_id,
+        sc.sync_status,
+        sc.last_synced_at,
         p.name AS product_name
       FROM sales_credit sc
       JOIN product p ON p.id = sc.product_id
@@ -147,6 +156,10 @@ class TransactionHistoryRepository {
         cp.amount,
         cp.paid_at AS created_at,
         'in' AS direction,
+        cp.local_uuid,
+        cp.server_id,
+        cp.sync_status,
+        cp.last_synced_at,
         NULLIF(cp.created_by_first_name, '') AS created_by_first_name,
         NULLIF(cp.created_by_middle_name, '') AS created_by_middle_name,
         NULLIF(cp.created_by_last_name, '') AS created_by_last_name,

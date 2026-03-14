@@ -29,6 +29,12 @@ import 'views/screens/reports_screen.dart';
 import 'views/screens/customer_utang_screen.dart';
 import 'views/screens/owner_utang_screen.dart';
 import 'views/screens/notification_screen.dart';
+import 'views/screens/sync_history_screen.dart';
+import 'views/screens/sync_diagnostics_screen.dart';
+import 'views/screens/audit_log_screen.dart';
+import 'views/screens/admin_monitoring_screen.dart';
+import 'views/screens/admin_organization_detail_screen.dart';
+import 'views/screens/admin_reports_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
 final router = GoRouter(
@@ -92,6 +98,83 @@ final router = GoRouter(
         const SettingsScreen(),
         transition: PageTransitionType.none,
       ),
+    ),
+    GoRoute(
+      path: '/sync_history',
+      pageBuilder: (context, state) {
+        final query = state.uri.queryParameters;
+        return customPage(
+          state,
+          SyncHistoryScreen(
+            initialEntityType: query['entityType'],
+            initialLocalUuid: query['localUuid'],
+          ),
+          transition: PageTransitionType.forward,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/sync_diagnostics',
+      pageBuilder: (context, state) {
+        final query = state.uri.queryParameters;
+        return customPage(
+          state,
+          SyncDiagnosticsScreen(
+            initialEntityType: query['entityType'],
+            initialLocalUuid: query['localUuid'],
+          ),
+          transition: PageTransitionType.forward,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/audit_logs',
+      pageBuilder: (context, state) {
+        final query = state.uri.queryParameters;
+        return customPage(
+          state,
+          AuditLogScreen(
+            initialOrganizationId: query['organizationId'],
+            initialEntityType: query['entityType'],
+            initialLocalUuid: query['localUuid'],
+          ),
+          transition: PageTransitionType.forward,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/admin_monitoring',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const AdminMonitoringScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/admin_org_detail',
+      pageBuilder: (context, state) {
+        final query = state.uri.queryParameters;
+        return customPage(
+          state,
+          AdminOrganizationDetailScreen(
+            organizationId: query['organizationId'] ?? '',
+          ),
+          transition: PageTransitionType.forward,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/admin_reports',
+      pageBuilder: (context, state) {
+        final query = state.uri.queryParameters;
+        return customPage(
+          state,
+          AdminReportsScreen(
+            organizationId: query['organizationId'] ?? '',
+          ),
+          transition: PageTransitionType.forward,
+        );
+      },
     ),
     GoRoute(
       path: '/expenses',

@@ -3,32 +3,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/app_colors.dart';
+import '../models/create_account_model.dart' as create_account;
 import '../providers/current_mobile_number_provider.dart';
+import '../repositories/auth_repository.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
-import 'package:local_auth/local_auth.dart';
+import '../services/supabase_service.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider<LoginViewModel>((ref) {
   final repository = LoginRepository(DBService.instance);
-  return LoginViewModel(repository);
+  return LoginViewModel(repository, const AuthRepository());
 });
 
 class LoginViewModel extends ChangeNotifier {
   final LoginRepository _repository;
+  final AuthRepository _authRepository;
 
-  LoginViewModel(this._repository) {
+  LoginViewModel(this._repository, this._authRepository) {
     loadSavedMobile();
   }
 
   final LocalAuthentication _auth = LocalAuthentication();
   final formKey = GlobalKey<FormState>();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
   bool shakePin = false;
   String mobileNumber = '';
   String pin = '';
   String? errorMessage;
+
+  bool get usesBackendAuth => SupabaseService.isConfigured;
 
   final Set<int> _pressedKeys = {};
   bool isPressed(int index) => _pressedKeys.contains(index);
@@ -45,6 +54,9 @@ class LoginViewModel extends ChangeNotifier {
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
     mobileNumber = prefs.getString('mobileNumber') ?? '';
+    if (usesBackendAuth) {
+      emailController.text = prefs.getString('lastLoginEmail') ?? '';
+    }
     notifyListeners();
   }
 
@@ -60,8 +72,54 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ Updated Biometric Login
+  Future<void> _saveEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lastLoginEmail', email);
+  }
+
+  Future<void> _saveSelectedOrganizationId(String? organizationId) async {
+    if (organizationId == null || organizationId.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedOrganizationId', organizationId);
+  }
+
+  Future<void> _cacheBackendIdentity({
+    required String mobile,
+    required String firstName,
+    required String? middleName,
+    required String lastName,
+  }) async {
+    final account = create_account.Account(
+      mobileNumber: mobile,
+      pin: pin.isEmpty ? '0000' : pin,
+      firstName: firstName,
+      middleName: middleName,
+      lastName: lastName,
+      securityQuestionId: null,
+      securityAnswer: null,
+    );
+
+    await _repository.upsertLocalAccountCache(account);
+
+    final fullNameParts = [
+      firstName,
+      if ((middleName ?? '').isNotEmpty) middleName!,
+      lastName,
+    ];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('fullName', fullNameParts.join(' '));
+  }
+
   Future<void> loginWithBiometric(BuildContext context, WidgetRef ref) async {
+    if (usesBackendAuth) {
+      _showMessageDialog(
+        context,
+        'Biometric login stays disabled until backend login is completed on this device.',
+        success: false,
+      );
+      return;
+    }
+
     if (mobileNumber.isEmpty) {
       _showMessageDialog(
         context,
@@ -72,7 +130,6 @@ class LoginViewModel extends ChangeNotifier {
     }
 
     try {
-      // 1️⃣ Check device support
       final canCheckBiometrics = await _auth.canCheckBiometrics;
       final isDeviceSupported = await _auth.isDeviceSupported();
       if (!canCheckBiometrics || !isDeviceSupported) {
@@ -84,7 +141,6 @@ class LoginViewModel extends ChangeNotifier {
         return;
       }
 
-      // 2️⃣ Check if user has enrolled biometrics
       final availableBiometrics = await _auth.getAvailableBiometrics();
       if (availableBiometrics.isEmpty) {
         _showMessageDialog(
@@ -95,24 +151,19 @@ class LoginViewModel extends ChangeNotifier {
         return;
       }
 
-      // 3️⃣ Authenticate
       final didAuthenticate = await _auth.authenticate(
         localizedReason: 'Scan fingerprint to login',
         options: const AuthenticationOptions(biometricOnly: true),
       );
 
-      if (!didAuthenticate) {
-        return;
-      }
+      if (!didAuthenticate) return;
 
-      // 4️⃣ Load account
       final account = await _repository.getAccountByMobileNumber(mobileNumber);
       if (account == null) {
         _showMessageDialog(context, 'Account not found', success: false);
         return;
       }
 
-      // 5️⃣ Successful login
       await saveMobileNumber(account.mobileNumber, ref: ref);
       if (context.mounted) {
         _showMessageDialog(context, 'Login successful!', success: true);
@@ -127,7 +178,6 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
-  // 🔹 PIN input handling (unchanged)
   void onKeyTap(
     BuildContext context,
     String label,
@@ -161,6 +211,11 @@ class LoginViewModel extends ChangeNotifier {
     WidgetRef ref, {
     VoidCallback? onInvalid,
   }) async {
+    if (usesBackendAuth) {
+      await loginWithEmailPassword(context, ref);
+      return;
+    }
+
     if (mobileNumber.isEmpty) {
       _showMessageDialog(
         context,
@@ -204,6 +259,60 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> loginWithEmailPassword(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showMessageDialog(
+        context,
+        'Enter your email and password',
+        success: false,
+      );
+      return;
+    }
+
+    try {
+      await _authRepository.signInWithEmail(email: email, password: password);
+      final session = await _authRepository.loadAuthenticatedSession();
+      if (session == null) {
+        _showMessageDialog(
+          context,
+          'Unable to load your backend profile',
+          success: false,
+        );
+        return;
+      }
+
+      await _saveEmail(email);
+      await saveMobileNumber(session.profile.mobileNumber ?? '', ref: ref);
+      await _saveSelectedOrganizationId(
+        session.memberships.isEmpty
+            ? null
+            : session.memberships.first.organizationId,
+      );
+      await _cacheBackendIdentity(
+        mobile: session.profile.mobileNumber ?? '',
+        firstName: session.profile.firstName,
+        middleName: session.profile.middleName,
+        lastName: session.profile.lastName,
+      );
+
+      if (!context.mounted) return;
+      _showMessageDialog(context, 'Login successful!', success: true);
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!context.mounted) return;
+      GoRouter.of(context).go('/home', extra: 'fromLogin');
+      clearPin();
+    } catch (e) {
+      if (!context.mounted) return;
+      _showMessageDialog(context, 'Login failed: $e', success: false);
+    }
+  }
+
   void _showMessageDialog(
     BuildContext context,
     String message, {
@@ -231,6 +340,15 @@ class LoginViewModel extends ChangeNotifier {
     BuildContext context, {
     WidgetRef? ref,
   }) async {
+    if (usesBackendAuth) {
+      _showMessageDialog(
+        context,
+        'Mobile number comes from your backend profile.',
+        success: false,
+      );
+      return;
+    }
+
     final controller = TextEditingController(text: mobileNumber);
     String? validationError;
 
@@ -246,14 +364,14 @@ class LoginViewModel extends ChangeNotifier {
             backgroundColor: Colors.white,
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
             title: const Text(
-              "Change Mobile Number",
+              'Change Mobile Number',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  "Enter your new mobile number below:",
+                  'Enter your new mobile number below:',
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                 ),
                 const SizedBox(height: 12),
@@ -262,8 +380,8 @@ class LoginViewModel extends ChangeNotifier {
                   maxLength: 11,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    hintText: "09XXXXXXXXX",
-                    counterText: "",
+                    hintText: '09XXXXXXXXX',
+                    counterText: '',
                     errorText: validationError,
                     filled: true,
                     fillColor: Colors.grey[100],
@@ -302,7 +420,7 @@ class LoginViewModel extends ChangeNotifier {
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
+                child: const Text('Cancel'),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -321,13 +439,13 @@ class LoginViewModel extends ChangeNotifier {
                   if (number.length != 11 ||
                       !RegExp(r'^09\d{9}$').hasMatch(number)) {
                     setState(() {
-                      validationError = "Enter a valid 11-digit mobile number";
+                      validationError = 'Enter a valid 11-digit mobile number';
                     });
                     return;
                   }
                   Navigator.pop(context, number);
                 },
-                child: const Text("Save"),
+                child: const Text('Save'),
               ),
             ],
           );
@@ -336,5 +454,12 @@ class LoginViewModel extends ChangeNotifier {
     );
 
     if (result != null) await saveMobileNumber(result, ref: ref);
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 }

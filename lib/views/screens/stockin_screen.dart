@@ -4,11 +4,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_colors.dart';
 import '../../view_models/stock_in_view_model.dart';
 import '../widgets/header.dart';
+import '../widgets/sync_status_badge.dart';
 
 class StockInScreen extends ConsumerStatefulWidget {
   const StockInScreen({super.key});
@@ -127,6 +129,22 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             optionFs: optionFs,
                             valueFs: valueFs,
                           ),
+                          if (vm.selectedProduct != null) ...[
+                            SizedBox(height: gap12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SyncStatusBadge(
+                                syncStatus: vm.selectedProduct!.syncStatus,
+                                lastSyncedAt: vm.selectedProduct!.lastSyncedAt,
+                                compact: false,
+                                onTap: vm.selectedProduct?.localUuid == null
+                                    ? null
+                                    : () => context.push(
+                                          '/sync_diagnostics?entityType=product&localUuid=${Uri.encodeComponent(vm.selectedProduct!.localUuid!)}',
+                                        ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

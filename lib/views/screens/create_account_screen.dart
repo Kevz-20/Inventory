@@ -8,8 +8,6 @@ import '../../view_models/create_account_view_model.dart';
 import '../../view_models/login_view_model.dart';
 import '../../core/app_colors.dart';
 import '../widgets/header.dart';
-import '../../repositories/account_repository.dart';
-import '../../models/account_model.dart';
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
@@ -22,8 +20,6 @@ class CreateAccountScreen extends ConsumerStatefulWidget {
 class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool pinVisible = false;
   bool confirmPinVisible = false;
-
-  final accountRepo = AccountRepository();
   final nameFormatter =
       FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s\.-]'));
 
@@ -86,26 +82,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
                           if (success) {
                             if (!context.mounted) return;
-
-                            final account = Account(
-                              id: 0,
-                              firstName: vm.firstNameController.text.trim(),
-                              middleName:
-                                  vm.middleNameController.text.trim().isEmpty
-                                      ? null
-                                      : vm.middleNameController.text.trim(),
-                              lastName: vm.lastNameController.text.trim(),
-                              mobileNumber: vm.mobileController.text.trim(),
-                              pin: vm.pinController.text.trim(),
-                              securityAnswer: vm.answerController.text.trim(),
-                            );
-                            await accountRepo.updateAccount(account);
-
-                            vm.clearFields();
-
                             final loginVM = ref.read(loginViewModelProvider);
                             await loginVM.loadSavedMobile();
-
                             if (!context.mounted) return;
                             context.go('/login');
                           }
@@ -179,6 +157,58 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                     radius: radius,
                   ),
                   SizedBox(height: gap15),
+
+                  if (vm.usesBackendAuth) ...[
+                    buildLabel("Email", fontSize: labelFs),
+                    buildTextField(
+                      controller: vm.emailController,
+                      hint: "name@example.com",
+                      keyboardType: TextInputType.emailAddress,
+                      errorText: vm.emailError,
+                      onChanged: (_) =>
+                          vmNotifier.clearFieldError(vm.emailController),
+                      scale: scale,
+                      hintFs: hintFs,
+                      errorFs: errorFs,
+                      fieldHPad: fieldHPad,
+                      fieldVPad: fieldVPad,
+                      radius: radius,
+                    ),
+                    SizedBox(height: gap15),
+                    buildLabel("Password", fontSize: labelFs),
+                    buildTextField(
+                      controller: vm.passwordController,
+                      hint: "At least 8 characters",
+                      obscureText: true,
+                      errorText: vm.passwordError,
+                      onChanged: (_) =>
+                          vmNotifier.clearFieldError(vm.passwordController),
+                      scale: scale,
+                      hintFs: hintFs,
+                      errorFs: errorFs,
+                      fieldHPad: fieldHPad,
+                      fieldVPad: fieldVPad,
+                      radius: radius,
+                    ),
+                    SizedBox(height: gap15),
+                    buildLabel("Confirm Password", fontSize: labelFs),
+                    buildTextField(
+                      controller: vm.confirmPasswordController,
+                      hint: "Re-enter password",
+                      obscureText: true,
+                      errorText: vm.confirmPasswordError,
+                      onChanged: (_) => vmNotifier.clearFieldError(
+                        vm.confirmPasswordController,
+                      ),
+                      scale: scale,
+                      hintFs: hintFs,
+                      errorFs: errorFs,
+                      fieldHPad: fieldHPad,
+                      fieldVPad: fieldVPad,
+                      radius: radius,
+                    ),
+                    SizedBox(height: gap15),
+                  ],
 
                   // ==================== PIN ====================
                   buildLabel("PIN", fontSize: labelFs),

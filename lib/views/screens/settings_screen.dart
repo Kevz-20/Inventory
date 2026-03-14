@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/app_colors.dart';
+import '../../providers/app_session_provider.dart';
 import '../../providers/profile_view_model_provider.dart';
 import '../../services/db_service.dart';
 import '../../view_models/settings_view_model.dart';
@@ -36,6 +37,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final profileVM = ref.watch(profileViewModelProvider);
     final account = profileVM.account;
+    final appSession = ref.watch(currentAppSessionProvider);
+    final canOpenAdminMonitoring = appSession.maybeWhen(
+      data: (session) {
+        final roles = session.authenticatedSession?.memberships
+                .where((membership) => membership.status == 'active')
+                .map((membership) => membership.roleCode)
+                .toSet() ??
+            <String>{};
+        return roles.contains('pdo_consultant') ||
+            roles.contains('system_admin') ||
+            roles.contains('slpa_admin');
+      },
+      orElse: () => false,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xfff5f5f5),
@@ -131,6 +146,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icons.info,
             onTap: () => GoRouter.of(context).push('/about_app'),
           ),
+
+          const SizedBox(height: _sectionSpacing),
+          _sectionTitle("Sync"),
+          const SizedBox(height: _itemSpacing),
+
+          _settingsTile(
+            title: "Sync History",
+            icon: Icons.sync_alt_rounded,
+            onTap: () => GoRouter.of(context).push('/sync_history'),
+          ),
+          const SizedBox(height: _itemSpacing),
+          _settingsTile(
+            title: "Sync Diagnostics",
+            icon: Icons.fact_check_outlined,
+            onTap: () => GoRouter.of(context).push('/sync_diagnostics'),
+          ),
+          const SizedBox(height: _itemSpacing),
+          _settingsTile(
+            title: "Audit Log",
+            icon: Icons.history_edu_outlined,
+            onTap: () => GoRouter.of(context).push('/audit_logs'),
+          ),
+          if (canOpenAdminMonitoring) ...[
+            const SizedBox(height: _itemSpacing),
+            _settingsTile(
+              title: "Admin Monitoring",
+              icon: Icons.admin_panel_settings_outlined,
+              onTap: () => GoRouter.of(context).push('/admin_monitoring'),
+            ),
+          ],
 
           const SizedBox(height: _sectionSpacing),
           _sectionTitle("Data"),

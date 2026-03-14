@@ -8,6 +8,7 @@ import '../../core/app_colors.dart';
 import '../../models/utang_customer_model.dart';
 import '../../services/db_service.dart';
 import '../widgets/header.dart';
+import '../widgets/sync_status_badge.dart';
 
 class CustomerUtangScreen extends StatefulWidget {
   const CustomerUtangScreen({super.key, this.initialCustomerId});
@@ -102,6 +103,10 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     c.municipality,
     c.barangay,
     c.phone_number,
+    c.local_uuid,
+    c.server_id,
+    c.sync_status,
+    c.last_synced_at,
     MAX(0, COALESCE(sc.total_amount, 0) - COALESCE(cp.total_paid, 0)) AS total_amount,
     sc.min_due_date AS due_date
   FROM customer c
@@ -435,6 +440,16 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                       text: item.phoneNumber!,
                       scale: scale,
                     ),
+                  SizedBox(height: (6 * scale).clamp(4, 8)),
+                  SyncStatusBadge(
+                    syncStatus: item.syncStatus,
+                    lastSyncedAt: item.lastSyncedAt,
+                    onTap: item.localUuid == null || item.localUuid!.isEmpty
+                        ? null
+                        : () => context.push(
+                              '/sync_diagnostics?entityType=customer&localUuid=${Uri.encodeComponent(item.localUuid!)}',
+                            ),
+                  ),
                   if (hasDebt && due != null) ...[
                     SizedBox(height: (6 * scale).clamp(4, 8)),
                     Text(
