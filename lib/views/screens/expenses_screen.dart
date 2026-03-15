@@ -10,7 +10,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../view_models/expenses_view_model.dart';
-import '../widgets/header.dart';
+import '../widgets/dashboard_background.dart';
 import '../../models/current_user.dart';
 
 class ThousandsFormatter extends TextInputFormatter {
@@ -67,12 +67,13 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 }
 
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _cardBgAlt = Color(0xFFF6FBF9);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBgAlt = Color(0xFFF9FBFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   late final ScrollController _scrollController;
   late final TextEditingController _dateTextController;
@@ -132,35 +133,47 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
         return Scaffold(
           backgroundColor: _pageBg,
-          appBar: AppHeader(
-            title: 'Gasto',
-            showBackButton: true,
-            action: Visibility(
-              visible: false,
-              maintainSize: true,
-              maintainAnimation: true,
-              maintainState: true,
-              child: IconButton(
-                icon: const Icon(Icons.list, color: Colors.white),
-                onPressed: () => GoRouter.of(context).push('/list_expenses'),
+          appBar: AppBar(
+            backgroundColor: _pageBg,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              icon: Image.asset(
+                'lib/assets/arrowleft.png',
+                width: (22 * scale).clamp(20.0, 26.0),
+                height: (22 * scale).clamp(20.0, 26.0),
+                fit: BoxFit.contain,
+              ),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              'Gasto',
+              style: TextStyle(
+                color: _titleColor,
+                fontWeight: FontWeight.w900,
+                fontSize: (20 * scale).clamp(18.0, 24.0),
               ),
             ),
+            centerTitle: true,
           ),
-          body: ScrollbarTheme(
-            data: ScrollbarThemeData(
-              thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
-              thickness: WidgetStateProperty.all(5),
-              radius: const Radius.circular(8),
-            ),
-            child: Scrollbar(
-              controller: _scrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          body: Stack(
+            children: [
+              const DashboardBackground(),
+              ScrollbarTheme(
+                data: ScrollbarThemeData(
+                  thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+                  thickness: WidgetStateProperty.all(5),
+                  radius: const Radius.circular(8),
+                ),
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                     _cleanCard(
                       scale: scale,
                       padding: cardPad,
@@ -195,7 +208,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                   '\u20B1',
                                   style: TextStyle(
                                     fontSize: (20 * scale).clamp(18, 24),
-                                    color: AppColors.primary,
+                                    color: _accentBlue,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -217,7 +230,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                             radius: radius12,
                             prefix: Icon(
                               Icons.description_rounded,
-                              color: AppColors.primary,
+                              color: _accentBlue,
                               size: (22 * scale).clamp(20, 26),
                             ),
                             label: 'Deskripsyon',
@@ -240,11 +253,13 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       icon: Icons.camera_alt_rounded,
                       child: _receiptSection(context, vm, scale: scale, radius: radius14, receiptHeight: receiptH),
                     ),
-                    SizedBox(height: (90 * scale).clamp(70, 110)),
-                  ],
+                        SizedBox(height: (90 * scale).clamp(70, 110)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
           bottomNavigationBar: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -261,7 +276,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 height: (52 * scale).clamp(48, 58),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: _accentBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(radius14),
                     ),
@@ -340,7 +355,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         decoration: InputDecoration(
           filled: true,
           fillColor: _cardBgAlt,
-          prefixIcon: Icon(Icons.category, color: AppColors.primary, size: (22 * scale).clamp(20, 26)),
+          prefixIcon: Icon(Icons.category, color: _accentBlue, size: (22 * scale).clamp(20, 26)),
           labelText: 'Kategorya',
           labelStyle: TextStyle(fontSize: labelFs),
           enabledBorder: OutlineInputBorder(
@@ -352,7 +367,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
-              color: isError ? Colors.red : AppColors.primary,
+              color: isError ? Colors.red : _accentBlue,
             ),
           ),
         ),
@@ -441,12 +456,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         height: (36 * s).clamp(34, 42),
                         width: (36 * s).clamp(34, 42),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.10),
+                          color: _accentBlue.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.category_rounded,
-                          color: AppColors.primary,
+                          color: _accentBlue,
                           size: (20 * s).clamp(18, 24),
                         ),
                       ),
@@ -470,21 +485,21 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                             vertical: (9 * s).clamp(8, 10),
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.10),
+                            color: _accentBlue.withOpacity(0.10),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: AppColors.primary.withOpacity(0.25),
+                              color: _accentBlue.withOpacity(0.25),
                             ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.add, size: (18 * s).clamp(16, 22), color: AppColors.primary),
+                              Icon(Icons.add, size: (18 * s).clamp(16, 22), color: _accentBlue),
                               SizedBox(width: (6 * s).clamp(5, 8)),
                               Text(
                                 'Add Kategorya',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  color: AppColors.primary,
+                                  color: _accentBlue,
                                   fontSize: (13 * s).clamp(12, 15),
                                 ),
                               ),
@@ -521,7 +536,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.primary),
+                          borderSide: const BorderSide(color: _accentBlue),
                         ),
                       ),
                     ),
@@ -584,12 +599,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppColors.primary.withOpacity(0.10)
+                                      ? _accentBlue.withOpacity(0.10)
                                       : _cardBgAlt,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: isSelected
-                                        ? AppColors.primary.withOpacity(0.35)
+                                        ? _accentBlue.withOpacity(0.35)
                                         : _cardBorder.withOpacity(0.8),
                                   ),
                                 ),
@@ -602,13 +617,13 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w900,
-                                          color: isSelected ? AppColors.primary : _titleColor,
+                                          color: isSelected ? _accentBlue : _titleColor,
                                           fontSize: (14 * s).clamp(13, 16),
                                         ),
                                       ),
                                     ),
                                     if (isSelected)
-                                      const Icon(Icons.check_circle_rounded, color: AppColors.primary),
+                                      const Icon(Icons.check_circle_rounded, color: _accentBlue),
                                   ],
                                 ),
                               ),
@@ -708,7 +723,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
-                            borderSide: const BorderSide(color: AppColors.primary),
+                            borderSide: const BorderSide(color: _accentBlue),
                           ),
                         ),
                         onChanged: (v) => value.value = v,
@@ -766,8 +781,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                                     }
                                   : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                disabledBackgroundColor: AppColors.primary.withOpacity(0.30),
+                                backgroundColor: _accentBlue,
+                                disabledBackgroundColor: _accentBlue.withOpacity(0.30),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                                 ),
@@ -837,10 +852,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 height: (36 * s).clamp(34, 44),
                 width: (36 * s).clamp(34, 44),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
+                  color: _accentBlue.withOpacity(0.10),
                   borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: (20 * s).clamp(18, 24)),
+                child: Icon(icon, color: _accentBlue, size: (20 * s).clamp(18, 24)),
               ),
               SizedBox(width: (10 * s).clamp(8, 12)),
               Expanded(
@@ -914,7 +929,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         decoration: InputDecoration(
           filled: true,
           fillColor: _cardBgAlt,
-          prefixIcon: Icon(icon, color: AppColors.primary, size: (22 * s).clamp(20, 26)),
+          prefixIcon: Icon(icon, color: _accentBlue, size: (22 * s).clamp(20, 26)),
           labelText: label,
           labelStyle: TextStyle(fontSize: labelFs, fontWeight: FontWeight.w700),
           suffixIcon: Icon(Icons.chevron_right_rounded, size: (22 * s).clamp(20, 26)),
@@ -924,7 +939,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+            borderSide: const BorderSide(color: _accentBlue, width: 1.2),
           ),
         ),
       ),
@@ -968,12 +983,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                         height: (54 * s).clamp(46, 62),
                         width: (54 * s).clamp(46, 62),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.10),
+                          color: _accentBlue.withOpacity(0.10),
                           borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
                         ),
                         child: Icon(
                           Icons.camera_alt_rounded,
-                          color: AppColors.primary,
+                          color: _accentBlue,
                           size: (28 * s).clamp(24, 34),
                         ),
                       ),
@@ -1002,8 +1017,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: (13.5 * s).clamp(12.5, 15)),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+                  foregroundColor: _accentBlue,
+                  side: BorderSide(color: _accentBlue.withOpacity(0.6)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                   ),
@@ -1084,7 +1099,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
-              color: isError ? Colors.red : AppColors.primary,
+              color: isError ? Colors.red : _accentBlue,
               width: 1.2,
             ),
           ),
@@ -1122,7 +1137,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             children: [
               TextButton.icon(
                 icon: const Icon(Icons.photo_library,
-                    size: 28, color: AppColors.primary),
+                    size: 28, color: _accentBlue),
                 label: const Text(
                   "Gallery",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -1135,7 +1150,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               const SizedBox(height: 8),
               TextButton.icon(
                 icon: const Icon(Icons.camera_alt,
-                    size: 28, color: AppColors.primary),
+                    size: 28, color: _accentBlue),
                 label: const Text(
                   "Camera",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),

@@ -1,13 +1,12 @@
-﻿// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/app_colors.dart';
 import '../../models/utang_customer_model.dart';
 import '../../services/db_service.dart';
-import '../widgets/header.dart';
+import '../widgets/dashboard_background.dart';
 
 class CustomerUtangScreen extends StatefulWidget {
   const CustomerUtangScreen({super.key, this.initialCustomerId});
@@ -20,18 +19,17 @@ class CustomerUtangScreen extends StatefulWidget {
 
 class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     with WidgetsBindingObserver {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
 
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
   final searchController = TextEditingController();
 
   List<UtangCustomer> utangan = [];
   List<UtangCustomer> filteredUtangan = [];
-
   bool _loadedOnce = false;
 
   DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
@@ -44,7 +42,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
   bool _isOverdue(DateTime dueDate) => _daysUntil(dueDate) < 0;
 
-  /// âœ… Short, professional due label
   String _dueLabel(DateTime dueDate) {
     final daysLeft = _daysUntil(dueDate);
     if (daysLeft < 0) return "OVERDUE";
@@ -52,7 +49,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     return "$daysLeft DAY${daysLeft == 1 ? "" : "S"} LEFT";
   }
 
-  /// âœ… Keep your detailed text, but shorter
   String _dueSubText(DateTime dueDate) {
     final formattedDueDate = DateFormat('MMM dd, yyyy').format(dueDate);
     return "Due: $formattedDueDate";
@@ -164,106 +160,188 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     setState(() {});
   }
 
+  BoxDecoration _surfaceDecoration(double scale) {
+    return BoxDecoration(
+      color: _cardBg,
+      borderRadius: BorderRadius.circular((20 * scale).clamp(16, 24)),
+      border: Border.all(color: _cardBorder),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF93A4CF).withOpacity(0.14),
+          blurRadius: (18 * scale).clamp(14, 24),
+          offset: Offset(0, (10 * scale).clamp(8, 14)),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-
-        // Scale: tuned for phones -> tablets. Clamped to avoid extreme sizes.
         final double scale = (w / 390).clamp(0.90, 1.20);
-
-        // Adaptive paddings
         final double padH = (16 * scale).clamp(14, 22);
         final double topGap = (14 * scale).clamp(10, 18);
 
         return Scaffold(
           backgroundColor: _pageBg,
-          appBar: AppHeader(
-            title: 'Customer Utang',
-            showBackButton: true,
-            action: IconButton(
-              tooltip: 'Add Customer',
-              onPressed: () async {
-                final result = await context.push<bool>('/new_customer');
-                if (result == true) {
-                  await fetchUtangan();
-                }
-              },
-              icon: Icon(
-                Icons.person_add_alt_1,
-                color: Colors.white,
-                size: (26 * scale).clamp(22, 30),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFF5F7FF),
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              icon: Image.asset(
+                'lib/assets/arrowleft.png',
+                width: (22 * scale).clamp(20.0, 26.0),
+                height: (22 * scale).clamp(20.0, 26.0),
+                fit: BoxFit.contain,
+              ),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              'Customer Utang',
+              style: TextStyle(
+                color: _titleColor,
+                fontWeight: FontWeight.w900,
+                fontSize: (20 * scale).clamp(18, 24),
               ),
             ),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                tooltip: 'Add Customer',
+                onPressed: () async {
+                  final result = await context.push<bool>('/new_customer');
+                  if (result == true) {
+                    await fetchUtangan();
+                  }
+                },
+                icon: Icon(
+                  Icons.person_add_alt_1_rounded,
+                  color: _titleColor,
+                  size: (24 * scale).clamp(22, 28),
+                ),
+              ),
+              SizedBox(width: (4 * scale).clamp(2, 6)),
+            ],
           ),
-          body: SafeArea(
-            top: false,
-            child: Column(
-              children: [
-                SizedBox(height: topGap),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: padH),
-                  child: Row(
-                    children: const [
-                      // keep as-is (empty row in your original)
-                    ],
-                  ),
-                ),
-                SizedBox(height: (10 * scale).clamp(8, 14)),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: padH),
-                  child: _buildSearch(scale: scale),
-                ),
-                SizedBox(height: (10 * scale).clamp(8, 14)),
-                Expanded(
-                  child: utangan.isEmpty
-                      ? Center(
-                          child: Text(
-                            "Walay utangan",
-                            style: TextStyle(
-                              fontSize: (15 * scale).clamp(13, 18),
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black.withOpacity(0.5),
-                            ),
-                          ),
-                        )
-                      : (filteredUtangan.isEmpty
-                          ? Center(
-                              child: Text(
-                                widget.initialCustomerId != null
-                                    ? "Customer not found"
-                                    : "Walay match",
-                                style: TextStyle(
-                                  fontSize: (15 * scale).clamp(13, 18),
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black.withOpacity(0.5),
-                                ),
-                              ),
+          body: Stack(
+            children: [
+              const DashboardBackground(),
+              SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    SizedBox(height: topGap),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: padH),
+                      child: Container(
+                        padding: EdgeInsets.all((14 * scale).clamp(12, 18)),
+                        decoration: _surfaceDecoration(scale),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSearch(scale: scale),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: (12 * scale).clamp(10, 16)),
+                    Expanded(
+                      child: utangan.isEmpty
+                          ? _emptyState(
+                              scale: scale,
+                              padH: padH,
+                              title: 'No customer utang yet',
+                              subtitle:
+                                  'Add a customer sale on credit to see records here.',
+                              icon: Icons.people_outline_rounded,
                             )
-                          : ListView.builder(
-                              padding: EdgeInsets.fromLTRB(
-                                padH,
-                                (6 * scale).clamp(4, 10),
-                                padH,
-                                padH,
-                              ),
-                              itemCount: filteredUtangan.length,
-                              itemBuilder: (context, index) {
-                                final item = filteredUtangan[index];
-                                return _buildCustomerCard(
-                                  item,
+                          : (filteredUtangan.isEmpty
+                              ? _emptyState(
                                   scale: scale,
-                                  maxWidth: w,
-                                );
-                              },
-                            )),
+                                  padH: padH,
+                                  title: widget.initialCustomerId != null
+                                      ? 'Customer not found'
+                                      : 'No matching customer',
+                                  subtitle: 'Try another name or clear your search.',
+                                  icon: Icons.search_off_rounded,
+                                )
+                              : ListView.builder(
+                                  padding: EdgeInsets.fromLTRB(
+                                    padH,
+                                    (6 * scale).clamp(4, 10),
+                                    padH,
+                                    padH,
+                                  ),
+                                  itemCount: filteredUtangan.length,
+                                  itemBuilder: (context, index) {
+                                    final item = filteredUtangan[index];
+                                    return _buildCustomerCard(
+                                      item,
+                                      scale: scale,
+                                      maxWidth: w,
+                                    );
+                                  },
+                                )),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  Widget _emptyState({
+    required double scale,
+    required double padH,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: padH),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all((18 * scale).clamp(16, 22)),
+          decoration: _surfaceDecoration(scale),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: (36 * scale).clamp(30, 44),
+                color: _subtitleColor,
+              ),
+              SizedBox(height: (10 * scale).clamp(8, 12)),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: (15 * scale).clamp(14, 18),
+                  fontWeight: FontWeight.w800,
+                  color: _titleColor,
+                ),
+              ),
+              SizedBox(height: (4 * scale).clamp(3, 6)),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: (12.8 * scale).clamp(11.8, 15),
+                  fontWeight: FontWeight.w500,
+                  color: _subtitleColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -272,17 +350,8 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
 
     return Container(
       height: height,
-      decoration: BoxDecoration(
-        color: _cardBg,
+      decoration: _surfaceDecoration(scale).copyWith(
         borderRadius: BorderRadius.circular((18 * scale).clamp(16, 22)),
-        border: Border.all(color: _cardBorder.withOpacity(0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: (12 * scale).clamp(10, 16),
-            offset: Offset(0, (8 * scale).clamp(6, 10)),
-          ),
-        ],
       ),
       child: TextField(
         controller: searchController,
@@ -291,10 +360,10 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         decoration: InputDecoration(
           prefixIcon: Icon(
             Icons.search,
-            color: Colors.black.withOpacity(0.6),
+            color: _titleColor,
             size: (22 * scale).clamp(20, 26),
           ),
-          hintText: "Pangalan sa Utangan",
+          hintText: "Search customer",
           hintStyle: TextStyle(
             color: _subtitleColor.withOpacity(0.75),
             fontSize: (14 * scale).clamp(12.5, 16),
@@ -333,10 +402,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
   }) {
     final hasDebt = item.totalAmount > 0;
     final due = item.dueDate;
-
-    // âœ… NEW: hide status pill for brand-new customers (no transactions)
     final bool hidePill = (item.totalAmount <= 0) && (due == null);
-
     final bool overdue = due != null && _isOverdue(due);
     final bool dueToday = due != null && _daysUntil(due) == 0;
 
@@ -346,7 +412,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
             ? Colors.red.withOpacity(0.12)
             : dueToday
                 ? Colors.orange.withOpacity(0.14)
-                : AppColors.primary.withOpacity(0.12);
+                : const Color(0xFF2B63D3).withOpacity(0.12);
 
     final Color pillFg = !hasDebt
         ? Colors.green.shade700
@@ -354,13 +420,10 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
             ? Colors.red.shade700
             : dueToday
                 ? Colors.orange.shade800
-                : AppColors.primary;
+                : const Color(0xFF2B63D3);
 
-    // Responsive: reserve a fixed-ish width for the right column
-    // so the left side (name/location) wonâ€™t get squeezed into overflow.
     final bool isNarrow = maxWidth < 360;
     final bool isTablet = maxWidth >= 700;
-
     final double rightColWidth = isTablet
         ? 220
         : isNarrow
@@ -379,136 +442,143 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
       child: Container(
         margin: EdgeInsets.symmetric(vertical: (6 * scale).clamp(5, 9)),
         padding: EdgeInsets.all(pad),
-        decoration: BoxDecoration(
-          color: _cardBg,
+        decoration: _surfaceDecoration(scale).copyWith(
           borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: _cardBorder.withOpacity(0.8)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: (14 * scale).clamp(12, 18),
-              offset: Offset(0, (10 * scale).clamp(8, 12)),
-            ),
-          ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Container(
-              width: avatarSize,
-              height: avatarSize,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
-                borderRadius: BorderRadius.circular((14 * scale).clamp(12, 18)),
-              ),
-              child: Icon(
-                Icons.person,
-                color: AppColors.primary,
-                size: (22 * scale).clamp(20, 28),
-              ),
-            ),
-            SizedBox(width: (12 * scale).clamp(10, 16)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.fullName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: (16 * scale).clamp(14.5, 20),
-                      fontWeight: FontWeight.w900,
-                      color: _titleColor,
-                    ),
-                  ),
-                  SizedBox(height: (4 * scale).clamp(3, 6)),
-                  _miniLine(
-                    icon: Icons.location_on_outlined,
-                    text: _buildLocation(item),
-                    scale: scale,
-                  ),
-                  SizedBox(height: (2 * scale).clamp(1, 4)),
-                  if (item.phoneNumber != null && item.phoneNumber!.isNotEmpty)
-                    _miniLine(
-                      icon: Icons.call_outlined,
-                      text: item.phoneNumber!,
-                      scale: scale,
-                    ),
-                  if (hasDebt && due != null) ...[
-                    SizedBox(height: (6 * scale).clamp(4, 8)),
-                    Text(
-                      _dueSubText(due),
-                      style: TextStyle(
-                        fontSize: (12.5 * scale).clamp(11.5, 15),
-                        fontWeight: FontWeight.w700,
-                        color: _subtitleColor,
-                      ),
-                    ),
-                  ],
-                ],
+            Positioned(
+              right: -20,
+              bottom: -26,
+              child: Container(
+                width: (110 * scale).clamp(90, 130),
+                height: (110 * scale).clamp(90, 130),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFEAF2FF).withOpacity(0.85),
+                ),
               ),
             ),
-            SizedBox(width: (10 * scale).clamp(8, 14)),
-            SizedBox(
-              width: rightColWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      "\u20B1${currencyFormat.format(item.totalAmount)}",
-                      style: TextStyle(
-                        fontSize: (15.5 * scale).clamp(14, 20),
-                        fontWeight: FontWeight.w900,
-                        color: _titleColor,
-                      ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: avatarSize,
+                  height: avatarSize,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEAF2FF), Color(0xFFF6F8FF)],
                     ),
+                    borderRadius:
+                        BorderRadius.circular((14 * scale).clamp(12, 18)),
                   ),
-
-                  // âœ… only show pill when NOT brand-new customer
-                  if (!hidePill) ...[
-                    SizedBox(height: (6 * scale).clamp(4, 8)),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: (10 * scale).clamp(8, 12),
-                          vertical: (6 * scale).clamp(5, 8),
+                  child: Icon(
+                    Icons.person,
+                    color: const Color(0xFF2B63D3),
+                    size: (22 * scale).clamp(20, 28),
+                  ),
+                ),
+                SizedBox(width: (12 * scale).clamp(10, 16)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: (16 * scale).clamp(14.5, 20),
+                          fontWeight: FontWeight.w900,
+                          color: _titleColor,
                         ),
-                        decoration: BoxDecoration(
-                          color: pillBg,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: pillBg.withOpacity(0.6)),
+                      ),
+                      SizedBox(height: (4 * scale).clamp(3, 6)),
+                      _miniLine(
+                        icon: Icons.location_on_outlined,
+                        text: _buildLocation(item),
+                        scale: scale,
+                      ),
+                      SizedBox(height: (2 * scale).clamp(1, 4)),
+                      if (item.phoneNumber != null && item.phoneNumber!.isNotEmpty)
+                        _miniLine(
+                          icon: Icons.call_outlined,
+                          text: item.phoneNumber!,
+                          scale: scale,
                         ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            !hasDebt
-                                ? "PAID"
-                                : (due == null ? "NO DUE DATE" : _dueLabel(due)),
-                            style: TextStyle(
-                              fontSize: (11.5 * scale).clamp(10.5, 14),
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.6,
-                              color: pillFg,
-                            ),
+                      if (hasDebt && due != null) ...[
+                        SizedBox(height: (6 * scale).clamp(4, 8)),
+                        Text(
+                          _dueSubText(due),
+                          style: TextStyle(
+                            fontSize: (12.5 * scale).clamp(11.5, 15),
+                            fontWeight: FontWeight.w700,
+                            color: _subtitleColor,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(width: (10 * scale).clamp(8, 14)),
+                SizedBox(
+                  width: rightColWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          "₱${currencyFormat.format(item.totalAmount)}",
+                          style: TextStyle(
+                            fontSize: (15.5 * scale).clamp(14, 20),
+                            fontWeight: FontWeight.w900,
+                            color: _titleColor,
                           ),
                         ),
                       ),
-                    ),
-                  ],
-
-                  SizedBox(height: (6 * scale).clamp(4, 8)),
-                  Icon(
-                    Icons.chevron_right,
-                    size: (20 * scale).clamp(18, 26),
-                    color: _subtitleColor.withOpacity(0.8),
+                      if (!hidePill) ...[
+                        SizedBox(height: (6 * scale).clamp(4, 8)),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: (10 * scale).clamp(8, 12),
+                              vertical: (6 * scale).clamp(5, 8),
+                            ),
+                            decoration: BoxDecoration(
+                              color: pillBg,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: pillBg.withOpacity(0.6)),
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                !hasDebt
+                                    ? "PAID"
+                                    : (due == null ? "NO DUE DATE" : _dueLabel(due)),
+                                style: TextStyle(
+                                  fontSize: (11.5 * scale).clamp(10.5, 14),
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.6,
+                                  color: pillFg,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: (6 * scale).clamp(4, 8)),
+                      Icon(
+                        Icons.chevron_right,
+                        size: (20 * scale).clamp(18, 26),
+                        color: _subtitleColor.withOpacity(0.8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -557,7 +627,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
       parts.add("Brgy. ${item.barangay!.trim()}");
     }
 
-    return parts.join(" \u2022 ");
+    return parts.join(" • ");
   }
 }
-

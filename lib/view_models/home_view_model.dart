@@ -3,15 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/home_repository.dart';
 import '../services/db_service.dart';
 
-/// ✅ Graph mode selector
 enum HomeGraphMode { net, income, expense }
 
-/// ------------------------------
-/// MODEL FOR GRAPH POINTS
-/// ------------------------------
 class CashflowPoint {
   final DateTime day;
-  final double net; // reused for net/income/expense series values
+  final double net;
 
   const CashflowPoint({required this.day, required this.net});
 }
@@ -32,23 +28,19 @@ class TopSellingProduct {
   });
 }
 
-/// ------------------------------
-/// STATE
-/// ------------------------------
 class HomeState {
   final double cashOnHand;
+  final double todaySales;
+  final int transactionCount;
+  final int lowStockCount;
   final bool isMoneyVisible;
   final String? mobileNumber;
   final String? error;
   final int selectedIndex;
-
-  // Graph mode + series
   final HomeGraphMode graphMode;
-
-  final List<CashflowPoint> net7Days;     // net = income - expense
-  final List<CashflowPoint> income7Days;  // income trend
-  final List<CashflowPoint> expense7Days; // expense trend
-
+  final List<CashflowPoint> net7Days;
+  final List<CashflowPoint> income7Days;
+  final List<CashflowPoint> expense7Days;
   final bool isGraphLoading;
   final String? graphError;
   final List<TopSellingProduct> topSellingProducts;
@@ -57,6 +49,9 @@ class HomeState {
 
   const HomeState({
     this.cashOnHand = 0.0,
+    this.todaySales = 0.0,
+    this.transactionCount = 0,
+    this.lowStockCount = 0,
     this.isMoneyVisible = true,
     this.mobileNumber,
     this.error,
@@ -74,6 +69,9 @@ class HomeState {
 
   HomeState copyWith({
     double? cashOnHand,
+    double? todaySales,
+    int? transactionCount,
+    int? lowStockCount,
     bool? isMoneyVisible,
     String? mobileNumber,
     String? error,
@@ -90,6 +88,9 @@ class HomeState {
   }) {
     return HomeState(
       cashOnHand: cashOnHand ?? this.cashOnHand,
+      todaySales: todaySales ?? this.todaySales,
+      transactionCount: transactionCount ?? this.transactionCount,
+      lowStockCount: lowStockCount ?? this.lowStockCount,
       isMoneyVisible: isMoneyVisible ?? this.isMoneyVisible,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       error: error ?? this.error,
@@ -107,9 +108,6 @@ class HomeState {
   }
 }
 
-/// ------------------------------
-/// VIEWMODEL
-/// ------------------------------
 class HomeViewModel extends StateNotifier<HomeState> {
   HomeViewModel(this._repo) : super(const HomeState());
 
@@ -117,17 +115,23 @@ class HomeViewModel extends StateNotifier<HomeState> {
 
   Future<void> fetchHomeData() async {
     try {
-      // ✅ cash + mobile from repository
-      final cash = await _repo.getCashOnHand();
-      final mobile = await _repo.getMobileNumber();
+      final results = await Future.wait<Object?>([
+        _repo.getCashOnHand(),
+        _repo.getMobileNumber(),
+        _repo.getTodaySalesTotal(),
+        _repo.getTodayTransactionCount(),
+        _repo.getLowStockCount(),
+      ]);
 
       state = state.copyWith(
-        cashOnHand: cash,
-        mobileNumber: mobile ?? "Not set",
+        cashOnHand: results[0] as double,
+        mobileNumber: (results[1] as String?) ?? 'Not set',
+        todaySales: results[2] as double,
+        transactionCount: results[3] as int,
+        lowStockCount: results[4] as int,
         error: null,
       );
 
-      // ✅ graph + top products from repository
       await Future.wait([
         fetchGraph7Days(),
         fetchTopSellingProducts(),
@@ -145,7 +149,6 @@ class HomeViewModel extends StateNotifier<HomeState> {
       final income = result.income;
       final expense = result.expense;
 
-      // ✅ compute net = income - expense
       final net = List.generate(7, (i) {
         final day = income[i].day;
         final value = income[i].net - expense[i].net;
@@ -201,17 +204,11 @@ class HomeViewModel extends StateNotifier<HomeState> {
   }
 }
 
-/// ------------------------------
-/// PROVIDERS
-/// ------------------------------
-
-/// ✅ HomeRepository provider (inject DBService)
 final homeRepositoryProvider = Provider<HomeRepository>((ref) {
   return HomeRepository(DBService.instance);
 });
 
-/// ✅ HomeViewModel provider (inject repository)
 final homeViewModelProvider =
     StateNotifierProvider<HomeViewModel, HomeState>((ref) {
-  return HomeViewModel(ref.read(homeRepositoryProvider));
-});
+      return HomeViewModel(ref.read(homeRepositoryProvider));
+    });

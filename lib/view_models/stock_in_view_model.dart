@@ -1,15 +1,16 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../repositories/stock_in_repository.dart';
-import '../repositories/product_category_repository.dart';
-import '../services/db_service.dart';
 import '../models/product_model.dart';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/product_unit_conversion.dart';
+import '../repositories/product_category_repository.dart';
+import '../repositories/stock_in_repository.dart';
+import '../services/db_service.dart';
 
 final stockInViewModelProvider =
     ChangeNotifierProvider.autoDispose<StockInViewModel>((ref) {
@@ -26,12 +27,10 @@ class StockInViewModel extends ChangeNotifier {
 
   DateTime selectedDate = DateTime.now();
 
-  // ✅ Categories from DB
-  List<Map<String, dynamic>> categoryRows = []; // [{id:1,name:"Imnonon"}]
-  String? selectedCategory; // name (UI)
-  int? selectedCategoryId; // id (DB)
+  List<Map<String, dynamic>> categoryRows = [];
+  String? selectedCategory;
+  int? selectedCategoryId;
 
-  // ✅ THIS FIXES YOUR ERROR
   List<String> get categoryNames =>
       categoryRows.map((e) => (e['name'] ?? '').toString()).toList();
 
@@ -39,22 +38,32 @@ class StockInViewModel extends ChangeNotifier {
   List<String> productNames = [];
   List<ProductModel> allProducts = [];
   ProductModel? selectedProduct;
+  List<ProductUnitConversion> unitConversions = [];
+  bool useAdvancedUnitSetup = false;
 
   TextEditingController? autocompleteFieldController;
   final TextEditingController productController = TextEditingController();
   final TextEditingController purchasePriceController = TextEditingController();
   final TextEditingController sellingPriceController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
+  final TextEditingController baseUnitController =
+      TextEditingController(text: 'pcs');
+  final TextEditingController conversionNameController =
+      TextEditingController();
+  final TextEditingController conversionQuantityController =
+      TextEditingController();
 
   bool get hasUnsavedData =>
       productController.text.isNotEmpty ||
       purchasePriceController.text.isNotEmpty ||
       sellingPriceController.text.isNotEmpty ||
       quantityController.text.isNotEmpty ||
+      baseUnitController.text.trim().toLowerCase() != 'pcs' ||
+      unitConversions.isNotEmpty ||
       selectedCategory != null ||
       productImage != null;
 
-  final List<String> months = [
+  final List<String> months = const [
     'January',
     'February',
     'March',
@@ -78,11 +87,13 @@ class StockInViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    productController.clear();
-    purchasePriceController.clear();
-    sellingPriceController.clear();
-    quantityController.clear();
-    autocompleteFieldController = null;
+    productController.dispose();
+    purchasePriceController.dispose();
+    sellingPriceController.dispose();
+    quantityController.dispose();
+    baseUnitController.dispose();
+    conversionNameController.dispose();
+    conversionQuantityController.dispose();
     super.dispose();
   }
 
@@ -102,16 +113,13 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  // -------------------- CATEGORY (DB) --------------------
-
   Future<void> loadCategories() async {
     try {
-      categoryRows = await _categoryRepo.getAllCategories(); // [{id,name}]
+      categoryRows = await _categoryRepo.getAllCategories();
     } catch (_) {
       categoryRows = [];
     }
 
-    // keep selection consistent
     if (selectedCategoryId != null) {
       final row =
           categoryRows.where((c) => c['id'] == selectedCategoryId).toList();
@@ -143,7 +151,6 @@ class StockInViewModel extends ChangeNotifier {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
 
-    // if exists, just select it
     final existing =
         categoryRows.where((c) => (c['name'] ?? '').toString() == trimmed);
     if (existing.isNotEmpty) {
@@ -162,8 +169,6 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  // -------------------- Date / UI --------------------
-
   void pickDate(DateTime date) {
     selectedDate = date;
     safeNotifyListeners();
@@ -178,6 +183,22 @@ class StockInViewModel extends ChangeNotifier {
     return autoText.isNotEmpty ? autoText : manualText;
   }
 
+  String get baseUnitLabel {
+    final raw = baseUnitController.text.trim();
+    return raw.isEmpty ? 'pcs' : raw;
+  }
+
+  void setUseAdvancedUnitSetup(bool value) {
+    useAdvancedUnitSetup = value;
+    if (!value) {
+      baseUnitController.text = 'pcs';
+      unitConversions = [];
+      conversionNameController.clear();
+      conversionQuantityController.clear();
+    }
+    safeNotifyListeners();
+  }
+
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
@@ -189,6 +210,32 @@ class StockInViewModel extends ChangeNotifier {
 
   void removeImage() {
     productImage = null;
+    safeNotifyListeners();
+  }
+
+  void addUnitConversion() {
+    final name = conversionNameController.text.trim();
+    final qtyText = conversionQuantityController.text.trim().replaceAll(',', '');
+    final qty = int.tryParse(qtyText) ?? 0;
+
+    if (name.isEmpty || qty <= 0) return;
+
+    unitConversions = [
+      ...unitConversions.where(
+        (item) => item.unitName.toLowerCase() != name.toLowerCase(),
+      ),
+      ProductUnitConversion(unitName: name, baseQuantity: qty),
+    ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
+
+    conversionNameController.clear();
+    conversionQuantityController.clear();
+    safeNotifyListeners();
+  }
+
+  void removeUnitConversion(ProductUnitConversion conversion) {
+    unitConversions = unitConversions
+        .where((item) => item.unitName != conversion.unitName)
+        .toList();
     safeNotifyListeners();
   }
 
@@ -215,27 +262,25 @@ class StockInViewModel extends ChangeNotifier {
     );
   }
 
-  // -------------------- SAVE PRODUCT --------------------
-
   Future<void> saveProduct(BuildContext context) async {
     if (!isInitialized) return;
 
     final productName = effectiveProductName;
-
     final purchaseText = purchasePriceController.text.trim();
     final sellingText = sellingPriceController.text.trim();
     final qtyText = quantityController.text.trim();
+    final baseUnit = useAdvancedUnitSetup ? baseUnitLabel : 'pcs';
 
     if (productName.isEmpty ||
         selectedCategory == null ||
         purchaseText.isEmpty ||
         sellingText.isEmpty ||
-        qtyText.isEmpty) {
+        qtyText.isEmpty ||
+        baseUnit.isEmpty) {
       showSnackBar(context, 'Please fill all required fields', success: false);
       return;
     }
 
-    // ✅ Ensure category id exists
     if (selectedCategoryId == null) {
       final row =
           categoryRows.where((c) => c['name'] == selectedCategory).toList();
@@ -249,14 +294,15 @@ class StockInViewModel extends ChangeNotifier {
     }
 
     final sellingPrice = double.tryParse(sellingText.replaceAll(',', '')) ?? 0;
-    final purchasePrice =
-        double.tryParse(purchaseText.replaceAll(',', '')) ?? 0;
+    final purchaseInput = double.tryParse(purchaseText.replaceAll(',', '')) ?? 0;
     final newQuantity = int.tryParse(qtyText.replaceAll(',', '')) ?? 0;
 
-    if (purchasePrice <= 0) {
+    if (purchaseInput <= 0) {
       showSnackBar(
         context,
-        'Purchase price must be greater than 0',
+        useAdvancedUnitSetup
+            ? 'Total stock cost must be greater than 0'
+            : 'Purchase price must be greater than 0',
         success: false,
       );
       return;
@@ -264,19 +310,15 @@ class StockInViewModel extends ChangeNotifier {
     if (sellingPrice <= 0) {
       showSnackBar(
         context,
-        'Selling price must be greater than 0',
+        'Selling price per $baseUnit must be greater than 0',
         success: false,
       );
       return;
     }
     if (newQuantity <= 0) {
-      showSnackBar(context, 'Quantity must be greater than 0', success: false);
-      return;
-    }
-    if (sellingPrice <= purchasePrice) {
       showSnackBar(
         context,
-        'Selling price must be greater than purchase price',
+        'Stock quantity in $baseUnit must be greater than 0',
         success: false,
       );
       return;
@@ -285,7 +327,7 @@ class StockInViewModel extends ChangeNotifier {
     setLoading(true);
 
     ProductModel? existingProduct;
-    for (var p in allProducts) {
+    for (final p in allProducts) {
       if (p.name.toLowerCase() == productName.toLowerCase()) {
         existingProduct = p;
         break;
@@ -294,14 +336,28 @@ class StockInViewModel extends ChangeNotifier {
 
     selectedProduct ??= existingProduct;
 
+    final purchaseTotal =
+        useAdvancedUnitSetup ? purchaseInput : purchaseInput * newQuantity;
+    final incomingCostPerUnit =
+        useAdvancedUnitSetup ? purchaseTotal / newQuantity : purchaseInput;
+    final previousQty = selectedProduct?.quantity ?? 0;
+    final previousCostPerUnit = selectedProduct?.costPerUnit ?? 0.0;
+    final mergedQuantity = previousQty + newQuantity;
+    final mergedCostPerUnit = mergedQuantity <= 0
+        ? incomingCostPerUnit
+        : ((previousQty * previousCostPerUnit) + purchaseTotal) / mergedQuantity;
+
     final stock = ProductModel(
       id: selectedProduct?.id,
       name: productName,
-      category: selectedCategory!, // keep for display
-      categoryId: selectedCategoryId, // ✅ save to DB
+      category: selectedCategory!,
+      categoryId: selectedCategoryId,
       sellingPrice: sellingPrice,
-      purchasePrice: purchasePrice,
-      quantity: (selectedProduct?.quantity ?? 0) + newQuantity,
+      purchasePrice: mergedCostPerUnit,
+      quantity: mergedQuantity,
+      baseUnit: baseUnit,
+      costPerUnit: mergedCostPerUnit,
+      pricePerUnit: sellingPrice,
       image: productImage?.path ?? selectedProduct?.image,
       createdAt: selectedProduct?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
@@ -311,14 +367,17 @@ class StockInViewModel extends ChangeNotifier {
       String message;
       if (selectedProduct != null) {
         await _repository.updateProduct(stock);
+        await _repository.replaceUnitConversions(stock.id!, unitConversions);
         message = 'Product updated successfully';
       } else {
         final newId = await _repository.addProduct(stock);
         stock.id = newId;
+        await _repository.replaceUnitConversions(newId, unitConversions);
         allProducts.add(stock);
         message = 'Product saved successfully';
       }
 
+      await loadProductNames();
       clearFields();
       selectedProduct = null;
       safeNotifyListeners();
@@ -333,8 +392,6 @@ class StockInViewModel extends ChangeNotifier {
       }
     }
   }
-
-  // -------------------- LOAD PRODUCTS --------------------
 
   Future<void> loadProductNames() async {
     allProducts = await _repository.loadAllProducts();
@@ -359,17 +416,42 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
+  Future<void> populateFromSelectedProduct(ProductModel product) async {
+    selectedProduct = product;
+    productController.text = product.name;
+    autocompleteFieldController?.text = product.name;
+    setCategoryByName(product.category);
+    purchasePriceController.clear();
+    sellingPriceController.text = product.pricePerUnit.toStringAsFixed(
+      product.pricePerUnit % 1 == 0 ? 0 : 2,
+    );
+      quantityController.clear();
+    baseUnitController.text = product.baseUnit;
+    productImage = product.image != null ? File(product.image!) : null;
+    unitConversions = product.id == null
+        ? []
+        : await _repository.getUnitConversions(product.id!);
+    useAdvancedUnitSetup =
+        product.baseUnit.toLowerCase() != 'pcs' || unitConversions.isNotEmpty;
+    safeNotifyListeners();
+  }
+
   void clearFields() {
     productController.clear();
     purchasePriceController.clear();
     sellingPriceController.clear();
     quantityController.clear();
+    baseUnitController.text = 'pcs';
+    conversionNameController.clear();
+    conversionQuantityController.clear();
     autocompleteFieldController?.clear();
 
     selectedCategory = null;
     selectedCategoryId = null;
     productImage = null;
     selectedProduct = null;
+    unitConversions = [];
+    useAdvancedUnitSetup = false;
     showValidationErrors = false;
 
     safeNotifyListeners();

@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/capital_management_model.dart';
 import '../models/product_model.dart';
+import '../models/product_unit_conversion.dart';
 import '../providers/capital_management_view_model_provider.dart';
-import '../repositories/product_repository.dart';
-import '../repositories/customer_repository.dart';
-import '../services/db_service.dart';
-import '../repositories/capital_management_repository.dart';
 import '../repositories/account_repository.dart';
+import '../repositories/capital_management_repository.dart';
+import '../repositories/customer_repository.dart';
 import '../repositories/product_category_repository.dart';
+import '../repositories/product_repository.dart';
+import '../services/db_service.dart';
 
 class SalesViewModel extends ChangeNotifier {
   final void Function()? onCashUpdated;
@@ -17,7 +18,6 @@ class SalesViewModel extends ChangeNotifier {
   CapitalManagementRepository? _capitalRepository;
   ProductRepository? _productRepository;
   CustomerRepository? _customerRepository;
-
   ProductCategoryRepository? _categoryRepository;
 
   List<ProductModel> products = [];
@@ -27,8 +27,11 @@ class SalesViewModel extends ChangeNotifier {
   int selectedCategoryIndex = 0;
 
   final Map<int, int> productQuantities = {};
+  final Map<int, double> productAmounts = {};
   final Map<int, TextEditingController> controllers = {};
+  final Map<int, TextEditingController> amountControllers = {};
   final Map<int, VoidCallback> _controllerListeners = {};
+  final Map<int, List<ProductUnitConversion>> productUnitConversions = {};
 
   List<Map<String, dynamic>> _dbCategories = [];
 
@@ -42,7 +45,7 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   int? categoryIdByIndex(int index) {
-    if (index <= 0) return null; // All
+    if (index <= 0) return null;
     final rowIndex = index - 1;
     if (rowIndex < 0 || rowIndex >= _dbCategories.length) return null;
 
@@ -52,7 +55,6 @@ class SalesViewModel extends ChangeNotifier {
     return int.tryParse(id?.toString() ?? '');
   }
 
-  // ------------------- Selected Customer -------------------
   Map<String, dynamic>? _selectedCustomer;
   Map<String, dynamic>? get selectedCustomer => _selectedCustomer;
 
@@ -66,9 +68,8 @@ class SalesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ------------------- Constructor -------------------
   SalesViewModel({this.onCashUpdated}) {
-    Future.microtask(() => _initRepository());
+    Future.microtask(_initRepository);
   }
 
   Future<void> _initRepository() async {
@@ -79,7 +80,6 @@ class SalesViewModel extends ChangeNotifier {
       _productRepository = ProductRepository(db, accountRepo);
       _customerRepository = CustomerRepository(db);
       _capitalRepository = CapitalManagementRepository(db);
-
       _categoryRepository = ProductCategoryRepository(db);
 
       await loadCategories();
@@ -88,7 +88,6 @@ class SalesViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
-  // ------------------- Categories -------------------
   Future<void> loadCategories() async {
     final repo = _categoryRepository;
     if (repo == null) return;
@@ -111,48 +110,21 @@ class SalesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setTypedQuantity(ProductModel product, String value) {
-  if (product.id == null) return;
-
-  final id = product.id!;
-  final controller = controllers[id];
-
-  // allow empty while typing
-  if (value.trim().isEmpty) {
-    productQuantities[id] = 0;
-    calculateTotal();
-    return;
+  double getEffectiveUnitPrice(ProductModel product) {
+    if (product.pricePerUnit > 0) return product.pricePerUnit;
+    return product.sellingPrice;
   }
 
-  final parsed = int.tryParse(value) ?? 0;
+  bool supportsPesoEntry(ProductModel product) =>
+      product.baseUnit.toLowerCase() != 'pcs' &&
+      getEffectiveUnitPrice(product) > 0;
 
-  // clamp to stock
-  final clamped = parsed.clamp(0, product.quantity);
+  List<ProductUnitConversion> unitConversionsFor(ProductModel product) =>
+      product.id == null
+          ? const <ProductUnitConversion>[]
+          : (productUnitConversions[product.id!] ??
+              const <ProductUnitConversion>[]);
 
-  productQuantities[id] = clamped;
-
-  // ✅ FORCE UI TEXT to snap back (ex: 100000 -> 50)
-  if (controller != null && controller.text != clamped.toString()) {
-    // remove listener to avoid loop
-    if (_controllerListeners.containsKey(id)) {
-      controller.removeListener(_controllerListeners[id]!);
-    }
-
-    controller.text = clamped.toString();
-    controller.selection = TextSelection.fromPosition(
-      TextPosition(offset: controller.text.length),
-    );
-
-    // add listener back
-    if (_controllerListeners.containsKey(id)) {
-      controller.addListener(_controllerListeners[id]!);
-    }
-  }
-
-  calculateTotal();
-}
-
-  // ------------------- Products -------------------
   Future<void> loadProducts() async {
     if (_productRepository == null) return;
 
@@ -162,50 +134,59 @@ class SalesViewModel extends ChangeNotifier {
 
     try {
       products = await _productRepository!.getProducts();
+      productUnitConversions
+        ..clear()
+        ..addAll(await _productRepository!.getAllUnitConversions());
     } catch (_) {
       products = [];
+      productUnitConversions.clear();
     }
 
-    // ✅ build controllers + listeners per product
     for (final p in products) {
       final id = p.id;
       if (id == null) continue;
 
       productQuantities[id] ??= 0;
+      productAmounts[id] ??= 0;
 
-      // create controller if missing
-      controllers[id] ??= TextEditingController(text: productQuantities[id].toString());
+      controllers[id] ??= TextEditingController(
+        text: productQuantities[id].toString(),
+      );
+      amountControllers[id] ??= TextEditingController(
+        text: productAmounts[id] == 0 ? '' : productAmounts[id]!.toStringAsFixed(2),
+      );
 
       final controller = controllers[id]!;
-
-      // remove old listener if exists
       if (_controllerListeners.containsKey(id)) {
         controller.removeListener(_controllerListeners[id]!);
       }
 
-      // ✅ new listener (this is the ONLY place totals update from typing)
       _controllerListeners[id] = () {
         final text = controller.text.trim();
-
-        // allow empty while typing
         if (text.isEmpty) {
           productQuantities[id] = 0;
+          productAmounts[id] = 0;
           calculateTotal();
           return;
         }
 
         final parsed = int.tryParse(text) ?? 0;
         final clamped = parsed.clamp(0, p.quantity);
-
         productQuantities[id] = clamped;
+        productAmounts[id] = clamped * getEffectiveUnitPrice(p);
 
-        // ✅ snap text back to max stock
         if (parsed != clamped) {
           controller
             ..text = clamped.toString()
             ..selection = TextSelection.fromPosition(
               TextPosition(offset: controller.text.length),
             );
+        }
+
+        final amountController = amountControllers[id];
+        if (amountController != null) {
+          amountController.text =
+              clamped == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
         }
 
         calculateTotal();
@@ -232,6 +213,84 @@ class SalesViewModel extends ChangeNotifier {
     }).toList();
   }
 
+  void setTypedQuantity(ProductModel product, String value) {
+    if (product.id == null) return;
+    final id = product.id!;
+    final controller = controllers[id];
+
+    if (value.trim().isEmpty) {
+      productQuantities[id] = 0;
+      productAmounts[id] = 0;
+      calculateTotal();
+      return;
+    }
+
+    final parsed = int.tryParse(value) ?? 0;
+    final clamped = parsed.clamp(0, product.quantity);
+
+    productQuantities[id] = clamped;
+    productAmounts[id] = clamped * getEffectiveUnitPrice(product);
+
+    if (controller != null && controller.text != clamped.toString()) {
+      if (_controllerListeners.containsKey(id)) {
+        controller.removeListener(_controllerListeners[id]!);
+      }
+
+      controller.text = clamped.toString();
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+
+      if (_controllerListeners.containsKey(id)) {
+        controller.addListener(_controllerListeners[id]!);
+      }
+    }
+
+    final amountController = amountControllers[id];
+    if (amountController != null) {
+      amountController.text = clamped == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
+    }
+
+    calculateTotal();
+  }
+
+  void setTypedAmount(ProductModel product, String value) {
+    if (product.id == null) return;
+
+    final id = product.id!;
+    final amount = double.tryParse(value.replaceAll(',', '').trim()) ?? 0;
+    final unitPrice = getEffectiveUnitPrice(product);
+
+    if (amount <= 0 || unitPrice <= 0) {
+      productQuantities[id] = 0;
+      productAmounts[id] = 0;
+      final qtyController = controllers[id];
+      if (qtyController != null) qtyController.text = '0';
+      calculateTotal();
+      return;
+    }
+
+    final maxAmount = product.quantity * unitPrice;
+    final clampedAmount = amount.clamp(0, maxAmount);
+    final baseQty = (clampedAmount / unitPrice).floor().clamp(0, product.quantity);
+    final subtotal = baseQty * unitPrice;
+
+    productQuantities[id] = baseQty;
+    productAmounts[id] = subtotal;
+
+    final qtyController = controllers[id];
+    if (qtyController != null) {
+      qtyController.text = baseQty.toString();
+    }
+
+    calculateTotal();
+  }
+
+  void applyUnitConversion(ProductModel product, ProductUnitConversion conversion) {
+    final nextQty = getQuantity(product) + conversion.baseQuantity;
+    updateQuantity(product, nextQty);
+  }
+
   void incrementQuantity(ProductModel product) {
     if (product.id == null) return;
     final id = product.id!;
@@ -252,17 +311,16 @@ class SalesViewModel extends ChangeNotifier {
     }
   }
 
-  /// ✅ Use this for + / - (and any time you want to force controller text)
   void updateQuantity(ProductModel product, int qty) {
     if (product.id == null) return;
     final id = product.id!;
 
     qty = qty.clamp(0, product.quantity);
     productQuantities[id] = qty;
+    productAmounts[id] = qty * getEffectiveUnitPrice(product);
 
     final controller = controllers[id];
     if (controller != null && controller.text != qty.toString()) {
-      // temporarily disable listener so it won’t loop
       if (_controllerListeners.containsKey(id)) {
         controller.removeListener(_controllerListeners[id]!);
       }
@@ -277,14 +335,20 @@ class SalesViewModel extends ChangeNotifier {
       }
     }
 
-    calculateTotal(); // notifyListeners inside
+    final amountController = amountControllers[id];
+    if (amountController != null) {
+      amountController.text =
+          qty == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
+    }
+
+    calculateTotal();
   }
 
   int getQuantity(ProductModel product) =>
       product.id == null ? 0 : productQuantities[product.id!] ?? 0;
 
   double getSubtotal(ProductModel product) =>
-      getQuantity(product) * product.sellingPrice;
+      product.id == null ? 0 : productAmounts[product.id!] ?? 0;
 
   void calculateTotal() {
     double newTotal = 0.0;
@@ -292,8 +356,7 @@ class SalesViewModel extends ChangeNotifier {
     for (final p in products) {
       final id = p.id;
       if (id == null) continue;
-
-      newTotal += p.sellingPrice * (productQuantities[id] ?? 0);
+      newTotal += productAmounts[id] ?? 0;
     }
 
     total = newTotal;
@@ -309,8 +372,8 @@ class SalesViewModel extends ChangeNotifier {
       if (id == null) continue;
 
       productQuantities[id] = 0;
+      productAmounts[id] = 0;
 
-      // update controller text safely
       final controller = controllers[id];
       if (controller != null && controller.text != '0') {
         if (_controllerListeners.containsKey(id)) {
@@ -321,13 +384,17 @@ class SalesViewModel extends ChangeNotifier {
           controller.addListener(_controllerListeners[id]!);
         }
       }
+
+      final amountController = amountControllers[id];
+      if (amountController != null) {
+        amountController.clear();
+      }
     }
 
     total = 0.0;
     notifyListeners();
   }
 
-  // ------------------- Customers -------------------
   Future<void> loadCustomers() async {
     if (_customerRepository == null) return;
 
@@ -340,7 +407,6 @@ class SalesViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ------------------- Checkout -------------------
   Future<void> checkout({
     bool isCash = true,
     int? customerId,
@@ -360,8 +426,8 @@ class SalesViewModel extends ChangeNotifier {
       purchasedItems.add({
         'productId': id,
         'quantity': qty,
-        'price': p.sellingPrice,
-        'subtotal': qty * p.sellingPrice,
+        'price': getEffectiveUnitPrice(p),
+        'subtotal': productAmounts[id] ?? (qty * getEffectiveUnitPrice(p)),
       });
     }
 
@@ -374,7 +440,7 @@ class SalesViewModel extends ChangeNotifier {
         if (_capitalRepository != null) {
           final totalCash = purchasedItems.fold<double>(
             0.0,
-            (sum, item) => sum + (item['subtotal'] as double),
+            (sum, item) => sum + ((item['subtotal'] as num).toDouble()),
           );
 
           final latest = await _capitalRepository!.getLatestCapital();

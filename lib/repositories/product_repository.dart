@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../models/product_model.dart';
+import '../models/product_unit_conversion.dart';
 import '../repositories/account_repository.dart';
 import '../services/audit_log_service.dart';
 
@@ -54,6 +55,23 @@ class ProductRepository {
     return ProductModel.fromMap(map);
   }).toList();
 }
+
+  Future<Map<int, List<ProductUnitConversion>>> getAllUnitConversions() async {
+    final rows = await db.query(
+      'product_unit_conversion',
+      orderBy: 'product_id ASC, base_quantity DESC, unit_name ASC',
+    );
+
+    final result = <int, List<ProductUnitConversion>>{};
+    for (final row in rows) {
+      final conversion = ProductUnitConversion.fromMap(row);
+      final productId = conversion.productId;
+      if (productId == null) continue;
+      result.putIfAbsent(productId, () => []);
+      result[productId]!.add(conversion);
+    }
+    return result;
+  }
 
   Future<int> updateProduct(ProductModel product) async {
     final fullName = await accountRepo.getFullName();
@@ -175,7 +193,10 @@ class ProductRepository {
     final now = DateTime.now().toIso8601String();
 
     // Calculate total
-    final total = items.fold<int>(0, (sum, item) => sum + (item['subtotal'] as num).toInt());
+    final total = items.fold<double>(
+      0,
+      (sum, item) => sum + (item['subtotal'] as num).toDouble(),
+    );
 
     // Get name parts for created_by fields
     final nameParts = await accountRepo.getNameParts();
@@ -196,8 +217,8 @@ class ProductRepository {
     // Insert each sale item and update stock
     for (var item in items) {
       final productId = item['productId'];
-      final subtotal = (item['subtotal'] as num).toInt();
-      final unitPrice = (item['price'] as num).toInt();
+      final subtotal = (item['subtotal'] as num).toDouble();
+      final unitPrice = (item['price'] as num).toDouble();
       final quantity = (item['quantity'] as num).toInt();
 
       // Insert sale item
@@ -279,7 +300,10 @@ class ProductRepository {
       saleId = await txn.insert('sales', {
         'customer_id': customerId,
         'sale_type': 'credit',
-        'total': items.fold<int>(0, (sum, item) => sum + (item['subtotal'] as num).toInt()),
+        'total': items.fold<double>(
+          0,
+          (sum, item) => sum + (item['subtotal'] as num).toDouble(),
+        ),
         'created_at': now,
         'created_by_first_name': nameParts['first'],
         'created_by_middle_name': nameParts['middle'],
@@ -292,8 +316,8 @@ class ProductRepository {
       // Insert sale items and sales_credit
       for (var item in items) {
         final productId = item['productId'];
-        final subtotal = (item['subtotal'] as num).toInt();
-        final unitPrice = (item['price'] as num).toInt();
+        final subtotal = (item['subtotal'] as num).toDouble();
+        final unitPrice = (item['price'] as num).toDouble();
         final quantity = (item['quantity'] as num).toInt();
 
         // Insert sale item

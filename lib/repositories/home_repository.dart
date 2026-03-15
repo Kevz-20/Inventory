@@ -53,6 +53,52 @@ class HomeRepository {
     return prefs.getString('mobileNumber');
   }
 
+  Future<double> getTodaySalesTotal() async {
+    final db = await _dbService.database;
+    final today = _fmt(DateTime.now());
+
+    final rows = await db.rawQuery(
+      '''
+      SELECT COALESCE(SUM(total), 0) AS total
+      FROM sales
+      WHERE DATE(created_at) = ?
+      ''',
+      [today],
+    );
+
+    return _toDouble(rows.first['total']);
+  }
+
+  Future<int> getTodayTransactionCount() async {
+    final db = await _dbService.database;
+    final today = _fmt(DateTime.now());
+
+    final rows = await db.rawQuery(
+      '''
+      SELECT COUNT(*) AS count
+      FROM sales
+      WHERE DATE(created_at) = ?
+      ''',
+      [today],
+    );
+
+    return (rows.first['count'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<int> getLowStockCount({int threshold = 10}) async {
+    final db = await _dbService.database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT COUNT(*) AS count
+      FROM product
+      WHERE COALESCE(quantity, 0) <= ?
+      ''',
+      [threshold],
+    );
+
+    return (rows.first['count'] as num?)?.toInt() ?? 0;
+  }
+
   Future<({List<CashflowPoint> income, List<CashflowPoint> expense})>
       getIncomeExpenseLast7Days() async {
     final db = await _dbService.database;

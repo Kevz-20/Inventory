@@ -2,15 +2,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../core/app_colors.dart';
+
 import '../../models/notification_item.dart';
 import '../../models/utang_customer_model.dart';
 import '../../providers/db_service_provider.dart';
 import '../../providers/notification_provider';
 import '../../providers/unread_notif_count_provider.dart';
+import '../widgets/dashboard_background.dart';
 import '../widgets/notification_3d_card.dart';
-import 'package:go_router/go_router.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -20,13 +21,15 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   bool _didMarkSeen = false;
+
   String _formatDueText(DateTime? dueDate) {
     if (dueDate == null) return '';
 
@@ -69,15 +72,17 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final now = DateTime.now().toIso8601String();
 
     for (final n in items) {
-      batch.execute('''
+      batch.execute(
+        '''
         INSERT INTO notif_state (notif_id, seen, seen_at, created_at)
         VALUES (?, 1, ?, ?)
         ON CONFLICT(notif_id) DO UPDATE SET seen=1, seen_at=?
-      ''', [n.id, now, now, now, now]);
+      ''',
+        [n.id, now, now, now],
+      );
     }
 
     await batch.commit(noResult: true);
-
     ref.invalidate(unreadNotifCountProvider);
   }
 
@@ -212,135 +217,176 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       }
 
       await context.push('/utang_summary', extra: customer);
-      return;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(notificationsStreamProvider);
-
-    // ✅ once it becomes data, mark seen
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
 
     return Scaffold(
       backgroundColor: _pageBg,
       appBar: AppBar(
+        backgroundColor: _pageBg,
         elevation: 0,
-        automaticallyImplyLeading: true,
-        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: Image.asset(
+            'lib/assets/arrowleft.png',
+            width: 22,
+            height: 22,
+            fit: BoxFit.contain,
+          ),
+          onPressed: () => context.pop(),
+        ),
         title: const Text(
           'Notifications',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.headerTop, AppColors.headerBottom],
-            ),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: _titleColor,
           ),
         ),
+        centerTitle: true,
       ),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('Error: $e', textAlign: TextAlign.center),
-          ),
-        ),
-        data: (items) {
-          final sortedItems = [...items]
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-          if (sortedItems.isEmpty) {
-            return Center(
+      body: Stack(
+        children: [
+          const DashboardBackground(),
+          async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
               child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      height: 62,
-                      width: 62,
-                      decoration: BoxDecoration(
-                        color: _cardBg,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: _cardBorder,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.notifications_none_rounded,
-                        color: AppColors.primary,
-                        size: 34,
-                      ),
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _cardBg,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: _cardBorder),
+                  ),
+                  child: Text(
+                    'Error: $e',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: _titleColor,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'No notifications right now.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: _titleColor,
-                        fontSize: 15.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'You’re all caught up.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: _subtitleColor,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(notificationsStreamProvider);
-              await ref.read(notificationsStreamProvider.future);
-              _didMarkSeen = false; // allow re-mark after refresh
-              await _markSeenIfPossible();
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-              itemCount: sortedItems.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, i) {
-                final n = sortedItems[i];
-
-                // Inside notification_screen.dart -> ListView.separated -> itemBuilder
-                return Notification3DCard(
-                  icon: _iconFor(n.type),
-                  badgeText: _badgeText(n.type),
-                  badgeOpacity: _badgeOpacity(n.type),
-                  badgeColor: n.type == AppNotifType.customerUtangOverdue
-                      ? Colors.red.shade700
-                      : null,
-                  title: n.title,
-                  message: n.message,
-                  createdAtText:
-                      DateFormat('MMM d, y • h:mm a').format(n.createdAt),
-                  dueText: n.dueDate == null
-                      ? null
-                      : _formatDueText(n.dueDate),
-                  onTap: () {
-                    _handleNotificationTap(context, n);
-                  },
-                );
-              },
             ),
-          );
-        },
+            data: (items) {
+              final sortedItems = [...items]
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+              if (sortedItems.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 26,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _cardBg,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: _cardBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF93A4CF).withOpacity(0.16),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            height: 70,
+                            width: 70,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFFECF3FF),
+                                  Color(0xFFD8E8FF),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: _accentBlue,
+                              size: 36,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No notifications right now.',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: _titleColor,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'You are all caught up.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: _subtitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(notificationsStreamProvider);
+                  await ref.read(notificationsStreamProvider.future);
+                  _didMarkSeen = false;
+                  await _markSeenIfPossible();
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                  itemCount: sortedItems.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) {
+                    final n = sortedItems[i];
+
+                    return Notification3DCard(
+                      icon: _iconFor(n.type),
+                      badgeText: _badgeText(n.type),
+                      badgeOpacity: _badgeOpacity(n.type),
+                      badgeColor: n.type == AppNotifType.customerUtangOverdue
+                          ? Colors.red.shade700
+                          : null,
+                      title: n.title,
+                      message: n.message,
+                      createdAtText:
+                          DateFormat('MMM d, y • h:mm a').format(n.createdAt),
+                      dueText: n.dueDate == null
+                          ? null
+                          : _formatDueText(n.dueDate),
+                      onTap: () => _handleNotificationTap(context, n),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-// keep your _Notification3DCard unchanged below

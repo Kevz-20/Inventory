@@ -1,19 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:math' as math;
-
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/app_colors.dart';
-import '../../view_models/home_view_model.dart';
-import '../widgets/nav_bar.dart';
 import '../../app_router.dart';
-import '../widgets/hero_header.dart';
-import '../widgets/adaptive_digits_text.dart';
+import '../../view_models/home_view_model.dart';
+import '../widgets/dashboard_background.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -24,13 +18,17 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
-
+  void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(homeViewModelProvider.notifier).fetchHomeData();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
   }
 
   @override
@@ -44,948 +42,894 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     ref.read(homeViewModelProvider.notifier).fetchHomeData();
   }
 
-  Size _screenSize(BuildContext context) => MediaQuery.of(context).size;
+  double get _screenWidth => MediaQuery.of(context).size.width;
 
-  double _screenWidth(BuildContext context) => _screenSize(context).width;
+  bool get _isTablet => _screenWidth >= 700;
 
-  double _screenHeight(BuildContext context) => _screenSize(context).height;
+  bool get _isNarrowPhone => _screenWidth < 430;
 
-  bool _isTablet(BuildContext context) => _screenWidth(context) >= 700;
+  bool get _isVeryNarrowPhone => _screenWidth < 380;
 
-  bool _isLandscape(BuildContext context) =>
-      MediaQuery.of(context).orientation == Orientation.landscape;
-
-  bool _isShortScreen(BuildContext context) => _screenHeight(context) < 500;
-
-  bool _useSplitLayout(BuildContext context) {
-    final width = _screenWidth(context);
-    final height = _screenHeight(context);
-
-    // Only allow split layout if both width and height are enough.
-    // This prevents small landscape phones from being treated like tablets.
-    return width >= 900 && height >= 560;
-  }
-
-  double _responsiveScale(BuildContext context) {
-    final width = _screenWidth(context);
-    if (width < 360) return 0.88;
-    if (width < 400) return 0.94;
-    if (width < 700) return 1.00;
-    if (width < 1000) return 1.10;
-    return 1.18;
-  }
-
-  double _r(BuildContext context, double value) {
-    final scaled = value * _responsiveScale(context);
-    final min = value * 0.82;
-    final max = value * 1.28;
-    return scaled.clamp(min, max);
+  double _r(double value) {
+    final scale = (_screenWidth / 390).clamp(0.84, 1.18);
+    return value * scale;
   }
 
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeViewModelProvider);
-
-    final pesoFormatter = NumberFormat.currency(
+    final currency = NumberFormat.currency(
       locale: 'en_PH',
-      symbol: '₱ ',
+      symbol: '₱',
       decimalDigits: 2,
     );
 
-    final balanceText = pesoFormatter.format(homeState.cashOnHand);
-    final mobileText = homeState.mobileNumber ?? "Not set";
-
-    final isTablet = _isTablet(context);
-    final isLandscape = _isLandscape(context);
-    final isShortScreen = _isShortScreen(context);
-    final useSplitLayout = _useSplitLayout(context);
-
-    final maxContentWidth = useSplitLayout
-        ? 1240.0
-        : isTablet
-        ? 780.0
-        : double.infinity;
-
-    final horizontalPadding = useSplitLayout
-        ? 24.0
-        : isTablet
-        ? 18.0
-        : isLandscape
-        ? 14.0
-        : 16.0;
-
-    final verticalPadding = useSplitLayout
-        ? 14.0
-        : isShortScreen
-        ? 8.0
-        : isLandscape
-        ? 10.0
-        : 12.0;
+    final cashText = homeState.isMoneyVisible
+        ? currency.format(homeState.cashOnHand)
+        : '₱ ••••••';
+    final salesText = homeState.isMoneyVisible
+        ? currency.format(homeState.todaySales)
+        : '₱ ••••••';
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            HeroHeader(
-              title: "Home",
-              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
-              mobileNumber: mobileText,
-              isBalanceVisible: homeState.isMoneyVisible,
-              centerTitle: true,
-              showBack: false,
-              showLogo: true,
-              onBellTap: () => context.push('/notifications'),
-              onEyeTap: () => ref
-                  .read(homeViewModelProvider.notifier)
-                  .toggleMoneyVisibility(),
+      backgroundColor: const Color(0xFFF5F7FF),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(_isVeryNarrowPhone ? _r(86) : _r(96)),
+        child: AppBar(
+          backgroundColor: const Color(0xFFF5F7FF),
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          automaticallyImplyLeading: false,
+          toolbarHeight: _isVeryNarrowPhone ? _r(86) : _r(96),
+          titleSpacing: 0,
+          title: Padding(
+            padding: EdgeInsets.fromLTRB(
+              _isVeryNarrowPhone ? _r(14) : _r(22),
+              _r(8),
+              _isVeryNarrowPhone ? _r(14) : _r(22),
+              0,
             ),
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      verticalPadding,
-                      horizontalPadding,
-                      verticalPadding,
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, c) {
-                        final h = c.maxHeight;
-                        final w = c.maxWidth;
-
-                        final gap = useSplitLayout
-                            ? (math.min(w, h) * 0.022).clamp(12.0, 18.0)
-                            : isShortScreen
-                            ? 10.0
-                            : isLandscape
-                            ? (h * 0.022).clamp(8.0, 12.0)
-                            : (h * 0.026).clamp(10.0, 16.0);
-
-                        // ================= SHORT LANDSCAPE PHONE =================
-                        if (isLandscape && isShortScreen && !isTablet) {
-                          return SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  height: 108,
-                                  child: _bigActionTile(
-                                    label: "CUSTOMER",
-                                    subtitle: "Manage customers",
-                                    icon: Icons.people_alt_outlined,
-                                    onTap: () => context.push('/customer_menu'),
-                                  ),
-                                ),
-                                SizedBox(height: gap),
-                                SizedBox(
-                                  height: 108,
-                                  child: _bigActionTile(
-                                    label: "NEGOSYO",
-                                    subtitle: "Store & inventory",
-                                    icon: Icons.storefront_outlined,
-                                    onTap: () => context.push('/negosyo_menu'),
-                                  ),
-                                ),
-                                SizedBox(height: gap),
-                                SizedBox(
-                                  height: 220,
-                                  child: _SalesOnlyGraphCard(
-                                    salesPoints: homeState.income7Days,
-                                    loading: homeState.isGraphLoading,
-                                    error: homeState.graphError,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        // ================= LARGE / TABLET SPLIT LAYOUT =================
-                        if (useSplitLayout) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 11,
-                                child: _buildTilesPanel(
-                                  context: context,
-                                  gap: gap,
-                                ),
-                              ),
-                              SizedBox(width: gap),
-                              Expanded(
-                                flex: 13,
-                                child: _SalesOnlyGraphCard(
-                                  salesPoints: homeState.income7Days,
-                                  loading: homeState.isGraphLoading,
-                                  error: homeState.graphError,
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-
-                        // ================= NORMAL PHONE / NORMAL TABLET STACK =================
-                        final tilesBlock = isTablet
-                            ? (isLandscape
-                                  ? (h * 0.36).clamp(220.0, 300.0)
-                                  : (h * 0.40).clamp(280.0, 380.0))
-                            : (isLandscape
-                                  ? (h * 0.42).clamp(190.0, 260.0)
-                                  : (h * 0.34).clamp(220.0, 320.0));
-
-                        return Column(
-                          children: [
-                            SizedBox(
-                              height: tilesBlock,
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: _bigActionTile(
-                                      label: "CUSTOMER",
-                                      subtitle: "Manage customers",
-                                      icon: Icons.people_alt_outlined,
-                                      onTap: () =>
-                                          context.push('/customer_menu'),
-                                    ),
-                                  ),
-                                  SizedBox(height: gap),
-                                  Expanded(
-                                    child: _bigActionTile(
-                                      label: "NEGOSYO",
-                                      subtitle: "Store & inventory",
-                                      icon: Icons.storefront_outlined,
-                                      onTap: () =>
-                                          context.push('/negosyo_menu'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: gap),
-                            Expanded(
-                              child: _SalesOnlyGraphCard(
-                                salesPoints: homeState.income7Days,
-                                loading: homeState.isGraphLoading,
-                                error: homeState.graphError,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+            child: _topHeader(homeState),
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          const DashboardBackground(),
+          Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    _isVeryNarrowPhone ? _r(14) : _r(22),
+                    _r(18),
+                    _isVeryNarrowPhone ? _r(14) : _r(22),
+                    _r(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _heroCard(
+                        cashText: cashText,
+                        updatedLabel: 'Updated just now',
+                      ),
+                      SizedBox(height: _r(16)),
+                      _summaryStrip(
+                        salesText: salesText,
+                        transactionCount: homeState.transactionCount,
+                        lowStockCount: homeState.lowStockCount,
+                      ),
+                      SizedBox(height: _r(16)),
+                      _featureSection(),
+                      SizedBox(height: _r(24)),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+              _bottomNav(),
+            ],
+          ),
+        ],
       ),
-      bottomNavigationBar: BottomNavBar(currentIndex: homeState.selectedIndex),
     );
   }
 
-  Widget _buildTilesPanel({
-    required BuildContext context,
-    required double gap,
-  }) {
-    return Column(
+  Widget _topHeader(HomeState state) {
+    return Row(
       children: [
+        Image.asset(
+          'lib/assets/logo.png',
+          width: _isVeryNarrowPhone ? _r(44) : _r(52),
+          height: _isVeryNarrowPhone ? _r(44) : _r(52),
+        ),
+        SizedBox(width: _r(10)),
         Expanded(
-          child: _bigActionTile(
-            label: "CUSTOMER",
-            subtitle: "Manage customers",
-            icon: Icons.people_alt_outlined,
-            onTap: () => context.push('/customer_menu'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'EMPOWER',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: _isVeryNarrowPhone ? _r(21) : _r(26),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.3,
+                  color: const Color(0xFF204C93),
+                ),
+              ),
+              Text(
+                'Sari-Sari Store Manager',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: _isVeryNarrowPhone ? _r(11.5) : _r(14),
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF5B6D96),
+                ),
+              ),
+            ],
           ),
         ),
-        SizedBox(height: gap),
-        Expanded(
-          child: _bigActionTile(
-            label: "NEGOSYO",
-            subtitle: "Store & inventory",
-            icon: Icons.storefront_outlined,
-            onTap: () => context.push('/negosyo_menu'),
-          ),
+        _circleIconButton(
+          assetPath: 'lib/assets/notification.png',
+          badge: state.lowStockCount > 0
+              ? '${state.lowStockCount.clamp(0, 99)}'
+              : null,
+          onTap: () => context.push('/notifications'),
+        ),
+        SizedBox(width: _r(8)),
+        _circleIconButton(
+          assetPath: 'lib/assets/transactionhistory.png',
+          onTap: () => context.go('/history'),
         ),
       ],
     );
   }
 
-  Widget _bigActionTile({
-    required String label,
+  Widget _heroCard({
+    required String cashText,
+    required String updatedLabel,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_isVeryNarrowPhone ? _r(14) : _r(18)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_r(26)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF173D86),
+            Color(0xFF1D79D8),
+            Color(0xFF28C4D5),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1B4A9A).withOpacity(0.24),
+            blurRadius: _r(28),
+            offset: Offset(0, _r(14)),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: _r(80),
+            right: _r(_isVeryNarrowPhone ? 0 : 110),
+            bottom: -_r(20),
+            child: _waveBand(
+              height: _r(90),
+              opacity: 0.18,
+              colors: const [
+                Color(0xFFAEDCFF),
+                Color(0x884FC8FF),
+                Color(0x0037B8FF),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cash on Hand',
+                      style: TextStyle(
+                        fontSize: _isVeryNarrowPhone ? _r(16) : _r(18),
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.96),
+                      ),
+                    ),
+                    SizedBox(height: _r(10)),
+                    Text(
+                      cashText,
+                      style: TextStyle(
+                        fontSize: _isVeryNarrowPhone ? _r(24) : _r(34),
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.8,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: _r(10)),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          color: Colors.white.withOpacity(0.92),
+                          size: _isVeryNarrowPhone ? _r(16) : _r(18),
+                        ),
+                        SizedBox(width: _r(8)),
+                        Expanded(
+                          child: Text(
+                            updatedLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: _isVeryNarrowPhone ? _r(11.5) : _r(13.5),
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withOpacity(0.92),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (!_isVeryNarrowPhone) ...[
+                SizedBox(width: _r(10)),
+                Image.asset(
+                  'lib/assets/cashonhand.png',
+                  width: _isNarrowPhone ? _r(92) : _r(126),
+                  height: _isNarrowPhone ? _r(92) : _r(126),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.account_balance_wallet_rounded,
+                    size: _r(92),
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryStrip({
+    required String salesText,
+    required int transactionCount,
+    required int lowStockCount,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: _r(12),
+        vertical: _r(14),
+      ),
+      decoration: _softCardDecoration(),
+      child: _isNarrowPhone
+          ? Column(
+              children: [
+                _metricItem(
+                  icon: Icons.calendar_month_rounded,
+                  iconColor: const Color(0xFF2B7BE4),
+                  title: "Today's Sales",
+                  value: salesText,
+                  compact: false,
+                ),
+                _horizontalDivider(),
+                _metricItem(
+                  icon: Icons.receipt_long_rounded,
+                  iconColor: const Color(0xFF2E7EF7),
+                  title: 'Transactions',
+                  value: '$transactionCount',
+                  compact: false,
+                ),
+                _horizontalDivider(),
+                _metricItem(
+                  icon: Icons.warning_amber_rounded,
+                  iconColor: const Color(0xFFFF8A36),
+                  title: 'Low Stock',
+                  value: '$lowStockCount item${lowStockCount == 1 ? '' : 's'}',
+                  valueColor: const Color(0xFFFF7A1A),
+                  compact: false,
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: _metricItem(
+                    icon: Icons.calendar_month_rounded,
+                    iconColor: const Color(0xFF2B7BE4),
+                    title: "Today's Sales",
+                    value: salesText,
+                    compact: true,
+                  ),
+                ),
+                _verticalDivider(),
+                Expanded(
+                  child: _metricItem(
+                    icon: Icons.receipt_long_rounded,
+                    iconColor: const Color(0xFF2E7EF7),
+                    title: 'Transactions',
+                    value: '$transactionCount',
+                    compact: true,
+                  ),
+                ),
+                _verticalDivider(),
+                Expanded(
+                  child: _metricItem(
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: const Color(0xFFFF8A36),
+                    title: 'Low Stock',
+                    value: '$lowStockCount item${lowStockCount == 1 ? '' : 's'}',
+                    valueColor: const Color(0xFFFF7A1A),
+                    compact: true,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _featureSection() {
+    final cards = [
+      _featureCard(
+        title: 'Record Sale',
+        subtitle: 'Sell products',
+        assetPath: 'lib/assets/shoppingcart_button.png',
+        accent: const Color(0xFFFFE9D8),
+        onTap: () => context.push('/record_sales'),
+      ),
+      _featureCard(
+        title: 'Customer Utang',
+        subtitle: 'Manage customer credit',
+        assetPath: 'lib/assets/customer_button.png',
+        accent: const Color(0xFFE9F6EA),
+        onTap: () => context.push('/customer_utang'),
+      ),
+      _featureCard(
+        title: 'Stock In',
+        subtitle: 'Add new stock',
+        assetPath: 'lib/assets/stockin_button.png',
+        accent: const Color(0xFFE3F1FF),
+        onTap: () => context.push('/stockin'),
+      ),
+      _featureCard(
+        title: 'Expense',
+        subtitle: 'Track expenses',
+        assetPath: 'lib/assets/expense_button.png',
+        accent: const Color(0xFFF3E9FF),
+        onTap: () => context.push('/expenses'),
+      ),
+      _featureCard(
+        title: 'Capital',
+        subtitle: 'Manage business funds',
+        assetPath: 'lib/assets/capital.png',
+        accent: const Color(0xFFE8F6FF),
+        onTap: () => context.push('/capital_management'),
+      ),
+      _featureCard(
+        title: 'Reports',
+        subtitle: 'View detailed reports',
+        assetPath: 'lib/assets/reports_button.png',
+        accent: const Color(0xFFEAF1FF),
+        onTap: () => context.push('/reports'),
+      ),
+    ];
+
+    if (!_isTablet) {
+      return Column(
+        children: [
+          for (int i = 0; i < cards.length; i++) ...[
+            cards[i],
+            if (i != cards.length - 1) SizedBox(height: _r(14)),
+          ],
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: cards[0]),
+            SizedBox(width: _r(14)),
+            Expanded(child: cards[1]),
+          ],
+        ),
+        SizedBox(height: _r(14)),
+        Row(
+          children: [
+            Expanded(child: cards[2]),
+            SizedBox(width: _r(14)),
+            Expanded(child: cards[3]),
+          ],
+        ),
+        SizedBox(height: _r(14)),
+        Row(
+          children: [
+            Expanded(child: cards[4]),
+            SizedBox(width: _r(14)),
+            Expanded(child: cards[5]),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _featureCard({
+    required String title,
     required String subtitle,
-    required IconData icon,
+    required String assetPath,
+    required Color accent,
     required VoidCallback onTap,
   }) {
-    final radius = BorderRadius.circular(_r(context, 22));
-    final isCustomer = label.toUpperCase().contains('CUSTOMER');
-    final startColor = isCustomer
-        ? const Color(0xFFEAF7F3)
-        : const Color(0xFFE6F3F0);
-    final endColor = isCustomer
-        ? const Color(0xFFD8EEE8)
-        : const Color(0xFFD0E9E3);
-    const primaryTextColor = Color(0xFF0B3D35);
-    const secondaryTextColor = Color(0xFF2F5C54);
+    final compact = !_isTablet;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: radius,
+        borderRadius: BorderRadius.circular(_r(22)),
         onTap: onTap,
-        child: LayoutBuilder(
-          builder: (context, c) {
-            final h = c.maxHeight;
-            final w = c.maxWidth;
-            final isLandscape = _isLandscape(context);
-            final isTablet = _isTablet(context);
-            final compact = h < 120 || w < 320;
-
-            final iconSize = compact
-                ? (h * 0.22).clamp(_r(context, 22), _r(context, 30))
-                : isTablet
-                ? (h * 0.24).clamp(_r(context, 28), _r(context, 40))
-                : (h * 0.28).clamp(_r(context, 26), _r(context, 34));
-
-            final iconBox = compact
-                ? (h * 0.42).clamp(_r(context, 42), _r(context, 56))
-                : isTablet
-                ? (h * 0.56).clamp(_r(context, 56), _r(context, 82))
-                : (h * 0.60).clamp(_r(context, 54), _r(context, 74));
-
-            final titleSize = compact
-                ? (h * 0.15).clamp(_r(context, 15), _r(context, 18))
-                : isLandscape
-                ? (h * 0.17).clamp(_r(context, 17), _r(context, 22))
-                : (h * 0.18).clamp(_r(context, 18), _r(context, 22));
-
-            final subSize = compact
-                ? (h * 0.10).clamp(_r(context, 10.5), _r(context, 12.5))
-                : isLandscape
-                ? (h * 0.12).clamp(_r(context, 12), _r(context, 14.5))
-                : (h * 0.13).clamp(_r(context, 12.5), _r(context, 15));
-
-            final vPad = compact
-                ? (h * 0.08).clamp(_r(context, 8), _r(context, 12))
-                : isLandscape
-                ? (h * 0.10).clamp(_r(context, 10), _r(context, 16))
-                : (h * 0.12).clamp(_r(context, 12), _r(context, 18));
-
-            final accentHeight = compact
-                ? (h * 0.35).clamp(_r(context, 32), _r(context, 44))
-                : isLandscape
-                ? (h * 0.50).clamp(_r(context, 42), _r(context, 60))
-                : (h * 0.55).clamp(_r(context, 48), _r(context, 64));
-
-            final horizontalPad = compact ? _r(context, 12) : _r(context, 18);
-            final gapBetween = compact ? _r(context, 10) : _r(context, 16);
-
-            return Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: horizontalPad,
-                vertical: vPad,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [startColor, endColor],
+        child: Container(
+          padding: EdgeInsets.all(compact ? _r(12) : _r(14)),
+          decoration: _softCardDecoration(),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -_r(34),
+                bottom: -_r(34),
+                child: Container(
+                  width: _r(compact ? 120 : 140),
+                  height: _r(compact ? 120 : 140),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withOpacity(0.45),
+                  ),
                 ),
-                borderRadius: radius,
-                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
-                    blurRadius: _r(context, 16),
-                    offset: Offset(0, _r(context, 8)),
-                  ),
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.80),
-                    blurRadius: _r(context, 5),
-                    offset: const Offset(0, 1),
-                  ),
-                ],
               ),
-              child: Row(
+              Positioned(
+                left: -_r(18),
+                bottom: -_r(14),
+                child: _waveBand(
+                  height: _r(52),
+                  colors: [
+                    accent.withOpacity(0.50),
+                    accent.withOpacity(0.10),
+                    Colors.transparent,
+                  ],
+                  opacity: 1,
+                ),
+              ),
+              Row(
                 children: [
-                  Container(
-                    width: _r(context, compact ? 4 : 5),
-                    height: accentHeight * 0.9,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.75),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
+                  Image.asset(
+                    assetPath,
+                    width: compact ? _r(72) : _r(86),
+                    height: compact ? _r(72) : _r(86),
+                    fit: BoxFit.contain,
                   ),
-                  SizedBox(width: gapBetween),
-                  Container(
-                    width: iconBox,
-                    height: iconBox,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withOpacity(0.96),
-                          Colors.white.withOpacity(0.82),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(_r(context, 18)),
-                      border: Border.all(color: const Color(0xFFB4D8CF)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
-                          blurRadius: _r(context, 8),
-                          offset: Offset(0, _r(context, 3)),
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: AppColors.primary, size: iconSize),
-                  ),
-                  SizedBox(width: gapBetween),
+                  SizedBox(width: compact ? _r(8) : _r(10)),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: titleSize,
-                              fontWeight: FontWeight.w900,
-                              color: primaryTextColor,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: _r(context, compact ? 4 : 6)),
                         Text(
-                          subtitle,
-                          maxLines: 1,
+                          title,
+                          maxLines: compact ? 2 : 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: subSize,
-                            fontWeight: FontWeight.w700,
-                            color: secondaryTextColor,
+                            fontSize: compact ? _r(16) : _r(18),
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF203A6C),
+                            height: 1.1,
+                          ),
+                        ),
+                        SizedBox(height: _r(6)),
+                        Text(
+                          subtitle,
+                          maxLines: compact ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: compact ? _r(12.5) : _r(13.5),
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF5D7097),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(width: _r(context, compact ? 8 : 10)),
-                  Container(
-                    width: _r(context, compact ? 32 : 38),
-                    height: _r(context, compact ? 32 : 38),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.88),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFB4D8CF)),
-                    ),
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: AppColors.primary,
-                      size: _r(context, compact ? 18 : 20),
-                    ),
-                  ),
                 ],
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
   }
-}
 
-// ========================= GRAPH CARD (SALES ONLY) =========================
-
-class _SalesOnlyGraphCard extends StatelessWidget {
-  final List<CashflowPoint> salesPoints;
-  final bool loading;
-  final String? error;
-
-  const _SalesOnlyGraphCard({
-    required this.salesPoints,
-    required this.loading,
-    required this.error,
-  });
-
-  bool _isTablet(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 700;
-
-  bool _isLandscape(BuildContext context) =>
-      MediaQuery.of(context).orientation == Orientation.landscape;
-
-  bool _isShortScreen(BuildContext context) =>
-      MediaQuery.of(context).size.height < 500;
-
-  double _responsiveScale(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width < 360) return 0.88;
-    if (width < 400) return 0.94;
-    if (width < 700) return 1.00;
-    if (width < 1000) return 1.10;
-    return 1.18;
-  }
-
-  double _r(BuildContext context, double value) {
-    final scaled = value * _responsiveScale(context);
-    final min = value * 0.82;
-    final max = value * 1.28;
-    return scaled.clamp(min, max);
-  }
-
-  double _totalSales() {
-    return salesPoints.fold<double>(0.0, (sum, p) => sum + p.net);
-  }
-
-  double _averageSales() {
-    if (salesPoints.isEmpty) return 0.0;
-    return _totalSales() / salesPoints.length;
-  }
-
-  String _pesoShort(double value) {
-    final sign = value < 0 ? '-' : '';
-    final abs = value.abs();
-    const peso = '\u20B1';
-    if (abs >= 1000000) {
-      return '$sign$peso${(abs / 1000000).toStringAsFixed(1)}M';
-    }
-    if (abs >= 1000) return '$sign$peso${(abs / 1000).toStringAsFixed(1)}K';
-    return '$sign$peso${abs.toStringAsFixed(0)}';
-  }
-
-  double _leftAxisReservedSize(
-    BuildContext context, {
-    required List<double> axisValues,
-    required double fontSize,
+  Widget _metricItem({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String value,
+    Color? valueColor,
+    required bool compact,
   }) {
-    final textDirection = Directionality.of(context);
-    double widest = 0;
-
-    for (final value in axisValues) {
-      final painter = TextPainter(
-        text: TextSpan(
-          text: _pesoShort(value),
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        maxLines: 1,
-        textDirection: textDirection,
-      )..layout();
-
-      if (painter.width > widest) {
-        widest = painter.width;
-      }
-    }
-
-    return widest + _r(context, 10);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isTablet = _isTablet(context);
-    final isLandscape = _isLandscape(context);
-    final isShortScreen = _isShortScreen(context);
-
-    return LayoutBuilder(
-      builder: (context, c) {
-        final h = c.maxHeight;
-        final compact = h < 220 || (isLandscape && isShortScreen);
-
-        return Container(
-          padding: EdgeInsets.fromLTRB(
-            _r(context, compact ? 12 : 14),
-            _r(context, compact ? 10 : 12),
-            _r(context, compact ? 12 : 14),
-            _r(context, compact ? 8 : 10),
-          ),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white, Color(0xFFF7FBF9)],
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: _r(compact ? 6 : 2),
+        vertical: _r(compact ? 0 : 2),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: _r(compact ? 42 : 38),
+            height: _r(compact ? 42 : 38),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(_r(14)),
             ),
-            borderRadius: BorderRadius.circular(_r(context, 18)),
-            border: Border.all(color: const Color(0xFFD8EAE4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: _r(context, 14),
-                offset: Offset(0, _r(context, 10)),
-              ),
-            ],
+            child: Icon(icon, color: iconColor, size: _r(compact ? 24 : 22)),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Sales',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: compact
-                            ? _r(context, 13)
-                            : isTablet
-                            ? _r(context, 15)
-                            : _r(context, 14),
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black.withOpacity(0.80),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: _r(context, 8),
-                      vertical: _r(context, 4),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.22),
-                      ),
-                    ),
-                    child: Text(
-                      'Last 7 days',
-                      style: TextStyle(
-                        fontSize: compact
-                            ? _r(context, 9.5)
-                            : _r(context, 10.5),
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: _r(context, compact ? 8 : 10)),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: _r(context, 10),
-                        vertical: _r(context, 8),
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(_r(context, 10)),
-                        border: Border.all(color: const Color(0xFFE0ECE8)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.payments_outlined,
-                            size: _r(context, 14),
-                            color: AppColors.primary,
-                          ),
-                          SizedBox(width: _r(context, 6)),
-                          Expanded(
-                            child: AdaptiveDigitsText(
-                              'Total: ${_pesoShort(_totalSales())}',
-                              style: TextStyle(
-                                fontSize: compact
-                                    ? _r(context, 10.5)
-                                    : _r(context, 11.5),
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black.withOpacity(0.72),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: _r(context, 8)),
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: _r(context, 10),
-                        vertical: _r(context, 8),
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(_r(context, 10)),
-                        border: Border.all(color: const Color(0xFFE0ECE8)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.insights_outlined,
-                            size: _r(context, 14),
-                            color: AppColors.primary,
-                          ),
-                          SizedBox(width: _r(context, 6)),
-                          Expanded(
-                            child: AdaptiveDigitsText(
-                              'Avg/day: ${_pesoShort(_averageSales())}',
-                              style: TextStyle(
-                                fontSize: compact
-                                    ? _r(context, 10.5)
-                                    : _r(context, 11.5),
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black.withOpacity(0.72),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                height: _r(context, compact ? 6 : (isLandscape ? 8 : 10)),
-              ),
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.fromLTRB(
-                    _r(context, 6),
-                    _r(context, 4),
-                    _r(context, 6),
-                    _r(context, 2),
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(_r(context, 12)),
-                    border: Border.all(color: const Color(0xFFE3EFEB)),
-                  ),
-                  child: _buildChart(
-                    context: context,
-                    sales: salesPoints,
-                    loading: loading,
-                    error: error,
+          SizedBox(width: _r(10)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: compact ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: _r(compact ? 12.2 : 11.3),
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF687B9F),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChart({
-    required BuildContext context,
-    required List<CashflowPoint> sales,
-    required bool loading,
-    required String? error,
-  }) {
-    if (loading) {
-      return const Center(
-        child: SizedBox(
-          height: 22,
-          width: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    if (error != null) {
-      return Center(
-        child: Text(
-          'Unable to load graph',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.black.withOpacity(0.55),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
-    if (sales.isEmpty) {
-      return Center(
-        child: Text(
-          'No sales yet.',
-          style: TextStyle(
-            color: Colors.black.withOpacity(0.55),
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
-
-    final isTablet = _isTablet(context);
-    final isLandscape = _isLandscape(context);
-    final isShortScreen = _isShortScreen(context);
-
-    final len = sales.length;
-
-    final spots = <FlSpot>[];
-    for (int i = 0; i < len; i++) {
-      spots.add(FlSpot(i.toDouble(), sales[i].net));
-    }
-
-    final values = sales.map((e) => e.net).toList();
-    final minY = values.reduce((a, b) => a < b ? a : b);
-    final maxY = values.reduce((a, b) => a > b ? a : b);
-
-    final pad = (maxY - minY).abs() * 0.2;
-    final low = minY - (pad == 0 ? 10 : pad);
-    final high = maxY + (pad == 0 ? 10 : pad);
-
-    final horizontalInterval = ((high - low) / 3).clamp(1.0, double.infinity);
-    final yAxisValues = <double>[
-      low,
-      low + horizontalInterval,
-      low + (horizontalInterval * 2),
-      high,
-    ];
-    final leftTitleFontSize = isTablet
-        ? 11.0
-        : isShortScreen
-        ? 9.5
-        : 10.5;
-    final leftReservedSize = _leftAxisReservedSize(
-      context,
-      axisValues: yAxisValues,
-      fontSize: leftTitleFontSize,
-    ).clamp(
-      isTablet ? 52.0 : 46.0,
-      isTablet ? 88.0 : 76.0,
-    );
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: (len - 1).toDouble(),
-        minY: low,
-        maxY: high,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: horizontalInterval,
-          getDrawingHorizontalLine: (_) =>
-              FlLine(color: Colors.black.withOpacity(0.06), strokeWidth: 1),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: leftReservedSize,
-              interval: horizontalInterval,
-              getTitlesWidget: (value, meta) {
-                return Padding(
-                  padding: EdgeInsets.only(right: _r(context, 4)),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      _pesoShort(value),
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.visible,
-                      style: TextStyle(
-                        fontSize: leftTitleFontSize,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black.withOpacity(0.35),
-                      ),
-                    ),
+                SizedBox(height: _r(2)),
+                Text(
+                  value,
+                  maxLines: compact ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: _r(compact ? 15.2 : 14),
+                    fontWeight: FontWeight.w900,
+                    color: valueColor ?? const Color(0xFF1F376B),
                   ),
-                );
-              },
-            ),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: isLandscape ? 22 : 18,
-              interval: 1,
-              getTitlesWidget: (value, meta) {
-                final i = value.toInt();
-                if (i < 0 || i >= len) return const SizedBox.shrink();
-                final d = sales[i].day;
-                return Padding(
-                  padding: EdgeInsets.only(top: _r(context, 6)),
-                  child: Text(
-                    DateFormat('EEE').format(d),
-                    style: TextStyle(
-                      fontSize: isTablet
-                          ? 11.5
-                          : isShortScreen
-                          ? 10
-                          : 11,
-                      color: Colors.black.withOpacity(0.45),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        lineTouchData: LineTouchData(
-          handleBuiltInTouches: true,
-          touchTooltipData: LineTouchTooltipData(
-            tooltipRoundedRadius: 12,
-            fitInsideHorizontally: true,
-            fitInsideVertically: true,
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((s) {
-                return LineTooltipItem(
-                  'Sales: ${_pesoShort(s.y)}',
-                  const TextStyle(fontWeight: FontWeight.w900),
-                );
-              }).toList();
-            },
-          ),
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.primary.withOpacity(0.72)],
-            ),
-            barWidth: isTablet ? 4.0 : 3.6,
-            dotData: FlDotData(
-              show: true,
-              checkToShowDot: (spot, barData) => spot.x == (len - 1).toDouble(),
-              getDotPainter: (spot, percent, barData, index) {
-                return FlDotCirclePainter(
-                  radius: isTablet ? 4.2 : 3.8,
-                  color: AppColors.primary,
-                  strokeWidth: 2,
-                  strokeColor: Colors.white,
-                );
-              },
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.primary.withOpacity(0.22),
-                  AppColors.primary.withOpacity(0.02),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
     );
+  }
+
+  Widget _circleIconButton({
+    IconData? icon,
+    String? assetPath,
+    required VoidCallback onTap,
+    String? badge,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_r(24)),
+        onTap: onTap,
+        child: SizedBox(
+          width: _isVeryNarrowPhone ? _r(44) : _r(52),
+          height: _isVeryNarrowPhone ? _r(44) : _r(52),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                decoration: assetPath == null
+                    ? BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF7082B8).withOpacity(0.18),
+                            blurRadius: _r(18),
+                            offset: Offset(0, _r(8)),
+                          ),
+                        ],
+                      )
+                    : null,
+                child: assetPath != null
+                    ? Padding(
+                        padding: EdgeInsets.all(_isVeryNarrowPhone ? _r(4) : _r(5)),
+                        child: Image.asset(
+                          assetPath,
+                          width: _isVeryNarrowPhone ? _r(30) : _r(34),
+                          height: _isVeryNarrowPhone ? _r(30) : _r(34),
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    : Icon(
+                        icon,
+                        color: const Color(0xFF284C93),
+                        size: _isVeryNarrowPhone ? _r(22) : _r(26),
+                      ),
+              ),
+              if (badge != null)
+                Positioned(
+                  right: -_r(2),
+                  top: -_r(2),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _r(6),
+                      vertical: _r(3),
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6942),
+                      borderRadius: BorderRadius.circular(_r(20)),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Text(
+                      badge,
+                      style: TextStyle(
+                        fontSize: _r(11),
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomNav() {
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+        _isVeryNarrowPhone ? _r(10) : _r(18),
+        0,
+        _isVeryNarrowPhone ? _r(10) : _r(18),
+        _r(18),
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: _isVeryNarrowPhone ? _r(4) : _r(10),
+        vertical: _r(10),
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.94),
+        borderRadius: BorderRadius.circular(_r(28)),
+        border: Border.all(color: const Color(0xFFDDE3F8)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7A8AB5).withOpacity(0.18),
+            blurRadius: _r(22),
+            offset: Offset(0, _r(12)),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: _navItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                selected: true,
+                onTap: () => context.go('/home'),
+              ),
+            ),
+            Expanded(
+              child: _navItem(
+                icon: Icons.inventory_2_outlined,
+                label: 'Products',
+                onTap: () => context.push('/manage_inventory'),
+              ),
+            ),
+            Expanded(
+              child: _navItem(
+                icon: Icons.receipt_long_outlined,
+                label: 'Owner Utang',
+                onTap: () => context.push('/owner_utang'),
+              ),
+            ),
+            Expanded(
+              child: _navItem(
+                icon: Icons.settings_outlined,
+                label: 'Settings',
+                onTap: () => context.go('/settings'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem({
+    IconData? icon,
+    String? assetPath,
+    required String label,
+    required VoidCallback onTap,
+    bool selected = false,
+  }) {
+    final color =
+        selected ? const Color(0xFF205CC8) : const Color(0xFF65779C);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_r(18)),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: _isVeryNarrowPhone ? _r(6) : _r(8)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              assetPath != null
+                  ? Image.asset(
+                      assetPath,
+                      width: _isVeryNarrowPhone ? _r(22) : _r(27),
+                      height: _isVeryNarrowPhone ? _r(22) : _r(27),
+                      fit: BoxFit.contain,
+                      color: color,
+                    )
+                  : Icon(
+                      icon,
+                      color: color,
+                      size: _isVeryNarrowPhone ? _r(22) : _r(27),
+                    ),
+              SizedBox(height: _r(4)),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: _isVeryNarrowPhone ? _r(9.2) : _r(11.5),
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _verticalDivider() {
+    return Container(
+      width: 1,
+      height: _r(54),
+      color: const Color(0xFFDCE3F5),
+    );
+  }
+
+  Widget _horizontalDivider() {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: _r(10)),
+      height: 1,
+      color: const Color(0xFFDCE3F5),
+    );
+  }
+
+  BoxDecoration _softCardDecoration() {
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(_r(24)),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0xFFF7F9FF),
+          Color(0xFFF5F8FF),
+        ],
+      ),
+      border: Border.all(color: const Color(0xFFE1E6F8)),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF93A4CF).withOpacity(0.16),
+          blurRadius: _r(22),
+          offset: Offset(0, _r(12)),
+        ),
+      ],
+    );
+  }
+
+  Widget _waveBand({
+    required double height,
+    List<Color>? colors,
+    double opacity = 0.24,
+  }) {
+    final waveColors = colors ??
+        [
+          const Color(0xFF89B2FF).withOpacity(opacity),
+          const Color(0xFFDCEAFF).withOpacity(opacity * 0.7),
+          const Color(0x00FFFFFF),
+        ];
+
+    return IgnorePointer(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.of(context).size.width;
+
+          return SizedBox(
+            width: width,
+            height: height,
+            child: CustomPaint(
+              size: Size(width, height),
+              painter: _WavePainter(colors: waveColors),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+}
+
+class _WavePainter extends CustomPainter {
+  const _WavePainter({required this.colors});
+
+  final List<Color> colors;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint1 = Paint()..color = colors[0];
+    final paint2 = Paint()..color = colors[1];
+
+    final path1 = Path()
+      ..moveTo(0, size.height * 0.65)
+      ..quadraticBezierTo(
+        size.width * 0.20,
+        size.height * 0.28,
+        size.width * 0.48,
+        size.height * 0.60,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.72,
+        size.height * 0.88,
+        size.width,
+        size.height * 0.45,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final path2 = Path()
+      ..moveTo(0, size.height * 0.76)
+      ..quadraticBezierTo(
+        size.width * 0.32,
+        size.height * 0.48,
+        size.width * 0.66,
+        size.height * 0.82,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.84,
+        size.height * 0.96,
+        size.width,
+        size.height * 0.68,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawPath(path1, paint1);
+    canvas.drawPath(path2, paint2);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavePainter oldDelegate) {
+    return oldDelegate.colors != colors;
   }
 }

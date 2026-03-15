@@ -5,10 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
-import '../../providers/capital_management_view_model_provider.dart';
 import '../../providers/capital_management_repository_provider.dart';
-import '../widgets/header.dart';
+import '../../providers/capital_management_view_model_provider.dart';
 import '../widgets/adaptive_digits_text.dart';
+import '../widgets/dashboard_background.dart';
 
 class CapitalManagementScreen extends ConsumerStatefulWidget {
   const CapitalManagementScreen({super.key});
@@ -29,7 +29,6 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
   ) {
     final raw = newValue.text.replaceAll(',', '');
     if (raw.isEmpty) return const TextEditingValue(text: '');
-
     if (!_amountPattern.hasMatch(raw)) return oldValue;
 
     final hasDot = raw.contains('.');
@@ -51,21 +50,29 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
 
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _fieldBg = Color(0xFFF6FBF9);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _fieldBg = Color(0xFFF9FBFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
 
   final NumberFormat _currencyFormatter = NumberFormat.currency(
     locale: 'en_PH',
-    symbol: '₱',
+    symbol: '\u20B1',
     decimalDigits: 2,
   );
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _remarksController.dispose();
+    super.dispose();
+  }
 
   double _parseAmount() {
     final raw = _amountController.text.replaceAll(',', '');
@@ -88,61 +95,72 @@ class _CapitalManagementScreenState
     return repoAsync.when(
       data: (_) {
         final vm = ref.watch(capitalManagementViewModelProvider);
-
         final totalCashOnHand = vm.capitals.fold(
           0.0,
           (sum, e) => sum + e.cashOnHand,
         );
         final totalCapital = vm.capitals.fold(0.0, (sum, e) => sum + e.capital);
-
         final enteredAmount = _parseAmount();
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final w = constraints.maxWidth;
-
-            // ✅ same responsive scaling approach
-            final double s = (w / 390).clamp(0.90, 1.20);
-
-            final double padH = (16 * s).clamp(14, 22);
-            final double padTop = (14 * s).clamp(10, 18);
-            final double padBottom = (16 * s).clamp(12, 20);
-
-            final double cardPad = (14 * s).clamp(12, 18);
-            final double r16 = (16 * s).clamp(14, 20);
-            final double r14 = (14 * s).clamp(12, 18);
-            final double r12 = (12 * s).clamp(10, 16);
-
-            final double fieldH = (58 * s).clamp(54, 66);
-            final double btnH = (52 * s).clamp(48, 58);
-
-            final double gap12 = (12 * s).clamp(10, 14);
-            final double gap14 = (14 * s).clamp(12, 18);
-
-            final double titleFs = (16 * s).clamp(14.5, 18);
-            final double smallFs = (12 * s).clamp(11.5, 14);
-            final double balanceLabelFs = (13 * s).clamp(12, 15);
-            final double balanceValueFs = (18 * s).clamp(16, 22);
-            final double bottomBtnFs = (16 * s).clamp(14.5, 18);
+            final double s = (w / 390).clamp(0.90, 1.20).toDouble();
+            final double padH = (16 * s).clamp(14, 22).toDouble();
+            final double padTop = (14 * s).clamp(10, 18).toDouble();
+            final double padBottom = (16 * s).clamp(12, 20).toDouble();
+            final double cardPad = (14 * s).clamp(12, 18).toDouble();
+            final double r16 = (16 * s).clamp(14, 20).toDouble();
+            final double r14 = (14 * s).clamp(12, 18).toDouble();
+            final double r12 = (12 * s).clamp(10, 16).toDouble();
+            final double fieldH = (58 * s).clamp(54, 66).toDouble();
+            final double btnH = (52 * s).clamp(48, 58).toDouble();
+            final double gap12 = (12 * s).clamp(10, 14).toDouble();
+            final double gap14 = (14 * s).clamp(12, 18).toDouble();
+            final double titleFs = (16 * s).clamp(14.5, 18).toDouble();
+            final double smallFs = (12 * s).clamp(11.5, 14).toDouble();
+            final double balanceLabelFs = (13 * s).clamp(12, 15).toDouble();
+            final double balanceValueFs = (18 * s).clamp(16, 22).toDouble();
+            final double bottomBtnFs = (16 * s).clamp(14.5, 18).toDouble();
 
             return Scaffold(
               backgroundColor: _pageBg,
-              appBar: const AppHeader(
-                title: 'Capital Management',
-                showBackButton: true,
+              appBar: AppBar(
+                backgroundColor: _pageBg,
+                elevation: 0,
+                centerTitle: true,
+                titleSpacing: 0,
+                leadingWidth: 52,
+                leading: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: Image.asset(
+                    'lib/assets/arrowleft.png',
+                    width: 22,
+                    height: 22,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                title: const Text(
+                  'Capital Management',
+                  style: TextStyle(
+                    color: _titleColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                  ),
+                ),
               ),
-              body: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ===================== SUMMARY =====================
-                    Column(
+              body: Stack(
+                children: [
+                  const Positioned.fill(child: DashboardBackground()),
+                  SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _miniBalanceCard(
-                          title: "Cash on Hand",
+                          title: 'Cash on Hand',
                           value: totalCashOnHand,
-                          icon: Icons.money_rounded,
+                          icon: Icons.account_balance_wallet_rounded,
                           s: s,
                           padding: cardPad,
                           radius: r16,
@@ -151,77 +169,72 @@ class _CapitalManagementScreenState
                         ),
                         SizedBox(height: gap12),
                         _miniBalanceCard(
-                          title: "Capital",
+                          title: 'Capital',
                           value: totalCapital,
-                          icon: Icons.account_balance_rounded,
+                          icon: Icons.savings_rounded,
                           s: s,
                           padding: cardPad,
                           radius: r16,
                           labelFs: balanceLabelFs,
                           valueFs: balanceValueFs,
                         ),
-                      ],
-                    ),
-
-                    SizedBox(height: gap14),
-
-                    // ===================== ADD CAPITAL =====================
-                    _sectionCard(
-                      title: 'Add Capital',
-                      icon: Icons.add_circle_outline_rounded,
-                      s: s,
-                      padding: cardPad,
-                      radius: r16,
-                      titleFs: titleFs,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _amountInput(s: s, height: fieldH, radius: r12),
-                          SizedBox(height: (8 * s).clamp(6, 10)),
-                          Text(
-                            'Enter the amount you want to add',
-                            style: TextStyle(
-                              fontSize: smallFs,
-                              color: _subtitleColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(height: gap12),
-
-                          // Chips responsive
-                          Wrap(
-                            spacing: (8 * s).clamp(6, 10),
-                            runSpacing: (8 * s).clamp(6, 10),
+                        SizedBox(height: gap14),
+                        _sectionCard(
+                          title: 'Add Capital',
+                          icon: Icons.add_circle_outline_rounded,
+                          s: s,
+                          padding: cardPad,
+                          radius: r16,
+                          titleFs: titleFs,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _quickAmountChip('500', s: s, radius: r12),
-                              _quickAmountChip('1000', s: s, radius: r12),
-                              _quickAmountChip('5000', s: s, radius: r12),
+                              _amountInput(s: s, height: fieldH, radius: r12),
+                              SizedBox(height: (8 * s).clamp(6, 10).toDouble()),
+                              Text(
+                                'Enter the amount you want to add',
+                                style: TextStyle(
+                                  fontSize: smallFs,
+                                  color: _subtitleColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: gap12),
+                              Wrap(
+                                spacing: (8 * s).clamp(6, 10).toDouble(),
+                                runSpacing: (8 * s).clamp(6, 10).toDouble(),
+                                children: [
+                                  _quickAmountChip('500', s: s, radius: r12),
+                                  _quickAmountChip('1000', s: s, radius: r12),
+                                  _quickAmountChip('5000', s: s, radius: r12),
+                                ],
+                              ),
+                              SizedBox(height: gap14),
+                              _remarksInput(
+                                s: s,
+                                height: fieldH,
+                                radius: r12,
+                              ),
                             ],
                           ),
-
-                          SizedBox(height: gap14),
-                          _remarksInput(s: s, height: fieldH, radius: r12),
-                        ],
-                      ),
+                        ),
+                        SizedBox(height: (90 * s).clamp(70, 110).toDouble()),
+                      ],
                     ),
-
-                    SizedBox(height: (90 * s).clamp(70, 110)),
-                  ],
-                ),
+                  ),
+                ],
               ),
-
-              // ===================== BOTTOM BUTTON =====================
               bottomNavigationBar: Padding(
                 padding: EdgeInsets.fromLTRB(
                   padH,
-                  (12 * s).clamp(10, 14),
+                  (12 * s).clamp(10, 14).toDouble(),
                   padH,
-                  (12 * s).clamp(10, 14) + bottomPadding,
+                  (12 * s).clamp(10, 14).toDouble() + bottomPadding,
                 ),
                 child: Material(
-                  elevation: 10,
+                  elevation: 12,
                   borderRadius: BorderRadius.circular(r14),
-                  shadowColor: Colors.black.withOpacity(0.15),
+                  shadowColor: const Color(0xFF869BCE).withOpacity(0.22),
                   child: SizedBox(
                     height: btnH,
                     child: ElevatedButton(
@@ -262,7 +275,8 @@ class _CapitalManagementScreenState
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: _accentBlue,
+                        disabledBackgroundColor: const Color(0xFFD8E1F5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(r14),
                         ),
@@ -278,10 +292,11 @@ class _CapitalManagementScreenState
                               ),
                             )
                           : Text(
-                              "Add Capital",
+                              'Add Capital',
                               style: TextStyle(
                                 fontSize: bottomBtnFs,
                                 fontWeight: FontWeight.w800,
+                                color: Colors.white,
                               ),
                             ),
                     ),
@@ -292,13 +307,34 @@ class _CapitalManagementScreenState
           },
         );
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
+      loading: () => const Scaffold(
+        backgroundColor: _pageBg,
+        body: Stack(
+          children: [
+            Positioned.fill(child: DashboardBackground()),
+            Center(child: CircularProgressIndicator()),
+          ],
+        ),
+      ),
+      error: (err, _) => Scaffold(
+        backgroundColor: _pageBg,
+        body: Stack(
+          children: [
+            const Positioned.fill(child: DashboardBackground()),
+            Center(
+              child: Text(
+                'Error: $err',
+                style: const TextStyle(
+                  color: _titleColor,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
-
-  // ================= UI HELPERS (responsive params) =================
 
   Widget _card({
     required Widget child,
@@ -311,12 +347,12 @@ class _CapitalManagementScreenState
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: _cardBorder.withOpacity(0.8)),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+            color: const Color(0xFF95A6D8).withOpacity(0.14),
           ),
         ],
       ),
@@ -328,7 +364,6 @@ class _CapitalManagementScreenState
     required String title,
     required IconData icon,
     required Widget child,
-
     required double s,
     required double padding,
     required double radius,
@@ -343,19 +378,28 @@ class _CapitalManagementScreenState
           Row(
             children: [
               Container(
-                height: (36 * s).clamp(34, 44),
-                width: (36 * s).clamp(34, 44),
+                height: (36 * s).clamp(34, 44).toDouble(),
+                width: (36 * s).clamp(34, 44).toDouble(),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                  gradient: LinearGradient(
+                    colors: [
+                      _accentBlue.withOpacity(0.16),
+                      const Color(0xFF78C5FF).withOpacity(0.12),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(
+                    (12 * s).clamp(10, 16).toDouble(),
+                  ),
                 ),
                 child: Icon(
                   icon,
-                  color: AppColors.primary,
-                  size: (20 * s).clamp(18, 24),
+                  color: _accentBlue,
+                  size: (20 * s).clamp(18, 24).toDouble(),
                 ),
               ),
-              SizedBox(width: (10 * s).clamp(8, 12)),
+              SizedBox(width: (10 * s).clamp(8, 12).toDouble()),
               Expanded(
                 child: Text(
                   title,
@@ -368,9 +412,9 @@ class _CapitalManagementScreenState
               ),
             ],
           ),
-          SizedBox(height: (10 * s).clamp(8, 12)),
-          Divider(color: _cardBorder.withOpacity(0.8), height: 1),
-          SizedBox(height: (12 * s).clamp(10, 14)),
+          SizedBox(height: (10 * s).clamp(8, 12).toDouble()),
+          Divider(color: _cardBorder, height: 1),
+          SizedBox(height: (12 * s).clamp(10, 14).toDouble()),
           child,
         ],
       ),
@@ -381,7 +425,6 @@ class _CapitalManagementScreenState
     required String title,
     required double value,
     IconData? icon,
-
     required double s,
     required double padding,
     required double radius,
@@ -393,12 +436,12 @@ class _CapitalManagementScreenState
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: _cardBorder.withOpacity(0.8)),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+            color: const Color(0xFF95A6D8).withOpacity(0.14),
           ),
         ],
       ),
@@ -406,19 +449,28 @@ class _CapitalManagementScreenState
         children: [
           if (icon != null)
             Container(
-              height: (42 * s).clamp(38, 52),
-              width: (42 * s).clamp(38, 52),
+              height: (42 * s).clamp(38, 52).toDouble(),
+              width: (42 * s).clamp(38, 52).toDouble(),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
+                gradient: LinearGradient(
+                  colors: [
+                    _accentBlue.withOpacity(0.14),
+                    const Color(0xFF7ED2FF).withOpacity(0.14),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(
+                  (14 * s).clamp(12, 18).toDouble(),
+                ),
               ),
               child: Icon(
                 icon,
-                size: (22 * s).clamp(20, 28),
-                color: AppColors.primary,
+                size: (22 * s).clamp(20, 28).toDouble(),
+                color: _accentBlue,
               ),
             ),
-          if (icon != null) SizedBox(width: (12 * s).clamp(10, 14)),
+          if (icon != null) SizedBox(width: (12 * s).clamp(10, 14).toDouble()),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,7 +483,7 @@ class _CapitalManagementScreenState
                     fontSize: labelFs,
                   ),
                 ),
-                SizedBox(height: (4 * s).clamp(3, 6)),
+                SizedBox(height: (4 * s).clamp(3, 6).toDouble()),
                 AdaptiveDigitsText(
                   _currencyFormatter.format(value),
                   style: TextStyle(
@@ -463,21 +515,22 @@ class _CapitalManagementScreenState
         setState(() {});
       },
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+        foregroundColor: _accentBlue,
+        backgroundColor: const Color(0xFFF7FAFF),
+        side: BorderSide(color: _accentBlue.withOpacity(0.28)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
         ),
         padding: EdgeInsets.symmetric(
-          horizontal: (14 * s).clamp(12, 18),
-          vertical: (12 * s).clamp(10, 14),
+          horizontal: (14 * s).clamp(12, 18).toDouble(),
+          vertical: (12 * s).clamp(10, 14).toDouble(),
         ),
       ),
       child: Text(
-        '₱${NumberFormat('#,##0').format(int.parse(value))}',
+        '\u20B1${NumberFormat('#,##0').format(int.parse(value))}',
         style: TextStyle(
           fontWeight: FontWeight.w800,
-          fontSize: (13.5 * s).clamp(12.5, 15.5),
+          fontSize: (13.5 * s).clamp(12.5, 15.5).toDouble(),
         ),
       ),
     );
@@ -501,30 +554,30 @@ class _CapitalManagementScreenState
         style: TextStyle(
           color: _titleColor,
           fontWeight: FontWeight.w800,
-          fontSize: (14 * s).clamp(13, 16),
+          fontSize: (14 * s).clamp(13, 16).toDouble(),
         ),
         decoration: InputDecoration(
           hintText: '0.00',
           filled: true,
           fillColor: _fieldBg,
           prefixIcon: Padding(
-            padding: EdgeInsets.all((16 * s).clamp(14, 18)),
+            padding: EdgeInsets.all((16 * s).clamp(14, 18).toDouble()),
             child: Text(
-              '₱',
+              '\u20B1',
               style: TextStyle(
-                color: AppColors.primary,
-                fontSize: (18 * s).clamp(16, 22),
+                color: _accentBlue,
+                fontSize: (18 * s).clamp(16, 22).toDouble(),
                 fontWeight: FontWeight.w900,
               ),
             ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: BorderSide(color: _cardBorder, width: 1.2),
+            borderSide: const BorderSide(color: _cardBorder, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+            borderSide: const BorderSide(color: _accentBlue, width: 1.2),
           ),
         ),
       ),
@@ -543,7 +596,7 @@ class _CapitalManagementScreenState
         style: TextStyle(
           color: _titleColor,
           fontWeight: FontWeight.w700,
-          fontSize: (14 * s).clamp(13, 16),
+          fontSize: (14 * s).clamp(13, 16).toDouble(),
         ),
         decoration: InputDecoration(
           hintText: 'Optional note',
@@ -551,16 +604,16 @@ class _CapitalManagementScreenState
           fillColor: _fieldBg,
           prefixIcon: Icon(
             Icons.notes_rounded,
-            color: AppColors.primary,
-            size: (22 * s).clamp(20, 26),
+            color: _accentBlue,
+            size: (22 * s).clamp(20, 26).toDouble(),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: BorderSide(color: _cardBorder, width: 1.2),
+            borderSide: const BorderSide(color: _cardBorder, width: 1.2),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
+            borderSide: const BorderSide(color: _accentBlue, width: 1.2),
           ),
         ),
       ),

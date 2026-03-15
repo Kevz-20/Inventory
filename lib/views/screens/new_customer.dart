@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../models/region7_psgc_model.dart';
 import '../../view_models/new_customer_view_model.dart';
-import '../widgets/header.dart';
+import '../widgets/dashboard_background.dart';
 
 class NewCustomerPage extends ConsumerStatefulWidget {
   const NewCustomerPage({super.key});
@@ -17,28 +17,41 @@ class NewCustomerPage extends ConsumerStatefulWidget {
 }
 
 class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _fieldBg = Color(0xFFF6FBF9);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _fieldBg = Color(0xFFF9FBFF);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   List<String> filteredCities = [];
   List<String> filteredBarangays = [];
-  List<BarangayModel> currentBarangays = [];
   bool _showValidationErrors = false;
-
   bool _contactTouched = false;
 
   String? _contactErrorText(String value) {
     final v = value.trim();
     if (v.isEmpty) return null;
-
     if (!RegExp(r'^\d+$').hasMatch(v)) return 'Numbers only';
     if (v.length != 11) return 'Contact number must be 11 digits';
     if (!v.startsWith('09')) return 'Contact number must start with 09';
     return null;
+  }
+
+  BoxDecoration _surfaceDecoration(double scale) {
+    return BoxDecoration(
+      color: _cardBg,
+      borderRadius: BorderRadius.circular((22 * scale).clamp(18, 26)),
+      border: Border.all(color: _cardBorder),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF93A4CF).withOpacity(0.14),
+          blurRadius: (20 * scale).clamp(16, 26),
+          offset: Offset(0, (10 * scale).clamp(8, 14)),
+        ),
+      ],
+    );
   }
 
   @override
@@ -60,289 +73,500 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
 
     final sortedCities = List<CityModel>.from(vm.cities)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
     final sortedBarangays = List<BarangayModel>.from(vm.barangays)
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     final canSave = !vm.isLoading && vm.isFormValid;
 
-    // ✅ Responsive scale (small phone -> tablet)
-    final w = MediaQuery.of(context).size.width;
-    final h = MediaQuery.of(context).size.height;
-    final s = (w / 360).clamp(1.0, 1.18);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final scale = (width / 390).clamp(0.90, 1.22);
+        final horizontalPad = (16.0 * scale).clamp(14.0, 28.0);
+        final topPad = (12.0 * scale).clamp(10.0, 20.0);
+        final buttonHeight = (56.0 * scale).clamp(54.0, 62.0);
+        final suggestMaxH =
+            (MediaQuery.of(context).size.height * 0.28).clamp(180.0, 280.0);
+        final isTablet = width >= 760;
 
-    // ✅ Responsive paddings (keeps your same layout, just adapts spacing)
-    final padH = (16.0 * s).clamp(16.0, 24.0);
-    final padV = (16.0 * s).clamp(16.0, 24.0);
-
-    // ✅ Responsive list max height
-    final suggestMaxH = (h * 0.28).clamp(180.0, 280.0);
-
-    // ✅ Responsive button height
-    final buttonH = (52.0 * s).clamp(52.0, 60.0);
-
-    return Scaffold(
-      backgroundColor: _pageBg,
-      appBar: const AppHeader(title: 'Add New Customer', showBackButton: true),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(padH, padV, padH, 24),
-        child: Column(
-          children: [
-            _sectionHeader(title: "Customer Information", s: s),
-            SizedBox(height: (12 * s).clamp(12.0, 16.0)),
-
-            _buildTextField(
-              'First Name',
-              vmNotifier.firstNameController,
-              s: s,
-              isRequired: true,
-              icon: Icons.person_outline,
-              hintText: "Juan",
+        return Scaffold(
+          backgroundColor: _pageBg,
+          appBar: AppBar(
+            backgroundColor: _pageBg,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: Image.asset(
+                'lib/assets/arrowleft.png',
+                width: (22 * scale).clamp(20.0, 26.0),
+                height: (22 * scale).clamp(20.0, 26.0),
+                fit: BoxFit.contain,
+              ),
+              tooltip: 'Back',
             ),
-
-            _buildTextField(
-              'Middle Name (optional)',
-              vmNotifier.middleNameController,
-              s: s,
-              icon: Icons.person_outline,
-              hintText: "Dela",
-            ),
-
-            _buildTextField(
-              'Last Name',
-              vmNotifier.lastNameController,
-              s: s,
-              isRequired: true,
-              icon: Icons.person_outline,
-              hintText: "Cruz",
-            ),
-
-            _buildTextField(
-              'Contact Number',
-              vmNotifier.contactController,
-              s: s,
-              isRequired: true,
-              icon: Icons.phone_outlined,
-              hintText: "09XXXXXXXXX",
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(11),
-              ],
-              validator: _contactErrorText,
-              showValidationWhileTyping: _contactTouched,
-              onUserInteracted: () {
-                if (!_contactTouched) setState(() => _contactTouched = true);
-              },
-            ),
-
-            _buildSearchField(
-              label: 'Municipality',
-              controller: vm.cityController,
-              s: s,
-              isRequired: true,
-              hintText: "Select municipality",
-              icon: Icons.location_city_outlined,
-              items: sortedCities.map((c) => c.name).toList(),
-              filteredItems: filteredCities,
-              suggestMaxHeight: suggestMaxH,
-              onChangedFiltered: (list) => setState(() => filteredCities = list),
-              onItemSelected: (value) {
-                final selected = vm.cities.firstWhere((c) => c.name == value);
-                vmNotifier.selectCity(selected);
-                setState(() {
-                  currentBarangays = sortedBarangays
-                      .where((b) => b.cityCode == selected.code)
-                      .toList();
-                  filteredBarangays = [];
-                  vm.barangayController.clear();
-                });
-              },
-            ),
-
-            _buildSearchField(
-              label: 'Barangay',
-              controller: vm.barangayController,
-              s: s,
-              isRequired: true,
-              hintText: "Select barangay",
-              icon: Icons.place_outlined,
-              items: sortedBarangays.map((b) => b.name).toList(),
-              filteredItems: filteredBarangays,
-              suggestMaxHeight: suggestMaxH,
-              onChangedFiltered: (list) => setState(() => filteredBarangays = list),
-              onItemSelected: (value) {
-                final selected = sortedBarangays.firstWhere((b) => b.name == value);
-                vmNotifier.selectBarangay(selected);
-              },
-            ),
-
-            _buildTextField(
-              'Landmark / Street',
-              vmNotifier.landmarkController,
-              s: s,
-              isRequired: true,
-              icon: Icons.edit_location_alt_outlined,
-              hintText: "Purok / Street / Landmark",
-            ),
-
-            SizedBox(height: (18 * s).clamp(18.0, 24.0)),
-
-            SizedBox(
-              width: double.infinity,
-              height: buttonH,
-              child: ElevatedButton(
-                onPressed: canSave
-                    ? () async {
-                        setState(() => _showValidationErrors = true);
-
-                        if (vmNotifier.firstNameController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('First Name is required'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-                        if (vmNotifier.lastNameController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Last Name is required'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-                        if (vmNotifier.contactController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Contact Number is required'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-
-                        final contactFormatError =
-                            _contactErrorText(vmNotifier.contactController.text);
-                        if (contactFormatError != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(contactFormatError),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-
-                        if (vmNotifier.cityController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Municipality is required'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-                        if (vmNotifier.barangayController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Barangay is required'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-                        if (vmNotifier.landmarkController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Landmark / Street is required'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                          return;
-                        }
-
-                        final success = await vmNotifier.saveCustomer();
-                        if (!context.mounted) return;
-
-                        if (success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Customer saved successfully!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
-                          vmNotifier.resetFields();
-                          setState(() {
-                            _showValidationErrors = false;
-                            _contactTouched = false;
-                          });
-                          Navigator.pop(context, true);
-                        }
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: canSave ? AppColors.primary : Colors.grey.shade400,
-                  disabledBackgroundColor: Colors.grey.shade400,
-                  elevation: canSave ? 2 : 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular((16 * s).clamp(16.0, 20.0)),
-                  ),
-                ),
-                child: vm.isLoading
-                    ? SizedBox(
-                        height: (22 * s).clamp(22.0, 26.0),
-                        width: (22 * s).clamp(22.0, 26.0),
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2.6,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        'Add Customer',
-                        style: TextStyle(
-                          fontSize: (16 * s).clamp(16.0, 18.0),
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
+            title: Text(
+              'Add New Customer',
+              style: TextStyle(
+                color: _titleColor,
+                fontWeight: FontWeight.w900,
+                fontSize: (20 * scale).clamp(18.0, 24.0),
+                letterSpacing: 0.1,
               ),
             ),
-          ],
-        ),
-      ),
+            centerTitle: true,
+          ),
+          body: Stack(
+            children: [
+              const DashboardBackground(),
+              Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPad,
+                        topPad,
+                        horizontalPad,
+                        24,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildIntroCard(scale),
+                          SizedBox(height: (16 * scale).clamp(14, 22)),
+                          Container(
+                            padding: EdgeInsets.all(
+                              (16 * scale).clamp(14, 22),
+                            ),
+                            decoration: _surfaceDecoration(scale),
+                            child: Column(
+                              children: [
+                                  if (isTablet)
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: _buildTextField(
+                                            'First Name',
+                                            vmNotifier.firstNameController,
+                                            scale: scale,
+                                            isRequired: true,
+                                            icon: Icons.person_outline_rounded,
+                                            hintText: 'Juan',
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: (12 * scale).clamp(10, 16),
+                                        ),
+                                        Expanded(
+                                          child: _buildTextField(
+                                            'Middle Name (optional)',
+                                            vmNotifier.middleNameController,
+                                            scale: scale,
+                                            icon: Icons.person_outline_rounded,
+                                            hintText: 'Dela',
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else ...[
+                                    _buildTextField(
+                                      'First Name',
+                                      vmNotifier.firstNameController,
+                                      scale: scale,
+                                      isRequired: true,
+                                      icon: Icons.person_outline_rounded,
+                                      hintText: 'Juan',
+                                    ),
+                                    _buildTextField(
+                                      'Middle Name (optional)',
+                                      vmNotifier.middleNameController,
+                                      scale: scale,
+                                      icon: Icons.person_outline_rounded,
+                                      hintText: 'Dela',
+                                    ),
+                                  ],
+                                  _buildTextField(
+                                    'Last Name',
+                                    vmNotifier.lastNameController,
+                                    scale: scale,
+                                    isRequired: true,
+                                    icon: Icons.badge_outlined,
+                                    hintText: 'Cruz',
+                                  ),
+                                  _buildTextField(
+                                    'Contact Number',
+                                    vmNotifier.contactController,
+                                    scale: scale,
+                                    isRequired: true,
+                                    icon: Icons.phone_outlined,
+                                    hintText: '09XXXXXXXXX',
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(11),
+                                    ],
+                                    validator: _contactErrorText,
+                                    showValidationWhileTyping: _contactTouched,
+                                    onUserInteracted: () {
+                                      if (!_contactTouched) {
+                                        setState(() => _contactTouched = true);
+                                      }
+                                    },
+                                  ),
+                                  if (isTablet)
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: _buildSearchField(
+                                            label: 'Municipality',
+                                            controller: vm.cityController,
+                                            scale: scale,
+                                            isRequired: true,
+                                            hintText: 'Select municipality',
+                                            icon: Icons.location_city_outlined,
+                                            items: sortedCities
+                                                .map((c) => c.name)
+                                                .toList(),
+                                            filteredItems: filteredCities,
+                                            suggestMaxHeight: suggestMaxH,
+                                            onChangedFiltered: (list) => setState(
+                                              () => filteredCities = list,
+                                            ),
+                                            onItemSelected: (value) {
+                                              final selected = vm.cities
+                                                  .firstWhere(
+                                                    (c) => c.name == value,
+                                                  );
+                                              vmNotifier.selectCity(selected);
+                                              setState(() {
+                                                filteredBarangays = [];
+                                                vm.barangayController.clear();
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: (12 * scale).clamp(10, 16),
+                                        ),
+                                        Expanded(
+                                          child: _buildSearchField(
+                                            label: 'Barangay',
+                                            controller: vm.barangayController,
+                                            scale: scale,
+                                            isRequired: true,
+                                            hintText: 'Select barangay',
+                                            icon: Icons.place_outlined,
+                                            items: sortedBarangays
+                                                .map((b) => b.name)
+                                                .toList(),
+                                            filteredItems: filteredBarangays,
+                                            suggestMaxHeight: suggestMaxH,
+                                            onChangedFiltered: (list) => setState(
+                                              () => filteredBarangays = list,
+                                            ),
+                                            onItemSelected: (value) {
+                                              final selected = sortedBarangays
+                                                  .firstWhere(
+                                                    (b) => b.name == value,
+                                                  );
+                                              vmNotifier.selectBarangay(
+                                                selected,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else ...[
+                                    _buildSearchField(
+                                      label: 'Municipality',
+                                      controller: vm.cityController,
+                                      scale: scale,
+                                      isRequired: true,
+                                      hintText: 'Select municipality',
+                                      icon: Icons.location_city_outlined,
+                                      items: sortedCities
+                                          .map((c) => c.name)
+                                          .toList(),
+                                      filteredItems: filteredCities,
+                                      suggestMaxHeight: suggestMaxH,
+                                      onChangedFiltered: (list) => setState(
+                                        () => filteredCities = list,
+                                      ),
+                                      onItemSelected: (value) {
+                                        final selected = vm.cities.firstWhere(
+                                          (c) => c.name == value,
+                                        );
+                                        vmNotifier.selectCity(selected);
+                                        setState(() {
+                                          filteredBarangays = [];
+                                          vm.barangayController.clear();
+                                        });
+                                      },
+                                    ),
+                                    _buildSearchField(
+                                      label: 'Barangay',
+                                      controller: vm.barangayController,
+                                      scale: scale,
+                                      isRequired: true,
+                                      hintText: 'Select barangay',
+                                      icon: Icons.place_outlined,
+                                      items: sortedBarangays
+                                          .map((b) => b.name)
+                                          .toList(),
+                                      filteredItems: filteredBarangays,
+                                      suggestMaxHeight: suggestMaxH,
+                                      onChangedFiltered: (list) => setState(
+                                        () => filteredBarangays = list,
+                                      ),
+                                      onItemSelected: (value) {
+                                        final selected = sortedBarangays
+                                            .firstWhere((b) => b.name == value);
+                                        vmNotifier.selectBarangay(selected);
+                                      },
+                                    ),
+                                  ],
+                                  _buildTextField(
+                                    'Landmark / Street',
+                                    vmNotifier.landmarkController,
+                                    scale: scale,
+                                    isRequired: true,
+                                    icon: Icons.edit_location_alt_outlined,
+                                    hintText: 'Purok / Street / Landmark',
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: (18 * scale).clamp(16, 22)),
+                          SizedBox(
+                            width: double.infinity,
+                            height: buttonHeight,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  (18 * scale).clamp(16, 22),
+                                ),
+                                gradient: LinearGradient(
+                                  colors: canSave
+                                      ? const [
+                                          Color(0xFF275EEA),
+                                          Color(0xFF43A5FF),
+                                        ]
+                                      : [
+                                          Colors.grey.shade300,
+                                          Colors.grey.shade400,
+                                        ],
+                                ),
+                                boxShadow: canSave
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFF2F6BFF,
+                                          ).withOpacity(0.28),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 10),
+                                        ),
+                                      ]
+                                    : const [],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: canSave
+                                    ? () async {
+                                        await _saveCustomer(vmNotifier);
+                                      }
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  surfaceTintColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      (18 * scale).clamp(16, 22),
+                                    ),
+                                  ),
+                                ),
+                                child: vm.isLoading
+                                    ? SizedBox(
+                                        height: (22 * scale).clamp(22, 26),
+                                        width: (22 * scale).clamp(22, 26),
+                                        child:
+                                            const CircularProgressIndicator(
+                                              strokeWidth: 2.6,
+                                              color: Colors.white,
+                                            ),
+                                      )
+                                    : Text(
+                                        'Add Customer',
+                                        style: TextStyle(
+                                          fontSize:
+                                              (17 * scale).clamp(16, 19),
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.2,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  // -------------------------
-  // UI HELPERS
-  // -------------------------
+  Future<void> _saveCustomer(NewCustomerViewModel vmNotifier) async {
+    setState(() => _showValidationErrors = true);
 
-  Widget _sectionHeader({required String title, required double s}) {
+    if (vmNotifier.firstNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('First Name is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (vmNotifier.lastNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Last Name is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (vmNotifier.contactController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contact Number is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final contactFormatError =
+        _contactErrorText(vmNotifier.contactController.text);
+    if (contactFormatError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(contactFormatError),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (vmNotifier.cityController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Municipality is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (vmNotifier.barangayController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Barangay is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (vmNotifier.landmarkController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Landmark / Street is required'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final success = await vmNotifier.saveCustomer();
+    if (!context.mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Customer saved successfully!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      vmNotifier.resetFields();
+      setState(() {
+        _showValidationErrors = false;
+        _contactTouched = false;
+        filteredCities = [];
+        filteredBarangays = [];
+      });
+      Navigator.pop(context, true);
+    }
+  }
+
+  Widget _buildIntroCard(double scale) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all((14 * s).clamp(14.0, 18.0)),
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular((16 * s).clamp(16.0, 20.0)),
-        border: Border.all(color: _cardBorder.withOpacity(0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+      padding: EdgeInsets.all((18 * scale).clamp(16, 24)),
+      decoration: _surfaceDecoration(scale).copyWith(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFDFEFF), Color(0xFFF3F7FF)],
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: (52 * scale).clamp(48, 60),
+            height: (52 * scale).clamp(48, 60),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular((16 * scale).clamp(14, 18)),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFECF3FF), Color(0xFFD8E8FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              Icons.person_add_alt_1_rounded,
+              color: _accentBlue,
+              size: (28 * scale).clamp(24, 32),
+            ),
+          ),
+          SizedBox(width: (14 * scale).clamp(12, 18)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer Information',
+                  style: TextStyle(
+                    color: _titleColor,
+                    fontSize: (18 * scale).clamp(17, 21),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: (16 * s).clamp(16.0, 18.0),
-          fontWeight: FontWeight.w900,
-          color: _titleColor,
-        ),
       ),
     );
   }
@@ -350,7 +574,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   Widget _buildTextField(
     String label,
     TextEditingController controller, {
-    required double s,
+    required double scale,
     bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
@@ -362,16 +586,13 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
   }) {
     final isEmpty = controller.text.trim().isEmpty;
     final formatError = validator?.call(controller.text);
-
     final showEmptyError = _showValidationErrors && isRequired && isEmpty;
     final showFormatError =
         (_showValidationErrors || showValidationWhileTyping) &&
         !isEmpty &&
         formatError != null;
-
     final showError = showEmptyError || showFormatError;
-
-    final radius = (14 * s).clamp(14.0, 18.0);
+    final double radius = (18 * scale).clamp(16.0, 20.0).toDouble();
 
     final baseBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),
@@ -379,55 +600,57 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
         color: showError ? AppColors.error : _cardBorder,
         width: showError ? 1.4 : 1,
       ),
-    );
+      );
 
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
-        color: showError ? AppColors.error : AppColors.primary,
+        color: showError ? AppColors.error : _accentBlue,
         width: 1.6,
       ),
     );
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: (8 * s).clamp(8.0, 12.0)),
+      padding: EdgeInsets.symmetric(vertical: (7 * scale).clamp(6, 10)),
       child: TextFormField(
         controller: controller,
-        cursorColor: AppColors.textPrimary,
-        style: const TextStyle(
+        cursorColor: _titleColor,
+        style: TextStyle(
           color: _titleColor,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
+          fontSize: (15 * scale).clamp(14, 16),
         ),
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         onChanged: (_) {
           onUserInteracted?.call();
-          if (_showValidationErrors || showValidationWhileTyping) setState(() {});
+          if (_showValidationErrors || showValidationWhileTyping) {
+            setState(() {});
+          }
         },
         decoration: InputDecoration(
-          floatingLabelBehavior: FloatingLabelBehavior.auto,
           labelText: label,
           hintText: hintText,
-          hintStyle: TextStyle(
-            color: _subtitleColor.withOpacity(0.65),
-            fontWeight: FontWeight.w500,
-          ),
-          prefixIcon: icon != null
-              ? Icon(icon, color: _subtitleColor.withOpacity(0.8))
-              : null,
           filled: true,
           fillColor: _fieldBg,
+          prefixIcon: icon != null
+              ? Icon(icon, color: _subtitleColor.withOpacity(0.88))
+              : null,
           contentPadding: EdgeInsets.symmetric(
-            horizontal: (14 * s).clamp(14.0, 18.0),
-            vertical: (14 * s).clamp(14.0, 18.0),
+            horizontal: (16 * scale).clamp(14, 18),
+            vertical: (16 * scale).clamp(15, 19),
+          ),
+          hintStyle: TextStyle(
+            color: _subtitleColor.withOpacity(0.68),
+            fontWeight: FontWeight.w500,
           ),
           labelStyle: TextStyle(
-            fontWeight: FontWeight.w700,
             color: showError ? AppColors.error : _subtitleColor,
+            fontWeight: FontWeight.w700,
           ),
           floatingLabelStyle: TextStyle(
+            color: showError ? AppColors.error : _accentBlue,
             fontWeight: FontWeight.w900,
-            color: showError ? AppColors.error : AppColors.primary,
           ),
           border: baseBorder,
           enabledBorder: baseBorder,
@@ -437,7 +660,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
             color: AppColors.error,
             fontWeight: FontWeight.w700,
           ),
-          errorText: showEmptyError ? "" : null,
+          errorText: showEmptyError ? '' : null,
           errorStyle: const TextStyle(height: 0, fontSize: 0),
         ),
       ),
@@ -452,13 +675,14 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     required Function(List<String>) onChangedFiltered,
     required Function(String) onItemSelected,
     required double suggestMaxHeight,
-    required double s,
+    required double scale,
     bool isRequired = false,
     String? hintText,
     IconData? icon,
   }) {
-    final showError = _showValidationErrors && isRequired && controller.text.trim().isEmpty;
-    final radius = (14 * s).clamp(14.0, 18.0);
+    final showError =
+        _showValidationErrors && isRequired && controller.text.trim().isEmpty;
+    final double radius = (18 * scale).clamp(16.0, 20.0).toDouble();
 
     final baseBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),
@@ -471,57 +695,60 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     final focusedBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radius),
       borderSide: BorderSide(
-        color: showError ? AppColors.error : AppColors.primary,
+        color: showError ? AppColors.error : _accentBlue,
         width: 1.6,
       ),
     );
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: (8 * s).clamp(8.0, 12.0)),
+      padding: EdgeInsets.symmetric(vertical: (7 * scale).clamp(6, 10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextFormField(
             controller: controller,
-            cursorColor: AppColors.textPrimary,
-            style: const TextStyle(
+            cursorColor: _titleColor,
+            style: TextStyle(
               color: _titleColor,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
+              fontSize: (15 * scale).clamp(14, 16),
             ),
             decoration: InputDecoration(
-              floatingLabelBehavior: FloatingLabelBehavior.auto,
               labelText: label,
               hintText: hintText,
-              hintStyle: TextStyle(
-                color: _subtitleColor.withOpacity(0.65),
-                fontWeight: FontWeight.w500,
-              ),
-              prefixIcon: icon != null
-                  ? Icon(icon, color: _subtitleColor.withOpacity(0.8))
-                  : null,
               filled: true,
               fillColor: _fieldBg,
+              prefixIcon: icon != null
+                  ? Icon(icon, color: _subtitleColor.withOpacity(0.88))
+                  : null,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: (14 * s).clamp(14.0, 18.0),
-                vertical: (14 * s).clamp(14.0, 18.0),
+                horizontal: (16 * scale).clamp(14, 18),
+                vertical: (16 * scale).clamp(15, 19),
+              ),
+              hintStyle: TextStyle(
+                color: _subtitleColor.withOpacity(0.68),
+                fontWeight: FontWeight.w500,
               ),
               labelStyle: TextStyle(
-                fontWeight: FontWeight.w700,
                 color: showError ? AppColors.error : _subtitleColor,
+                fontWeight: FontWeight.w700,
               ),
               floatingLabelStyle: TextStyle(
+                color: showError ? AppColors.error : _accentBlue,
                 fontWeight: FontWeight.w900,
-                color: showError ? AppColors.error : AppColors.primary,
               ),
               border: baseBorder,
               enabledBorder: baseBorder,
               focusedBorder: focusedBorder,
-              errorText: showError ? "" : null,
+              errorText: showError ? '' : null,
               errorStyle: const TextStyle(height: 0, fontSize: 0),
             ),
             onChanged: (value) {
               final matches = items
-                  .where((item) => item.toLowerCase().startsWith(value.toLowerCase()))
+                  .where(
+                    (item) =>
+                        item.toLowerCase().startsWith(value.toLowerCase()),
+                  )
                   .toList();
               onChangedFiltered(matches);
               if (_showValidationErrors) setState(() {});
@@ -529,19 +756,10 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
           ),
           if (controller.text.isNotEmpty && filteredItems.isNotEmpty)
             Container(
-              margin: const EdgeInsets.only(top: 6),
+              margin: const EdgeInsets.only(top: 8),
               constraints: BoxConstraints(maxHeight: suggestMaxHeight),
-              decoration: BoxDecoration(
-                color: _cardBg,
-                border: Border.all(color: _cardBorder.withOpacity(0.8)),
+              decoration: _surfaceDecoration(scale).copyWith(
                 borderRadius: BorderRadius.circular(radius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 14,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
               ),
               child: ListView.builder(
                 shrinkWrap: true,
@@ -551,11 +769,17 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
                   final item = filteredItems[index];
                   return ListTile(
                     dense: true,
+                    leading: Icon(
+                      Icons.location_on_outlined,
+                      color: _accentBlue.withOpacity(0.85),
+                      size: (20 * scale).clamp(18, 22),
+                    ),
                     title: Text(
                       item,
                       style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: (13 * s).clamp(13.0, 15.0),
+                        color: _titleColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: (14 * scale).clamp(13, 15),
                       ),
                     ),
                     onTap: () {

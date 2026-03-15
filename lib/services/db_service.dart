@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 16,
+      version: 17,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -369,6 +369,67 @@ class DBService {
             ''');
           }
         }
+
+        if (oldVersion < 17) {
+          await addColumnIfMissing(
+            'product',
+            'base_unit',
+            "TEXT NOT NULL DEFAULT 'pcs'",
+          );
+          await addColumnIfMissing(
+            'product',
+            'cost_per_unit',
+            'REAL NOT NULL DEFAULT 0',
+          );
+          await addColumnIfMissing(
+            'product',
+            'price_per_unit',
+            'REAL NOT NULL DEFAULT 0',
+          );
+
+          await db.execute('''
+            UPDATE product
+            SET
+              base_unit = COALESCE(NULLIF(base_unit, ''), 'pcs'),
+              cost_per_unit = CASE
+                WHEN COALESCE(cost_per_unit, 0) <= 0 THEN COALESCE(purchase_price, 0)
+                ELSE cost_per_unit
+              END,
+              price_per_unit = CASE
+                WHEN COALESCE(price_per_unit, 0) <= 0 THEN COALESCE(selling_price, 0)
+                ELSE price_per_unit
+              END
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS product_unit_conversion (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              product_id INTEGER NOT NULL,
+              unit_name TEXT NOT NULL,
+              base_quantity INTEGER NOT NULL,
+              created_at TEXT,
+              updated_at TEXT,
+              UNIQUE(product_id, unit_name),
+              FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS product_selling_option (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              product_id INTEGER NOT NULL,
+              label TEXT NOT NULL,
+              mode TEXT NOT NULL,
+              unit_name TEXT,
+              base_quantity INTEGER,
+              price REAL NOT NULL DEFAULT 0,
+              created_at TEXT,
+              updated_at TEXT,
+              UNIQUE(product_id, label),
+              FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+            )
+          ''');
+        }
       },
 
       onConfigure: (db) async {
@@ -570,6 +631,9 @@ class DBService {
         purchase_price REAL,
         selling_price REAL,
         quantity INTEGER,
+        base_unit TEXT NOT NULL DEFAULT 'pcs',
+        cost_per_unit REAL NOT NULL DEFAULT 0,
+        price_per_unit REAL NOT NULL DEFAULT 0,
         image TEXT,
         created_at TEXT,
         updated_at TEXT,
@@ -708,6 +772,35 @@ class DBService {
         is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (account_id) REFERENCES account (id),
         FOREIGN KEY (product_id) REFERENCES product (id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE product_unit_conversion (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        unit_name TEXT NOT NULL,
+        base_quantity INTEGER NOT NULL,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(product_id, unit_name),
+        FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE product_selling_option (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        label TEXT NOT NULL,
+        mode TEXT NOT NULL,
+        unit_name TEXT,
+        base_quantity INTEGER,
+        price REAL NOT NULL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(product_id, label),
+        FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
       )
     ''');
 
@@ -979,6 +1072,8 @@ class DBService {
         'owner_installments',
         'fixed_asset',
         'stock_in',
+        'product_unit_conversion',
+        'product_selling_option',
         'balance_assets',
         'expenses',
         'capital_management',

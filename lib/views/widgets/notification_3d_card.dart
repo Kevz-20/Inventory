@@ -1,15 +1,15 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import '../../core/app_colors.dart';
 
 class Notification3DCard extends StatelessWidget {
-  static const Color _cardStart = Color(0xFFF6FBF9);
-  static const Color _cardEnd = Color(0xFFEAF6F2);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _messageColor = Color(0xFF244E47);
-  static const Color _mutedColor = Color(0xFF3E6A62);
+  static const Color _cardStart = Color(0xFFFDFEFF);
+  static const Color _cardEnd = Color(0xFFF3F7FF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _messageColor = Color(0xFF425983);
+  static const Color _mutedColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   final IconData icon;
   final String badgeText;
@@ -37,7 +37,7 @@ class Notification3DCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(20);
-    final effectiveBadgeColor = badgeColor ?? AppColors.primary;
+    final effectiveBadgeColor = badgeColor ?? _accentBlue;
 
     return Material(
       color: Colors.transparent,
@@ -48,21 +48,16 @@ class Notification3DCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: radius,
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [_cardStart, _cardEnd],
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: Colors.white.withOpacity(0.65),
-                blurRadius: 10,
-                offset: const Offset(-2, -2),
+                color: const Color(0xFF93A4CF).withOpacity(0.16),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
             ],
             border: Border.all(color: _cardBorder, width: 1),
@@ -75,19 +70,19 @@ class Notification3DCard extends StatelessWidget {
                 width: 48,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.primary.withOpacity(0.18),
-                      AppColors.primary.withOpacity(0.08),
+                      Color(0xFFECF3FF),
+                      Color(0xFFD8E8FF),
                     ],
                   ),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.18),
+                    color: const Color(0xFFCFE0FF),
                   ),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 26),
+                child: Icon(icon, color: _accentBlue, size: 26),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -115,7 +110,7 @@ class Notification3DCard extends StatelessWidget {
                             color: effectiveBadgeColor.withOpacity(badgeOpacity),
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: effectiveBadgeColor.withOpacity(0.18),
+                              color: effectiveBadgeColor.withOpacity(0.22),
                             ),
                           ),
                           child: Text(
@@ -167,7 +162,7 @@ class Notification3DCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            Icons.schedule_rounded,
+                            Icons.event_note_rounded,
                             size: 16,
                             color: _mutedColor,
                           ),

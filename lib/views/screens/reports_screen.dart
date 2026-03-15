@@ -3,13 +3,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/app_colors.dart';
 import '../../services/db_service.dart';
-import '../widgets/header.dart';
-import '../widgets/utang_calendar_card.dart';
+import '../widgets/dashboard_background.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
+
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   Size _screenSize(BuildContext context) => MediaQuery.of(context).size;
 
@@ -76,22 +81,47 @@ class ReportsScreen extends StatelessWidget {
                 : 12.0;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Reports', showBackButton: true),
-      body: SafeArea(
-        top: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxContentWidth),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                verticalPadding,
-                horizontalPadding,
-                verticalPadding,
-              ),
-              child: LayoutBuilder(
-                builder: (context, c) {
+      backgroundColor: _pageBg,
+      appBar: AppBar(
+        backgroundColor: _pageBg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: Image.asset(
+            'lib/assets/arrowleft.png',
+            width: _r(context, 22),
+            height: _r(context, 22),
+            fit: BoxFit.contain,
+          ),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(
+          'Reports',
+          style: TextStyle(
+            color: _titleColor,
+            fontWeight: FontWeight.w900,
+            fontSize: _r(context, 20),
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          const DashboardBackground(),
+          SafeArea(
+            top: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    verticalPadding,
+                    horizontalPadding,
+                    verticalPadding,
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, c) {
                   final h = c.maxHeight;
                   final w = c.maxWidth;
                   final gap = useSplitLayout
@@ -141,7 +171,7 @@ class ReportsScreen extends StatelessWidget {
                           SizedBox(height: gap),
                           SizedBox(
                             height: _r(context, 320),
-                            child: _buildCalendarPanel(),
+                            child: _buildTopSellingPanel(context),
                           ),
                         ],
                       ),
@@ -162,7 +192,7 @@ class ReportsScreen extends StatelessWidget {
                         SizedBox(width: gap),
                         Expanded(
                           flex: 13,
-                          child: _buildCalendarPanel(),
+                          child: _buildTopSellingPanel(context),
                         ),
                       ],
                     );
@@ -184,15 +214,17 @@ class ReportsScreen extends StatelessWidget {
                       ),
                       SizedBox(height: gap),
                       Expanded(
-                        child: _buildCalendarPanel(),
+                        child: _buildTopSellingPanel(context),
                       ),
                     ],
                   );
-                },
+                    },
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -236,37 +268,286 @@ class ReportsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCalendarPanel() {
+  Future<List<Map<String, dynamic>>> _fetchTopSellingProducts() async {
+    final db = await DBService.instance.database;
+    return db.rawQuery('''
+      SELECT
+        p.name AS product_name,
+        COALESCE(SUM(si.quantity), 0) AS units_sold,
+        COALESCE(SUM(si.unit_price * si.quantity), 0) AS revenue
+      FROM sale_item si
+      INNER JOIN product p ON p.id = si.product_id
+      GROUP BY si.product_id, p.name
+      ORDER BY units_sold DESC, revenue DESC, p.name ASC
+      LIMIT 5
+    ''');
+  }
+
+  Widget _buildTopSellingPanel(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DBService.instance.fetchCustomerUtangList(),
+      future: _fetchTopSellingProducts(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
+          return _insightCard(
+            context: context,
+            title: 'Top Selling Product',
+            subtitle: 'Best-performing items based on recorded sales.',
+            child: const Center(child: CircularProgressIndicator()),
           );
         } else if (snapshot.hasError) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: Text("Error loading utang"),
-            ),
-          );
-        } else {
-          final utangList = snapshot.data ?? [];
-          final totalUtang = utangList.fold<double>(
-            0,
-            (prev, e) => prev + (e['total_amount'] as double? ?? 0),
-          );
-
-          return UtangCalendarCard(
-            utangList: utangList,
-            totalUtang: totalUtang,
+          return _insightCard(
+            context: context,
+            title: 'Top Selling Product',
+            subtitle: 'Best-performing items based on recorded sales.',
+            child: const Center(child: Text('Error loading top-selling products')),
           );
         }
+
+        final rows = snapshot.data ?? [];
+        return _insightCard(
+          context: context,
+          title: 'Top Selling Product',
+          subtitle: '',
+          child: rows.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: _r(context, 28)),
+                    child: Text(
+                      'No sales data yet.',
+                      style: TextStyle(
+                        color: _subtitleColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: _r(context, 14),
+                      ),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: List.generate(rows.length, (index) {
+                    final row = rows[index];
+                    final name = (row['product_name'] ?? 'Unknown Product').toString();
+                    final units = ((row['units_sold'] as num?)?.toInt() ?? 0);
+                    return _topSellingRow(
+                      context: context,
+                      rank: index + 1,
+                      name: name,
+                      units: units,
+                      isFirst: index == 0,
+                    );
+                  }),
+                ),
+        );
       },
+    );
+  }
+
+  Widget _insightCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_r(context, 18)),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(_r(context, 24)),
+        border: Border.all(color: _cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF93A4CF).withOpacity(0.16),
+            blurRadius: _r(context, 20),
+            offset: Offset(0, _r(context, 10)),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: _r(context, 46),
+                height: _r(context, 46),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFECF3FF), Color(0xFFD9E8FF)],
+                  ),
+                  borderRadius: BorderRadius.circular(_r(context, 16)),
+                ),
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  color: _accentBlue,
+                  size: _r(context, 24),
+                ),
+              ),
+              SizedBox(width: _r(context, 12)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: _titleColor,
+                        fontWeight: FontWeight.w900,
+                        fontSize: _r(context, 18),
+                      ),
+                    ),
+                    if (subtitle.trim().isNotEmpty) ...[
+                      SizedBox(height: _r(context, 4)),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: _subtitleColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: _r(context, 13),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: _r(context, 18)),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _topSellingRow({
+    required BuildContext context,
+    required int rank,
+    required String name,
+    required int units,
+    required bool isFirst,
+  }) {
+    final rankColor = switch (rank) {
+      1 => const Color(0xFFFFC94D),
+      2 => const Color(0xFFB8C6DB),
+      3 => const Color(0xFFD9975B),
+      _ => const Color(0xFFE7EEFF),
+    };
+
+    final rankIconColor = switch (rank) {
+      1 => const Color(0xFF8A5A00),
+      2 => const Color(0xFF52657F),
+      3 => const Color(0xFF7F4A20),
+      _ => _titleColor,
+    };
+
+    return Container(
+      margin: EdgeInsets.only(bottom: _r(context, 10)),
+      padding: EdgeInsets.all(_r(context, 14)),
+      decoration: BoxDecoration(
+        color: isFirst ? const Color(0xFFF3F7FF) : const Color(0xFFF9FBFF),
+        borderRadius: BorderRadius.circular(_r(context, 18)),
+        border: Border.all(
+          color: isFirst ? const Color(0xFFCFE0FF) : _cardBorder,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: _r(context, 38),
+            height: _r(context, 38),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: rank <= 3
+                    ? [
+                        rankColor.withOpacity(0.95),
+                        rankColor.withOpacity(0.72),
+                      ]
+                    : [
+                        rankColor,
+                        const Color(0xFFD9E5FF),
+                      ],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: rankColor.withOpacity(0.22),
+                  blurRadius: _r(context, 8),
+                  offset: Offset(0, _r(context, 4)),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: rank <= 3
+                ? Icon(
+                    rank == 1
+                        ? Icons.workspace_premium_rounded
+                        : rank == 2
+                            ? Icons.military_tech_rounded
+                            : Icons.emoji_events_rounded,
+                    color: rankIconColor,
+                    size: _r(context, 20),
+                  )
+                : Text(
+                    '$rank',
+                    style: TextStyle(
+                      color: rankIconColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: _r(context, 15),
+                    ),
+                  ),
+          ),
+          if (rank <= 3) ...[
+            SizedBox(width: _r(context, 8)),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: _r(context, 8),
+                vertical: _r(context, 4),
+              ),
+              decoration: BoxDecoration(
+                color: rankColor.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(_r(context, 999)),
+              ),
+              child: Text(
+                '#$rank',
+                style: TextStyle(
+                  color: rankIconColor,
+                  fontWeight: FontWeight.w900,
+                  fontSize: _r(context, 11.5),
+                ),
+              ),
+            ),
+          ],
+          SizedBox(width: _r(context, 12)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _titleColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: _r(context, 15),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '$units units sold',
+            style: TextStyle(
+              color: _accentBlue,
+              fontWeight: FontWeight.w900,
+              fontSize: _r(context, 13.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -280,11 +561,11 @@ class ReportsScreen extends StatelessWidget {
     final radius = BorderRadius.circular(_r(context, 22));
     final isPrimaryReport = label.toUpperCase().contains('INCOME');
     final startColor =
-        isPrimaryReport ? const Color(0xFFEAF7F3) : const Color(0xFFE6F3F0);
+        isPrimaryReport ? const Color(0xFFFDFEFF) : const Color(0xFFF9FBFF);
     final endColor =
-        isPrimaryReport ? const Color(0xFFD8EEE8) : const Color(0xFFD0E9E3);
-    const primaryTextColor = Color(0xFF0B3D35);
-    const secondaryTextColor = Color(0xFF2F5C54);
+        isPrimaryReport ? const Color(0xFFF1F5FF) : const Color(0xFFF3F7FF);
+    const primaryTextColor = _titleColor;
+    const secondaryTextColor = _subtitleColor;
 
     return Material(
       color: Colors.transparent,
@@ -331,11 +612,6 @@ class ReportsScreen extends StatelessWidget {
 
             final horizontalPad = compact ? _r(context, 12) : _r(context, 18);
             final gapBetween = compact ? _r(context, 10) : _r(context, 16);
-            final accentHeight = compact
-                ? (h * 0.35).clamp(_r(context, 32), _r(context, 44))
-                : isLandscape
-                    ? (h * 0.50).clamp(_r(context, 42), _r(context, 60))
-                    : (h * 0.55).clamp(_r(context, 48), _r(context, 64));
 
             return Container(
               padding: EdgeInsets.symmetric(
@@ -349,10 +625,10 @@ class ReportsScreen extends StatelessWidget {
                   colors: [startColor, endColor],
                 ),
                 borderRadius: radius,
-                border: Border.all(color: const Color(0xFFBFDCD4), width: 1.2),
+                border: Border.all(color: _cardBorder, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0C4B3E).withOpacity(0.18),
+                    color: const Color(0xFF93A4CF).withOpacity(0.18),
                     blurRadius: _r(context, 16),
                     offset: Offset(0, _r(context, 8)),
                   ),
@@ -366,15 +642,6 @@ class ReportsScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: _r(context, compact ? 4 : 5),
-                    height: accentHeight * 0.9,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.75),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  SizedBox(width: gapBetween),
-                  Container(
                     width: iconBox,
                     height: iconBox,
                     decoration: BoxDecoration(
@@ -383,20 +650,20 @@ class ReportsScreen extends StatelessWidget {
                         end: Alignment.bottomRight,
                         colors: [
                           Colors.white.withOpacity(0.96),
-                          Colors.white.withOpacity(0.82),
+                          const Color(0xFFEAF2FF),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(_r(context, 18)),
-                      border: Border.all(color: const Color(0xFFB4D8CF)),
+                      border: Border.all(color: const Color(0xFFD8E4FF)),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0C4B3E).withOpacity(0.16),
+                          color: const Color(0xFF93A4CF).withOpacity(0.16),
                           blurRadius: _r(context, 8),
                           offset: Offset(0, _r(context, 3)),
                         ),
                       ],
                     ),
-                    child: Icon(icon, color: AppColors.primary, size: iconSize),
+                    child: Icon(icon, color: _accentBlue, size: iconSize),
                   ),
                   SizedBox(width: gapBetween),
                   Expanded(
@@ -437,11 +704,11 @@ class ReportsScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.88),
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFB4D8CF)),
+                      border: Border.all(color: const Color(0xFFD8E4FF)),
                     ),
                     child: Icon(
                       Icons.arrow_forward_rounded,
-                      color: AppColors.primary,
+                      color: _accentBlue,
                       size: _r(context, compact ? 18 : 20),
                     ),
                   ),

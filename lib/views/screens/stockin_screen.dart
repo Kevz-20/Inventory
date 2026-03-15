@@ -4,11 +4,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_colors.dart';
+import '../../models/product_unit_conversion.dart';
 import '../../view_models/stock_in_view_model.dart';
-import '../widgets/header.dart';
+import '../widgets/dashboard_background.dart';
 
 class StockInScreen extends ConsumerStatefulWidget {
   const StockInScreen({super.key});
@@ -18,12 +20,14 @@ class StockInScreen extends ConsumerStatefulWidget {
 }
 
 class _StockInScreenState extends ConsumerState<StockInScreen> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _fieldBg = Color(0xFFF6FBF9);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _fieldBg = Color(0xFFF9FBFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _accentBlueDark = Color(0xFF275EEA);
 
   late final ScrollController _scrollController;
 
@@ -52,7 +56,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
 
-        // ✅ same scaling pattern as your other pages
+        // Ã¢Å“â€¦ same scaling pattern as your other pages
         final double scale = (w / 390).clamp(0.90, 1.20);
 
         final double padH = (16 * scale).clamp(14, 22);
@@ -79,23 +83,48 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
         return Scaffold(
           backgroundColor: _pageBg,
-          appBar: const AppHeader(title: 'Stock In', showBackButton: true),
-
-          body: ScrollbarTheme(
-            data: ScrollbarThemeData(
-              thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
-              thickness: WidgetStateProperty.all(5),
-              radius: const Radius.circular(8),
+          appBar: AppBar(
+            backgroundColor: _pageBg,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            leading: IconButton(
+              icon: Image.asset(
+                'lib/assets/arrowleft.png',
+                width: (22 * scale).clamp(20.0, 26.0),
+                height: (22 * scale).clamp(20.0, 26.0),
+                fit: BoxFit.contain,
+              ),
+              onPressed: () => context.pop(),
             ),
-            child: Scrollbar(
-              controller: _scrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            title: Text(
+              'Stock In',
+              style: TextStyle(
+                color: _titleColor,
+                fontWeight: FontWeight.w900,
+                fontSize: (20 * scale).clamp(18.0, 24.0),
+              ),
+            ),
+            centerTitle: true,
+          ),
+
+          body: Stack(
+            children: [
+              const DashboardBackground(),
+              ScrollbarTheme(
+                data: ScrollbarThemeData(
+                  thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+                  thickness: WidgetStateProperty.all(5),
+                  radius: const Radius.circular(8),
+                ),
+                child: Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                     // ===================== CARD: BASIC INFO =====================
                     _card(
                       padding: cardPad,
@@ -110,7 +139,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                           SizedBox(height: gap12),
 
-                          // ✅ Category Picker (Bottom Sheet)
+                          // Ã¢Å“â€¦ Category Picker (Bottom Sheet)
                           _categoryPickerField(
                             vm,
                             scale: scale,
@@ -139,8 +168,17 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       radius: radius16,
                       child: Column(
                         children: [
+                          _advancedModeToggle(
+                            vm,
+                            scale: scale,
+                            radius: radius12,
+                            valueFs: valueFs,
+                          ),
+                          SizedBox(height: gap12),
                           _inputNumberField(
-                            label: 'Presyo sa pagpalit',
+                            label: vm.useAdvancedUnitSetup
+                                ? 'Total stock cost'
+                                : 'Purchase price',
                             controller: vm.purchasePriceController,
                             showError: vm.showValidationErrors,
                             isPeso: true,
@@ -151,7 +189,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                           SizedBox(height: gap12),
                           _inputNumberField(
-                            label: 'Presyo sa pagbaligya',
+                            label: vm.useAdvancedUnitSetup
+                                ? 'Selling price per base unit'
+                                : 'Selling price',
                             controller: vm.sellingPriceController,
                             showError: vm.showValidationErrors,
                             isPeso: true,
@@ -162,7 +202,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                           SizedBox(height: gap12),
                           _inputNumberField(
-                            label: 'Gidaghanon',
+                            label: vm.useAdvancedUnitSetup
+                                ? 'Stock quantity in base unit'
+                                : 'Quantity',
                             controller: vm.quantityController,
                             showError: vm.showValidationErrors,
                             icon: Icons.shopping_cart_rounded,
@@ -172,11 +214,43 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             radius: radius12,
                             valueFs: valueFs,
                           ),
+                          if (vm.useAdvancedUnitSetup) ...[
+                            SizedBox(height: gap12),
+                            _inputTextField(
+                              label: 'Base unit',
+                              controller: vm.baseUnitController,
+                              showError: vm.showValidationErrors,
+                              icon: Icons.straighten_rounded,
+                              scale: scale,
+                              height: fieldH,
+                              radius: radius12,
+                              valueFs: valueFs,
+                            ),
+                          ],
                         ],
                       ),
                     ),
 
-                    SizedBox(height: gap14),
+                    if (vm.useAdvancedUnitSetup) ...[
+                      SizedBox(height: gap14),
+                      _sectionCard(
+                        scale: scale,
+                        padding: cardPad,
+                        radius: radius16,
+                        titleFs: titleFs,
+                        title: 'Unit Conversion Setup',
+                        icon: Icons.tune_rounded,
+                        child: _unitConversionSection(
+                          vm,
+                          scale: scale,
+                          radius: radius12,
+                          valueFs: valueFs,
+                          gap12: gap12,
+                        ),
+                      ),
+                      SizedBox(height: gap14),
+                    ] else
+                      SizedBox(height: gap14),
 
                     // ===================== CARD: IMAGE =====================
                     _sectionCard(
@@ -197,11 +271,13 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       ),
                     ),
 
-                    SizedBox(height: (90 * scale).clamp(70, 110)),
-                  ],
+                        SizedBox(height: (90 * scale).clamp(70, 110)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
 
           // ===================== BOTTOM BUTTON =====================
@@ -220,7 +296,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 height: btnH,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: _accentBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(radius14),
                     ),
@@ -258,7 +334,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // ✅ CATEGORY PICKER FIELD (BOTTOM SHEET) - responsive only
+  // Ã¢Å“â€¦ CATEGORY PICKER FIELD (BOTTOM SHEET) - responsive only
   // ============================================================
   Widget _categoryPickerField(
     StockInViewModel vm, {
@@ -293,7 +369,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           fillColor: _fieldBg,
           prefixIcon: Icon(
             Icons.category,
-            color: AppColors.primary,
+            color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
           labelText: 'Kategorya',
@@ -306,7 +382,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(
-              color: isError ? Colors.red : AppColors.primary,
+              color: isError ? Colors.red : _accentBlue,
             ),
           ),
         ),
@@ -338,7 +414,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // ✅ CATEGORY BOTTOM SHEET (responsive only)
+  // Ã¢Å“â€¦ CATEGORY BOTTOM SHEET (responsive only)
   // ============================================================
   Future<String?> _showCategoryBottomSheet({
     required BuildContext context,
@@ -397,12 +473,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         height: (36 * s).clamp(34, 42),
                         width: (36 * s).clamp(34, 42),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.10),
+                          color: _accentBlue.withOpacity(0.10),
                           borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                         ),
                         child: Icon(
                           Icons.category_rounded,
-                          color: AppColors.primary,
+                          color: _accentBlue,
                           size: (20 * s).clamp(18, 24),
                         ),
                       ),
@@ -427,23 +503,23 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             vertical: (9 * s).clamp(8, 10),
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.10),
+                            color: _accentBlue.withOpacity(0.10),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: AppColors.primary.withOpacity(0.25),
+                              color: _accentBlue.withOpacity(0.25),
                             ),
                           ),
                           child: Row(
                             children: [
                               Icon(Icons.add,
                                   size: (18 * s).clamp(16, 22),
-                                  color: AppColors.primary),
+                                  color: _accentBlue),
                               SizedBox(width: (6 * s).clamp(5, 8)),
                               Text(
                                 'Add Kategorya',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
-                                  color: AppColors.primary,
+                                  color: _accentBlue,
                                   fontSize: (13 * s).clamp(12, 15),
                                 ),
                               ),
@@ -481,7 +557,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppColors.primary),
+                          borderSide: const BorderSide(color: _accentBlue),
                         ),
                       ),
                     ),
@@ -561,12 +637,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? AppColors.primary.withOpacity(0.10)
+                                      ? _accentBlue.withOpacity(0.10)
                                       : _fieldBg,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: isSelected
-                                        ? AppColors.primary.withOpacity(0.35)
+                                        ? _accentBlue.withOpacity(0.35)
                                         : _cardBorder.withOpacity(0.8),
                                   ),
                                 ),
@@ -580,7 +656,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                         style: TextStyle(
                                           fontWeight: FontWeight.w900,
                                           color: isSelected
-                                              ? AppColors.primary
+                                              ? _accentBlue
                                               : _titleColor,
                                           fontSize: (14 * s).clamp(13, 16),
                                         ),
@@ -589,7 +665,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                     if (isSelected)
                                       const Icon(
                                         Icons.check_circle_rounded,
-                                        color: AppColors.primary,
+                                        color: _accentBlue,
                                       ),
                                   ],
                                 ),
@@ -611,7 +687,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // ✅ ADD CATEGORY DIALOG (responsive only)
+  // Ã¢Å“â€¦ ADD CATEGORY DIALOG (responsive only)
   // ============================================================
   Future<void> _showAddCategoryDialog(
     BuildContext context,
@@ -695,7 +771,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
-                            borderSide: const BorderSide(color: AppColors.primary),
+                            borderSide: const BorderSide(color: _accentBlue),
                           ),
                         ),
                         onChanged: (v) => value.value = v,
@@ -756,8 +832,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                     }
                                   : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                disabledBackgroundColor: AppColors.primary.withOpacity(0.30),
+                                backgroundColor: _accentBlue,
+                                disabledBackgroundColor: _accentBlue.withOpacity(0.30),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                                 ),
@@ -831,10 +907,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 height: (36 * s).clamp(34, 44),
                 width: (36 * s).clamp(34, 44),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
+                  color: _accentBlue.withOpacity(0.10),
                   borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: (20 * s).clamp(18, 24)),
+                child: Icon(icon, color: _accentBlue, size: (20 * s).clamp(18, 24)),
               ),
               SizedBox(width: (10 * s).clamp(8, 12)),
               Expanded(
@@ -906,7 +982,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             builder: (context, child) => Theme(
               data: Theme.of(context).copyWith(
                 colorScheme: ColorScheme.light(
-                  primary: AppColors.primary,
+                  primary: _accentBlue,
                   onPrimary: Colors.white,
                   onSurface: AppColors.textPrimary,
                 ),
@@ -925,7 +1001,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         decoration: InputDecoration(
           filled: true,
           fillColor: _fieldBg,
-          prefixIcon: const Icon(Icons.calendar_today, color: AppColors.primary),
+          prefixIcon: const Icon(Icons.calendar_today, color: _accentBlue),
           labelText: 'Petsa',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
@@ -933,7 +1009,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
-            borderSide: const BorderSide(color: AppColors.primary),
+            borderSide: const BorderSide(color: _accentBlue),
           ),
         ),
       ),
@@ -1015,7 +1091,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             style: TextStyle(fontSize: valueFs, fontWeight: FontWeight.w800),
             decoration: InputDecoration(
               labelText: 'Pangalan sa produkto',
-              prefixIcon: const Icon(Icons.edit, color: AppColors.primary),
+              prefixIcon: const Icon(Icons.edit, color: _accentBlue),
               filled: true,
               fillColor: _fieldBg,
               enabledBorder: OutlineInputBorder(
@@ -1033,7 +1109,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   color: (vm.showValidationErrors &&
                           vm.effectiveProductName.trim().isEmpty)
                       ? Colors.red
-                      : AppColors.primary,
+                      : _accentBlue,
                 ),
               ),
             ),
@@ -1049,21 +1125,184 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       },
       onSelected: (value) async {
         final product = vm.allProducts.firstWhere((p) => p.name == value);
-        vm.selectedProduct = product;
-
         FocusScope.of(context).unfocus();
         await Future.delayed(const Duration(milliseconds: 50));
-
-        vm.productController.text = product.name;
-        vm.autocompleteFieldController?.text = product.name;
-
-        vm.setCategoryByName(product.category);
-
-        vm.purchasePriceController.text = product.purchasePrice.toString();
-        vm.sellingPriceController.text = product.sellingPrice.toString();
-        vm.quantityController.text = product.quantity.toString();
-        vm.productImage = product.image != null ? File(product.image!) : null;
+        await vm.populateFromSelectedProduct(product);
       },
+    );
+  }
+
+  Widget _inputTextField({
+    required String label,
+    required TextEditingController controller,
+    required bool showError,
+    required IconData icon,
+    required double scale,
+    required double height,
+    required double radius,
+    required double valueFs,
+  }) {
+    return SizedBox(
+      height: height,
+      child: TextField(
+        controller: controller,
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
+          fontSize: valueFs,
+        ),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: _fieldBg,
+          prefixIcon: Icon(icon, color: _accentBlue, size: (22 * scale).clamp(20, 26)),
+          labelText: label,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(
+              color: showError && controller.text.trim().isEmpty
+                  ? Colors.red
+                  : _cardBorder,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(
+              color: showError && controller.text.trim().isEmpty
+                  ? Colors.red
+                  : _accentBlue,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _advancedModeToggle(
+    StockInViewModel vm, {
+    required double scale,
+    required double radius,
+    required double valueFs,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: (12 * scale).clamp(10, 16),
+        vertical: (10 * scale).clamp(8, 14),
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Advanced unit setup',
+                  style: TextStyle(
+                    fontSize: valueFs,
+                    fontWeight: FontWeight.w800,
+                    color: _titleColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Turn on only for mL, grams, lapad, or custom unit conversion.',
+                  style: TextStyle(
+                    fontSize: (valueFs - 1).clamp(12, 15),
+                    fontWeight: FontWeight.w600,
+                    color: _subtitleColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: vm.useAdvancedUnitSetup,
+            onChanged: vm.setUseAdvancedUnitSetup,
+            activeColor: _accentBlue,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _unitConversionSection(
+    StockInViewModel vm, {
+    required double scale,
+    required double radius,
+    required double valueFs,
+    required double gap12,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _inputTextField(
+                label: 'Unit name',
+                controller: vm.conversionNameController,
+                showError: false,
+                icon: Icons.label_outline_rounded,
+                scale: scale,
+                height: (58 * scale).clamp(54, 66),
+                radius: radius,
+                valueFs: valueFs,
+              ),
+            ),
+            SizedBox(width: gap12),
+            Expanded(
+              child: _inputNumberField(
+                label: 'Base qty',
+                controller: vm.conversionQuantityController,
+                showError: false,
+                icon: Icons.water_drop_outlined,
+                scale: scale,
+                height: (58 * scale).clamp(54, 66),
+                radius: radius,
+                valueFs: valueFs,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: gap12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: vm.addUnitConversion,
+            icon: const Icon(Icons.add_rounded),
+            label: Text('Add unit for ${vm.baseUnitLabel}'),
+          ),
+        ),
+        if (vm.unitConversions.isNotEmpty) ...[
+          SizedBox(height: gap12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: vm.unitConversions.map((conversion) {
+              return _conversionChip(conversion, vm);
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _conversionChip(
+    ProductUnitConversion conversion,
+    StockInViewModel vm,
+  ) {
+    return Chip(
+      label: Text(
+        '${conversion.unitName} = ${conversion.baseQuantity} ${vm.baseUnitLabel}',
+      ),
+      onDeleted: () => vm.removeUnitConversion(conversion),
+      deleteIcon: const Icon(Icons.close_rounded, size: 18),
+      backgroundColor: Colors.white,
+      side: BorderSide(color: _cardBorder.withOpacity(0.9)),
     );
   }
 
@@ -1110,16 +1349,16 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ? Padding(
                   padding: EdgeInsets.all((16 * s).clamp(14, 18)),
                   child: Text(
-                    '₱',
+                    '\u20B1',
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: _accentBlue,
                       fontSize: (18 * s).clamp(16, 22),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 )
               : icon != null
-                  ? Icon(icon, color: AppColors.primary, size: (22 * s).clamp(20, 26))
+                  ? Icon(icon, color: _accentBlue, size: (22 * s).clamp(20, 26))
                   : null,
           labelText: label,
           enabledBorder: OutlineInputBorder(
@@ -1135,7 +1374,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             borderSide: BorderSide(
               color: showError && controller.text.isEmpty
                   ? Colors.red
-                  : AppColors.primary,
+                  : _accentBlue,
             ),
           ),
         ),
@@ -1168,7 +1407,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               children: [
                 TextButton.icon(
                   icon: Icon(Icons.photo_library,
-                      size: (28 * scale).clamp(24, 32), color: AppColors.primary),
+                      size: (28 * scale).clamp(24, 32), color: _accentBlue),
                   label: Text(
                     "Gallery",
                     style: TextStyle(
@@ -1184,7 +1423,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 SizedBox(height: (8 * scale).clamp(6, 10)),
                 TextButton.icon(
                   icon: Icon(Icons.camera_alt,
-                      size: (28 * scale).clamp(24, 32), color: AppColors.primary),
+                      size: (28 * scale).clamp(24, 32), color: _accentBlue),
                   label: Text(
                     "Camera",
                     style: TextStyle(
@@ -1229,12 +1468,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         height: (54 * scale).clamp(46, 62),
                         width: (54 * scale).clamp(46, 62),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.10),
+                          color: _accentBlue.withOpacity(0.10),
                           borderRadius: BorderRadius.circular((18 * scale).clamp(16, 22)),
                         ),
                         child: Icon(
                           Icons.camera_alt_rounded,
-                          color: AppColors.primary,
+                          color: _accentBlue,
                           size: (28 * scale).clamp(24, 34),
                         ),
                       ),
@@ -1263,8 +1502,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: (13.5 * scale).clamp(12.5, 15)),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+                  foregroundColor: _accentBlue,
+                  side: BorderSide(color: _accentBlue.withOpacity(0.6)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular((12 * scale).clamp(10, 16)),
                   ),
