@@ -47,8 +47,7 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Fetch full account details
-      final accountDetails = await accountRepository!.getAccountDetails();
+      final accountDetails = await accountRepository!.getProfileDetails();
       account = accountDetails;
 
       error = null;
@@ -65,7 +64,7 @@ class ProfileViewModel extends ChangeNotifier {
     if (accountRepository == null) return false;
 
     try {
-      await accountRepository!.updateAccount(updated);
+      await accountRepository!.updateCurrentMemberProfile(updated);
       account = updated;
       notifyListeners();
       return true;

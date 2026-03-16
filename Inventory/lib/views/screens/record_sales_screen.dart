@@ -1502,11 +1502,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(_r(context, 16)),
+          top: Radius.circular(_r(context, 30)),
         ),
       ),
       builder: (_) {
@@ -1516,161 +1516,373 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             : null;
         final bool exceedsAvailableCredit =
             availableCredit != null && vm.total > availableCredit;
+        final messenger = ScaffoldMessenger.of(context);
 
         return SafeArea(
           child: SizedBox(
             height: _isLandscape(context)
                 ? MediaQuery.of(context).size.height * 0.9
                 : MediaQuery.of(context).size.height * 0.8,
-            child: Padding(
-              padding: EdgeInsets.all(_r(context, 16)),
+            child: Container(
+              margin: EdgeInsets.fromLTRB(
+                _r(context, 12),
+                _r(context, 8),
+                _r(context, 12),
+                _r(context, 12),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                _r(context, 18),
+                _r(context, 14),
+                _r(context, 18),
+                _r(context, 18),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(_r(context, 30)),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: _r(context, 28),
+                    offset: const Offset(0, -6),
+                  ),
+                ],
+              ),
               child: Column(
                 children: [
-                  Text(
-                    isCash ? "CASH SALE" : "UTANG SALE",
-                    style: TextStyle(
-                      fontSize: _r(context, 12),
-                      fontWeight: FontWeight.w900,
-                      color: isCash ? AppColors.primary : AppColors.error,
-                      letterSpacing: 1,
+                  Container(
+                    width: _r(context, 48),
+                    height: _r(context, 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD7E1F7),
+                      borderRadius: BorderRadius.circular(_r(context, 99)),
                     ),
                   ),
-                  SizedBox(height: _r(context, 6)),
-                  Text(
-                    'Sale Summary',
-                    style: TextStyle(
-                      fontSize: _r(context, 20),
-                      fontWeight: FontWeight.w900,
+                  SizedBox(height: _r(context, 16)),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _r(context, 18),
+                      vertical: _r(context, 14),
                     ),
-                  ),
-                  if (!isCash && selectedCustomer != null) ...[
-                    SizedBox(height: _r(context, 8)),
-                    Text(
-                      "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
-                      "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
-                      style: TextStyle(
-                        fontSize: _r(context, 13),
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black.withOpacity(0.55),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(_r(context, 24)),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isCash
+                            ? const [
+                                Color(0xFF173D86),
+                                Color(0xFF1D79D8),
+                                Color(0xFF28C4D5),
+                              ]
+                            : const [
+                                Color(0xFF7A2331),
+                                Color(0xFFB63D58),
+                                Color(0xFFE36A7C),
+                              ],
                       ),
-                      textAlign: TextAlign.center,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isCash
+                                  ? const Color(0xFF1B4A9A)
+                                  : const Color(0xFF9D3250))
+                              .withValues(alpha: 0.22),
+                          blurRadius: _r(context, 20),
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                  ],
-                  SizedBox(height: _r(context, 12)),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: _r(context, 42),
+                          height: _r(context, 42),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(_r(context, 18)),
+                          ),
+                          child: Icon(
+                            isCash
+                                ? Icons.point_of_sale_rounded
+                                : Icons.credit_card_rounded,
+                            color: Colors.white,
+                            size: _r(context, 20),
+                          ),
+                        ),
+                        SizedBox(height: _r(context, 8)),
+                        Text(
+                          isCash ? "CASH SALE" : "UTANG SALE",
+                          style: TextStyle(
+                            fontSize: _r(context, 11),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white.withValues(alpha: 0.88),
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        SizedBox(height: _r(context, 3)),
+                        Text(
+                          'Sale Summary',
+                          style: TextStyle(
+                            fontSize: _r(context, 18),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: _r(context, 4)),
+                        Text(
+                          '${selectedProducts.length} item${selectedProducts.length == 1 ? '' : 's'} selected',
+                          style: TextStyle(
+                            fontSize: _r(context, 12),
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white.withValues(alpha: 0.84),
+                          ),
+                        ),
+                        if (!isCash && selectedCustomer != null) ...[
+                          SizedBox(height: _r(context, 6)),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: _r(context, 10),
+                              vertical: _r(context, 6),
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(_r(context, 999)),
+                            ),
+                            child: Text(
+                              "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
+                              "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
+                              style: TextStyle(
+                                fontSize: _r(context, 11.5),
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: _r(context, 16)),
                   Expanded(
                     child: selectedProducts.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No products selected',
-                              style: TextStyle(
-                                fontSize: _r(context, 14.5),
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black.withOpacity(0.55),
+                        ? Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FBFF),
+                              borderRadius: BorderRadius.circular(_r(context, 22)),
+                              border: Border.all(
+                                color: const Color(0xFFDDE5F8),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'No products selected',
+                                style: TextStyle(
+                                  fontSize: _r(context, 14.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF60739B),
+                                ),
                               ),
                             ),
                           )
-                        : ListView.builder(
+                        : Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FBFF),
+                              borderRadius: BorderRadius.circular(_r(context, 22)),
+                              border: Border.all(
+                                color: const Color(0xFFDDE5F8),
+                              ),
+                            ),
+                            child: ListView.separated(
+                            padding: EdgeInsets.all(_r(context, 12)),
                             itemCount: selectedProducts.length,
+                            separatorBuilder: (_, index) =>
+                                SizedBox(height: _r(context, 10)),
                             itemBuilder: (_, index) {
                               final product = selectedProducts[index];
                               final qty = vm.getQuantity(product);
                               final subtotal = vm.getSubtotal(product);
 
-                              return ListTile(
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: _r(context, 4),
-                                  vertical: _r(context, 4),
-                                ),
-                                title: Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: _r(context, 16),
+                              return Container(
+                                padding: EdgeInsets.all(_r(context, 14)),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(
+                                    _r(context, 18),
+                                  ),
+                                  border: Border.all(
+                                    color: const Color(0xFFDDE5F8),
                                   ),
                                 ),
-                                subtitle: Text(
-                                    vm.supportsPesoEntry(product)
-                                        ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
-                                        : '${currencyFormatter.format(product.sellingPrice)} x $qty',
-                                  style: TextStyle(
-                                    fontSize: _r(context, 13.5),
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black.withOpacity(0.55),
-                                  ),
-                                ),
-                                trailing: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    currencyFormatter.format(subtotal),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: _r(context, 15),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: _r(context, 42),
+                                      height: _r(context, 42),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF2F6BFF,
+                                        ).withValues(alpha: 0.10),
+                                        borderRadius: BorderRadius.circular(
+                                          _r(context, 14),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.inventory_2_rounded,
+                                        color: const Color(0xFF2F6BFF),
+                                        size: _r(context, 22),
+                                      ),
                                     ),
-                                  ),
+                                    SizedBox(width: _r(context, 12)),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            product.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: _r(context, 15.5),
+                                              color: const Color(0xFF213A6B),
+                                            ),
+                                          ),
+                                          SizedBox(height: _r(context, 4)),
+                                          Text(
+                                            vm.supportsPesoEntry(product)
+                                                ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
+                                                : '${currencyFormatter.format(product.sellingPrice)} x $qty',
+                                            style: TextStyle(
+                                              fontSize: _r(context, 13),
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF60739B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: _r(context, 8)),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: _r(context, 10),
+                                        vertical: _r(context, 8),
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF2F6BFF,
+                                        ).withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(
+                                          _r(context, 14),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        currencyFormatter.format(subtotal),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: _r(context, 14.5),
+                                          color: const Color(0xFF213A6B),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
                           ),
-                  ),
-                  Divider(height: _r(context, 24)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'TOTAL',
-                        style: TextStyle(
-                          fontSize: _r(context, 14.5),
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          currencyFormatter.format(vm.total),
-                          style: TextStyle(
-                            fontSize: _r(context, 20),
-                            fontWeight: FontWeight.w900,
                           ),
-                        ),
-                      ),
-                    ],
                   ),
-                  if (!isCash && availableCredit != null) ...[
-                    SizedBox(height: _r(context, 10)),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  SizedBox(height: _r(context, 14)),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(_r(context, 16)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FBFF),
+                      borderRadius: BorderRadius.circular(_r(context, 20)),
+                      border: Border.all(
+                        color: const Color(0xFFDDE5F8),
+                      ),
+                    ),
+                    child: Column(
                       children: [
-                        Text(
-                          'Available Credit',
-                          style: TextStyle(
-                            fontSize: _r(context, 13.5),
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black.withOpacity(0.55),
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'TOTAL',
+                              style: TextStyle(
+                                fontSize: _r(context, 14.5),
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1,
+                                color: const Color(0xFF213A6B),
+                              ),
+                            ),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                currencyFormatter.format(vm.total),
+                                style: TextStyle(
+                                  fontSize: _r(context, 22),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF213A6B),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          currencyFormatter.format(availableCredit),
-                          style: TextStyle(
-                            fontSize: _r(context, 15),
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                        if (!isCash && availableCredit != null) ...[
+                          SizedBox(height: _r(context, 12)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Available Credit',
+                                style: TextStyle(
+                                  fontSize: _r(context, 13.5),
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF60739B),
+                                ),
+                              ),
+                              Text(
+                                currencyFormatter.format(availableCredit),
+                                style: TextStyle(
+                                  fontSize: _r(context, 15),
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF213A6B),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
+                          if (exceedsAvailableCredit) ...[
+                            SizedBox(height: _r(context, 8)),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(_r(context, 12)),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFD84040,
+                                ).withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(
+                                  _r(context, 14),
+                                ),
+                              ),
+                              child: Text(
+                                'Amount exceeds available credit. Please reduce items.',
+                                style: TextStyle(
+                                  fontSize: _r(context, 13),
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFD84040),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ],
                     ),
-                    if (exceedsAvailableCredit) ...[
-                      SizedBox(height: _r(context, 6)),
-                      Text(
-                        'Amount exceeds available credit. Please reduce items.',
-                        style: TextStyle(
-                          fontSize: _r(context, 13),
-                          fontWeight: FontWeight.w700,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                   SizedBox(height: _r(context, 16)),
                   Row(
                     children: [
@@ -1678,7 +1890,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            minimumSize: Size.fromHeight(_r(context, 52)),
+                            minimumSize: Size.fromHeight(_r(context, 54)),
+                            side: const BorderSide(
+                              color: Color(0xFFD0DCF6),
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                 _r(context, 20),
@@ -1690,6 +1905,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: _r(context, 16),
+                              color: const Color(0xFF213A6B),
                             ),
                           ),
                         ),
@@ -1700,7 +1916,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           onPressed: () async {
                             if (!isCash) {
                               if (selectedCustomer == null || dueDate == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   const SnackBar(
                                     content: Text(
                                       'Please select a customer and due date for utang.',
@@ -1713,7 +1929,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                               }
 
                               if (selectedProducts.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   const SnackBar(
                                     content: Text(
                                       'Please select at least one product for utang.',
@@ -1736,7 +1952,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   creditLimit - currentBalance;
 
                               if (totalSale > availableCredit2) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
                                       'Customer\'s available credit is ₱${availableCredit2.toStringAsFixed(2)}. '
@@ -1772,7 +1988,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                               searchController.clear();
                               searchQuery = '';
 
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: const Text(
                                     'Sale successfully recorded!',
@@ -1782,7 +1998,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 ),
                               );
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Checkout failed: $e'),
                                   duration: const Duration(seconds: 2),
@@ -1792,13 +2008,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            minimumSize: Size.fromHeight(_r(context, 52)),
-                            backgroundColor: AppColors.primary,
+                            minimumSize: Size.fromHeight(_r(context, 54)),
+                            backgroundColor: const Color(0xFF173D86),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                 _r(context, 20),
                               ),
                             ),
+                            elevation: 0,
                           ),
                           child: Text(
                             'Confirm',

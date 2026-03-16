@@ -512,8 +512,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                 children: [
                   Image.asset(
                     assetPath,
-                    width: compact ? _r(72) : _r(86),
-                    height: compact ? _r(72) : _r(86),
+                    width: compact ? _r(60) : _r(74),
+                    height: compact ? _r(60) : _r(74),
                     fit: BoxFit.contain,
                   ),
                   SizedBox(width: compact ? _r(8) : _r(10)),

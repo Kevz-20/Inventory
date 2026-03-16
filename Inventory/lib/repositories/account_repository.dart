@@ -76,6 +76,20 @@ class AccountRepository {
     return Account.fromMap(result.first);
   }
 
+  Future<Account> getProfileDetails() async {
+    final account = await getAccountDetails();
+    final member = await getCurrentMemberRow();
+
+    return account.copyWith(
+      firstName: (member['first_name'] ?? '').toString(),
+      middleName: (member['middle_name'] ?? '').toString().trim().isEmpty
+          ? null
+          : (member['middle_name'] ?? '').toString(),
+      lastName: (member['last_name'] ?? '').toString(),
+      mobileNumber: (member['mobile_number'] ?? '').toString(),
+    );
+  }
+
   Future<String> getFullName() async {
     final member = await getCurrentMemberRow();
     return [
@@ -138,6 +152,63 @@ class AccountRepository {
       },
       newValue: {
         'slpa_name': updated.slpaName,
+        'profile_image': updated.profileImage,
+      },
+    );
+
+    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
+  }
+
+  Future<void> updateCurrentMemberProfile(Account updated) async {
+    final db = await dbService.database;
+    final previous = await getProfileDetails();
+    final member = await getCurrentMemberRow();
+    final now = DateTime.now().toIso8601String();
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'slpa_member',
+        {
+          'first_name': updated.firstName.trim(),
+          'middle_name': updated.middleName?.trim(),
+          'last_name': updated.lastName.trim(),
+          'updated_at': now,
+          'sync_status': 'pending',
+          'last_synced_at': null,
+        },
+        where: 'id = ?',
+        whereArgs: [member['id']],
+      );
+
+      await txn.update(
+        'account',
+        {
+          'profile_image': updated.profileImage,
+          'updated_at': now,
+          'sync_status': 'pending',
+          'last_synced_at': null,
+        },
+        where: 'id = ?',
+        whereArgs: [member['account_id']],
+      );
+    });
+
+    await AuditLogService.instance.log(
+      accountId: member['account_id'] as int?,
+      module: 'member_profile',
+      tableName: 'slpa_member',
+      recordId: member['id']?.toString(),
+      action: 'update',
+      oldValue: {
+        'first_name': previous.firstName,
+        'middle_name': previous.middleName,
+        'last_name': previous.lastName,
+        'profile_image': previous.profileImage,
+      },
+      newValue: {
+        'first_name': updated.firstName,
+        'middle_name': updated.middleName,
+        'last_name': updated.lastName,
         'profile_image': updated.profileImage,
       },
     );

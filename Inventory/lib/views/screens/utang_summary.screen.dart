@@ -1,6 +1,7 @@
 ﻿// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_colors.dart';
@@ -9,7 +10,7 @@ import '../../repositories/capital_management_repository.dart';
 import '../../repositories/customer_repository.dart';
 import '../../services/audit_log_service.dart';
 import '../../services/db_service.dart';
-import '../widgets/header.dart';
+import '../widgets/dashboard_background.dart';
 
 // ================================
 // MODEL FOR INDIVIDUAL UTANG ITEMS
@@ -82,11 +83,13 @@ class UtangSummaryPage extends StatefulWidget {
 }
 
 class _UtangSummaryPageState extends State<UtangSummaryPage> {
-  static const Color _pageBg = Color(0xFFF2F7F5);
-  static const Color _cardBg = Color(0xFFEFF8F4);
-  static const Color _cardBorder = Color(0xFFBFDCD4);
-  static const Color _titleColor = Color(0xFF0B3D35);
-  static const Color _subtitleColor = Color(0xFF2F5C54);
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Colors.white;
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _accentTeal = Color(0xFF22C7D6);
 
   List<UtangItem> customerItems = [];
   List<CustomerPayment> customerPayments = [];
@@ -678,36 +681,80 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
 
         return Scaffold(
           backgroundColor: _pageBg,
-          appBar: AppHeader(
-            title: widget.customer.fullName,
-            showBackButton: true,
-            action: IconButton(
-              icon: Icon(Icons.list, color: Colors.white, size: (24 * scale).clamp(22, 28)),
-              onPressed: _showPaymentsAppliedSheet,
+          appBar: AppBar(
+            backgroundColor: _pageBg,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            centerTitle: true,
+            leading: IconButton(
+              icon: Image.asset(
+                'lib/assets/arrowleft.png',
+                width: 22,
+                height: 22,
+                fit: BoxFit.contain,
+              ),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/customer_utang');
+                }
+              },
             ),
+            title: Text(
+              widget.customer.fullName,
+              style: const TextStyle(
+                color: _titleColor,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: _titleColor,
+                ),
+                onPressed: _showPaymentsAppliedSheet,
+              ),
+            ],
           ),
-          body: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(pad),
-              child: ListView(
-                physics: const BouncingScrollPhysics(),
-                children: [
+          body: Stack(
+            children: [
+              const DashboardBackground(),
+              SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(pad, 16, pad, 24),
+                  child: ListView(
+                    physics: const BouncingScrollPhysics(),
+                    children: [
                   // ================= TOTAL UTANG CARD =================
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: (22 * scale).clamp(16, 28),
-                      vertical: (26 * scale).clamp(18, 30),
+                    padding: EdgeInsets.fromLTRB(
+                      (22 * scale).clamp(16, 28),
+                      (22 * scale).clamp(18, 28),
+                      (22 * scale).clamp(16, 28),
+                      (20 * scale).clamp(16, 26),
                     ),
                     decoration: BoxDecoration(
-                      color: _cardBg,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF173D86),
+                          Color(0xFF1D79D8),
+                          Color(0xFF28C4D5),
+                        ],
+                      ),
                       borderRadius: BorderRadius.circular(cardRadius),
-                      border: Border.all(color: _cardBorder.withOpacity(0.8)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withAlpha(51),
-                          blurRadius: (2 * scale).clamp(2, 6),
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFF1B4A9A).withValues(alpha: 0.22),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
                         ),
                       ],
                     ),
@@ -722,8 +769,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 "Total Utang",
                                 style: TextStyle(
                                   fontSize: labelFs,
-                                  fontWeight: FontWeight.w600,
-                                  color: _subtitleColor,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white.withValues(alpha: 0.88),
                                 ),
                               ),
                             ),
@@ -735,7 +782,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                   vertical: (7 * scale).clamp(6, 8),
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.green[100],
+                                  color: Colors.white.withValues(alpha: 0.16),
                                   borderRadius: BorderRadius.circular(30),
                                 ),
                                 child: Text(
@@ -743,7 +790,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                   style: TextStyle(
                                     fontSize: (13 * scale).clamp(12, 15),
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green[800],
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
@@ -757,14 +804,17 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             "₱${currencyFormat.format(totalUtang)}",
                             style: TextStyle(
                               fontSize: bigFs,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w900,
                               letterSpacing: 0.6,
-                              color: _titleColor,
+                              color: Colors.white,
                             ),
                           ),
                         ),
                         SizedBox(height: (20 * scale).clamp(14, 24)),
-                        const Divider(thickness: 1),
+                        Divider(
+                          thickness: 1,
+                          color: Colors.white.withValues(alpha: 0.22),
+                        ),
                         SizedBox(height: (14 * scale).clamp(10, 18)),
 
                         if (widget.customer.barangay != null && widget.customer.barangay!.isNotEmpty)
@@ -774,6 +824,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             scale: scale,
                             iconSize: iconFs,
                             textSize: (15 * scale).clamp(13, 17),
+                            iconColor: Colors.white,
+                            textColor: Colors.white,
                           ),
 
                         if (widget.customer.barangay != null && widget.customer.barangay!.isNotEmpty)
@@ -786,6 +838,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             scale: scale,
                             iconSize: iconFs,
                             textSize: (15 * scale).clamp(13, 17),
+                            iconColor: Colors.white,
+                            textColor: Colors.white,
                           ),
 
                         if (creditLimit != null || availableCredit != null)
@@ -799,6 +853,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                             scale: scale,
                             iconSize: iconFs,
                             textSize: (15 * scale).clamp(13, 17),
+                            iconColor: Colors.white,
+                            textColor: Colors.white,
                           ),
 
                         if (widget.customer.phoneNumber != null) SizedBox(height: gap12),
@@ -813,6 +869,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 scale: scale,
                                 iconSize: iconFs,
                                 textSize: (15 * scale).clamp(13, 17),
+                                iconColor: Colors.white,
+                                textColor: Colors.white,
                               ),
                               SizedBox(height: (10 * scale).clamp(8, 14)),
                               SizedBox(
@@ -820,14 +878,16 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 child: ElevatedButton(
                                   onPressed: totalUtang > 0 ? addPartialPayment : null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: _accentBlue,
                                     padding: EdgeInsets.symmetric(
                                       horizontal: (16 * scale).clamp(14, 18),
-                                      vertical: (10 * scale).clamp(10, 12),
+                                      vertical: (13 * scale).clamp(12, 15),
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular((10 * scale).clamp(10, 14)),
+                                      borderRadius: BorderRadius.circular((16 * scale).clamp(14, 18)),
                                     ),
+                                    elevation: 0,
                                   ),
                                   child: Text(
                                     "Add Payment",
@@ -844,14 +904,16 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 child: OutlinedButton(
                                   onPressed: adjustCreditLimit,
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.primary,
-                                    side: const BorderSide(color: AppColors.primary),
+                                    foregroundColor: Colors.white,
+                                    side: BorderSide(
+                                      color: Colors.white.withValues(alpha: 0.78),
+                                    ),
                                     padding: EdgeInsets.symmetric(
                                       horizontal: (16 * scale).clamp(14, 18),
-                                      vertical: (10 * scale).clamp(10, 12),
+                                      vertical: (13 * scale).clamp(12, 15),
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular((10 * scale).clamp(10, 14)),
+                                      borderRadius: BorderRadius.circular((16 * scale).clamp(14, 18)),
                                     ),
                                   ),
                                   child: Text(
@@ -874,7 +936,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     "Lista",
                     style: TextStyle(
                       fontSize: titleFs,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                       color: _titleColor,
                     ),
                   ),
@@ -888,14 +950,58 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                   else if (groupedItems.isEmpty)
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: (20 * scale).clamp(14, 24)),
-                      child: Center(
-                        child: Text(
-                          "Walay item sa utangan",
-                          style: TextStyle(
-                            fontSize: (16 * scale).clamp(14, 18),
-                            color: _subtitleColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (24 * scale).clamp(18, 28),
+                          vertical: (28 * scale).clamp(22, 34),
+                        ),
+                        decoration: BoxDecoration(
+                          color: _cardBg,
+                          borderRadius: BorderRadius.circular(tileRadius),
+                          border: Border.all(color: _cardBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 54,
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: _accentBlue.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: const Icon(
+                                Icons.receipt_long_rounded,
+                                color: _accentBlue,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              "Walay item sa utangan",
+                              style: TextStyle(
+                                fontSize: (16 * scale).clamp(14, 18),
+                                color: _titleColor,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Ang customer wala pay active nga utang items karon.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: (13 * scale).clamp(12, 14),
+                                color: _subtitleColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     )
@@ -913,14 +1019,25 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                         final totalPerDate = items.fold(0.0, (sum, item) => sum + item.amount);
                         final remaining = (remainingByDate[dateKey] ?? totalPerDate);
 
-                        return Card(
-                          color: _cardBg,
+                        return Container(
                           margin: EdgeInsets.symmetric(vertical: (8 * scale).clamp(6, 10)),
-                          shape: RoundedRectangleBorder(
+                          decoration: BoxDecoration(
+                            color: _cardBg,
                             borderRadius: BorderRadius.circular(tileRadius),
+                            border: Border.all(color: _cardBorder),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          elevation: 3,
-                          child: ExpansionTile(
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              dividerColor: Colors.transparent,
+                            ),
+                            child: ExpansionTile(
                                       tilePadding: EdgeInsets.symmetric(
                                         horizontal: (16 * scale).clamp(12, 18),
                                         vertical: (12 * scale).clamp(10, 14),
@@ -951,8 +1068,8 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                     style: TextStyle(
                                                       fontSize: (13 * scale).clamp(12, 15),
                                                       color: _isOverdue(items.first.dueDate!)
-                                                          ? Colors.red
-                                                          : Colors.green,
+                                                          ? const Color(0xFFD84040)
+                                                          : const Color(0xFF1FA86D),
                                                       fontWeight: FontWeight.w700,
                                                     ),
                                                   ),
@@ -984,7 +1101,9 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: (14 * scale).clamp(12.5, 16),
-                                                  color: remaining > 0 ? Colors.red : Colors.green[800],
+                                                  color: remaining > 0
+                                                      ? const Color(0xFFD84040)
+                                                      : const Color(0xFF1FA86D),
                                                 ),
                                               ),
                                             ),
@@ -998,11 +1117,12 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                             margin: EdgeInsets.symmetric(vertical: (4 * scale).clamp(3, 6)),
                                             padding: EdgeInsets.all((12 * scale).clamp(10, 14)),
                                             decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.72),
+                                              color: const Color(0xFFF9FBFF),
                                               borderRadius: BorderRadius.circular((12 * scale).clamp(10, 14)),
+                                              border: Border.all(color: _cardBorder),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.grey.withOpacity(0.05),
+                                                  color: const Color(0xFF8EA1D1).withValues(alpha: 0.06),
                                                   blurRadius: (2 * scale).clamp(2, 6),
                                                   offset: const Offset(0, 1),
                                                 ),
@@ -1052,12 +1172,15 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                         }),
                                       ],
                                     ),
+                          ),
                         );
                       },
                     ),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
@@ -1070,10 +1193,12 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
     required double scale,
     required double iconSize,
     required double textSize,
+    Color? iconColor,
+    Color? textColor,
   }) {
     return Row(
       children: [
-        Icon(icon, size: iconSize, color: _subtitleColor),
+        Icon(icon, size: iconSize, color: iconColor ?? _accentTeal),
         SizedBox(width: (10 * scale).clamp(8, 12)),
         Expanded(
           child: Text(
@@ -1082,7 +1207,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: textSize,
-              color: _titleColor,
+              color: textColor ?? _titleColor,
               fontWeight: FontWeight.w600,
             ),
           ),
