@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/current_user.dart';
 import '../../core/app_colors.dart';
 import '../../models/cashflow_model.dart';
 import '../../view_models/cashflow_view_model.dart';
-import '../widgets/header.dart';
 import '../widgets/adaptive_digits_text.dart';
+import '../widgets/dashboard_background.dart';
 
 class CashFlowScreen extends ConsumerStatefulWidget {
   const CashFlowScreen({super.key});
@@ -17,6 +18,13 @@ class CashFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Colors.white;
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _textPrimary = Color(0xFF213A6B);
+  static const Color _textSecondary = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
+
   bool _loading = true;
   final ScrollController _listController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
@@ -85,33 +93,77 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     final records = vm.filteredRecords;
     final isTablet = _isTablet(context);
     final maxContentWidth = isTablet ? 980.0 : double.infinity;
+    final totalIn = records.fold<double>(0, (sum, record) => sum + record.cashIn);
+    final totalOut = records.fold<double>(0, (sum, record) => sum + record.cashOut);
+    final currentBalance = records.isEmpty ? 0.0 : records.first.balance;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Cash Flow', showBackButton: true),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxContentWidth),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              _r(context, 16),
-              _r(context, 12),
-              _r(context, 16),
-              _r(context, 16),
-            ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: _loading
-                      ? const Center(child: CircularProgressIndicator())
-                      : records.isEmpty
-                      ? _buildEmptyState(context)
-                      : _buildCashflowTable(context, records),
-                ),
-              ],
-            ),
+      backgroundColor: _pageBg,
+      appBar: AppBar(
+        backgroundColor: _pageBg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Image.asset(
+            'lib/assets/arrowleft.png',
+            width: 22,
+            height: 22,
+            fit: BoxFit.contain,
+          ),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
+        title: const Text(
+          'Cash Flow',
+          style: TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w900,
           ),
         ),
+      ),
+      body: Stack(
+        children: [
+          const DashboardBackground(),
+          Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxContentWidth),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  _r(context, 16),
+                  _r(context, 12),
+                  _r(context, 16),
+                  _r(context, 16),
+                ),
+                child: Column(
+                  children: [
+                    if (!_loading) ...[
+                      _summaryPanel(
+                        context,
+                        totalIn: totalIn,
+                        totalOut: totalOut,
+                        currentBalance: currentBalance,
+                      ),
+                      SizedBox(height: _r(context, 14)),
+                    ],
+                    Expanded(
+                      child: _loading
+                          ? const Center(child: CircularProgressIndicator())
+                          : records.isEmpty
+                          ? _buildEmptyState(context)
+                          : _buildCashflowTable(context, records),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -356,6 +408,123 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   // Helpers (UI only)
   // ============================================================
 
+  Widget _summaryPanel(
+    BuildContext context, {
+    required double totalIn,
+    required double totalOut,
+    required double currentBalance,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_r(context, 14)),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(_r(context, 22)),
+        border: Border.all(color: _cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
+            blurRadius: _r(context, 14),
+            offset: Offset(0, _r(context, 8)),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _summaryMetric(
+                  context,
+                  label: 'Cash In',
+                  value: _formatCurrency(totalIn),
+                  icon: Icons.south_west_rounded,
+                  color: const Color(0xFF1FA64A),
+                ),
+              ),
+              SizedBox(width: _r(context, 10)),
+              Expanded(
+                child: _summaryMetric(
+                  context,
+                  label: 'Cash Out',
+                  value: _formatCurrency(totalOut),
+                  icon: Icons.north_east_rounded,
+                  color: const Color(0xFFE25555),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: _r(context, 10)),
+          _summaryMetric(
+            context,
+            label: 'Current Balance',
+            value: _formatCurrency(currentBalance),
+            icon: Icons.account_balance_wallet_rounded,
+            color: _accentBlue,
+            wide: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryMetric(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    bool wide = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_r(context, 12)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FBFF),
+        borderRadius: BorderRadius.circular(_r(context, 16)),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: _r(context, 36),
+            height: _r(context, 36),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(_r(context, 12)),
+            ),
+            child: Icon(icon, color: color, size: _r(context, 20)),
+          ),
+          SizedBox(width: _r(context, 10)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: _textSecondary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: _r(context, 12),
+                  ),
+                ),
+                SizedBox(height: _r(context, 2)),
+                AdaptiveDigitsText(
+                  value,
+                  style: TextStyle(
+                    color: wide ? _textPrimary : color,
+                    fontWeight: FontWeight.w900,
+                    fontSize: _r(context, wide ? 17 : 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _divider() =>
       Divider(height: 14, thickness: 1, color: Colors.grey.withAlpha(40));
 
@@ -501,9 +670,16 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         width: double.infinity,
         padding: EdgeInsets.all(_r(context, 20)),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(_r(context, 18)),
-          border: Border.all(color: const Color(0xFFD5E7E1)),
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(_r(context, 22)),
+          border: Border.all(color: _cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
+              blurRadius: _r(context, 14),
+              offset: Offset(0, _r(context, 8)),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -512,12 +688,12 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               width: _r(context, 54),
               height: _r(context, 54),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.10),
+                color: _accentBlue.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(_r(context, 16)),
               ),
               child: Icon(
                 Icons.bar_chart_rounded,
-                color: AppColors.primary,
+                color: _accentBlue,
                 size: _r(context, 28),
               ),
             ),
@@ -527,7 +703,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               style: TextStyle(
                 fontSize: _r(context, 16),
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF143D34),
+                color: _textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -537,7 +713,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
               style: TextStyle(
                 fontSize: _r(context, 12.5),
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF6A8580),
+                color: _textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -558,19 +734,19 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(_r(context, 18)),
-            border: Border.all(color: const Color(0xFFD5E7E1)),
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(_r(context, 22)),
+            border: Border.all(color: _cardBorder),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0C4B3E).withOpacity(0.05),
+                color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
                 blurRadius: _r(context, 14),
                 offset: Offset(0, _r(context, 8)),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(_r(context, 18)),
+            borderRadius: BorderRadius.circular(_r(context, 22)),
             child: Scrollbar(
               controller: _horizontalController,
               thumbVisibility: true,
@@ -615,7 +791,11 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.headerTop, AppColors.headerBottom],
+          colors: [
+            Color(0xFF173D86),
+            Color(0xFF1D79D8),
+            Color(0xFF28C4D5),
+          ],
         ),
       ),
       child: Row(
@@ -633,7 +813,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             'In',
             flex: 3,
             align: TextAlign.center,
-            color: const Color(0xFF86F0A5),
+            color: const Color(0xFFCAFFD6),
             showRightBorder: true,
             height: _r(context, 48),
             fontSize: _r(context, 13),
@@ -642,7 +822,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             'Out',
             flex: 3,
             align: TextAlign.center,
-            color: const Color(0xFFFF9A94),
+            color: const Color(0xFFFFD4D0),
             showRightBorder: true,
             height: _r(context, 48),
             fontSize: _r(context, 13),
@@ -665,14 +845,16 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: index.isEven ? const Color(0xFFFCFEFD) : const Color(0xFFF5FAF8),
+        color: index.isEven ? const Color(0xFFFCFDFF) : const Color(0xFFF7FAFF),
         border: Border(
-          bottom: BorderSide(color: const Color(0xFFD6E6E0).withOpacity(0.9)),
+          bottom: BorderSide(
+            color: _cardBorder.withValues(alpha: 0.9),
+          ),
         ),
       ),
       child: InkWell(
-        splashColor: AppColors.primary.withAlpha(18),
-        highlightColor: AppColors.primary.withAlpha(8),
+        splashColor: _accentBlue.withValues(alpha: 0.10),
+        highlightColor: _accentBlue.withValues(alpha: 0.05),
         onTap: () => _showCashflowDetails(r),
         child: Row(
           children: [
@@ -736,7 +918,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
           border: showRightBorder
               ? Border(
                   right: BorderSide(
-                    color: const Color(0xFFD6E6E0).withOpacity(0.9),
+                    color: _cardBorder.withValues(alpha: 0.9),
                   ),
                 )
               : null,
@@ -753,7 +935,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       textAlign: TextAlign.center,
       forceAnimate: forceAnimate,
       style: const TextStyle(
-        color: Color(0xFF143D34),
+        color: _textPrimary,
         fontWeight: FontWeight.w700,
       ),
     );

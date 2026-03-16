@@ -33,50 +33,51 @@ class PayableRepository {
 
   /// Add a new payable
   Future<int> addPayable(Payable payable) async {
-  final db = await DBService.instance.database;
-  final map = payable.toMap();
-  map['updated_at'] ??= map['created_at'] ?? DateTime.now().toIso8601String();
-  map['sync_status'] = 'pending';
-  map['last_synced_at'] = null;
-  map['is_deleted'] = 0;
+    final db = await DBService.instance.database;
+    final map = payable.toMap();
+    map['updated_at'] ??= map['created_at'] ?? DateTime.now().toIso8601String();
+    map['sync_status'] = 'pending';
+    map['last_synced_at'] = null;
+    map['is_deleted'] = 0;
 
-  // Fill creator info if null
-  if (payable.createdByFirstName == null || payable.createdByMiddleName == null || payable.createdByLastName == null) {
-    // Fetch logged-in user from account table
-    final currentUserQuery = await db.query(
-      'account', // your user table
-      where: 'is_logged_in = ?',
-      whereArgs: [1],
-      limit: 1,
-    );
+    // Fill creator info if null
+    if (payable.createdByFirstName == null ||
+        payable.createdByMiddleName == null ||
+        payable.createdByLastName == null) {
+      final currentUserQuery = await db.query(
+        'account',
+        where: 'is_logged_in = ?',
+        whereArgs: [1],
+        limit: 1,
+      );
 
-    if (currentUserQuery.isNotEmpty) {
-      final user = currentUserQuery.first;
-      map['created_by_first_name'] ??= user['first_name'];
-      map['created_by_middle_name'] ??= user['middle_name'];
-      map['created_by_last_name'] ??= user['last_name'];
+      if (currentUserQuery.isNotEmpty) {
+        final user = currentUserQuery.first;
+        map['created_by_first_name'] ??= user['first_name'];
+        map['created_by_middle_name'] ??= user['middle_name'];
+        map['created_by_last_name'] ??= user['last_name'];
+      }
     }
-  }
 
-  final payableId = await db.insert(
-    'payable',
-    map,
-    conflictAlgorithm: ConflictAlgorithm.replace,
-  );
-  await AuditLogService.instance.log(
-    module: 'payable',
-    tableName: 'payable',
-    recordId: payableId.toString(),
-    action: 'create',
-    newValue: map,
-  );
-  return payableId;
-}
+    final payableId = await db.insert(
+      'payable',
+      map,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await AuditLogService.instance.log(
+      module: 'payable',
+      tableName: 'payable',
+      recordId: payableId.toString(),
+      action: 'create',
+      newValue: map,
+    );
+    return payableId;
+  }
 
   /// Update an existing payable
   Future<int> updatePayable(Payable payable) async {
     final db = await DBService.instance.database;
-    final previous = payable.id == null ? null : await getPayableById(payable.id!);
+    final previous = await getPayableById(payable.id);
     final map = payable.toMap();
 
     // ✅ Get current logged-in user from DB if creator info is null
@@ -107,7 +108,7 @@ class PayableRepository {
       await AuditLogService.instance.log(
         module: 'payable',
         tableName: 'payable',
-        recordId: payable.id?.toString(),
+        recordId: payable.id.toString(),
         action: 'update',
         oldValue: previous?.toMap(),
         newValue: map,

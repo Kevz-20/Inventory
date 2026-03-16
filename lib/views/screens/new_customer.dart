@@ -500,7 +500,7 @@ class _NewCustomerPageState extends ConsumerState<NewCustomerPage> {
     }
 
     final success = await vmNotifier.saveCustomer();
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(

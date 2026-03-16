@@ -204,7 +204,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       }
 
       final customer = await _loadUtangCustomer(customerId);
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       if (customer == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -295,7 +295,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                         border: Border.all(color: _cardBorder),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF93A4CF).withOpacity(0.16),
+                            color: const Color(
+                              0xFF93A4CF,
+                            ).withValues(alpha: 0.16),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),

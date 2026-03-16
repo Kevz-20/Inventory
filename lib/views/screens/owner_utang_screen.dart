@@ -11,6 +11,7 @@ import '../../repositories/capital_management_repository.dart';
 import '../../repositories/payable_repository.dart';
 import '../../services/db_service.dart';
 import '../widgets/dashboard_background.dart';
+import '../widgets/primary_footer_nav.dart';
 
 // ============================================================
 // FORMATTERS
@@ -930,6 +931,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
         return Scaffold(
           backgroundColor: _pageBg,
+          extendBody: true,
           appBar: AppBar(
             backgroundColor: _pageBg,
             elevation: 0,
@@ -941,7 +943,13 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 height: (22 * s).clamp(20.0, 26.0),
                 fit: BoxFit.contain,
               ),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
+              },
             ),
             title: Text(
               'Owner Utang',
@@ -953,38 +961,6 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
             ),
             centerTitle: true,
           ),
-
-          // ✅ Full-width Add button (same functionality)
-          floatingActionButton: Padding(
-            padding: EdgeInsets.fromLTRB(pad16, 0, pad16, 0),
-            child: SizedBox(
-              width: double.infinity,
-              height: fabH,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await GoRouter.of(context).push('/add_utang');
-                  _refreshData();
-                },
-                icon: const SizedBox.shrink(),
-                label: Text(
-                  "Dugang Bayronon",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: fabFs,
-                    color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _accentBlue,
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(fabR),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
           body: Stack(
             children: [
@@ -1004,6 +980,50 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 ],
               ),
             ],
+          ),
+          bottomNavigationBar: Container(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    pad16,
+                    gap12,
+                    pad16,
+                    gap12,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: fabH,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await GoRouter.of(context).push('/add_utang');
+                        _refreshData();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accentBlue,
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(fabR),
+                        ),
+                      ),
+                      child: Text(
+                        "Dugang Bayronon",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: fabFs,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const PrimaryFooterNav(
+                  selectedTab: PrimaryFooterTab.ownerUtang,
+                ),
+              ],
+            ),
           ),
         );
       },

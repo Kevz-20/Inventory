@@ -102,7 +102,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                     itemCount: logs.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) => _logCard(logs[index]),
                   ),
                 );
@@ -167,7 +167,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _actionColor(log.action).withOpacity(0.12),
+                  color: _actionColor(log.action).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -242,7 +242,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

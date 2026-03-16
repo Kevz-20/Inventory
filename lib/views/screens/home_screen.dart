@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../app_router.dart';
 import '../../view_models/home_view_model.dart';
 import '../widgets/dashboard_background.dart';
+import '../widgets/primary_footer_nav.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -126,7 +127,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   ),
                 ),
               ),
-              _bottomNav(),
+              const PrimaryFooterNav(selectedTab: PrimaryFooterTab.home),
             ],
           ),
         ],
@@ -286,7 +287,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                   width: _isNarrowPhone ? _r(92) : _r(126),
                   height: _isNarrowPhone ? _r(92) : _r(126),
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Icon(
+                  errorBuilder: (_, _, _) => Icon(
                     Icons.account_balance_wallet_rounded,
                     size: _r(92),
                     color: Colors.white.withOpacity(0.9),
@@ -684,120 +685,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
                     ),
                   ),
                 ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bottomNav() {
-    return Container(
-      margin: EdgeInsets.fromLTRB(
-        _isVeryNarrowPhone ? _r(10) : _r(18),
-        0,
-        _isVeryNarrowPhone ? _r(10) : _r(18),
-        _r(18),
-      ),
-      padding: EdgeInsets.symmetric(
-        horizontal: _isVeryNarrowPhone ? _r(4) : _r(10),
-        vertical: _r(10),
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.94),
-        borderRadius: BorderRadius.circular(_r(28)),
-        border: Border.all(color: const Color(0xFFDDE3F8)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF7A8AB5).withOpacity(0.18),
-            blurRadius: _r(22),
-            offset: Offset(0, _r(12)),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: _navItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                selected: true,
-                onTap: () => context.go('/home'),
-              ),
-            ),
-            Expanded(
-              child: _navItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Products',
-                onTap: () => context.push('/manage_inventory'),
-              ),
-            ),
-            Expanded(
-              child: _navItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Owner Utang',
-                onTap: () => context.push('/owner_utang'),
-              ),
-            ),
-            Expanded(
-              child: _navItem(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                onTap: () => context.go('/settings'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem({
-    IconData? icon,
-    String? assetPath,
-    required String label,
-    required VoidCallback onTap,
-    bool selected = false,
-  }) {
-    final color =
-        selected ? const Color(0xFF205CC8) : const Color(0xFF65779C);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(_r(18)),
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: _isVeryNarrowPhone ? _r(6) : _r(8)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              assetPath != null
-                  ? Image.asset(
-                      assetPath,
-                      width: _isVeryNarrowPhone ? _r(22) : _r(27),
-                      height: _isVeryNarrowPhone ? _r(22) : _r(27),
-                      fit: BoxFit.contain,
-                      color: color,
-                    )
-                  : Icon(
-                      icon,
-                      color: color,
-                      size: _isVeryNarrowPhone ? _r(22) : _r(27),
-                    ),
-              SizedBox(height: _r(4)),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: _isVeryNarrowPhone ? _r(9.2) : _r(11.5),
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: color,
-                ),
-              ),
             ],
           ),
         ),

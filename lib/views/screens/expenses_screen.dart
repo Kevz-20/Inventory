@@ -133,6 +133,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
         return Scaffold(
           backgroundColor: _pageBg,
+          extendBody: true,
           appBar: AppBar(
             backgroundColor: _pageBg,
             elevation: 0,
@@ -159,160 +160,188 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           body: Stack(
             children: [
               const DashboardBackground(),
-              ScrollbarTheme(
-                data: ScrollbarThemeData(
-                  thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
-                  thickness: WidgetStateProperty.all(5),
-                  radius: const Radius.circular(8),
-                ),
-                child: Scrollbar(
-                  controller: _scrollController,
-                  thumbVisibility: true,
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    _cleanCard(
-                      scale: scale,
-                      padding: cardPad,
-                      radius: radius16,
-                      child: Column(
-                        children: [
-                          _readOnlyField(
-                            scale: scale,
-                            height: fieldH,
-                            radius: radius12,
-                            controller: _dateTextController,
-                            icon: Icons.calendar_month_rounded,
-                            label: 'Petsa',
-                            onTap: () => _pickDate(context, vm),
-                            labelFs: labelFs,
-                            valueFs: valueFs,
+              Column(
+                children: [
+                  Expanded(
+                    child: ScrollbarTheme(
+                      data: ScrollbarThemeData(
+                        thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+                        thickness: WidgetStateProperty.all(5),
+                        radius: const Radius.circular(8),
+                      ),
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _scrollController,
+                          padding: EdgeInsets.fromLTRB(
+                            padH,
+                            padTop,
+                            padH,
+                            padBottom,
                           ),
-                          SizedBox(height: gap12),
-
-                          // ✅ NEW: Bottom sheet picker like StockIn (with Add Category)
-                          _categoryPickerField(vm, scale: scale, radius: radius12, labelFs: labelFs),
-
-                          SizedBox(height: gap12),
-                          _inputTextField(
-                            scale: scale,
-                            height: fieldH,
-                            radius: radius12,
-                            prefix: SizedBox(
-                              width: (48 * scale).clamp(42, 56),
-                              child: Center(
-                                child: Text(
-                                  '\u20B1',
-                                  style: TextStyle(
-                                    fontSize: (20 * scale).clamp(18, 24),
-                                    color: _accentBlue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _cleanCard(
+                                scale: scale,
+                                padding: cardPad,
+                                radius: radius16,
+                                child: Column(
+                                  children: [
+                                    _readOnlyField(
+                                      scale: scale,
+                                      height: fieldH,
+                                      radius: radius12,
+                                      controller: _dateTextController,
+                                      icon: Icons.calendar_month_rounded,
+                                      label: 'Petsa',
+                                      onTap: () => _pickDate(context, vm),
+                                      labelFs: labelFs,
+                                      valueFs: valueFs,
+                                    ),
+                                    SizedBox(height: gap12),
+                                    _categoryPickerField(
+                                      vm,
+                                      scale: scale,
+                                      radius: radius12,
+                                      labelFs: labelFs,
+                                    ),
+                                    SizedBox(height: gap12),
+                                    _inputTextField(
+                                      scale: scale,
+                                      height: fieldH,
+                                      radius: radius12,
+                                      prefix: SizedBox(
+                                        width: (48 * scale).clamp(42, 56),
+                                        child: Center(
+                                          child: Text(
+                                            '\u20B1',
+                                            style: TextStyle(
+                                              fontSize: (
+                                                20 * scale
+                                              ).clamp(18, 24),
+                                              color: _accentBlue,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      label: 'Gasto',
+                                      controller: vm.amountController,
+                                      showError: vm.showValidationErrors,
+                                      keyboardType: const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                      inputFormatters: [ThousandsFormatter()],
+                                      hintText: "0.00",
+                                      labelFs: labelFs,
+                                      valueFs: valueFs,
+                                    ),
+                                    SizedBox(height: gap12),
+                                    _inputTextField(
+                                      scale: scale,
+                                      height: fieldH,
+                                      radius: radius12,
+                                      prefix: Icon(
+                                        Icons.description_rounded,
+                                        color: _accentBlue,
+                                        size: (22 * scale).clamp(20, 26),
+                                      ),
+                                      label: 'Deskripsyon',
+                                      controller: vm.descriptionController,
+                                      showError: vm.showValidationErrors,
+                                      hintText: "Unsa ni nga gasto?",
+                                      labelFs: labelFs,
+                                      valueFs: valueFs,
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                            label: 'Gasto',
-                            controller: vm.amountController,
-                            showError: vm.showValidationErrors,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            inputFormatters: [ThousandsFormatter()],
-                            hintText: "0.00",
-                            labelFs: labelFs,
-                            valueFs: valueFs,
-                          ),
-                          SizedBox(height: gap12),
-                          _inputTextField(
-                            scale: scale,
-                            height: fieldH,
-                            radius: radius12,
-                            prefix: Icon(
-                              Icons.description_rounded,
-                              color: _accentBlue,
-                              size: (22 * scale).clamp(20, 26),
-                            ),
-                            label: 'Deskripsyon',
-                            controller: vm.descriptionController,
-                            showError: vm.showValidationErrors,
-                            hintText: "Unsa ni nga gasto?",
-                            labelFs: labelFs,
-                            valueFs: valueFs,
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: gap14),
-                    _sectionCard(
-                      scale: scale,
-                      padding: cardPad,
-                      radius: radius16,
-                      titleFs: titleFs,
-                      title: "Resibo (Opsyonal)",
-                      icon: Icons.camera_alt_rounded,
-                      child: _receiptSection(context, vm, scale: scale, radius: radius14, receiptHeight: receiptH),
-                    ),
-                        SizedBox(height: (90 * scale).clamp(70, 110)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          bottomNavigationBar: Padding(
-            padding: EdgeInsets.fromLTRB(
-              padH,
-              (12 * scale).clamp(10, 14),
-              padH,
-              (12 * scale).clamp(10, 14) + bottomPadding,
-            ),
-            child: Material(
-              elevation: 10,
-              borderRadius: BorderRadius.circular(radius14),
-              shadowColor: Colors.black.withOpacity(0.15),
-              child: SizedBox(
-                height: (52 * scale).clamp(48, 58),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accentBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(radius14),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: vm.isLoading
-                      ? null
-                      : () async {
-                          vm.triggerValidation();
-
-                          await vm.save(
-                            context: context,
-                            createdByFirstName: CurrentUser.firstName ?? '',
-                            createdByMiddleName: CurrentUser.middleName ?? '',
-                            createdByLastName: CurrentUser.lastName ?? '',
-                          );
-                        },
-                  child: vm.isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Rekord',
-                          style: TextStyle(
-                            fontSize: buttonFs,
-                            fontWeight: FontWeight.w800,
+                              SizedBox(height: gap14),
+                              _sectionCard(
+                                scale: scale,
+                                padding: cardPad,
+                                radius: radius16,
+                                titleFs: titleFs,
+                                title: "Resibo (Opsyonal)",
+                                icon: Icons.camera_alt_rounded,
+                                child: _receiptSection(
+                                  context,
+                                  vm,
+                                  scale: scale,
+                                  radius: radius14,
+                                  receiptHeight: receiptH,
+                                ),
+                              ),
+                              SizedBox(height: (24 * scale).clamp(20, 32)),
+                            ],
                           ),
                         ),
-                ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      padH,
+                      (12 * scale).clamp(10, 14),
+                      padH,
+                      (12 * scale).clamp(10, 14) + bottomPadding,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      elevation: 10,
+                      borderRadius: BorderRadius.circular(radius14),
+                      shadowColor: Colors.black.withValues(alpha: 0.15),
+                      child: SizedBox(
+                        height: (52 * scale).clamp(48, 58),
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _accentBlue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(radius14),
+                            ),
+                            elevation: 0,
+                          ),
+                          onPressed: vm.isLoading
+                              ? null
+                              : () async {
+                                  vm.triggerValidation();
+
+                                  await vm.save(
+                                    context: context,
+                                    createdByFirstName:
+                                        CurrentUser.firstName ?? '',
+                                    createdByMiddleName:
+                                        CurrentUser.middleName ?? '',
+                                    createdByLastName:
+                                        CurrentUser.lastName ?? '',
+                                  );
+                                },
+                          child: vm.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  'Rekord',
+                                  style: TextStyle(
+                                    fontSize: buttonFs,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
+            ],
           ),
         );
       },

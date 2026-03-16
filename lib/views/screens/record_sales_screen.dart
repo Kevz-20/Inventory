@@ -1590,7 +1590,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 ),
                                 subtitle: Text(
                                     vm.supportsPesoEntry(product)
-                                        ? '${qty} ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
+                                        ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
                                         : '${currencyFormatter.format(product.sellingPrice)} x $qty',
                                   style: TextStyle(
                                     fontSize: _r(context, 13.5),

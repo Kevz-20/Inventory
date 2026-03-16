@@ -162,6 +162,26 @@ class StockInRepository {
     return result.map(ProductModel.fromMap).toList();
   }
 
+  Future<List<String>> getBaseUnits() async {
+    final rows = await db.query(
+      'base_unit_choice',
+      columns: ['name'],
+      orderBy: 'name COLLATE NOCASE ASC',
+    );
+
+    return rows.map((row) => (row['name'] ?? '').toString()).toList();
+  }
+
+  Future<void> addBaseUnit(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    await db.insert('base_unit_choice', {
+      'name': trimmed,
+      'created_at': _now(),
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
   Future<List<ProductUnitConversion>> getUnitConversions(int productId) async {
     final rows = await db.query(
       'product_unit_conversion',

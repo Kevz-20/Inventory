@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,8 +26,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   static const Color _titleColor = Color(0xFF213A6B);
   static const Color _subtitleColor = Color(0xFF60739B);
   static const Color _accentBlue = Color(0xFF2F6BFF);
-  static const Color _accentBlueDark = Color(0xFF275EEA);
-
   late final ScrollController _scrollController;
 
   @override
@@ -216,13 +213,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                           if (vm.useAdvancedUnitSetup) ...[
                             SizedBox(height: gap12),
-                            _inputTextField(
-                              label: 'Base unit',
-                              controller: vm.baseUnitController,
-                              showError: vm.showValidationErrors,
-                              icon: Icons.straighten_rounded,
+                            _baseUnitPickerField(
+                              vm,
                               scale: scale,
-                              height: fieldH,
                               radius: radius12,
                               valueFs: valueFs,
                             ),
@@ -954,6 +947,463 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       ),
       child: child,
     );
+  }
+
+  Widget _baseUnitPickerField(
+    StockInViewModel vm, {
+    required double scale,
+    required double radius,
+    required double valueFs,
+  }) {
+    final isError =
+        vm.showValidationErrors && vm.baseUnitController.text.trim().isEmpty;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(radius),
+      onTap: () async {
+        final selected = await _showBaseUnitBottomSheet(
+          context: context,
+          units: vm.baseUnitOptions,
+          selected: vm.baseUnitController.text.trim(),
+          scale: scale,
+        );
+
+        if (selected == null) return;
+        if (selected == '__add_new__') {
+          await _showAddBaseUnitDialog(context, vm, scale: scale);
+          return;
+        }
+
+        vm.setBaseUnit(selected);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: _fieldBg,
+          prefixIcon: Icon(
+            Icons.straighten_rounded,
+            color: _accentBlue,
+            size: (22 * scale).clamp(20, 26),
+          ),
+          labelText: 'Base unit',
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(color: isError ? Colors.red : _cardBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(color: isError ? Colors.red : _accentBlue),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                vm.baseUnitController.text.trim().isEmpty
+                    ? 'Select base unit'
+                    : vm.baseUnitController.text.trim(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: valueFs,
+                  fontWeight: FontWeight.w800,
+                  color: vm.baseUnitController.text.trim().isEmpty
+                      ? _subtitleColor
+                      : _titleColor,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: _subtitleColor,
+              size: (22 * scale).clamp(20, 26),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _showBaseUnitBottomSheet({
+    required BuildContext context,
+    required List<String> units,
+    required String? selected,
+    required double scale,
+  }) async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (sheetCtx) {
+        final search = ValueNotifier('');
+        final maxHeight = MediaQuery.of(sheetCtx).size.height * 0.78;
+        final s = scale.clamp(0.90, 1.20);
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: _cardBg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                  color: Colors.black.withOpacity(0.10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: (16 * s).clamp(14, 20),
+                right: (16 * s).clamp(14, 20),
+                top: (10 * s).clamp(8, 12),
+                bottom: (16 * s).clamp(14, 20) +
+                    MediaQuery.of(sheetCtx).viewInsets.bottom,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: 5,
+                    width: (48 * s).clamp(44, 54),
+                    decoration: BoxDecoration(
+                      color: _cardBorder,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  Row(
+                    children: [
+                      Container(
+                        height: (36 * s).clamp(34, 42),
+                        width: (36 * s).clamp(34, 42),
+                        decoration: BoxDecoration(
+                          color: _accentBlue.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(
+                            (12 * s).clamp(10, 16),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.straighten_rounded,
+                          color: _accentBlue,
+                          size: (20 * s).clamp(18, 24),
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(8, 12)),
+                      Expanded(
+                        child: Text(
+                          'Pili ug Base Unit',
+                          style: TextStyle(
+                            fontSize: (16 * s).clamp(14, 18),
+                            fontWeight: FontWeight.w900,
+                            color: _titleColor,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(sheetCtx, '__add_new__'),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: (12 * s).clamp(10, 14),
+                            vertical: (9 * s).clamp(8, 10),
+                          ),
+                          decoration: BoxDecoration(
+                            color: _accentBlue.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _accentBlue.withOpacity(0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.add,
+                                size: (18 * s).clamp(16, 22),
+                                color: _accentBlue,
+                              ),
+                              SizedBox(width: (6 * s).clamp(5, 8)),
+                              Text(
+                                'Add Unit',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: _accentBlue,
+                                  fontSize: (13 * s).clamp(12, 15),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  ValueListenableBuilder<String>(
+                    valueListenable: search,
+                    builder: (_, value, _) => TextField(
+                      onChanged: (v) => search.value = v,
+                      decoration: InputDecoration(
+                        hintText: 'Search unit...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: value.trim().isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () => search.value = '',
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                        filled: true,
+                        fillColor: _fieldBg,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: _cardBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: _accentBlue),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: search,
+                      builder: (_, value, _) {
+                        final q = value.trim().toLowerCase();
+                        final filtered = q.isEmpty
+                            ? units
+                            : units
+                                .where((unit) => unit.toLowerCase().contains(q))
+                                .toList();
+
+                        if (filtered.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Walay match nga base unit.',
+                              style: TextStyle(
+                                color: _subtitleColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) =>
+                              SizedBox(height: (8 * s).clamp(6, 10)),
+                          itemBuilder: (_, i) {
+                            final item = filtered[i];
+                            final isSelected = item == selected;
+
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () => Navigator.pop(sheetCtx, item),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (14 * s).clamp(12, 16),
+                                  vertical: (12 * s).clamp(10, 14),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? _accentBlue.withOpacity(0.10)
+                                      : _fieldBg,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? _accentBlue.withOpacity(0.35)
+                                        : _cardBorder.withOpacity(0.8),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: isSelected
+                                              ? _accentBlue
+                                              : _titleColor,
+                                          fontSize: (14 * s).clamp(13, 16),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: _accentBlue,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: (8 * s).clamp(6, 10)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddBaseUnitDialog(
+    BuildContext context,
+    StockInViewModel vm, {
+    required double scale,
+  }) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final value = ValueNotifier<String>('');
+    final s = scale.clamp(0.90, 1.20);
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Dialog(
+          backgroundColor: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              (16 * s).clamp(14, 20),
+              (14 * s).clamp(12, 18),
+              (16 * s).clamp(14, 20),
+              (12 * s).clamp(10, 16),
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Pagdugang ug Bag-ong Base Unit',
+                          style: TextStyle(
+                            fontSize: (16 * s).clamp(14, 18),
+                            fontWeight: FontWeight.w900,
+                            color: _titleColor,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogCtx),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: (10 * s).clamp(8, 12)),
+                  Text(
+                    'Example: bottle, litro, box, kilo',
+                    style: TextStyle(
+                      color: _subtitleColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: (13.5 * s).clamp(12.5, 15),
+                    ),
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  ValueListenableBuilder<String>(
+                    valueListenable: value,
+                    builder: (_, text, _) {
+                      return TextFormField(
+                        controller: controller,
+                        autofocus: true,
+                        maxLength: 40,
+                        decoration: InputDecoration(
+                          counterText: '',
+                          prefixIcon: const Icon(Icons.straighten_rounded),
+                          labelText: 'Base unit name',
+                          hintText: 'e.g. bottle',
+                          filled: true,
+                          fillColor: _fieldBg,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              (12 * s).clamp(10, 16),
+                            ),
+                            borderSide: BorderSide(color: _cardBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              (12 * s).clamp(10, 16),
+                            ),
+                            borderSide: const BorderSide(color: _accentBlue),
+                          ),
+                        ),
+                        onChanged: (v) => value.value = v,
+                        validator: (v) {
+                          final name = (v ?? '').trim();
+                          if (name.isEmpty) return 'Please enter a base unit.';
+
+                          final exists = vm.baseUnitOptions.any(
+                            (item) => item.trim().toLowerCase() == name.toLowerCase(),
+                          );
+                          if (exists) return 'Base unit already exists.';
+                          return null;
+                        },
+                      );
+                    },
+                  ),
+                  SizedBox(height: (6 * s).clamp(4, 10)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogCtx),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(8, 12)),
+                      Expanded(
+                        child: ValueListenableBuilder<String>(
+                          valueListenable: value,
+                          builder: (_, text, _) {
+                            return ElevatedButton(
+                              onPressed: text.trim().isEmpty
+                                  ? null
+                                  : () {
+                                      if (formKey.currentState?.validate() != true) {
+                                        return;
+                                      }
+                                      Navigator.pop(dialogCtx, controller.text);
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accentBlue,
+                                elevation: 0,
+                              ),
+                              child: const Text('Add'),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    final trimmed = (result ?? '').trim();
+    if (trimmed.isNotEmpty) {
+      await vm.addNewBaseUnit(trimmed);
+    }
   }
 
   // ============================================================

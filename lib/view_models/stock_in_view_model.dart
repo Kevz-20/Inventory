@@ -39,6 +39,7 @@ class StockInViewModel extends ChangeNotifier {
   List<ProductModel> allProducts = [];
   ProductModel? selectedProduct;
   List<ProductUnitConversion> unitConversions = [];
+  List<String> baseUnitOptions = [];
   bool useAdvancedUnitSetup = false;
 
   TextEditingController? autocompleteFieldController;
@@ -108,6 +109,7 @@ class StockInViewModel extends ChangeNotifier {
 
     await loadCategories();
     await loadProductNames();
+    await loadBaseUnits();
 
     isInitialized = true;
     safeNotifyListeners();
@@ -186,6 +188,40 @@ class StockInViewModel extends ChangeNotifier {
   String get baseUnitLabel {
     final raw = baseUnitController.text.trim();
     return raw.isEmpty ? 'pcs' : raw;
+  }
+
+  Future<void> loadBaseUnits() async {
+    try {
+      baseUnitOptions = await _repository.getBaseUnits();
+    } catch (_) {
+      baseUnitOptions = ['pcs'];
+    }
+
+    if (baseUnitOptions.isEmpty) {
+      baseUnitOptions = ['pcs'];
+    }
+
+    final current = baseUnitController.text.trim();
+    if (current.isNotEmpty && !baseUnitOptions.contains(current)) {
+      baseUnitOptions = [...baseUnitOptions, current]
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    }
+
+    safeNotifyListeners();
+  }
+
+  void setBaseUnit(String value) {
+    baseUnitController.text = value.trim();
+    safeNotifyListeners();
+  }
+
+  Future<void> addNewBaseUnit(String value) async {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+
+    await _repository.addBaseUnit(trimmed);
+    await loadBaseUnits();
+    setBaseUnit(trimmed);
   }
 
   void setUseAdvancedUnitSetup(bool value) {
@@ -427,6 +463,10 @@ class StockInViewModel extends ChangeNotifier {
     );
       quantityController.clear();
     baseUnitController.text = product.baseUnit;
+    if (!baseUnitOptions.contains(product.baseUnit)) {
+      baseUnitOptions = [...baseUnitOptions, product.baseUnit]
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    }
     productImage = product.image != null ? File(product.image!) : null;
     unitConversions = product.id == null
         ? []

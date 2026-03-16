@@ -3,13 +3,14 @@
 import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_colors.dart';
 import '../../models/current_user.dart';
 import '../../view_models/transaction_history_view_model.dart';
-import '../widgets/nav_bar.dart';
+import '../widgets/dashboard_background.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -20,6 +21,13 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Colors.white;
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _textPrimary = Color(0xFF213A6B);
+  static const Color _textSecondary = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
+
   late final TransactionHistoryViewModel viewModel;
   final ScrollController _scrollController = ScrollController();
   final ScrollController _categoryScrollController = ScrollController();
@@ -81,8 +89,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isTablet = width >= 700;
-
-    // ? same pattern as your HomeScreen
     final maxContentWidth = isTablet ? 760.0 : double.infinity;
 
     return ChangeNotifierProvider.value(
@@ -90,103 +96,143 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       child: Consumer<TransactionHistoryViewModel>(
         builder: (_, vm, _) {
           return Scaffold(
+            backgroundColor: _pageBg,
             appBar: AppBar(
-              backgroundColor: AppColors.primary,
+              backgroundColor: _pageBg,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                icon: Image.asset(
+                  'lib/assets/arrowleft.png',
+                  width: 22,
+                  height: 22,
+                  fit: BoxFit.contain,
+                ),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
+              ),
               title: const Text(
                 'History',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                  color: _textPrimary,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               centerTitle: true,
-              elevation: 2,
+              elevation: 0,
             ),
-            backgroundColor: AppColors.surface,
-            body: SafeArea(
-              top: false,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: Column(
-                    children: [
-                      // ? Date pickers responsive
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                        child: LayoutBuilder(
-                          builder: (context, c) {
-                            final isCompact = c.maxWidth < 420;
-                            final spacing = isCompact ? 8.0 : 12.0;
-
-                            final startBox = _DatePickerBox(
-                              title: 'Start Date',
-                              date: vm.startDate ?? DateTime.now(),
-                              onDateSelected: vm.setStartDate,
-                              compact: isCompact,
-                            );
-
-                            final endBox = _DatePickerBox(
-                              title: 'End Date',
-                              date: vm.endDate ?? DateTime.now(),
-                              onDateSelected: vm.setEndDate,
-                              compact: isCompact,
-                            );
-
-                            return Row(
+            body: Stack(
+              children: [
+                const DashboardBackground(),
+                SafeArea(
+                  top: false,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxContentWidth),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                            child: Column(
                               children: [
-                                Expanded(child: startBox),
-                                SizedBox(width: spacing),
-                                Expanded(child: endBox),
+                                _buildFilterPanel(vm),
+                                const SizedBox(height: 14),
+                                CategoryChipsWithDots(
+                                  scrollController: _categoryScrollController,
+                                  categories: _historyCategories,
+                                  selectedCategory: vm.selectedCategory,
+                                  onCategorySelected: (cat) {
+                                    final index = _historyCategories.indexOf(cat);
+                                    vm.setSelectedCategory(cat);
+                                    if (index >= 0) {
+                                      _categoryPageController.animateToPage(
+                                        index,
+                                        duration: const Duration(milliseconds: 280),
+                                        curve: Curves.easeInOut,
+                                      );
+                                      _autoScrollChips(index);
+                                    }
+                                  },
+                                ),
                               ],
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                          Expanded(
+                            child: PageView.builder(
+                              controller: _categoryPageController,
+                              itemCount: _historyCategories.length,
+                              onPageChanged: (index) {
+                                vm.setSelectedCategory(_historyCategories[index]);
+                                _autoScrollChips(index);
+                              },
+                              itemBuilder: (context, index) => _buildHistoryList(vm),
+                            ),
+                          ),
+                        ],
                       ),
-
-                      // ? Category chips (same behavior)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: CategoryChipsWithDots(
-                          scrollController: _categoryScrollController,
-                          categories: _historyCategories,
-                          selectedCategory: vm.selectedCategory,
-                          onCategorySelected: (cat) {
-                            final index = _historyCategories.indexOf(cat);
-                            vm.setSelectedCategory(cat);
-                            if (index >= 0) {
-                              _categoryPageController.animateToPage(
-                                index,
-                                duration: const Duration(milliseconds: 280),
-                                curve: Curves.easeInOut,
-                              );
-                              _autoScrollChips(index);
-                            }
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      // ? List area
-                      Expanded(
-                        child: PageView.builder(
-                          controller: _categoryPageController,
-                          itemCount: _historyCategories.length,
-                          onPageChanged: (index) {
-                            vm.setSelectedCategory(_historyCategories[index]);
-                            _autoScrollChips(index);
-                          },
-                          itemBuilder: (context, index) => _buildHistoryList(vm),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-            bottomNavigationBar: const BottomNavBar(currentIndex: 1),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFilterPanel(TransactionHistoryViewModel vm) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, c) {
+              final isCompact = c.maxWidth < 420;
+              final spacing = isCompact ? 8.0 : 12.0;
+
+              final startBox = _DatePickerBox(
+                title: 'Start Date',
+                date: vm.startDate ?? DateTime.now(),
+                onDateSelected: vm.setStartDate,
+                compact: isCompact,
+              );
+
+              final endBox = _DatePickerBox(
+                title: 'End Date',
+                date: vm.endDate ?? DateTime.now(),
+                onDateSelected: vm.setEndDate,
+                compact: isCompact,
+              );
+
+              return Row(
+                children: [
+                  Expanded(child: startBox),
+                  SizedBox(width: spacing),
+                  Expanded(child: endBox),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -200,10 +246,57 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            vm.emptyStateMessage,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: Colors.black45),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: _cardBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF8EA1D1).withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF2FF),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: _accentBlue,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Nothing to show yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: _textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  vm.emptyStateMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: _textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -211,7 +304,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       itemCount: vm.sections.length,
       itemBuilder: (context, sectionIndex) {
         final section = vm.sections[sectionIndex];
@@ -226,9 +319,21 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Text(
-            section.title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.90),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: _cardBorder),
+            ),
+            child: Text(
+              section.title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: _textPrimary,
+              ),
+            ),
           ),
         ),
         ...section.items.map((tx) => _buildTransactionCard(tx, context)),
@@ -272,14 +377,25 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         : tx.description!.trim();
 
     final isIncome = isCapital || isHalin || isCustomerPayment;
-    final amountColor = isIncome ? Colors.green : Colors.red;
+    final amountColor =
+        isIncome ? const Color(0xFF0B8E5F) : const Color(0xFFC04E4E);
 
     final amountText = isIncome
         ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
         : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}';
 
+    final accentColor = isCapital
+        ? const Color(0xFFF4A63D)
+        : isExpense
+            ? const Color(0xFFE46A5A)
+            : isCustomerPayment
+                ? const Color(0xFF1EAF8A)
+                : isOwnerPayment || isDownpayment
+                    ? const Color(0xFF7D6BF2)
+                    : _accentBlue;
+
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(22),
       onTap: () {
         showModalBottomSheet(
           context: context,
@@ -297,17 +413,17 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(22),
+          color: _cardBg,
+          border: Border.all(color: _cardBorder),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 8),
+              color: const Color(0xFF8EA1D1).withValues(alpha: 0.14),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -316,68 +432,108 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    isExpense
+                        ? Icons.receipt_long_rounded
+                        : isCapital
+                            ? Icons.savings_rounded
+                            : isCustomerPayment
+                                ? Icons.people_alt_rounded
+                                : isOwnerPayment || isDownpayment
+                                    ? Icons.payments_outlined
+                                    : Icons.shopping_bag_outlined,
+                    color: accentColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    typeLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black54,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        typeLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: _textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        (isExpense ||
+                                isCustomerPayment ||
+                                isOwnerPayment ||
+                                isDownpayment)
+                            ? descriptionLabel
+                            : isCapital
+                                ? 'Capital movement'
+                                : (tx.productName ?? 'Product'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: _textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 10),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    amountText,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: amountColor,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        amountText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: amountColor,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Text(
+                      DateFormat('hh:mm a').format(tx.createdAt),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: _textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
 
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    (isExpense ||
-                            isCustomerPayment ||
-                            isOwnerPayment ||
-                            isDownpayment)
-                        ? descriptionLabel
-                        : isCapital
-                            ? ''
-                            : (tx.productName ?? 'Product'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-
-                // ? Make receipt button responsive (no overflow)
+                Expanded(child: _buildMetaWrap(tx, capitalNote)),
                 if (isExpense && tx.receiptImagePath != null) ...[
                   const SizedBox(width: 10),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 130),
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.green,
-                        side: BorderSide(color: Colors.green.shade200),
-                        backgroundColor: Colors.green.shade50,
+                        foregroundColor: _accentBlue,
+                        side: const BorderSide(color: Color(0xFFD6E0F6)),
+                        backgroundColor: const Color(0xFFF5F8FF),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 8,
@@ -402,68 +558,67 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         );
                       },
                       child: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'View Receipt',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'View Receipt',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
                   ),
                 ],
               ],
             ),
-
-            const SizedBox(height: 8),
-
-            Row(
-              children: [
-                Expanded(
-                  child: Builder(
-                    builder: (_) {
-                      if (isCapital) {
-                        return Text(
-                          'Note: $capitalNote',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                        );
-                      } else if (isHalin && tx.quantity != null) {
-                        return Text(
-                          'Qty: ${tx.quantity}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
-                          ),
-                        );
-                      } else if (isExpense && tx.category != null) {
-                        return Text(
-                          'Category: ${tx.category}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black54,
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  DateFormat('hh:mm a').format(tx.createdAt),
-                  style: const TextStyle(fontSize: 13, color: Colors.black45),
-                ),
-              ],
-            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetaWrap(TransactionItem tx, String capitalNote) {
+    final isExpense = tx.type == 'Gasto';
+    final isCapital = tx.type == 'Capital';
+    final isHalin = tx.type == 'Halin';
+    final chips = <Widget>[];
+
+    if (isCapital) {
+      chips.add(_metaChip('Note: $capitalNote'));
+    } else if (isHalin && tx.quantity != null) {
+      chips.add(_metaChip('Qty: ${tx.quantity}'));
+    } else if (isExpense && tx.category != null) {
+      chips.add(_metaChip('Category: ${tx.category}'));
+    }
+
+    if ((tx.recordedBy ?? '').trim().isNotEmpty) {
+      chips.add(_metaChip('By ${tx.recordedBy!.trim()}'));
+    }
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: chips,
+    );
+  }
+
+  Widget _metaChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F7FF),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFDCE5F8)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: _textSecondary,
         ),
       ),
     );
@@ -514,18 +669,25 @@ class _DatePickerBox extends StatelessWidget {
       },
       child: Container(
         padding: EdgeInsets.symmetric(
-          vertical: compact ? 8 : 10,
-          horizontal: compact ? 10 : 12,
+          vertical: compact ? 10 : 12,
+          horizontal: compact ? 12 : 14,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFFFFFF),
+              Color(0xFFF7FAFF),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFDDE5F8)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
+              color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -538,9 +700,10 @@ class _DatePickerBox extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: compact ? 12 : 13,
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      fontSize: compact ? 11.5 : 12.5,
+                      color: const Color(0xFF60739B),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
                     ),
                   ),
                   SizedBox(height: compact ? 2 : 4),
@@ -548,8 +711,8 @@ class _DatePickerBox extends StatelessWidget {
                     DateFormat(compact ? 'MMM d, y' : 'MMMM d, y').format(date),
                     style: TextStyle(
                       fontSize: compact ? 13 : 15,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF213A6B),
+                      fontWeight: FontWeight.w800,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -558,7 +721,26 @@ class _DatePickerBox extends StatelessWidget {
               ),
             ),
             SizedBox(width: compact ? 6 : 10),
-            Icon(Icons.calendar_today, size: compact ? 16 : 18),
+            Container(
+              width: compact ? 30 : 34,
+              height: compact ? 30 : 34,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFEAF2FF),
+                    Color(0xFFD8E7FF),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                size: compact ? 15 : 17,
+                color: const Color(0xFF2F6BFF),
+              ),
+            ),
           ],
         ),
       ),
@@ -586,7 +768,7 @@ class CategoryChipsWithDots extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          height: 46,
+          height: 52,
           child: ListView.separated(
             controller: scrollController,
             scrollDirection: Axis.horizontal,
@@ -601,20 +783,22 @@ class CategoryChipsWithDots extends StatelessWidget {
                 onTap: () => onCategorySelected(category),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
+                    horizontal: 16,
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.white,
+                    color: isSelected
+                        ? const Color(0xFF205CC8)
+                        : Colors.white.withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: isSelected
-                          ? AppColors.primary
-                          : Colors.grey.shade300,
+                          ? const Color(0xFF205CC8)
+                          : const Color(0xFFDDE5F8),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: const Color(0xFF8EA1D1).withValues(alpha: 0.08),
                         blurRadius: 10,
                         offset: const Offset(0, 6),
                       ),
@@ -625,7 +809,9 @@ class CategoryChipsWithDots extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF213A6B),
                     ),
                   ),
                 ),
@@ -645,7 +831,9 @@ class CategoryChipsWithDots extends StatelessWidget {
               height: isSelected ? 8 : 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.grey.shade400,
+                color: isSelected
+                    ? const Color(0xFF205CC8)
+                    : const Color(0xFFBFC9E2),
               ),
             );
           }).toList(),

@@ -2,12 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
 import '../../view_models/income_statement_view_model.dart';
-import '../widgets/header.dart';
 import '../widgets/adaptive_digits_text.dart';
+import '../widgets/dashboard_background.dart';
 
 class IncomeStatementScreen extends ConsumerStatefulWidget {
   const IncomeStatementScreen({super.key});
@@ -18,6 +19,13 @@ class IncomeStatementScreen extends ConsumerStatefulWidget {
 }
 
 class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Colors.white;
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _textPrimary = Color(0xFF213A6B);
+  static const Color _textSecondary = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
+
   static final DateFormat _dateFormat = DateFormat('MMMM d, yyyy');
 
   DateTime start = DateTime.now();
@@ -99,181 +107,236 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Income Statement', showBackButton: true),
-      body: ScrollbarTheme(
-        data: ScrollbarThemeData(
-          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
-          thickness: WidgetStateProperty.all(5),
-          radius: const Radius.circular(8),
+      backgroundColor: _pageBg,
+      extendBody: true,
+      appBar: AppBar(
+        backgroundColor: _pageBg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Image.asset(
+            'lib/assets/arrowleft.png',
+            width: 22,
+            height: 22,
+            fit: BoxFit.contain,
+          ),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
-        child: Scrollbar(
-          controller: _scrollController,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _dateRangeCard(
-                  startLabel: _format(start),
-                  endLabel: _format(end),
-                  onStartTap: () => _selectDate(context, true),
-                  onEndTap: () => _selectDate(context, false),
-                ),
-                const SizedBox(height: 14),
-
-                incomeState.when(
-                  loading: () => SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.45,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Text(
-                      e.toString(),
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                  data: (income) {
-                    final currency = NumberFormat.currency(
-                      symbol: '₱',
-                      decimalDigits: 2,
-                    );
-
-                    final expenseEntries =
-                        income.expenseCategories.entries.toList()..sort(
-                          (a, b) => a.key.toLowerCase().compareTo(
-                            b.key.toLowerCase(),
-                          ),
-                        );
-
-                    final isEmpty =
-                        income.sales == 0 && income.totalExpenses == 0;
-
-                    return Column(
-                      children: [
-                        _summaryCard(
-                          sales: income.sales,
-                          totalExpenses: income.totalExpenses,
-                          netIncome: income.netIncome,
-                          currency: currency,
-                        ),
-                        const SizedBox(height: 14),
-
-                        if (isEmpty)
-                          _emptyCard()
-                        else ...[
-                          _buildFinancialSection(
-                            title: 'Sales',
-                            icon: Icons.point_of_sale_rounded,
-                            totalText: currency.format(income.sales),
-                            children: [
-                              _itemRow(
-                                label: 'Merchandise Sales',
-                                value: income.merchandiseSales,
-                                currency: currency,
-                              ),
-                              const SizedBox(height: 8),
-                              Divider(color: Colors.grey.shade200, height: 1),
-                              const SizedBox(height: 10),
-                              _totalRow(
-                                label: 'TOTAL SALES',
-                                amountText: currency.format(income.sales),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-
-                          _buildFinancialSection(
-                            title: 'Expenses',
-                            icon: Icons.payments_rounded,
-                            totalText: currency.format(income.totalExpenses),
-                            children: [
-                              if (expenseEntries.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                  ),
-                                  child: Text(
-                                    'No expense records',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.grey.shade700,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                )
-                              else
-                                ...expenseEntries.map(
-                                  (entry) => _itemRow(
-                                    label: entry.key,
-                                    value: entry.value,
-                                    currency: currency,
-                                  ),
-                                ),
-
-                              const SizedBox(height: 8),
-                              Divider(color: Colors.grey.shade200, height: 1),
-                              const SizedBox(height: 10),
-                              _totalRow(
-                                label: 'TOTAL EXPENSES',
-                                amountText: currency.format(
-                                  income.totalExpenses,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 14),
-                        ],
-
-                        const SizedBox(height: 90),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
+        title: const Text(
+          'Income Statement',
+          style: TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
-        child: Material(
-          elevation: 10,
-          borderRadius: BorderRadius.circular(14),
-          shadowColor: Colors.black.withOpacity(0.15),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                final vm = ref.read(incomeStatementViewModelProvider.notifier);
-                final state = ref.read(incomeStatementViewModelProvider);
-                if (state.asData?.value == null) return;
-                await vm.exportPdf();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+      body: Stack(
+        children: [
+          const DashboardBackground(),
+          Column(
+            children: [
+              Expanded(
+                child: ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+                    thickness: WidgetStateProperty.all(5),
+                    radius: const Radius.circular(8),
+                  ),
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _dateRangeCard(
+                            startLabel: _format(start),
+                            endLabel: _format(end),
+                            onStartTap: () => _selectDate(context, true),
+                            onEndTap: () => _selectDate(context, false),
+                          ),
+                          const SizedBox(height: 14),
+                          incomeState.when(
+                            loading: () => SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.45,
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            error: (e, _) => Padding(
+                              padding: const EdgeInsets.only(top: 40),
+                              child: Text(
+                                e.toString(),
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                            data: (income) {
+                              final currency = NumberFormat.currency(
+                                symbol: '₱',
+                                decimalDigits: 2,
+                              );
+
+                              final expenseEntries =
+                                  income.expenseCategories.entries.toList()..sort(
+                                    (a, b) => a.key.toLowerCase().compareTo(
+                                      b.key.toLowerCase(),
+                                    ),
+                                  );
+
+                              final isEmpty =
+                                  income.sales == 0 &&
+                                  income.totalExpenses == 0;
+
+                              return Column(
+                                children: [
+                                  _summaryCard(
+                                    sales: income.sales,
+                                    totalExpenses: income.totalExpenses,
+                                    netIncome: income.netIncome,
+                                    currency: currency,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  if (isEmpty)
+                                    _emptyCard()
+                                  else ...[
+                                    _buildFinancialSection(
+                                      title: 'Sales',
+                                      icon: Icons.point_of_sale_rounded,
+                                      totalText: currency.format(income.sales),
+                                      children: [
+                                        _itemRow(
+                                          label: 'Merchandise Sales',
+                                          value: income.merchandiseSales,
+                                          currency: currency,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Divider(
+                                          color: Colors.grey.shade200,
+                                          height: 1,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        _totalRow(
+                                          label: 'TOTAL SALES',
+                                          amountText: currency.format(
+                                            income.sales,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                    _buildFinancialSection(
+                                      title: 'Expenses',
+                                      icon: Icons.payments_rounded,
+                                      totalText: currency.format(
+                                        income.totalExpenses,
+                                      ),
+                                      children: [
+                                        if (expenseEntries.isEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 6,
+                                            ),
+                                            child: Text(
+                                              'No expense records',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                color: Colors.grey.shade700,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          )
+                                        else
+                                          ...expenseEntries.map(
+                                            (entry) => _itemRow(
+                                              label: entry.key,
+                                              value: entry.value,
+                                              currency: currency,
+                                            ),
+                                          ),
+                                        const SizedBox(height: 8),
+                                        Divider(
+                                          color: Colors.grey.shade200,
+                                          height: 1,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        _totalRow(
+                                          label: 'TOTAL EXPENSES',
+                                          amountText: currency.format(
+                                            income.totalExpenses,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                  const SizedBox(height: 24),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              icon: const Icon(Icons.download_rounded, color: Colors.white),
-              label: const Text(
-                'Download PDF',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPadding),
+                child: Material(
+                  elevation: 14,
+                  borderRadius: BorderRadius.circular(20),
+                  shadowColor: const Color(
+                    0xFF8EA1D1,
+                  ).withValues(alpha: 0.22),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 64,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final vm = ref.read(
+                          incomeStatementViewModelProvider.notifier,
+                        );
+                        final state = ref.read(incomeStatementViewModelProvider);
+                        if (state.asData?.value == null) return;
+                        await vm.exportPdf();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accentBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                      ),
+                      icon: const Icon(
+                        Icons.download_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      label: const Text(
+                        'Download PDF',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -288,14 +351,14 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
           ),
         ],
       ),
@@ -331,9 +394,9 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
+          color: const Color(0xFFF9FBFF),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _cardBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,7 +406,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: Colors.grey.shade700,
+                color: _textSecondary,
               ),
             ),
             const SizedBox(height: 6),
@@ -355,8 +418,8 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                     dateLabel,
                     style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      fontWeight: FontWeight.w800,
+                      color: _textPrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -365,7 +428,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                 Icon(
                   Icons.calendar_today_rounded,
                   size: 18,
-                  color: Colors.grey.shade700,
+                  color: _accentBlue,
                 ),
               ],
             ),
@@ -385,14 +448,14 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
           ),
         ],
       ),
@@ -440,13 +503,13 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: highlight
-            ? AppColors.primary.withOpacity(0.08)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(14),
+            ? _accentBlue.withValues(alpha: 0.08)
+            : const Color(0xFFF9FBFF),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: highlight
-              ? AppColors.primary.withOpacity(0.18)
-              : Colors.grey.shade200,
+              ? _accentBlue.withValues(alpha: 0.18)
+              : _cardBorder,
         ),
       ),
       child: Row(
@@ -455,10 +518,10 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
             height: 36,
             width: 36,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.10),
+              color: _accentBlue.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
+            child: Icon(icon, color: _accentBlue, size: 20),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -469,19 +532,19 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade700,
+                    color: _textSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
                 AdaptiveDigitsText(
                   value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: highlight ? AppColors.primary : Colors.black87,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: highlight ? _accentBlue : _textPrimary,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -500,14 +563,14 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
           ),
         ],
       ),
@@ -520,10 +583,10 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                 height: 36,
                 width: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
+                  color: _accentBlue.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: _accentBlue, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -532,7 +595,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 17,
-                    color: Colors.black87,
+                    color: _textPrimary,
                   ),
                 ),
               ),
@@ -559,12 +622,12 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: _textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
           ),
           const SizedBox(width: 10),
           Text(
@@ -590,7 +653,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
           style: const TextStyle(
             fontWeight: FontWeight.w900,
             fontSize: 16,
-            color: AppColors.primary,
+            color: _accentBlue,
           ),
         ),
       ],
@@ -602,14 +665,14 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
           ),
         ],
       ),
@@ -619,12 +682,12 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
             height: 42,
             width: 42,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.10),
+              color: _accentBlue.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.info_outline_rounded,
-              color: AppColors.primary,
+              color: _accentBlue,
             ),
           ),
           const SizedBox(width: 12),
@@ -633,7 +696,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
               'No records found for the selected date range.',
               style: TextStyle(
                 color: Colors.grey.shade700,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

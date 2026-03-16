@@ -1,12 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../view_models/balance_sheet_view_model.dart';
 import '../../core/app_colors.dart';
-import '../widgets/header.dart';
+import '../../view_models/balance_sheet_view_model.dart';
 import '../widgets/adaptive_digits_text.dart';
+import '../widgets/dashboard_background.dart';
 
 final balanceSheetProvider = ChangeNotifierProvider(
   (ref) => BalanceSheetViewModel(),
@@ -20,8 +21,14 @@ class BalanceSheetScreen extends ConsumerStatefulWidget {
 }
 
 class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
-  bool _isLoading = true;
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Colors.white;
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _textPrimary = Color(0xFF213A6B);
+  static const Color _textSecondary = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
 
+  bool _isLoading = true;
   late final ScrollController _scrollController;
 
   @override
@@ -40,6 +47,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
   Future<void> _loadBalanceSheet() async {
     final vm = ref.read(balanceSheetProvider);
     await vm.loadBalanceSheet();
+    if (!mounted) return;
     setState(() {
       _isLoading = false;
     });
@@ -51,136 +59,174 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
 
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: _pageBg,
+        body: Stack(
+          children: [
+            DashboardBackground(),
+            Center(child: CircularProgressIndicator()),
+          ],
+        ),
+      );
     }
 
-    final totalLE = vm.totalLiabilities + vm.totalEquity;
+    final totalLiabilitiesAndEquity = vm.totalLiabilities + vm.totalEquity;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: const AppHeader(title: 'Balance Sheet', showBackButton: true),
-
-      // ✅ Scrollbar hint (same color/style as others)
-      body: ScrollbarTheme(
-        data: ScrollbarThemeData(
-          thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
-          thickness: WidgetStateProperty.all(5),
-          radius: const Radius.circular(8),
+      backgroundColor: _pageBg,
+      extendBody: true,
+      appBar: AppBar(
+        backgroundColor: _pageBg,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        leading: IconButton(
+          icon: Image.asset(
+            'lib/assets/arrowleft.png',
+            width: 22,
+            height: 22,
+            fit: BoxFit.contain,
+          ),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
-        child: Scrollbar(
-          controller: _scrollController,
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ==================== SUMMARY CARD ====================
-                _summaryCard(vm: vm),
-                const SizedBox(height: 14),
-
-                // ==================== ASSETS ====================
-                _buildFinancialSection(
-                  title: 'Assets',
-                  icon: Icons.account_balance_wallet_rounded,
-                  items: vm.assets,
-                  total: vm.totalAssets,
-                  vm: vm,
-                ),
-                const SizedBox(height: 14),
-
-                // ==================== LIABILITIES ====================
-                _buildFinancialSection(
-                  title: 'Liabilities',
-                  icon: Icons.payments_rounded,
-                  items: vm.liabilities,
-                  total: vm.totalLiabilities,
-                  vm: vm,
-                ),
-                const SizedBox(height: 14),
-
-                // ==================== EQUITY ====================
-                _buildFinancialSection(
-                  title: "Owner's Equity",
-                  icon: Icons.account_balance_rounded,
-                  items: vm.equity,
-                  total: vm.totalEquity,
-                  vm: vm,
-                ),
-                const SizedBox(height: 14),
-
-                // ==================== TOTAL L + E ====================
-                _totalHighlightCard(
-                  title: 'Total Liabilities + Equity',
-                  amount: totalLE,
-                  vm: vm,
-                ),
-
-                const SizedBox(height: 90),
-              ],
-            ),
+        title: const Text(
+          'Balance Sheet',
+          style: TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
-
-      // ==================== BOTTOM BUTTON ====================
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottomPadding),
-        child: Material(
-          elevation: 10,
-          borderRadius: BorderRadius.circular(14),
-          shadowColor: Colors.black.withOpacity(0.15),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                final vm = ref.read(balanceSheetProvider);
-                await vm.exportPdf();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+      body: Stack(
+        children: [
+          const DashboardBackground(),
+          Column(
+            children: [
+              Expanded(
+                child: ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
+                    thickness: WidgetStateProperty.all(5),
+                    radius: const Radius.circular(8),
+                  ),
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _summaryCard(vm: vm),
+                          const SizedBox(height: 14),
+                          _buildFinancialSection(
+                            title: 'Assets',
+                            icon: Icons.account_balance_wallet_rounded,
+                            items: vm.assets,
+                            total: vm.totalAssets,
+                            vm: vm,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFinancialSection(
+                            title: 'Liabilities',
+                            icon: Icons.payments_rounded,
+                            items: vm.liabilities,
+                            total: vm.totalLiabilities,
+                            vm: vm,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFinancialSection(
+                            title: "Owner's Equity",
+                            icon: Icons.account_balance_rounded,
+                            items: vm.equity,
+                            total: vm.totalEquity,
+                            vm: vm,
+                          ),
+                          const SizedBox(height: 14),
+                          _totalHighlightCard(
+                            title: 'Total Liabilities + Equity',
+                            amount: totalLiabilitiesAndEquity,
+                            vm: vm,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              icon: const Icon(Icons.download_rounded, color: Colors.white),
-              label: const Text(
-                'Download PDF',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPadding),
+                child: Material(
+                  elevation: 14,
+                  borderRadius: BorderRadius.circular(20),
+                  shadowColor: const Color(
+                    0xFF8EA1D1,
+                  ).withValues(alpha: 0.22),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 64,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final readVm = ref.read(balanceSheetProvider);
+                        await readVm.exportPdf();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _accentBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                      ),
+                      icon: const Icon(
+                        Icons.download_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      label: const Text(
+                        'Download PDF',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // ==================== SUMMARY CARD ====================
   Widget _summaryCard({required BalanceSheetViewModel vm}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -206,7 +252,6 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
             label: "Owner's Equity",
             value: vm.formatCurrency(vm.totalEquity),
             icon: Icons.balance_rounded,
-            fullWidth: true,
           ),
         ],
       ),
@@ -217,14 +262,13 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
     required String label,
     required String value,
     required IconData icon,
-    bool fullWidth = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        color: const Color(0xFFF9FBFF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _cardBorder),
       ),
       child: Row(
         children: [
@@ -232,10 +276,10 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
             height: 36,
             width: 36,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.10),
+              color: _accentBlue.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 20),
+            child: Icon(icon, color: _accentBlue, size: 20),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -244,10 +288,10 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w600,
+                    color: _textSecondary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -255,8 +299,8 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
                   value,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w900,
+                    color: _textPrimary,
                   ),
                 ),
               ],
@@ -267,7 +311,6 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
     );
   }
 
-  // ---------------- Financial Section ----------------
   Widget _buildFinancialSection({
     required String title,
     required IconData icon,
@@ -279,31 +322,30 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _cardBorder),
         boxShadow: [
           BoxShadow(
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-            color: Colors.black.withOpacity(0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+            color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
                 height: 36,
                 width: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.10),
+                  color: _accentBlue.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: _accentBlue, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -312,54 +354,56 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 17,
-                    color: Colors.black87,
+                    color: _textPrimary,
                   ),
                 ),
               ),
-
-              // ❌ Removed the header total amount here
             ],
           ),
           const SizedBox(height: 10),
           Divider(color: Colors.grey.shade200, height: 1),
           const SizedBox(height: 6),
-
-          // Items (List style)
           if (items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
               child: Text(
                 'No records yet.',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: _textSecondary,
                   fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             )
           else
             ...items.entries.map(
-              (e) => _itemRow(label: e.key, amount: e.value, vm: vm),
+              (entry) => _itemRow(
+                label: entry.key,
+                amount: entry.value,
+                vm: vm,
+              ),
             ),
-
           const SizedBox(height: 6),
           Divider(color: Colors.grey.shade200, height: 1),
           const SizedBox(height: 10),
-
-          // Total row (✅ still kept at the bottom)
           Row(
             children: [
               const Expanded(
                 child: Text(
                   'Total',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: _textPrimary,
+                  ),
                 ),
               ),
               Text(
                 vm.formatCurrency(total),
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 16,
-                  color: AppColors.primary,
+                  color: _accentBlue,
                 ),
               ),
             ],
@@ -383,7 +427,7 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
               label,
               style: const TextStyle(
                 fontSize: 15,
-                color: Colors.black87,
+                color: _textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -391,14 +435,17 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
           const SizedBox(width: 10),
           Text(
             vm.formatCurrency(amount),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: _textPrimary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ---------------- Total Highlight Card ----------------
   Widget _totalHighlightCard({
     required String title,
     required double amount,
@@ -408,9 +455,9 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        color: _accentBlue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _accentBlue.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
@@ -418,12 +465,12 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
             height: 40,
             width: 40,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.18),
+              color: _accentBlue.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.calculate_rounded,
-              color: AppColors.primary,
+              color: _accentBlue,
               size: 22,
             ),
           ),
@@ -431,12 +478,20 @@ class _BalanceSheetScreenState extends ConsumerState<BalanceSheetScreen> {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                color: _textPrimary,
+              ),
             ),
           ),
           Text(
             vm.formatCurrency(amount),
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: _textPrimary,
+            ),
           ),
         ],
       ),

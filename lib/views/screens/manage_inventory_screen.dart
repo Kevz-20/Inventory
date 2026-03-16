@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/app_colors.dart';
 import '../../models/product_model.dart';
 import '../../repositories/account_repository.dart';
 import '../../repositories/product_category_repository.dart';
 import '../../repositories/product_repository.dart';
 import '../../services/db_service.dart';
 import '../widgets/dashboard_background.dart';
+import '../widgets/primary_footer_nav.dart';
 
 class ManageInventoryScreen extends StatefulWidget {
   const ManageInventoryScreen({super.key});
@@ -20,7 +20,6 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
   static const Color _pageBg = Color(0xFFF5F7FF);
   static const Color _cardBg = Colors.white;
   static const Color _border = Color(0xFFDDE5F8);
-  static const Color _softBg = Color(0xFFF7F9FF);
   static const Color _textPrimary = Color(0xFF213A6B);
   static const Color _textSecondary = Color(0xFF60739B);
   static const Color _accentBlue = Color(0xFF2F6BFF);
@@ -77,9 +76,6 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
 
   bool _isLowStock(ProductModel product) => product.quantity <= 10;
 
-  int get _lowStockCount =>
-      _products.where((product) => _isLowStock(product)).length;
-
   Future<void> _openEditDialog(ProductModel product) async {
     final nameController = TextEditingController(text: product.name);
     final purchaseController = TextEditingController(
@@ -119,7 +115,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: selectedCategory,
+                      initialValue: selectedCategory,
                       decoration: const InputDecoration(
                         labelText: 'Category',
                       ),
@@ -224,7 +220,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                               ),
                             );
 
-                            if (!mounted) return;
+                            if (!dialogContext.mounted) return;
                             Navigator.pop(dialogContext, true);
                           } finally {
                             if (mounted) {
@@ -285,11 +281,6 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
     ).showSnackBar(const SnackBar(content: Text('Product deleted.')));
   }
 
-  Future<void> _goToAddProduct() async {
-    await context.push('/stockin');
-    await _loadData();
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -300,6 +291,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _pageBg,
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: _pageBg,
         elevation: 0,
@@ -311,7 +303,13 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
             height: 22,
             fit: BoxFit.contain,
           ),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         title: const Text(
           'Manage Inventory',
@@ -384,7 +382,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                           : ListView.separated(
                               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                               itemCount: _filteredProducts.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              separatorBuilder: (_, _) => const SizedBox(height: 12),
                               itemBuilder: (context, index) {
                                 final product = _filteredProducts[index];
                                 final isLowStock = _isLowStock(product);
@@ -398,7 +396,9 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF8EA1D1).withOpacity(0.18),
+                                        color: const Color(
+                                          0xFF8EA1D1,
+                                        ).withValues(alpha: 0.18),
                                         blurRadius: 22,
                                         offset: const Offset(0, 12),
                                       ),
@@ -613,59 +613,8 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                 ),
         ],
       ),
-    );
-  }
-
-  Widget _summaryChip({
-    required IconData icon,
-    required String label,
-    required String value,
-    Color accentColor = _accentBlue,
-    Color softColor = _softBg,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: softColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accentColor, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: _textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: _textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      bottomNavigationBar: const PrimaryFooterNav(
+        selectedTab: PrimaryFooterTab.products,
       ),
     );
   }
@@ -682,7 +631,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFBAC7E6).withOpacity(0.12),
+            color: const Color(0xFFBAC7E6).withValues(alpha: 0.12),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),

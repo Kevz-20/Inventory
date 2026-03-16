@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 17,
+      version: 18,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -359,11 +359,19 @@ class DBService {
           ];
 
           for (final table in updatedAtTables) {
+            await addColumnIfMissing(table, 'created_at', 'TEXT');
+            await db.execute('''
+              UPDATE $table
+              SET created_at = COALESCE(
+                NULLIF(created_at, ''),
+                '$now'
+              )
+            ''');
             await db.execute('''
               UPDATE $table
               SET updated_at = COALESCE(
                 NULLIF(updated_at, ''),
-                created_at,
+                NULLIF(created_at, ''),
                 '$now'
               )
             ''');
@@ -429,6 +437,31 @@ class DBService {
               FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
             )
           ''');
+        }
+
+        if (oldVersion < 18) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS base_unit_choice (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL UNIQUE,
+              created_at TEXT NOT NULL
+            )
+          ''');
+
+          const defaultBaseUnits = [
+            'pcs',
+            'Piece / pcs',
+            'Pack / Sachet',
+            'Gram / Kilogram',
+            'mL',
+          ];
+
+          for (final unit in defaultBaseUnits) {
+            await db.rawInsert(
+              'INSERT OR IGNORE INTO base_unit_choice(name, created_at) VALUES(?, ?)',
+              [unit, DateTime.now().toIso8601String()],
+            );
+          }
         }
       },
 
@@ -529,6 +562,14 @@ class DBService {
     created_at TEXT NOT NULL
   )
 ''');
+
+    await db.execute('''
+      CREATE TABLE base_unit_choice (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL
+      )
+    ''');
 
     await db.execute('''
       CREATE TABLE credit_status (
@@ -1048,6 +1089,21 @@ class DBService {
       await db.rawInsert(
         'INSERT OR IGNORE INTO product_category(name, created_at) VALUES(?, ?)',
         [c, DateTime.now().toIso8601String()],
+      );
+    }
+
+    const defaultBaseUnits = [
+      'pcs',
+      'Piece / pcs',
+      'Pack / Sachet',
+      'Gram / Kilogram',
+      'mL',
+    ];
+
+    for (final unit in defaultBaseUnits) {
+      await db.rawInsert(
+        'INSERT OR IGNORE INTO base_unit_choice(name, created_at) VALUES(?, ?)',
+        [unit, DateTime.now().toIso8601String()],
       );
     }
   }

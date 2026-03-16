@@ -77,7 +77,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
             final horizontalPadding = isTablet ? 24.0 : 16.0;
 
-            // Height-based scaling
             final veryShort = height < 650;
             final short = height < 730;
 
@@ -107,22 +106,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
             final keypadSpacing = veryShort ? 8.0 : 12.0;
 
-            // Reserve space for non-keypad widgets so keypad can shrink to fit
             final reservedHeight =
                 logoHeight +
                 gap1 +
                 titleSize +
                 gap2 +
-                54 + // mobile number box approx
+                54 +
                 gap2 +
                 pinLabelSize +
                 gap3 +
                 pinDotSize +
                 gap2 +
-                50; // bottom links safe area
+                50;
 
-            final remainingHeight =
-                height - reservedHeight - 40; // extra breathing room
+            final remainingHeight = height - reservedHeight - 40;
 
             final widthBasedKeySize =
                 ((contentWidth -

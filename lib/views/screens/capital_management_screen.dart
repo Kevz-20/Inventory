@@ -125,6 +125,7 @@ class _CapitalManagementScreenState
 
             return Scaffold(
               backgroundColor: _pageBg,
+              extendBody: true,
               appBar: AppBar(
                 backgroundColor: _pageBg,
                 elevation: 0,
@@ -151,157 +152,195 @@ class _CapitalManagementScreenState
               ),
               body: Stack(
                 children: [
-                  const Positioned.fill(child: DashboardBackground()),
-                  SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _miniBalanceCard(
-                          title: 'Cash on Hand',
-                          value: totalCashOnHand,
-                          icon: Icons.account_balance_wallet_rounded,
-                          s: s,
-                          padding: cardPad,
-                          radius: r16,
-                          labelFs: balanceLabelFs,
-                          valueFs: balanceValueFs,
-                        ),
-                        SizedBox(height: gap12),
-                        _miniBalanceCard(
-                          title: 'Capital',
-                          value: totalCapital,
-                          icon: Icons.savings_rounded,
-                          s: s,
-                          padding: cardPad,
-                          radius: r16,
-                          labelFs: balanceLabelFs,
-                          valueFs: balanceValueFs,
-                        ),
-                        SizedBox(height: gap14),
-                        _sectionCard(
-                          title: 'Add Capital',
-                          icon: Icons.add_circle_outline_rounded,
-                          s: s,
-                          padding: cardPad,
-                          radius: r16,
-                          titleFs: titleFs,
+                  const DashboardBackground(),
+                  Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            padH,
+                            padTop,
+                            padH,
+                            padBottom,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _amountInput(s: s, height: fieldH, radius: r12),
-                              SizedBox(height: (8 * s).clamp(6, 10).toDouble()),
-                              Text(
-                                'Enter the amount you want to add',
-                                style: TextStyle(
-                                  fontSize: smallFs,
-                                  color: _subtitleColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              _miniBalanceCard(
+                                title: 'Cash on Hand',
+                                value: totalCashOnHand,
+                                icon: Icons.account_balance_wallet_rounded,
+                                s: s,
+                                padding: cardPad,
+                                radius: r16,
+                                labelFs: balanceLabelFs,
+                                valueFs: balanceValueFs,
                               ),
                               SizedBox(height: gap12),
-                              Wrap(
-                                spacing: (8 * s).clamp(6, 10).toDouble(),
-                                runSpacing: (8 * s).clamp(6, 10).toDouble(),
-                                children: [
-                                  _quickAmountChip('500', s: s, radius: r12),
-                                  _quickAmountChip('1000', s: s, radius: r12),
-                                  _quickAmountChip('5000', s: s, radius: r12),
-                                ],
+                              _miniBalanceCard(
+                                title: 'Capital',
+                                value: totalCapital,
+                                icon: Icons.savings_rounded,
+                                s: s,
+                                padding: cardPad,
+                                radius: r16,
+                                labelFs: balanceLabelFs,
+                                valueFs: balanceValueFs,
                               ),
                               SizedBox(height: gap14),
-                              _remarksInput(
+                              _sectionCard(
+                                title: 'Add Capital',
+                                icon: Icons.add_circle_outline_rounded,
                                 s: s,
-                                height: fieldH,
-                                radius: r12,
+                                padding: cardPad,
+                                radius: r16,
+                                titleFs: titleFs,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _amountInput(
+                                      s: s,
+                                      height: fieldH,
+                                      radius: r12,
+                                    ),
+                                    SizedBox(
+                                      height: (8 * s).clamp(6, 10).toDouble(),
+                                    ),
+                                    Text(
+                                      'Enter the amount you want to add',
+                                      style: TextStyle(
+                                        fontSize: smallFs,
+                                        color: _subtitleColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    SizedBox(height: gap12),
+                                    Wrap(
+                                      spacing: (8 * s).clamp(6, 10).toDouble(),
+                                      runSpacing: (
+                                        8 * s
+                                      ).clamp(6, 10).toDouble(),
+                                      children: [
+                                        _quickAmountChip(
+                                          '500',
+                                          s: s,
+                                          radius: r12,
+                                        ),
+                                        _quickAmountChip(
+                                          '1000',
+                                          s: s,
+                                          radius: r12,
+                                        ),
+                                        _quickAmountChip(
+                                          '5000',
+                                          s: s,
+                                          radius: r12,
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: gap14),
+                                    _remarksInput(
+                                      s: s,
+                                      height: fieldH,
+                                      radius: r12,
+                                    ),
+                                  ],
+                                ),
                               ),
+                              SizedBox(height: (24 * s).clamp(20, 32).toDouble()),
                             ],
                           ),
                         ),
-                        SizedBox(height: (90 * s).clamp(70, 110).toDouble()),
-                      ],
-                    ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          padH,
+                          (12 * s).clamp(10, 14).toDouble(),
+                          padH,
+                          (12 * s).clamp(10, 14).toDouble() + bottomPadding,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          elevation: 12,
+                          borderRadius: BorderRadius.circular(r14),
+                          shadowColor: const Color(
+                            0xFF869BCE,
+                          ).withValues(alpha: 0.22),
+                          child: SizedBox(
+                            height: btnH,
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: vm.isLoading || enteredAmount <= 0
+                                  ? null
+                                  : () async {
+                                      final messenger =
+                                          ScaffoldMessenger.of(context);
+                                      messenger.hideCurrentSnackBar();
+
+                                      await vm.addCapital(
+                                        capitalAmount: enteredAmount,
+                                        remarks: _remarksController.text,
+                                      );
+
+                                      if (!mounted) return;
+
+                                      if (vm.error == null) {
+                                        _amountController.clear();
+                                        _remarksController.clear();
+                                        setState(() {});
+                                        messenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Capital added successfully!',
+                                            ),
+                                            backgroundColor: AppColors.success,
+                                          ),
+                                        );
+                                      } else {
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Failed to add capital: ${vm.error}',
+                                            ),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accentBlue,
+                                disabledBackgroundColor: const Color(
+                                  0xFFD8E1F5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(r14),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: vm.isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Add Capital',
+                                      style: TextStyle(
+                                        fontSize: bottomBtnFs,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              bottomNavigationBar: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  padH,
-                  (12 * s).clamp(10, 14).toDouble(),
-                  padH,
-                  (12 * s).clamp(10, 14).toDouble() + bottomPadding,
-                ),
-                child: Material(
-                  elevation: 12,
-                  borderRadius: BorderRadius.circular(r14),
-                  shadowColor: const Color(0xFF869BCE).withOpacity(0.22),
-                  child: SizedBox(
-                    height: btnH,
-                    child: ElevatedButton(
-                      onPressed: vm.isLoading || enteredAmount <= 0
-                          ? null
-                          : () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              messenger.hideCurrentSnackBar();
-
-                              await vm.addCapital(
-                                capitalAmount: enteredAmount,
-                                remarks: _remarksController.text,
-                              );
-
-                              if (!mounted) return;
-
-                              if (vm.error == null) {
-                                _amountController.clear();
-                                _remarksController.clear();
-                                setState(() {});
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Capital added successfully!',
-                                    ),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
-                              } else {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Failed to add capital: ${vm.error}',
-                                    ),
-                                    backgroundColor: AppColors.error,
-                                  ),
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _accentBlue,
-                        disabledBackgroundColor: const Color(0xFFD8E1F5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(r14),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: vm.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Add Capital',
-                              style: TextStyle(
-                                fontSize: bottomBtnFs,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
               ),
             );
           },
@@ -311,7 +350,7 @@ class _CapitalManagementScreenState
         backgroundColor: _pageBg,
         body: Stack(
           children: [
-            Positioned.fill(child: DashboardBackground()),
+            DashboardBackground(),
             Center(child: CircularProgressIndicator()),
           ],
         ),
@@ -320,7 +359,7 @@ class _CapitalManagementScreenState
         backgroundColor: _pageBg,
         body: Stack(
           children: [
-            const Positioned.fill(child: DashboardBackground()),
+            const DashboardBackground(),
             Center(
               child: Text(
                 'Error: $err',

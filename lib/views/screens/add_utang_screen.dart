@@ -2,13 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/app_colors.dart';
-import '../widgets/header.dart';
 import '../widgets/adaptive_digits_text.dart';
 import '../../services/db_service.dart';
 import '../../models/current_user.dart';
+import '../widgets/dashboard_background.dart';
+import '../widgets/primary_footer_nav.dart';
 
 class AddUtangPage extends StatefulWidget {
   const AddUtangPage({super.key});
@@ -23,6 +25,14 @@ class AddUtangPage extends StatefulWidget {
 final NumberFormat currencyFormat = NumberFormat('#,##0');
 
 class _AddUtangPageState extends State<AddUtangPage> {
+  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _fieldBg = Color(0xFFF9FBFF);
+  static const Color _cardBorder = Color(0xFFDDE5F8);
+  static const Color _titleColor = Color(0xFF213A6B);
+  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _accentBlue = Color(0xFF2F6BFF);
+
   // ✅ Default: One-Time Payment
   bool isInstallment = false;
 
@@ -358,8 +368,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
-
     return LayoutBuilder(
       builder: (context, c) {
         final w = c.maxWidth;
@@ -378,63 +386,98 @@ class _AddUtangPageState extends State<AddUtangPage> {
         final btnText = (18 * s).clamp(15.0, 19.0);
 
         return Scaffold(
-          backgroundColor: AppColors.surface,
-          appBar: const AppHeader(
-            title: 'Dugang Bayronon',
-            showBackButton: true,
-          ),
-          body: Column(
-            children: [
-              SizedBox(height: (12 * s).clamp(10.0, 16.0)),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: padH),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      buildTextField(
-                        "Item / Description",
-                        itemController,
-                        icon: Icons.description,
-                        s: s,
-                        radius: r12,
-                      ),
-                      SizedBox(height: gap16),
-
-                      buildPaymentCard(
-                        s: s,
-                        cardPad: cardPad,
-                        r16: r16,
-                        r12: r12,
-                        gap12: gap12,
-                      ),
-
-                      SizedBox(height: gap16),
-
-                      buildNotesCard(
-                        s: s,
-                        cardPad: cardPad,
-                        r16: r16,
-                        r12: r12,
-                      ),
-
-                      SizedBox(height: gap20),
-                    ],
-                  ),
-                ),
+          backgroundColor: _pageBg,
+          extendBody: true,
+          appBar: AppBar(
+            backgroundColor: _pageBg,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            centerTitle: true,
+            leading: IconButton(
+              icon: Image.asset(
+                'lib/assets/arrowleft.png',
+                width: 22,
+                height: 22,
+                fit: BoxFit.contain,
               ),
-
-              SizedBox(height: (10 * s).clamp(8.0, 14.0)),
-
-              buildSaveButton(
-                s: s,
-                padH: padH,
-                btnH: btnH,
-                btnText: btnText,
-                r12: r12,
-                bottomInset: bottomInset,
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/owner_utang');
+                }
+              },
+            ),
+            title: Text(
+              'Dugang Bayronon',
+              style: TextStyle(
+                color: _titleColor,
+                fontWeight: FontWeight.w900,
+                fontSize: (20 * s).clamp(18.0, 24.0),
+              ),
+            ),
+          ),
+          body: Stack(
+            children: [
+              const DashboardBackground(),
+              Column(
+                children: [
+                  SizedBox(height: (12 * s).clamp(10.0, 16.0)),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: padH),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          buildTextField(
+                            "Item / Description",
+                            itemController,
+                            icon: Icons.description,
+                            s: s,
+                            radius: r12,
+                          ),
+                          SizedBox(height: gap16),
+                          buildPaymentCard(
+                            s: s,
+                            cardPad: cardPad,
+                            r16: r16,
+                            r12: r12,
+                            gap12: gap12,
+                          ),
+                          SizedBox(height: gap16),
+                          buildNotesCard(
+                            s: s,
+                            cardPad: cardPad,
+                            r16: r16,
+                            r12: r12,
+                          ),
+                          SizedBox(height: gap20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
+          ),
+          bottomNavigationBar: Container(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                buildSaveButton(
+                  s: s,
+                  padH: padH,
+                  btnH: btnH,
+                  btnText: btnText,
+                  r12: r12,
+                  bottomInset: 0,
+                ),
+                const PrimaryFooterNav(
+                  selectedTab: PrimaryFooterTab.ownerUtang,
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -455,8 +498,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(r16)),
-      elevation: 2,
-      color: Colors.white,
+      elevation: 0,
+      color: _cardBg,
       child: Padding(
         padding: EdgeInsets.all(cardPad),
         child: Column(
@@ -464,7 +507,11 @@ class _AddUtangPageState extends State<AddUtangPage> {
           children: [
             Text(
               "Payment Details",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: titleFs),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: titleFs,
+                color: _titleColor,
+              ),
             ),
             SizedBox(height: gap12),
 
@@ -499,9 +546,9 @@ class _AddUtangPageState extends State<AddUtangPage> {
                 vertical: (4 * s).clamp(4.0, 8.0),
               ),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: _fieldBg,
                 borderRadius: BorderRadius.circular((12 * s).clamp(10.0, 16.0)),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: _cardBorder),
               ),
               child: SwitchListTile(
                 dense: true,
@@ -509,13 +556,14 @@ class _AddUtangPageState extends State<AddUtangPage> {
                   horizontal: (6 * s).clamp(6.0, 10.0),
                 ),
                 value: isInstallment,
-                activeColor: AppColors.primary,
+                activeColor: _accentBlue,
                 onChanged: _setInstallment,
                 title: Text(
                   "Installment Plan",
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     fontSize: (14 * s).clamp(13.0, 16.0),
+                    color: _titleColor,
                   ),
                 ),
                 subtitle: Text(
@@ -523,7 +571,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
                       ? "Monthly schedule will apply"
                       : "Enable if you will pay monthly",
                   style: TextStyle(
-                    color: Colors.grey,
+                    color: _subtitleColor,
                     fontSize: (12 * s).clamp(11.0, 13.5),
                   ),
                 ),
@@ -603,7 +651,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           padH,
           (10 * s).clamp(8.0, 14.0),
           padH,
-          (14 * s).clamp(10.0, 16.0) + bottomInset,
+          (12 * s).clamp(10.0, 16.0) + bottomInset,
         ),
         child: SizedBox(
           width: double.infinity,
@@ -611,14 +659,19 @@ class _AddUtangPageState extends State<AddUtangPage> {
           child: ElevatedButton(
             onPressed: saveUtang,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: _accentBlue,
+              elevation: 8,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(r12),
               ),
             ),
             child: Text(
               "Rekord",
-              style: TextStyle(fontSize: btnText, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: btnText,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -659,7 +712,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
       style: TextStyle(fontSize: textFs),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey, fontSize: labelFs),
+        labelStyle: TextStyle(color: _subtitleColor, fontSize: labelFs),
         errorText: errorText,
         prefixIcon: icon != null
             ? (icon == Icons.attach_money || icon == Icons.money_off
@@ -670,17 +723,30 @@ class _AddUtangPageState extends State<AddUtangPage> {
                         style: TextStyle(
                           fontSize: (20 * s).clamp(16.0, 22.0),
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                          color: _accentBlue,
                         ),
                       ),
                     )
                   : Icon(
                       icon,
-                      color: Colors.grey,
+                      color: _accentBlue,
                       size: (22 * s).clamp(20.0, 26.0),
                     ))
             : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
+        filled: true,
+        fillColor: _fieldBg,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: _cardBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: _cardBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(color: _accentBlue),
+        ),
         contentPadding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
       ),
     );
@@ -694,8 +760,8 @@ class _AddUtangPageState extends State<AddUtangPage> {
   }) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(r16)),
-      elevation: 2,
-      color: Colors.white,
+      elevation: 0,
+      color: _cardBg,
       child: Padding(
         padding: EdgeInsets.all(cardPad),
         child: buildTextField(
@@ -722,7 +788,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     return Container(
       padding: EdgeInsets.all((12 * s).clamp(10.0, 14.0)),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(radius),
       ),
       child: Column(
@@ -730,7 +796,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
         children: [
           Text(
             title,
-            style: TextStyle(fontSize: tFs, color: Colors.grey),
+            style: TextStyle(fontSize: tFs, color: _subtitleColor),
           ),
           SizedBox(height: (4 * s).clamp(3.0, 6.0)),
           AdaptiveDigitsText(
