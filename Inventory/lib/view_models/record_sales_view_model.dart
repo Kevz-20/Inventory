@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/capital_management_model.dart';
 import '../models/product_model.dart';
+import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
 import '../providers/capital_management_view_model_provider.dart';
 import '../repositories/account_repository.dart';
@@ -11,6 +12,16 @@ import '../repositories/customer_repository.dart';
 import '../repositories/product_category_repository.dart';
 import '../repositories/product_repository.dart';
 import '../services/db_service.dart';
+
+class AppliedSellingOptionSummary {
+  final ProductSellingOption option;
+  final int count;
+
+  const AppliedSellingOptionSummary({
+    required this.option,
+    required this.count,
+  });
+}
 
 class SalesViewModel extends ChangeNotifier {
   final void Function()? onCashUpdated;
@@ -32,6 +43,8 @@ class SalesViewModel extends ChangeNotifier {
   final Map<int, TextEditingController> amountControllers = {};
   final Map<int, VoidCallback> _controllerListeners = {};
   final Map<int, List<ProductUnitConversion>> productUnitConversions = {};
+  final Map<int, List<ProductSellingOption>> productSellingOptions = {};
+  final Map<int, Map<String, int>> appliedSellingOptionCounts = {};
 
   List<Map<String, dynamic>> _dbCategories = [];
 
@@ -125,6 +138,49 @@ class SalesViewModel extends ChangeNotifier {
           : (productUnitConversions[product.id!] ??
               const <ProductUnitConversion>[]);
 
+  List<ProductSellingOption> sellingOptionsFor(ProductModel product) =>
+      product.id == null
+          ? const <ProductSellingOption>[]
+          : (productSellingOptions[product.id!] ??
+              const <ProductSellingOption>[]);
+
+  List<AppliedSellingOptionSummary> appliedSellingOptionsFor(
+    ProductModel product,
+  ) {
+    final id = product.id;
+    if (id == null) return const <AppliedSellingOptionSummary>[];
+
+    final counts = appliedSellingOptionCounts[id];
+    if (counts == null || counts.isEmpty) {
+      return const <AppliedSellingOptionSummary>[];
+    }
+
+    final options = sellingOptionsFor(product);
+    final summaries = <AppliedSellingOptionSummary>[];
+
+    for (final option in options) {
+      final count = counts[option.label] ?? 0;
+      if (count <= 0) continue;
+      summaries.add(
+        AppliedSellingOptionSummary(option: option, count: count),
+      );
+    }
+
+    return summaries;
+  }
+
+  Map<String, int> appliedSellingOptionCountMap(ProductModel product) {
+    final id = product.id;
+    if (id == null) return const <String, int>{};
+    return Map<String, int>.from(appliedSellingOptionCounts[id] ?? const <String, int>{});
+  }
+
+  void _clearAppliedSellingOptions(ProductModel product) {
+    final id = product.id;
+    if (id == null) return;
+    appliedSellingOptionCounts.remove(id);
+  }
+
   Future<void> loadProducts() async {
     if (_productRepository == null) return;
 
@@ -137,9 +193,13 @@ class SalesViewModel extends ChangeNotifier {
       productUnitConversions
         ..clear()
         ..addAll(await _productRepository!.getAllUnitConversions());
+      productSellingOptions
+        ..clear()
+        ..addAll(await _productRepository!.getAllSellingOptions());
     } catch (_) {
       products = [];
       productUnitConversions.clear();
+      productSellingOptions.clear();
     }
 
     for (final p in products) {
@@ -219,6 +279,7 @@ class SalesViewModel extends ChangeNotifier {
     final controller = controllers[id];
 
     if (value.trim().isEmpty) {
+      _clearAppliedSellingOptions(product);
       productQuantities[id] = 0;
       productAmounts[id] = 0;
       calculateTotal();
@@ -228,6 +289,7 @@ class SalesViewModel extends ChangeNotifier {
     final parsed = int.tryParse(value) ?? 0;
     final clamped = parsed.clamp(0, product.quantity);
 
+    _clearAppliedSellingOptions(product);
     productQuantities[id] = clamped;
     productAmounts[id] = clamped * getEffectiveUnitPrice(product);
 
@@ -262,6 +324,7 @@ class SalesViewModel extends ChangeNotifier {
     final unitPrice = getEffectiveUnitPrice(product);
 
     if (amount <= 0 || unitPrice <= 0) {
+      _clearAppliedSellingOptions(product);
       productQuantities[id] = 0;
       productAmounts[id] = 0;
       final qtyController = controllers[id];
@@ -275,6 +338,7 @@ class SalesViewModel extends ChangeNotifier {
     final baseQty = (clampedAmount / unitPrice).floor().clamp(0, product.quantity);
     final subtotal = baseQty * unitPrice;
 
+    _clearAppliedSellingOptions(product);
     productQuantities[id] = baseQty;
     productAmounts[id] = subtotal;
 
@@ -287,8 +351,51 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void applyUnitConversion(ProductModel product, ProductUnitConversion conversion) {
+    _clearAppliedSellingOptions(product);
     final nextQty = getQuantity(product) + conversion.baseQuantity;
     updateQuantity(product, nextQty);
+  }
+
+  void applySellingOption(ProductModel product, ProductSellingOption option) {
+    if (product.id == null) return;
+    final id = product.id!;
+    final baseQty = option.baseQuantity ?? 0;
+    final price = option.price;
+    if (baseQty <= 0 || price <= 0) return;
+
+    final currentQty = productQuantities[id] ?? 0;
+    final currentAmount = productAmounts[id] ?? 0;
+    final nextQty = currentQty + baseQty;
+    if (nextQty > product.quantity) {
+      return;
+    }
+
+    productQuantities[id] = nextQty;
+    productAmounts[id] = currentAmount + price;
+    final counts = {...(appliedSellingOptionCounts[id] ?? <String, int>{})};
+    counts[option.label] = (counts[option.label] ?? 0) + 1;
+    appliedSellingOptionCounts[id] = counts;
+
+    final controller = controllers[id];
+    if (controller != null && controller.text != nextQty.toString()) {
+      if (_controllerListeners.containsKey(id)) {
+        controller.removeListener(_controllerListeners[id]!);
+      }
+      controller.text = nextQty.toString();
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+      if (_controllerListeners.containsKey(id)) {
+        controller.addListener(_controllerListeners[id]!);
+      }
+    }
+
+    final amountController = amountControllers[id];
+    if (amountController != null) {
+      amountController.text = productAmounts[id]!.toStringAsFixed(2);
+    }
+
+    calculateTotal();
   }
 
   void incrementQuantity(ProductModel product) {
@@ -297,6 +404,7 @@ class SalesViewModel extends ChangeNotifier {
     final currentQty = productQuantities[id] ?? 0;
 
     if (product.quantity > 0 && currentQty < product.quantity) {
+      _clearAppliedSellingOptions(product);
       updateQuantity(product, currentQty + 1);
     }
   }
@@ -307,6 +415,7 @@ class SalesViewModel extends ChangeNotifier {
     final currentQty = productQuantities[id] ?? 0;
 
     if (currentQty > 0) {
+      _clearAppliedSellingOptions(product);
       updateQuantity(product, currentQty - 1);
     }
   }
@@ -316,6 +425,7 @@ class SalesViewModel extends ChangeNotifier {
     final id = product.id!;
 
     qty = qty.clamp(0, product.quantity);
+    _clearAppliedSellingOptions(product);
     productQuantities[id] = qty;
     productAmounts[id] = qty * getEffectiveUnitPrice(product);
 
@@ -339,6 +449,51 @@ class SalesViewModel extends ChangeNotifier {
     if (amountController != null) {
       amountController.text =
           qty == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
+    }
+
+    calculateTotal();
+  }
+
+  void setProductSelection(
+    ProductModel product, {
+    required int qty,
+    required double subtotal,
+    Map<String, int>? appliedOptionCounts,
+  }) {
+    final id = product.id;
+    if (id == null) return;
+
+    final clampedQty = qty.clamp(0, product.quantity);
+    final safeSubtotal = clampedQty <= 0
+        ? 0.0
+        : subtotal.clamp(0, double.infinity).toDouble();
+
+    if (appliedOptionCounts == null || appliedOptionCounts.isEmpty || clampedQty == 0) {
+      appliedSellingOptionCounts.remove(id);
+    } else {
+      appliedSellingOptionCounts[id] = Map<String, int>.from(appliedOptionCounts);
+    }
+
+    productQuantities[id] = clampedQty;
+    productAmounts[id] = safeSubtotal;
+
+    final controller = controllers[id];
+    if (controller != null) {
+      if (_controllerListeners.containsKey(id)) {
+        controller.removeListener(_controllerListeners[id]!);
+      }
+      controller.text = clampedQty.toString();
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+      if (_controllerListeners.containsKey(id)) {
+        controller.addListener(_controllerListeners[id]!);
+      }
+    }
+
+    final amountController = amountControllers[id];
+    if (amountController != null) {
+      amountController.text = safeSubtotal == 0 ? '' : safeSubtotal.toStringAsFixed(2);
     }
 
     calculateTotal();
@@ -373,6 +528,7 @@ class SalesViewModel extends ChangeNotifier {
 
       productQuantities[id] = 0;
       productAmounts[id] = 0;
+      appliedSellingOptionCounts.remove(id);
 
       final controller = controllers[id];
       if (controller != null && controller.text != '0') {
@@ -428,6 +584,16 @@ class SalesViewModel extends ChangeNotifier {
         'quantity': qty,
         'price': getEffectiveUnitPrice(p),
         'subtotal': productAmounts[id] ?? (qty * getEffectiveUnitPrice(p)),
+        'appliedSellingOptions': appliedSellingOptionsFor(p)
+            .map(
+              (entry) => {
+                'label': entry.option.label,
+                'count': entry.count,
+                'baseQuantity': entry.option.baseQuantity,
+                'price': entry.option.price,
+              },
+            )
+            .toList(),
       });
     }
 

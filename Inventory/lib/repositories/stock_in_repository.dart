@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/product_model.dart';
+import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
 import '../services/audit_log_service.dart';
 
@@ -211,6 +212,45 @@ class StockInRepository {
           'product_id': productId,
           'unit_name': conversion.unitName.trim(),
           'base_quantity': conversion.baseQuantity,
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+    });
+  }
+
+  Future<List<ProductSellingOption>> getSellingOptions(int productId) async {
+    final rows = await db.query(
+      'product_selling_option',
+      where: 'product_id = ?',
+      whereArgs: [productId],
+      orderBy: 'base_quantity DESC, label ASC',
+    );
+
+    return rows.map(ProductSellingOption.fromMap).toList();
+  }
+
+  Future<void> replaceSellingOptions(
+    int productId,
+    List<ProductSellingOption> options,
+  ) async {
+    final now = _now();
+
+    await db.transaction((txn) async {
+      await txn.delete(
+        'product_selling_option',
+        where: 'product_id = ?',
+        whereArgs: [productId],
+      );
+
+      for (final option in options) {
+        await txn.insert('product_selling_option', {
+          'product_id': productId,
+          'label': option.label.trim(),
+          'mode': option.mode.trim(),
+          'unit_name': option.unitName?.trim(),
+          'base_quantity': option.baseQuantity,
+          'price': option.price,
           'created_at': now,
           'updated_at': now,
         });

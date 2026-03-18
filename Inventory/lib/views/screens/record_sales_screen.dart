@@ -9,6 +9,7 @@ import 'package:dswd_slp/core/app_colors.dart';
 import 'package:go_router/go_router.dart';
 import '../../app_router.dart';
 import '../../models/product_model.dart';
+import '../../models/product_selling_option.dart';
 import '../../view_models/record_sales_view_model.dart';
 import 'package:intl/intl.dart';
 import '../widgets/dashboard_background.dart';
@@ -853,105 +854,191 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
-  Widget _productCard(ProductModel product, SalesViewModel vm) => Container(
-    margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
-    padding: EdgeInsets.all(_r(context, 12)),
-    decoration: _surfaceDecoration(),
-    child: Stack(
-      children: [
-        Positioned(
-          right: -_r(context, 24),
-          bottom: -_r(context, 30),
-          child: Container(
-            width: _r(context, 110),
-            height: _r(context, 110),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFEAF2FF).withOpacity(0.85),
-            ),
-          ),
-        ),
-        Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _productImage(product),
-        SizedBox(width: _r(context, 12)),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                product.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: _r(context, 16),
-                  color: _titleColor,
+  Widget _productCard(ProductModel product, SalesViewModel vm) {
+    final subtotal = vm.getSubtotal(product);
+    final qty = vm.getQuantity(product);
+    final hasSelection = subtotal > 0;
+    final addedLabel = hasSelection ? 'Added: $qty ${product.baseUnit}' : null;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(_r(context, 20)),
+      onTap: () => _showProductSellSheet(product, vm),
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
+        padding: EdgeInsets.all(_r(context, 14)),
+        decoration: _surfaceDecoration(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(_r(context, 8)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F8FF),
+                    borderRadius: BorderRadius.circular(_r(context, 16)),
+                    border: Border.all(color: _cardBorder),
+                  ),
+                  child: _productImage(product),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: _r(context, 4)),
-              Text(
-                vm.supportsPesoEntry(product)
-                    ? '${currencyFormatter.format(vm.getEffectiveUnitPrice(product))} / ${product.baseUnit}'
-                    : currencyFormatter.format(product.sellingPrice),
-                style: TextStyle(
-                  fontSize: _r(context, 15),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              SizedBox(height: _r(context, 2)),
-              Text(
-                "Stock: ${product.stockDisplay}",
-                style: TextStyle(
-                  fontSize: _r(context, 12.5),
-                  color: _subtitleColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: _r(context, 8)),
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: _isTablet(context) ? _r(context, 130) : _r(context, 110),
-            maxWidth: _isLandscape(context)
-                ? _r(context, 170)
-                : (_isTablet(context) ? _r(context, 150) : _r(context, 130)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _quantitySelector(product, vm),
-              SizedBox(height: _r(context, 8)),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  currencyFormatter.format(vm.getSubtotal(product)),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: _r(context, 14.5),
-                    color: Colors.black87,
+                SizedBox(width: _r(context, 12)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: _r(context, 16),
+                          color: _titleColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: _r(context, 4)),
+                      Text(
+                        vm.supportsPesoEntry(product)
+                            ? '${currencyFormatter.format(vm.getEffectiveUnitPrice(product))} / ${product.baseUnit}'
+                            : currencyFormatter.format(product.sellingPrice),
+                        style: TextStyle(
+                          fontSize: _r(context, 14.5),
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF255FD5),
+                        ),
+                      ),
+                      SizedBox(height: _r(context, 6)),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: _infoPill('Stock: ${product.stockDisplay}'),
+                          ),
+                          if (addedLabel != null) ...[
+                            SizedBox(width: _r(context, 12)),
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: _statusText(addedLabel),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Text(
-                "Subtotal",
-                style: TextStyle(
-                  fontSize: _r(context, 11.5),
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black.withOpacity(0.5),
+                SizedBox(width: _r(context, 12)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      constraints: BoxConstraints(
+                        minWidth: _r(context, 92),
+                        maxWidth: _r(context, 104),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _r(context, 12),
+                        vertical: _r(context, 12),
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFF8FAFF), Color(0xFFEFF4FF)],
+                        ),
+                        borderRadius: BorderRadius.circular(_r(context, 18)),
+                        border: Border.all(color: _cardBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            currencyFormatter.format(subtotal),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: _r(context, 15),
+                              color: _titleColor,
+                            ),
+                          ),
+                          SizedBox(height: _r(context, 2)),
+                          Text(
+                            "Subtotal",
+                            style: TextStyle(
+                              fontSize: _r(context, 11.5),
+                              fontWeight: FontWeight.w700,
+                              color: _subtitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: _r(context, 8)),
+                    SizedBox(
+                      width: _r(context, 92),
+                      height: _r(context, 40),
+                      child: ElevatedButton(
+                        onPressed: () => _showProductSellSheet(product, vm),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: subtotal > 0
+                              ? const Color(0xFF173D86)
+                              : const Color(0xFF255FD5),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(_r(context, 14)),
+                          ),
+                        ),
+                        child: Text(
+                          subtotal > 0 ? 'Edit' : 'Sell',
+                          style: TextStyle(
+                            fontSize: _r(context, 12.5),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _infoPill(String label) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: _r(context, 8),
+        vertical: _r(context, 5),
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F8FF),
+        borderRadius: BorderRadius.circular(_r(context, 999)),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: _r(context, 11.5),
+          fontWeight: FontWeight.w700,
+          color: _subtitleColor,
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
+
+  Widget _statusText(String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: _r(context, 12.5),
+        fontWeight: FontWeight.w900,
+        color: const Color(0xFFE46F1F),
+      ),
+    );
+  }
 
   Widget _productImage(ProductModel product) {
     final double size = _isTablet(context)
@@ -1044,145 +1131,447 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         RegExp(r'^[A-Za-z]:/').hasMatch(normalized);
   }
 
-  Widget _quantitySelector(ProductModel product, SalesViewModel vm) {
-    final controller = vm.controllers[product.id!]!;
-    final iconSize = _r(context, 18);
-    final amountController = vm.amountControllers[product.id!]!;
+  Future<void> _showProductSellSheet(
+    ProductModel product,
+    SalesViewModel vm,
+  ) async {
+    final sellingOptions = vm.sellingOptionsFor(product);
+    final appliedCounts = vm.appliedSellingOptionCountMap(product);
+    int localQty = vm.getQuantity(product);
+    double localSubtotal = vm.getSubtotal(product);
+    final localAppliedCounts = <String, int>{...appliedCounts};
+    final amountController = TextEditingController(
+      text: localSubtotal > 0 ? localSubtotal.toStringAsFixed(2) : '',
+    );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        if (vm.supportsPesoEntry(product))
-          Container(
-            width: _isTablet(context) ? _r(context, 150) : _r(context, 132),
-            padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
-            decoration: BoxDecoration(
-              border: Border.all(color: _cardBorder),
-              borderRadius: BorderRadius.circular(_r(context, 14)),
-              color: Colors.white,
-            ),
-            child: TextField(
-              controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: _r(context, 13.5),
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                LengthLimitingTextInputFormatter(8),
-              ],
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                hintText: '₱ amount',
-              ),
-              onChanged: (value) => vm.setTypedAmount(product, value),
-            ),
-          ),
-        if (vm.supportsPesoEntry(product)) SizedBox(height: _r(context, 6)),
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: _r(context, 6),
-            vertical: _r(context, 2),
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: _cardBorder),
-            borderRadius: BorderRadius.circular(_r(context, 50)),
-            color: _cardBg,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(_r(context, 50)),
-                onTap: () => vm.decrementQuantity(product),
-                child: Padding(
-                  padding: EdgeInsets.all(_r(context, 8)),
-                  child: Icon(Icons.remove, size: iconSize),
+    void syncAmountField() {
+      amountController.text =
+          localSubtotal <= 0 ? '' : localSubtotal.toStringAsFixed(2);
+      amountController.selection = TextSelection.fromPosition(
+        TextPosition(offset: amountController.text.length),
+      );
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final summaries = vm
+                .sellingOptionsFor(product)
+                .where((option) => (localAppliedCounts[option.label] ?? 0) > 0)
+                .map(
+                  (option) => AppliedSellingOptionSummary(
+                    option: option,
+                    count: localAppliedCounts[option.label]!,
+                  ),
+                )
+                .toList();
+
+            void setManualQty(int qty) {
+              final clampedQty = qty.clamp(0, product.quantity);
+              setSheetState(() {
+                localQty = clampedQty;
+                localSubtotal = clampedQty * vm.getEffectiveUnitPrice(product);
+                localAppliedCounts.clear();
+                syncAmountField();
+              });
+            }
+
+            void applyPreset(ProductSellingOption option) {
+              final baseQty = option.baseQuantity ?? 0;
+              if (baseQty <= 0) return;
+              final nextQty = localQty + baseQty;
+              if (nextQty > product.quantity) return;
+
+              setSheetState(() {
+                localQty = nextQty;
+                localSubtotal += option.price;
+                localAppliedCounts[option.label] =
+                    (localAppliedCounts[option.label] ?? 0) + 1;
+                syncAmountField();
+              });
+            }
+
+            return SafeArea(
+              top: false,
+              child: Container(
+                margin: EdgeInsets.fromLTRB(
+                  _r(context, 10),
+                  _r(context, 12),
+                  _r(context, 10),
+                  _r(context, 10),
                 ),
-              ),
-              SizedBox(
-                width: _isTablet(context) ? _r(context, 52) : _r(context, 44),
-                child: Focus(
-                  onFocusChange: (hasFocus) {
-                    if (!hasFocus && controller.text.trim().isEmpty) {
-                      vm.setTypedQuantity(product, '0');
-                    }
-                  },
-                  child: TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: _r(context, 14),
+                padding: EdgeInsets.fromLTRB(
+                  _r(context, 16),
+                  _r(context, 12),
+                  _r(context, 16),
+                  _r(context, 16) + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(_r(context, 28)),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: _r(context, 24),
+                      offset: const Offset(0, -6),
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: _r(context, 8),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: _r(context, 46),
+                          height: _r(context, 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD7E1F7),
+                            borderRadius: BorderRadius.circular(_r(context, 99)),
+                          ),
+                        ),
                       ),
-                    ),
-                    onChanged: (value) {
-                      vm.setTypedQuantity(product, value);
-                    },
-                    onTapOutside: (_) {
-                      if (controller.text.trim().isEmpty) {
-                        vm.setTypedQuantity(product, '0');
-                      }
-                      FocusScope.of(context).unfocus();
-                    },
-                    onSubmitted: (_) {
-                      if (controller.text.trim().isEmpty) {
-                        vm.setTypedQuantity(product, '0');
-                      }
-                    },
-                    onEditingComplete: () {
-                      if (controller.text.trim().isEmpty) {
-                        vm.setTypedQuantity(product, '0');
-                      }
-                      FocusScope.of(context).unfocus();
-                    },
+                      SizedBox(height: _r(context, 16)),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _productImage(product),
+                          SizedBox(width: _r(context, 12)),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: _r(context, 18),
+                                    color: _titleColor,
+                                  ),
+                                ),
+                                SizedBox(height: _r(context, 4)),
+                                Text(
+                                  vm.supportsPesoEntry(product)
+                                      ? '${currencyFormatter.format(vm.getEffectiveUnitPrice(product))} / ${product.baseUnit}'
+                                      : currencyFormatter.format(product.sellingPrice),
+                                  style: TextStyle(
+                                    fontSize: _r(context, 14),
+                                    fontWeight: FontWeight.w800,
+                                    color: _subtitleColor,
+                                  ),
+                                ),
+                                SizedBox(height: _r(context, 6)),
+                                Wrap(
+                                  spacing: _r(context, 8),
+                                  runSpacing: _r(context, 6),
+                                  children: [
+                                    _infoPill('Stock: ${product.stockDisplay}'),
+                                    _infoPill('Selected: $localQty ${product.baseUnit}'),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: _r(context, 18)),
+                      if (sellingOptions.isNotEmpty) ...[
+                        _sheetSectionLabel('Paspas nga baligya'),
+                        SizedBox(height: _r(context, 8)),
+                        Wrap(
+                          spacing: _r(context, 10),
+                          runSpacing: _r(context, 10),
+                          children: sellingOptions.map((option) {
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(_r(context, 18)),
+                              onTap: () => applyPreset(option),
+                              child: Container(
+                                constraints: BoxConstraints(
+                                  minWidth: _r(context, 120),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: _r(context, 14),
+                                  vertical: _r(context, 12),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F8FF),
+                                  borderRadius: BorderRadius.circular(_r(context, 18)),
+                                  border: Border.all(color: _cardBorder),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      option.label,
+                                      style: TextStyle(
+                                        fontSize: _r(context, 13),
+                                        fontWeight: FontWeight.w900,
+                                        color: _titleColor,
+                                      ),
+                                    ),
+                                    SizedBox(height: _r(context, 4)),
+                                    Text(
+                                      currencyFormatter.format(option.price),
+                                      style: TextStyle(
+                                        fontSize: _r(context, 12.5),
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF255FD5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (summaries.isNotEmpty) ...[
+                          SizedBox(height: _r(context, 10)),
+                          Wrap(
+                            spacing: _r(context, 8),
+                            runSpacing: _r(context, 8),
+                            children: summaries
+                                .map(
+                                  (entry) => Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: _r(context, 10),
+                                      vertical: _r(context, 6),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2F6BFF).withValues(
+                                        alpha: 0.10,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        _r(context, 999),
+                                      ),
+                                      border: Border.all(color: _cardBorder),
+                                    ),
+                                    child: Text(
+                                      '${entry.option.label} x${entry.count}',
+                                      style: TextStyle(
+                                        fontSize: _r(context, 11.5),
+                                        fontWeight: FontWeight.w800,
+                                        color: _titleColor,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                        SizedBox(height: _r(context, 16)),
+                      ],
+                      _sheetSectionLabel('Manual nga qty'),
+                      SizedBox(height: _r(context, 8)),
+                      if (vm.supportsPesoEntry(product)) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FBFF),
+                            borderRadius: BorderRadius.circular(_r(context, 16)),
+                            border: Border.all(color: _cardBorder),
+                          ),
+                          child: TextField(
+                            controller: amountController,
+                            keyboardType:
+                                const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: _r(context, 14),
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                              LengthLimitingTextInputFormatter(8),
+                            ],
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: '₱ amount',
+                            ),
+                            onChanged: (value) {
+                              final amount =
+                                  double.tryParse(value.replaceAll(',', '').trim()) ??
+                                      0;
+                              final unitPrice = vm.getEffectiveUnitPrice(product);
+                              final maxAmount = product.quantity * unitPrice;
+                              final clampedAmount = amount.clamp(0, maxAmount);
+                              final qty = unitPrice <= 0
+                                  ? 0
+                                  : (clampedAmount / unitPrice)
+                                      .floor()
+                                      .clamp(0, product.quantity);
+
+                              setSheetState(() {
+                                localQty = qty;
+                                localSubtotal = qty * unitPrice;
+                                localAppliedCounts.clear();
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(height: _r(context, 8)),
+                      ],
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: _r(context, 6),
+                          vertical: _r(context, 2),
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FBFF),
+                          borderRadius: BorderRadius.circular(_r(context, 50)),
+                          border: Border.all(color: _cardBorder),
+                        ),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: localQty <= 0
+                                  ? null
+                                  : () => setManualQty(localQty - 1),
+                              icon: Icon(Icons.remove, size: _r(context, 18)),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '$localQty',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: _r(context, 16),
+                                  fontWeight: FontWeight.w900,
+                                  color: _titleColor,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: localQty >= product.quantity
+                                  ? null
+                                  : () => setManualQty(localQty + 1),
+                              icon: Icon(Icons.add, size: _r(context, 18)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (vm.supportsPesoEntry(product) &&
+                          vm.unitConversionsFor(product).isNotEmpty) ...[
+                        SizedBox(height: _r(context, 10)),
+                        Wrap(
+                          spacing: _r(context, 8),
+                          runSpacing: _r(context, 8),
+                          children: vm
+                              .unitConversionsFor(product)
+                              .take(4)
+                              .map((conversion) {
+                            return ActionChip(
+                              label: Text(
+                                '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
+                              ),
+                              onPressed: () => setManualQty(
+                                (localQty + conversion.baseQuantity)
+                                    .clamp(0, product.quantity),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                      SizedBox(height: _r(context, 18)),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(_r(context, 14)),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F8FF),
+                          borderRadius: BorderRadius.circular(_r(context, 18)),
+                          border: Border.all(color: _cardBorder),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Subtotal',
+                              style: TextStyle(
+                                fontSize: _r(context, 14),
+                                fontWeight: FontWeight.w800,
+                                color: _subtitleColor,
+                              ),
+                            ),
+                            Text(
+                              currencyFormatter.format(localSubtotal),
+                              style: TextStyle(
+                                fontSize: _r(context, 18),
+                                fontWeight: FontWeight.w900,
+                                color: _titleColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: _r(context, 16)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(sheetCtx),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: Size.fromHeight(_r(context, 52)),
+                                side: BorderSide(color: _cardBorder),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(_r(context, 16)),
+                                ),
+                              ),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          SizedBox(width: _r(context, 10)),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                vm.setProductSelection(
+                                  product,
+                                  qty: localQty,
+                                  subtotal: localSubtotal,
+                                  appliedOptionCounts: localAppliedCounts,
+                                );
+                                Navigator.pop(sheetCtx);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: Size.fromHeight(_r(context, 52)),
+                                backgroundColor: const Color(0xFF255FD5),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(_r(context, 16)),
+                                ),
+                              ),
+                              child: const Text('Add to Sale'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-              InkWell(
-                borderRadius: BorderRadius.circular(_r(context, 50)),
-                onTap: () => vm.incrementQuantity(product),
-                child: Padding(
-                  padding: EdgeInsets.all(_r(context, 8)),
-                  child: Icon(Icons.add, size: iconSize),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (vm.supportsPesoEntry(product) &&
-            vm.unitConversionsFor(product).isNotEmpty) ...[
-          SizedBox(height: _r(context, 6)),
-          Wrap(
-            spacing: _r(context, 6),
-            runSpacing: _r(context, 6),
-            alignment: WrapAlignment.end,
-            children: vm.unitConversionsFor(product).take(3).map((conversion) {
-              return ActionChip(
-                label: Text(
-                  '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
-                  style: TextStyle(fontSize: _r(context, 10.5)),
-                ),
-                onPressed: () => vm.applyUnitConversion(product, conversion),
-              );
-            }).toList(),
-          ),
-        ],
-      ],
+            );
+          },
+        );
+      },
+    );
+
+    amountController.dispose();
+  }
+
+  Widget _sheetSectionLabel(String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontWeight: FontWeight.w900,
+        fontSize: _r(context, 13),
+        color: _titleColor,
+      ),
     );
   }
 
@@ -1407,6 +1796,255 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     );
   }
 
+  void _showCurrentSaleSheet(SalesViewModel vm) {
+    final selectedProducts = vm.products.where((p) {
+      final id = p.id;
+      if (id == null) return false;
+      return (vm.productQuantities[id] ?? 0) > 0;
+    }).toList();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            margin: EdgeInsets.fromLTRB(
+              _r(context, 10),
+              _r(context, 12),
+              _r(context, 10),
+              _r(context, 10),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              _r(context, 16),
+              _r(context, 12),
+              _r(context, 16),
+              _r(context, 16),
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(_r(context, 28)),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.10),
+                  blurRadius: _r(context, 24),
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: _r(context, 46),
+                    height: _r(context, 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD7E1F7),
+                      borderRadius: BorderRadius.circular(_r(context, 99)),
+                    ),
+                  ),
+                ),
+                SizedBox(height: _r(context, 14)),
+                Row(
+                  children: [
+                    Container(
+                      width: _r(context, 42),
+                      height: _r(context, 42),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF255FD5).withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(_r(context, 14)),
+                      ),
+                      child: Icon(
+                        Icons.shopping_bag_rounded,
+                        size: _r(context, 22),
+                        color: const Color(0xFF255FD5),
+                      ),
+                    ),
+                    SizedBox(width: _r(context, 10)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Current Sale',
+                            style: TextStyle(
+                              fontSize: _r(context, 18),
+                              fontWeight: FontWeight.w900,
+                              color: _titleColor,
+                            ),
+                          ),
+                          Text(
+                            '${selectedProducts.length} ka produkto ang napili',
+                            style: TextStyle(
+                              fontSize: _r(context, 12.5),
+                              fontWeight: FontWeight.w700,
+                              color: _subtitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: _r(context, 14)),
+                if (selectedProducts.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: _r(context, 18)),
+                    child: Center(
+                      child: Text(
+                        'Wala pay napiling item.',
+                        style: TextStyle(
+                          fontSize: _r(context, 13.5),
+                          fontWeight: FontWeight.w700,
+                          color: _subtitleColor,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.45,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: selectedProducts.length,
+                      separatorBuilder: (_, index) =>
+                          SizedBox(height: _r(context, 10)),
+                      itemBuilder: (_, index) {
+                        final product = selectedProducts[index];
+                        final qty = vm.getQuantity(product);
+                        final subtotal = vm.getSubtotal(product);
+                        final appliedOptions =
+                            vm.appliedSellingOptionsFor(product);
+                        final details = appliedOptions.isNotEmpty
+                            ? appliedOptions
+                                .map(
+                                  (entry) =>
+                                      '${entry.option.label} x${entry.count}',
+                                )
+                                .join('  •  ')
+                            : 'Manual qty: $qty ${product.baseUnit}';
+
+                        return Container(
+                          padding: EdgeInsets.all(_r(context, 14)),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FBFF),
+                            borderRadius: BorderRadius.circular(_r(context, 18)),
+                            border: Border.all(color: _cardBorder),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      product.name,
+                                      style: TextStyle(
+                                        fontSize: _r(context, 14.5),
+                                        fontWeight: FontWeight.w900,
+                                        color: _titleColor,
+                                      ),
+                                    ),
+                                    SizedBox(height: _r(context, 4)),
+                                    Text(
+                                      details,
+                                      style: TextStyle(
+                                        fontSize: _r(context, 12.5),
+                                        fontWeight: FontWeight.w700,
+                                        color: _subtitleColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: _r(context, 10)),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    currencyFormatter.format(subtotal),
+                                    style: TextStyle(
+                                      fontSize: _r(context, 14.5),
+                                      fontWeight: FontWeight.w900,
+                                      color: _titleColor,
+                                    ),
+                                  ),
+                                  SizedBox(height: _r(context, 8)),
+                                  SizedBox(
+                                    height: _r(context, 34),
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        Navigator.pop(sheetCtx);
+                                        _showProductSellSheet(product, vm);
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(color: _cardBorder),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            _r(context, 12),
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text('Edit'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                SizedBox(height: _r(context, 14)),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(_r(context, 14)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F8FF),
+                    borderRadius: BorderRadius.circular(_r(context, 18)),
+                    border: Border.all(color: _cardBorder),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: _r(context, 14),
+                          fontWeight: FontWeight.w800,
+                          color: _subtitleColor,
+                        ),
+                      ),
+                      Text(
+                        currencyFormatter.format(vm.total),
+                        style: TextStyle(
+                          fontSize: _r(context, 18),
+                          fontWeight: FontWeight.w900,
+                          color: _titleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _bottomBar(SalesViewModel vm, double bottomPadding) {
     final bool canCheckout = vm.hasSelectedProducts;
 
@@ -1429,39 +2067,54 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                vertical: _r(context, 10),
-                horizontal: _r(context, 12),
-              ),
-              decoration: _surfaceDecoration().copyWith(
-                borderRadius: BorderRadius.circular(_r(context, 16)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Products: $itemCount",
-                    style: TextStyle(
-                      fontSize: _r(context, 12.5),
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black.withOpacity(0.55),
-                    ),
-                  ),
-                  SizedBox(height: _r(context, 4)),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      currencyFormatter.format(vm.total),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(_r(context, 16)),
+              onTap: itemCount > 0 ? () => _showCurrentSaleSheet(vm) : null,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  vertical: _r(context, 10),
+                  horizontal: _r(context, 12),
+                ),
+                decoration: _surfaceDecoration().copyWith(
+                  borderRadius: BorderRadius.circular(_r(context, 16)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Products: $itemCount",
                       style: TextStyle(
-                        fontSize: _r(context, 18),
-                        fontWeight: FontWeight.w900,
+                        fontSize: _r(context, 12.5),
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.55),
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: _r(context, 4)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        currencyFormatter.format(vm.total),
+                        style: TextStyle(
+                          fontSize: _r(context, 18),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    if (itemCount > 0) ...[
+                      SizedBox(height: _r(context, 2)),
+                      Text(
+                        'View items',
+                        style: TextStyle(
+                          fontSize: _r(context, 11.5),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF255FD5),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1705,6 +2358,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                               final product = selectedProducts[index];
                               final qty = vm.getQuantity(product);
                               final subtotal = vm.getSubtotal(product);
+                              final appliedOptions =
+                                  vm.appliedSellingOptionsFor(product);
 
                               return Container(
                                 padding: EdgeInsets.all(_r(context, 14)),
@@ -1753,9 +2408,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                           ),
                                           SizedBox(height: _r(context, 4)),
                                           Text(
-                                            vm.supportsPesoEntry(product)
-                                                ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
-                                                : '${currencyFormatter.format(product.sellingPrice)} x $qty',
+                                            appliedOptions.isNotEmpty
+                                                ? appliedOptions
+                                                    .map(
+                                                      (entry) =>
+                                                          '${entry.option.label} x${entry.count}',
+                                                    )
+                                                    .join('  •  ')
+                                                : vm.supportsPesoEntry(product)
+                                                    ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
+                                                    : '${currencyFormatter.format(product.sellingPrice)} x $qty',
                                             style: TextStyle(
                                               fontSize: _r(context, 13),
                                               fontWeight: FontWeight.w700,

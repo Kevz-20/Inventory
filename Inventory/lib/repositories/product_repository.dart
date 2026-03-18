@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../models/product_model.dart';
+import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
 import '../repositories/account_repository.dart';
 import '../services/audit_log_service.dart';
@@ -69,6 +70,23 @@ class ProductRepository {
       if (productId == null) continue;
       result.putIfAbsent(productId, () => []);
       result[productId]!.add(conversion);
+    }
+    return result;
+  }
+
+  Future<Map<int, List<ProductSellingOption>>> getAllSellingOptions() async {
+    final rows = await db.query(
+      'product_selling_option',
+      orderBy: 'product_id ASC, base_quantity DESC, label ASC',
+    );
+
+    final result = <int, List<ProductSellingOption>>{};
+    for (final row in rows) {
+      final option = ProductSellingOption.fromMap(row);
+      final productId = option.productId;
+      if (productId == null) continue;
+      result.putIfAbsent(productId, () => []);
+      result[productId]!.add(option);
     }
     return result;
   }

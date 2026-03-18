@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_colors.dart';
+import '../../models/product_selling_option.dart';
 import '../../models/product_unit_conversion.dart';
 import '../../view_models/stock_in_view_model.dart';
 import '../widgets/dashboard_background.dart';
@@ -127,7 +128,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       padding: cardPad,
                       radius: radius16,
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _sectionIntro(
+                            title: 'Item details',
+                            description:
+                                'Start with the date, category, and product name.',
+                            scale: scale,
+                          ),
+                          SizedBox(height: gap12),
                           _inputDate(
                             vm,
                             height: fieldH,
@@ -164,7 +173,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       padding: cardPad,
                       radius: radius16,
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _sectionIntro(
+                            title: 'Basic stock in',
+                            description: vm.useAdvancedUnitSetup
+                                ? 'Use the smallest unit you want to track and sell.'
+                                : 'Enter the total cost, selling price, and quantity you bought.',
+                            scale: scale,
+                          ),
+                          SizedBox(height: gap12),
+                          if (vm.isExistingProductSelected) ...[
+                            _savedSetupNotice(
+                              vm,
+                              scale: scale,
+                              radius: radius12,
+                            ),
+                            SizedBox(height: gap12),
+                          ],
                           _advancedModeToggle(
                             vm,
                             scale: scale,
@@ -174,8 +200,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           SizedBox(height: gap12),
                           _inputNumberField(
                             label: vm.useAdvancedUnitSetup
-                                ? 'Total stock cost'
-                                : 'Purchase price',
+                                ? 'Total cost of bought stock'
+                                : 'Total cost',
                             controller: vm.purchasePriceController,
                             showError: vm.showValidationErrors,
                             isPeso: true,
@@ -187,8 +213,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           SizedBox(height: gap12),
                           _inputNumberField(
                             label: vm.useAdvancedUnitSetup
-                                ? 'Selling price per base unit'
-                                : 'Selling price',
+                                ? 'Price per smallest sell unit'
+                                : 'Selling price per item',
                             controller: vm.sellingPriceController,
                             showError: vm.showValidationErrors,
                             isPeso: true,
@@ -200,8 +226,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           SizedBox(height: gap12),
                           _inputNumberField(
                             label: vm.useAdvancedUnitSetup
-                                ? 'Stock quantity in base unit'
-                                : 'Quantity',
+                                ? 'Total quantity in smallest unit'
+                                : 'Qty bought',
                             controller: vm.quantityController,
                             showError: vm.showValidationErrors,
                             icon: Icons.shopping_cart_rounded,
@@ -224,14 +250,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       ),
                     ),
 
-                    if (vm.useAdvancedUnitSetup) ...[
+                    if (vm.useAdvancedUnitSetup &&
+                        vm.shouldShowSetupEditors) ...[
                       SizedBox(height: gap14),
                       _sectionCard(
                         scale: scale,
                         padding: cardPad,
                         radius: radius16,
                         titleFs: titleFs,
-                        title: 'Unit Conversion Setup',
+                        title: 'More units',
                         icon: Icons.tune_rounded,
                         child: _unitConversionSection(
                           vm,
@@ -241,30 +268,48 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           gap12: gap12,
                         ),
                       ),
-                      SizedBox(height: gap14),
-                    ] else
-                      SizedBox(height: gap14),
+                    ],
 
-                    // ===================== CARD: IMAGE =====================
-                    _sectionCard(
-                      scale: scale,
-                      padding: cardPad,
-                      radius: radius16,
-                      titleFs: titleFs,
-                      title: "Product Image (Opsyonal)",
-                      icon: Icons.camera_alt_rounded,
-                      child: _imagePicker(
-                        vm,
-                        context,
+                    if (vm.shouldShowSetupEditors) ...[
+                      SizedBox(height: gap14),
+                      _sectionCard(
                         scale: scale,
-                        radius: radius14,
-                        imageHeight: imgH,
-                        gap10: gap10,
-                        valueFs: valueFs,
+                        padding: cardPad,
+                        radius: radius16,
+                        titleFs: titleFs,
+                        title: 'Quick sell buttons',
+                        icon: Icons.sell_rounded,
+                        child: _sellingOptionsSection(
+                          vm,
+                          scale: scale,
+                          radius: radius12,
+                          valueFs: valueFs,
+                          gap12: gap12,
+                        ),
                       ),
-                    ),
+                      SizedBox(height: gap14),
 
-                        SizedBox(height: (90 * scale).clamp(70, 110)),
+                      // ===================== CARD: IMAGE =====================
+                      _sectionCard(
+                        scale: scale,
+                        padding: cardPad,
+                        radius: radius16,
+                        titleFs: titleFs,
+                        title: "Photo (Optional)",
+                        icon: Icons.camera_alt_rounded,
+                        child: _imagePicker(
+                          vm,
+                          context,
+                          scale: scale,
+                          radius: radius14,
+                          imageHeight: imgH,
+                          gap10: gap10,
+                          valueFs: valueFs,
+                        ),
+                      ),
+                    ],
+
+                    SizedBox(height: (90 * scale).clamp(70, 110)),
                       ],
                     ),
                   ),
@@ -949,6 +994,126 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  Widget _sectionIntro({
+    required String title,
+    required String description,
+    required double scale,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: (16 * scale).clamp(14.5, 18),
+            color: _titleColor,
+          ),
+        ),
+        SizedBox(height: (4 * scale).clamp(3, 6)),
+        Text(
+          description,
+          style: TextStyle(
+            fontSize: (13 * scale).clamp(12, 14.5),
+            fontWeight: FontWeight.w600,
+            color: _subtitleColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _savedSetupNotice(
+    StockInViewModel vm, {
+    required double scale,
+    required double radius,
+  }) {
+    final product = vm.selectedProduct;
+    if (product == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all((12 * scale).clamp(10, 16)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F7FF),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Using saved setup for ${product.name}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: (14 * scale).clamp(13, 16),
+                    color: _titleColor,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => vm.setEditSavedSetup(!vm.editSavedSetup),
+                child: Text(vm.editSavedSetup ? 'Done editing' : 'Edit setup'),
+              ),
+            ],
+          ),
+          SizedBox(height: (4 * scale).clamp(3, 6)),
+          Text(
+            vm.editSavedSetup
+                ? 'Update units, quick buttons, or photo only if this product setup changed.'
+                : 'You only need to enter how much stock came in and how much you paid.',
+            style: TextStyle(
+              fontSize: (12.5 * scale).clamp(12, 14),
+              fontWeight: FontWeight.w600,
+              color: _subtitleColor,
+            ),
+          ),
+          SizedBox(height: (8 * scale).clamp(6, 10)),
+          Wrap(
+            spacing: (8 * scale).clamp(6, 10),
+            runSpacing: (8 * scale).clamp(6, 10),
+            children: [
+              _summaryPill('Unit: ${vm.baseUnitLabel}', scale: scale),
+              _summaryPill(
+                'Quick buttons: ${vm.sellingOptions.length}',
+                scale: scale,
+              ),
+              _summaryPill(
+                'More units: ${vm.unitConversions.length}',
+                scale: scale,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryPill(String label, {required double scale}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: (10 * scale).clamp(8, 12),
+        vertical: (6 * scale).clamp(5, 8),
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _cardBorder),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: (12 * scale).clamp(11.5, 13.5),
+          fontWeight: FontWeight.w800,
+          color: _titleColor,
+        ),
+      ),
+    );
+  }
+
   Widget _baseUnitPickerField(
     StockInViewModel vm, {
     required double scale,
@@ -985,7 +1150,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
-          labelText: 'Base unit',
+          labelText: 'Smallest unit to sell',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: isError ? Colors.red : _cardBorder),
@@ -1000,7 +1165,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             Expanded(
               child: Text(
                 vm.baseUnitController.text.trim().isEmpty
-                    ? 'Select base unit'
+                    ? 'Select smallest unit'
                     : vm.baseUnitController.text.trim(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1567,7 +1732,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               vm.productController.text = value;
               if (vm.selectedProduct != null &&
                   vm.selectedProduct!.name.toLowerCase() != value.toLowerCase()) {
-                vm.selectedProduct = null;
+                vm.clearSelectedProductLink();
               }
             },
           ),
@@ -1633,6 +1798,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     required double radius,
     required double valueFs,
   }) {
+    final canEditOptions =
+        !vm.isExistingProductSelected || vm.editSavedSetup;
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: (12 * scale).clamp(10, 16),
@@ -1650,7 +1818,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Advanced unit setup',
+                  'More options',
                   style: TextStyle(
                     fontSize: valueFs,
                     fontWeight: FontWeight.w800,
@@ -1659,7 +1827,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Turn on only for mL, grams, lapad, or custom unit conversion.',
+                  'Use only if you need units like dozen, twin pack, case, mL, or grams.',
                   style: TextStyle(
                     fontSize: (valueFs - 1).clamp(12, 15),
                     fontWeight: FontWeight.w600,
@@ -1671,7 +1839,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ),
           Switch(
             value: vm.useAdvancedUnitSetup,
-            onChanged: vm.setUseAdvancedUnitSetup,
+            onChanged: canEditOptions ? vm.setUseAdvancedUnitSetup : null,
             activeColor: _accentBlue,
           ),
         ],
@@ -1689,6 +1857,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          'Example: 1 dozen = 12 pcs, 1 twin pack = 2 pcs.',
+          style: TextStyle(
+            fontSize: (valueFs - 1).clamp(12, 15),
+            fontWeight: FontWeight.w600,
+            color: _subtitleColor,
+          ),
+        ),
+        SizedBox(height: gap12),
         Row(
           children: [
             Expanded(
@@ -1706,7 +1883,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             SizedBox(width: gap12),
             Expanded(
               child: _inputNumberField(
-                label: 'Base qty',
+                label: 'Equivalent pieces',
                 controller: vm.conversionQuantityController,
                 showError: false,
                 icon: Icons.water_drop_outlined,
@@ -1724,7 +1901,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: OutlinedButton.icon(
             onPressed: vm.addUnitConversion,
             icon: const Icon(Icons.add_rounded),
-            label: Text('Add unit for ${vm.baseUnitLabel}'),
+            label: const Text('Add unit conversion'),
           ),
         ),
         if (vm.unitConversions.isNotEmpty) ...[
@@ -1750,6 +1927,108 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         '${conversion.unitName} = ${conversion.baseQuantity} ${vm.baseUnitLabel}',
       ),
       onDeleted: () => vm.removeUnitConversion(conversion),
+      deleteIcon: const Icon(Icons.close_rounded, size: 18),
+      backgroundColor: Colors.white,
+      side: BorderSide(color: _cardBorder.withOpacity(0.9)),
+    );
+  }
+
+  Widget _sellingOptionsSection(
+    StockInViewModel vm, {
+    required double scale,
+    required double radius,
+    required double valueFs,
+    required double gap12,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Add ready buttons the cashier can tap later, like 1 dozen, twin pack, 3 for 20, or 1 case.',
+          style: TextStyle(
+            fontSize: (valueFs - 1).clamp(12, 15),
+            fontWeight: FontWeight.w600,
+            color: _subtitleColor,
+          ),
+        ),
+        SizedBox(height: gap12),
+        _inputTextField(
+          label: 'Button label',
+          controller: vm.sellingOptionLabelController,
+          showError: false,
+          icon: Icons.local_offer_outlined,
+          scale: scale,
+          height: (58 * scale).clamp(54, 66),
+          radius: radius,
+          valueFs: valueFs,
+        ),
+        SizedBox(height: gap12),
+        Row(
+          children: [
+            Expanded(
+              child: _inputNumberField(
+                label: 'Pieces to deduct',
+                controller: vm.sellingOptionQuantityController,
+                showError: false,
+                icon: Icons.inventory_2_outlined,
+                scale: scale,
+                height: (58 * scale).clamp(54, 66),
+                radius: radius,
+                valueFs: valueFs,
+              ),
+            ),
+            SizedBox(width: gap12),
+            Expanded(
+              child: _inputNumberField(
+                label: 'Sell price',
+                controller: vm.sellingOptionPriceController,
+                showError: false,
+                isPeso: true,
+                scale: scale,
+                height: (58 * scale).clamp(54, 66),
+                radius: radius,
+                valueFs: valueFs,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: gap12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: vm.addSellingOption,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add quick sell button'),
+          ),
+        ),
+        if (vm.sellingOptions.isNotEmpty) ...[
+          SizedBox(height: gap12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: vm.sellingOptions.map((option) {
+              return _sellingOptionChip(option, vm);
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _sellingOptionChip(
+    ProductSellingOption option,
+    StockInViewModel vm,
+  ) {
+    final qty = option.baseQuantity ?? 0;
+    final priceText = option.price % 1 == 0
+        ? option.price.toStringAsFixed(0)
+        : option.price.toStringAsFixed(2);
+
+    return Chip(
+      label: Text(
+        '${option.label} · $qty ${vm.baseUnitLabel} · ₱$priceText',
+      ),
+      onDeleted: () => vm.removeSellingOption(option),
       deleteIcon: const Icon(Icons.close_rounded, size: 18),
       backgroundColor: Colors.white,
       side: BorderSide(color: _cardBorder.withOpacity(0.9)),

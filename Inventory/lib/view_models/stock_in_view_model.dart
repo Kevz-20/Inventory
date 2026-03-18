@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/product_model.dart';
+import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
 import '../repositories/product_category_repository.dart';
 import '../repositories/stock_in_repository.dart';
@@ -39,8 +40,10 @@ class StockInViewModel extends ChangeNotifier {
   List<ProductModel> allProducts = [];
   ProductModel? selectedProduct;
   List<ProductUnitConversion> unitConversions = [];
+  List<ProductSellingOption> sellingOptions = [];
   List<String> baseUnitOptions = [];
   bool useAdvancedUnitSetup = false;
+  bool editSavedSetup = false;
 
   TextEditingController? autocompleteFieldController;
   final TextEditingController productController = TextEditingController();
@@ -53,6 +56,12 @@ class StockInViewModel extends ChangeNotifier {
       TextEditingController();
   final TextEditingController conversionQuantityController =
       TextEditingController();
+  final TextEditingController sellingOptionLabelController =
+      TextEditingController();
+  final TextEditingController sellingOptionQuantityController =
+      TextEditingController();
+  final TextEditingController sellingOptionPriceController =
+      TextEditingController();
 
   bool get hasUnsavedData =>
       productController.text.isNotEmpty ||
@@ -61,6 +70,7 @@ class StockInViewModel extends ChangeNotifier {
       quantityController.text.isNotEmpty ||
       baseUnitController.text.trim().toLowerCase() != 'pcs' ||
       unitConversions.isNotEmpty ||
+      sellingOptions.isNotEmpty ||
       selectedCategory != null ||
       productImage != null;
 
@@ -95,6 +105,9 @@ class StockInViewModel extends ChangeNotifier {
     baseUnitController.dispose();
     conversionNameController.dispose();
     conversionQuantityController.dispose();
+    sellingOptionLabelController.dispose();
+    sellingOptionQuantityController.dispose();
+    sellingOptionPriceController.dispose();
     super.dispose();
   }
 
@@ -190,6 +203,10 @@ class StockInViewModel extends ChangeNotifier {
     return raw.isEmpty ? 'pcs' : raw;
   }
 
+  bool get isExistingProductSelected => selectedProduct != null;
+
+  bool get shouldShowSetupEditors => !isExistingProductSelected || editSavedSetup;
+
   Future<void> loadBaseUnits() async {
     try {
       baseUnitOptions = await _repository.getBaseUnits();
@@ -235,6 +252,17 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
+  void setEditSavedSetup(bool value) {
+    editSavedSetup = value;
+    safeNotifyListeners();
+  }
+
+  void clearSelectedProductLink() {
+    selectedProduct = null;
+    editSavedSetup = false;
+    safeNotifyListeners();
+  }
+
   Future<void> pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
@@ -271,6 +299,52 @@ class StockInViewModel extends ChangeNotifier {
   void removeUnitConversion(ProductUnitConversion conversion) {
     unitConversions = unitConversions
         .where((item) => item.unitName != conversion.unitName)
+        .toList();
+    safeNotifyListeners();
+  }
+
+  void addSellingOption() {
+    final label = sellingOptionLabelController.text.trim();
+    final qtyText = sellingOptionQuantityController.text.trim().replaceAll(
+      ',',
+      '',
+    );
+    final priceText = sellingOptionPriceController.text.trim().replaceAll(
+      ',',
+      '',
+    );
+
+    final qty = int.tryParse(qtyText) ?? 0;
+    final price = double.tryParse(priceText) ?? 0;
+
+    if (label.isEmpty || qty <= 0 || price <= 0) return;
+
+    sellingOptions = [
+      ...sellingOptions.where(
+        (item) => item.label.toLowerCase() != label.toLowerCase(),
+      ),
+      ProductSellingOption(
+        label: label,
+        mode: 'preset',
+        unitName: baseUnitLabel,
+        baseQuantity: qty,
+        price: price,
+      ),
+    ]..sort((a, b) {
+        final qtyCompare = (b.baseQuantity ?? 0).compareTo(a.baseQuantity ?? 0);
+        if (qtyCompare != 0) return qtyCompare;
+        return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+      });
+
+    sellingOptionLabelController.clear();
+    sellingOptionQuantityController.clear();
+    sellingOptionPriceController.clear();
+    safeNotifyListeners();
+  }
+
+  void removeSellingOption(ProductSellingOption option) {
+    sellingOptions = sellingOptions
+        .where((item) => item.label != option.label)
         .toList();
     safeNotifyListeners();
   }
@@ -404,11 +478,13 @@ class StockInViewModel extends ChangeNotifier {
       if (selectedProduct != null) {
         await _repository.updateProduct(stock);
         await _repository.replaceUnitConversions(stock.id!, unitConversions);
+        await _repository.replaceSellingOptions(stock.id!, sellingOptions);
         message = 'Product updated successfully';
       } else {
         final newId = await _repository.addProduct(stock);
         stock.id = newId;
         await _repository.replaceUnitConversions(newId, unitConversions);
+        await _repository.replaceSellingOptions(newId, sellingOptions);
         allProducts.add(stock);
         message = 'Product saved successfully';
       }
@@ -454,6 +530,7 @@ class StockInViewModel extends ChangeNotifier {
 
   Future<void> populateFromSelectedProduct(ProductModel product) async {
     selectedProduct = product;
+    editSavedSetup = false;
     productController.text = product.name;
     autocompleteFieldController?.text = product.name;
     setCategoryByName(product.category);
@@ -471,6 +548,9 @@ class StockInViewModel extends ChangeNotifier {
     unitConversions = product.id == null
         ? []
         : await _repository.getUnitConversions(product.id!);
+    sellingOptions = product.id == null
+        ? []
+        : await _repository.getSellingOptions(product.id!);
     useAdvancedUnitSetup =
         product.baseUnit.toLowerCase() != 'pcs' || unitConversions.isNotEmpty;
     safeNotifyListeners();
@@ -484,6 +564,9 @@ class StockInViewModel extends ChangeNotifier {
     baseUnitController.text = 'pcs';
     conversionNameController.clear();
     conversionQuantityController.clear();
+    sellingOptionLabelController.clear();
+    sellingOptionQuantityController.clear();
+    sellingOptionPriceController.clear();
     autocompleteFieldController?.clear();
 
     selectedCategory = null;
@@ -491,7 +574,9 @@ class StockInViewModel extends ChangeNotifier {
     productImage = null;
     selectedProduct = null;
     unitConversions = [];
+    sellingOptions = [];
     useAdvancedUnitSetup = false;
+    editSavedSetup = false;
     showValidationErrors = false;
 
     safeNotifyListeners();

@@ -52,4 +52,28 @@ class ProductSellingOption {
           : DateTime.tryParse(map['updated_at'].toString()),
     );
   }
+
+  ProductSellingOption copyWith({
+    int? id,
+    int? productId,
+    String? label,
+    String? mode,
+    String? unitName,
+    int? baseQuantity,
+    double? price,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return ProductSellingOption(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      label: label ?? this.label,
+      mode: mode ?? this.mode,
+      unitName: unitName ?? this.unitName,
+      baseQuantity: baseQuantity ?? this.baseQuantity,
+      price: price ?? this.price,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
