@@ -48,6 +48,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
   bool isCash = true;
   bool isProductMode = false;
+  bool _isSwitchingSaleType = false;
 
   final ScrollController _categoryScrollController = ScrollController();
   final PageController _categoryPageController = PageController();
@@ -366,6 +367,33 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
   // ---------------------------- Helper Widgets ----------------------------
 
+  Future<void> _handleSaleTypeToggle(SalesViewModel vm, bool nextIsCash) async {
+    if (_isSwitchingSaleType || isCash == nextIsCash) return;
+
+    setState(() {
+      _isSwitchingSaleType = true;
+      isCash = nextIsCash;
+      isProductMode = false;
+      if (nextIsCash) {
+        vm.selectedCustomer = null;
+        dueDate = null;
+      }
+    });
+
+    vm.resetQuantities();
+
+    if (nextIsCash) {
+      await vm.loadProducts();
+    } else {
+      await vm.loadCustomers();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSwitchingSaleType = false;
+    });
+  }
+
   Widget _cashUtangSwitch(SalesViewModel vm) {
     final double toggleWidth =
         _screenWidth(context) - (_pagePadding(context).horizontal);
@@ -406,26 +434,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           ),
           Row(
             children: [
-              _switchButton("Cash", isCash, () async {
-                setState(() {
-                  isCash = true;
-                  isProductMode = false;
-                  vm.selectedCustomer = null;
-                  dueDate = null;
-                });
-
-                vm.resetQuantities();
-                await vm.loadProducts();
-              }),
-              _switchButton("Utang", !isCash, () async {
-                setState(() {
-                  isCash = false;
-                  isProductMode = false;
-                });
-
-                vm.resetQuantities();
-                await vm.loadCustomers();
-              }),
+              _switchButton("Cash", isCash, () => _handleSaleTypeToggle(vm, true)),
+              _switchButton("Utang", !isCash, () => _handleSaleTypeToggle(vm, false)),
             ],
           ),
         ],
@@ -436,7 +446,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   Widget _switchButton(String title, bool active, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: _isSwitchingSaleType ? null : onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
           alignment: Alignment.center,
@@ -627,7 +637,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
               return GestureDetector(
                 onTap: () {
-                  vm.selectCategory(index);
                   _categoryPageController.animateToPage(
                     index,
                     duration: const Duration(milliseconds: 260),
@@ -741,39 +750,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               padding: EdgeInsets.symmetric(
                 horizontal: _pagePadding(context).left,
               ),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(_r(context, 18)),
-                decoration: _surfaceDecoration(),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.category_outlined,
-                      size: _r(context, 34),
-                      color: _subtitleColor,
-                    ),
-                    SizedBox(height: _r(context, 10)),
-                    Text(
-                      'No products in this category',
-                      style: TextStyle(
-                        fontSize: _r(context, 15),
-                        fontWeight: FontWeight.w800,
-                        color: _titleColor,
-                      ),
-                    ),
-                    SizedBox(height: _r(context, 4)),
-                    Text(
-                      'Try another category or switch to All.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: _r(context, 12.5),
-                        fontWeight: FontWeight.w500,
-                        color: _subtitleColor,
-                      ),
-                    ),
-                  ],
+              child: Text(
+                'No products in this category',
+                style: TextStyle(
+                  fontSize: _r(context, 15),
+                  fontWeight: FontWeight.w800,
+                  color: _titleColor,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           );
@@ -1174,8 +1158,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               final clampedQty = qty.clamp(0, product.quantity);
               setSheetState(() {
                 localQty = clampedQty;
-                localSubtotal = clampedQty * vm.getEffectiveUnitPrice(product);
-                localAppliedCounts.clear();
+                localSubtotal = vm.subtotalForQuantity(product, clampedQty);
+                localAppliedCounts
+                  ..clear()
+                  ..addAll(vm.appliedOptionCountsForQuantity(product, clampedQty));
                 syncAmountField();
               });
             }
@@ -1183,16 +1169,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             void applyPreset(ProductSellingOption option) {
               final baseQty = option.baseQuantity ?? 0;
               if (baseQty <= 0) return;
-              final nextQty = localQty + baseQty;
-              if (nextQty > product.quantity) return;
-
-              setSheetState(() {
-                localQty = nextQty;
-                localSubtotal += option.price;
-                localAppliedCounts[option.label] =
-                    (localAppliedCounts[option.label] ?? 0) + 1;
-                syncAmountField();
-              });
+              setManualQty(localQty + baseQty);
             }
 
             return SafeArea(
@@ -1410,8 +1387,12 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
                               setSheetState(() {
                                 localQty = qty;
-                                localSubtotal = qty * unitPrice;
-                                localAppliedCounts.clear();
+                                localSubtotal = vm.subtotalForQuantity(product, qty);
+                                localAppliedCounts
+                                  ..clear()
+                                  ..addAll(
+                                    vm.appliedOptionCountsForQuantity(product, qty),
+                                  );
                               });
                             },
                           ),

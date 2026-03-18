@@ -1060,35 +1060,11 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: (72 * s).clamp(62.0, 80.0),
-              height: (72 * s).clamp(62.0, 80.0),
-              decoration: BoxDecoration(
-                color: _accentBlue.withOpacity(0.10),
-                borderRadius: BorderRadius.circular((20 * s).clamp(16.0, 24.0)),
-              ),
-              child: Icon(
-                Icons.receipt_long_rounded,
-                size: (34 * s).clamp(28.0, 38.0),
-                color: _accentBlue,
-              ),
-            ),
-            SizedBox(height: (12 * s).clamp(10.0, 14.0)),
             Text(
               "Walay bayranan",
               style: TextStyle(
                 fontSize: (18 * s).clamp(16.0, 20.0),
                 fontWeight: FontWeight.w900,
-              ),
-            ),
-            SizedBox(height: (6 * s).clamp(4.0, 8.0)),
-            Text(
-              "Add a payable para ma-track nimo ang due dates ug payments.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: (13.5 * s).clamp(12.0, 15.0),
-                fontWeight: FontWeight.w600,
-                color: _subtitleColor,
               ),
             ),
           ],

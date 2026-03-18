@@ -122,7 +122,6 @@ class _CapitalManagementScreenState
             final double balanceLabelFs = (13 * s).clamp(12, 15).toDouble();
             final double balanceValueFs = (18 * s).clamp(16, 22).toDouble();
             final double bottomBtnFs = (16 * s).clamp(14.5, 18).toDouble();
-
             return Scaffold(
               backgroundColor: _pageBg,
               extendBody: true,
@@ -166,26 +165,13 @@ class _CapitalManagementScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _miniBalanceCard(
-                                title: 'Cash on Hand',
-                                value: totalCashOnHand,
-                                icon: Icons.account_balance_wallet_rounded,
+                              _summaryHeroCard(
                                 s: s,
                                 padding: cardPad,
                                 radius: r16,
                                 labelFs: balanceLabelFs,
-                                valueFs: balanceValueFs,
-                              ),
-                              SizedBox(height: gap12),
-                              _miniBalanceCard(
-                                title: 'Capital',
-                                value: totalCapital,
-                                icon: Icons.savings_rounded,
-                                s: s,
-                                padding: cardPad,
-                                radius: r16,
-                                labelFs: balanceLabelFs,
-                                valueFs: balanceValueFs,
+                                cashOnHand: totalCashOnHand,
+                                capital: totalCapital,
                               ),
                               SizedBox(height: gap14),
                               _sectionCard(
@@ -198,6 +184,10 @@ class _CapitalManagementScreenState
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    _fieldLabel('Amount to add', s: s),
+                                    SizedBox(
+                                      height: (8 * s).clamp(6, 10).toDouble(),
+                                    ),
                                     _amountInput(
                                       s: s,
                                       height: fieldH,
@@ -239,6 +229,10 @@ class _CapitalManagementScreenState
                                       ],
                                     ),
                                     SizedBox(height: gap14),
+                                    _fieldLabel('Note', s: s),
+                                    SizedBox(
+                                      height: (8 * s).clamp(6, 10).toDouble(),
+                                    ),
                                     _remarksInput(
                                       s: s,
                                       height: fieldH,
@@ -316,6 +310,9 @@ class _CapitalManagementScreenState
                                   borderRadius: BorderRadius.circular(r14),
                                 ),
                                 elevation: 0,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (18 * s).clamp(16, 22).toDouble(),
+                                ),
                               ),
                               child: vm.isLoading
                                   ? const SizedBox(
@@ -403,6 +400,7 @@ class _CapitalManagementScreenState
     required String title,
     required IconData icon,
     required Widget child,
+    String? subtitle,
     required double s,
     required double padding,
     required double radius,
@@ -452,28 +450,41 @@ class _CapitalManagementScreenState
             ],
           ),
           SizedBox(height: (10 * s).clamp(8, 12).toDouble()),
+          if (subtitle != null) ...[
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: _subtitleColor,
+                fontSize: (12.8 * s).clamp(12, 14.5).toDouble(),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: (12 * s).clamp(10, 14).toDouble()),
+          ],
           Divider(color: _cardBorder, height: 1),
-          SizedBox(height: (12 * s).clamp(10, 14).toDouble()),
+          SizedBox(height: (14 * s).clamp(12, 16).toDouble()),
           child,
         ],
       ),
     );
   }
 
-  Widget _miniBalanceCard({
-    required String title,
-    required double value,
-    IconData? icon,
+  Widget _summaryHeroCard({
     required double s,
     required double padding,
     required double radius,
     required double labelFs,
-    required double valueFs,
+    required double cashOnHand,
+    required double capital,
   }) {
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: _cardBg,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFFFFF), Color(0xFFF4F8FF)],
+        ),
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: _cardBorder),
         boxShadow: [
@@ -484,57 +495,98 @@ class _CapitalManagementScreenState
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (icon != null)
-            Container(
-              height: (42 * s).clamp(38, 52).toDouble(),
-              width: (42 * s).clamp(38, 52).toDouble(),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _accentBlue.withOpacity(0.14),
-                    const Color(0xFF7ED2FF).withOpacity(0.14),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(
-                  (14 * s).clamp(12, 18).toDouble(),
-                ),
-              ),
-              child: Icon(
-                icon,
-                size: (22 * s).clamp(20, 28).toDouble(),
-                color: _accentBlue,
-              ),
+          Text(
+            'Available funds',
+            style: TextStyle(
+              color: _subtitleColor,
+              fontWeight: FontWeight.w800,
+              fontSize: labelFs,
             ),
-          if (icon != null) SizedBox(width: (12 * s).clamp(10, 14).toDouble()),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: _subtitleColor,
-                    fontWeight: FontWeight.w800,
-                    fontSize: labelFs,
-                  ),
+          ),
+          SizedBox(height: (8 * s).clamp(6, 10).toDouble()),
+          Row(
+            children: [
+              Expanded(
+                child: _summaryStatTile(
+                  title: 'Cash on Hand',
+                  value: cashOnHand,
+                  icon: Icons.payments_rounded,
+                  s: s,
+                  labelFs: labelFs,
                 ),
-                SizedBox(height: (4 * s).clamp(3, 6).toDouble()),
-                AdaptiveDigitsText(
-                  _currencyFormatter.format(value),
-                  style: TextStyle(
-                    fontSize: valueFs,
-                    fontWeight: FontWeight.w900,
-                    color: _titleColor,
-                  ),
+              ),
+              SizedBox(width: (10 * s).clamp(8, 12).toDouble()),
+              Expanded(
+                child: _summaryStatTile(
+                  title: 'Capital',
+                  value: capital,
+                  icon: Icons.savings_rounded,
+                  s: s,
+                  labelFs: labelFs,
                 ),
-              ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryStatTile({
+    required String title,
+    required double value,
+    required IconData icon,
+    required double s,
+    required double labelFs,
+  }) {
+    return Container(
+      padding: EdgeInsets.all((12 * s).clamp(10, 14).toDouble()),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFF),
+        borderRadius: BorderRadius.circular((14 * s).clamp(12, 18).toDouble()),
+        border: Border.all(color: _cardBorder.withOpacity(0.9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: (18 * s).clamp(16, 20).toDouble(),
+            color: _accentBlue,
+          ),
+          SizedBox(height: (10 * s).clamp(8, 12).toDouble()),
+          Text(
+            title,
+            style: TextStyle(
+              color: _subtitleColor,
+              fontWeight: FontWeight.w700,
+              fontSize: labelFs,
+            ),
+          ),
+          SizedBox(height: (4 * s).clamp(3, 6).toDouble()),
+          AdaptiveDigitsText(
+            _currencyFormatter.format(value),
+            style: TextStyle(
+              fontSize: (16 * s).clamp(14, 18).toDouble(),
+              fontWeight: FontWeight.w900,
+              color: _titleColor,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String text, {required double s}) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: _titleColor,
+        fontWeight: FontWeight.w800,
+        fontSize: (13.5 * s).clamp(12.5, 15).toDouble(),
       ),
     );
   }
@@ -555,8 +607,8 @@ class _CapitalManagementScreenState
       },
       style: OutlinedButton.styleFrom(
         foregroundColor: _accentBlue,
-        backgroundColor: const Color(0xFFF7FAFF),
-        side: BorderSide(color: _accentBlue.withOpacity(0.28)),
+        backgroundColor: const Color(0xFFF4F8FF),
+        side: BorderSide(color: _accentBlue.withOpacity(0.18)),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
         ),
@@ -599,6 +651,10 @@ class _CapitalManagementScreenState
           hintText: '0.00',
           filled: true,
           fillColor: _fieldBg,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: (14 * s).clamp(12, 16).toDouble(),
+            vertical: (16 * s).clamp(14, 18).toDouble(),
+          ),
           prefixIcon: Padding(
             padding: EdgeInsets.all((16 * s).clamp(14, 18).toDouble()),
             child: Text(
@@ -632,6 +688,8 @@ class _CapitalManagementScreenState
       height: height,
       child: TextField(
         controller: _remarksController,
+        minLines: 1,
+        maxLines: 3,
         style: TextStyle(
           color: _titleColor,
           fontWeight: FontWeight.w700,
@@ -641,6 +699,10 @@ class _CapitalManagementScreenState
           hintText: 'Optional note',
           filled: true,
           fillColor: _fieldBg,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: (14 * s).clamp(12, 16).toDouble(),
+            vertical: (16 * s).clamp(14, 18).toDouble(),
+          ),
           prefixIcon: Icon(
             Icons.notes_rounded,
             color: _accentBlue,

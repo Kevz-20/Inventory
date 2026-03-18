@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/product_model.dart';
+import '../../models/product_selling_option.dart';
+import '../../models/product_unit_conversion.dart';
 import '../../repositories/account_repository.dart';
 import '../../repositories/product_category_repository.dart';
 import '../../repositories/product_repository.dart';
+import '../../repositories/stock_in_repository.dart';
 import '../../services/db_service.dart';
 import '../widgets/dashboard_background.dart';
 import '../widgets/primary_footer_nav.dart';
@@ -28,6 +31,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
 
   late ProductRepository _productRepository;
   late ProductCategoryRepository _categoryRepository;
+  late StockInRepository _stockInRepository;
 
   List<ProductModel> _products = [];
   List<Map<String, dynamic>> _categories = [];
@@ -45,6 +49,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
     final db = await DBService.instance.database;
     _productRepository = ProductRepository(db, AccountRepository());
     _categoryRepository = ProductCategoryRepository(db);
+    _stockInRepository = StockInRepository(db);
     await _loadData();
   }
 
@@ -76,6 +81,510 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
 
   bool _isLowStock(ProductModel product) => product.quantity <= 10;
 
+  Future<bool?> _openAdvancedSetupDialog(ProductModel product) async {
+    if (product.id == null) return null;
+
+    final baseUnitController = TextEditingController(text: product.baseUnit);
+    final conversionNameController = TextEditingController();
+    final conversionQtyController = TextEditingController();
+    final presetLabelController = TextEditingController();
+    final presetQtyController = TextEditingController();
+    final presetPriceController = TextEditingController();
+
+    final conversions = (await _stockInRepository.getUnitConversions(product.id!))
+        .toList();
+    final sellingOptions =
+        (await _stockInRepository.getSellingOptions(product.id!)).toList();
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        var localSaving = false;
+
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            void addConversion() {
+              final name = conversionNameController.text.trim();
+              final qty = int.tryParse(conversionQtyController.text.trim()) ?? 0;
+              if (name.isEmpty || qty <= 0) return;
+
+              setLocalState(() {
+                conversions
+                  ..removeWhere(
+                    (item) => item.unitName.toLowerCase() == name.toLowerCase(),
+                  )
+                  ..add(ProductUnitConversion(unitName: name, baseQuantity: qty))
+                  ..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
+                conversionNameController.clear();
+                conversionQtyController.clear();
+              });
+            }
+
+            void addPreset() {
+              final label = presetLabelController.text.trim();
+              final qty = int.tryParse(presetQtyController.text.trim()) ?? 0;
+              final price = double.tryParse(presetPriceController.text.trim()) ?? 0;
+              if (label.isEmpty || qty <= 0 || price <= 0) return;
+
+              setLocalState(() {
+                sellingOptions
+                  ..removeWhere(
+                    (item) => item.label.toLowerCase() == label.toLowerCase(),
+                  )
+                  ..add(
+                    ProductSellingOption(
+                      label: label,
+                      mode: 'preset',
+                      unitName: baseUnitController.text.trim().isEmpty
+                          ? 'pcs'
+                          : baseUnitController.text.trim(),
+                      baseQuantity: qty,
+                      price: price,
+                    ),
+                  )
+                  ..sort((a, b) {
+                    final qtyCompare =
+                        (b.baseQuantity ?? 0).compareTo(a.baseQuantity ?? 0);
+                    if (qtyCompare != 0) return qtyCompare;
+                    return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+                  });
+                presetLabelController.clear();
+                presetQtyController.clear();
+                presetPriceController.clear();
+              });
+            }
+
+            Future<void> saveAdvancedSetup() async {
+              final nextBaseUnit = baseUnitController.text.trim();
+              if (nextBaseUnit.isEmpty) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a base unit.')),
+                );
+                return;
+              }
+
+              setLocalState(() => localSaving = true);
+              try {
+                await _stockInRepository.addBaseUnit(nextBaseUnit);
+                await _productRepository.updateProduct(
+                  ProductModel(
+                    id: product.id,
+                    name: product.name,
+                    category: product.category,
+                    categoryId: product.categoryId,
+                    purchasePrice: product.purchasePrice,
+                    sellingPrice: product.sellingPrice,
+                    quantity: product.quantity,
+                    baseUnit: nextBaseUnit,
+                    costPerUnit: product.costPerUnit,
+                    pricePerUnit: product.pricePerUnit,
+                    image: product.image,
+                    createdAt: product.createdAt,
+                    updatedAt: DateTime.now(),
+                  ),
+                );
+
+                await _stockInRepository.replaceUnitConversions(
+                  product.id!,
+                  conversions,
+                );
+                await _stockInRepository.replaceSellingOptions(
+                  product.id!,
+                  sellingOptions
+                      .map(
+                        (option) => option.copyWith(
+                          unitName: nextBaseUnit,
+                        ),
+                      )
+                      .toList(),
+                );
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext, true);
+              } finally {
+                if (dialogContext.mounted) {
+                  setLocalState(() => localSaving = false);
+                }
+              }
+            }
+
+            InputDecoration inputDecoration(
+              String label, {
+              IconData? icon,
+              String? prefixText,
+            }) {
+              return InputDecoration(
+                labelText: label,
+                prefixIcon:
+                    icon == null ? null : Icon(icon, color: _accentBlue, size: 20),
+                prefixText: prefixText,
+                prefixStyle: const TextStyle(
+                  color: _accentBlue,
+                  fontWeight: FontWeight.w800,
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF8FBFF),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _accentBlue, width: 1.3),
+                ),
+              );
+            }
+
+            Widget sectionTitle(String title, String subtitle) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: _textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: _textSecondary,
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 24,
+              ),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFEEF4FF),
+                                Color(0xFFDCE8FF),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.tune_rounded,
+                            color: _accentBlue,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Advanced Setup',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: _textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Edit unit conversions and quick sale presets for this product.',
+                                style: TextStyle(
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w600,
+                                  color: _textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        InkWell(
+                          onTap: localSaving
+                              ? null
+                              : () => Navigator.pop(dialogContext, false),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7FAFF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _border),
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: _textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: baseUnitController,
+                      decoration: inputDecoration(
+                        'Base unit',
+                        icon: Icons.straighten_rounded,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    sectionTitle(
+                      'More units',
+                      'Example: 1 pack = 50 pcs, 1 dozen = 12 pcs.',
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: conversionNameController,
+                            decoration: inputDecoration(
+                              'Unit name',
+                              icon: Icons.folder_open_rounded,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: conversionQtyController,
+                            keyboardType: TextInputType.number,
+                            decoration: inputDecoration(
+                              'Equivalent pieces',
+                              icon: Icons.adjust_rounded,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: addConversion,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Add unit conversion'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0E766E),
+                          side: const BorderSide(color: Color(0xFF90D3C7)),
+                          backgroundColor: const Color(0xFFF1FBF8),
+                          minimumSize: const Size.fromHeight(46),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (conversions.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: conversions
+                            .map(
+                              (conversion) => Chip(
+                                label: Text(
+                                  '${conversion.unitName} = ${conversion.baseQuantity} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()}',
+                                ),
+                                onDeleted: () => setLocalState(
+                                  () => conversions.remove(conversion),
+                                ),
+                                backgroundColor: Colors.white,
+                                side: const BorderSide(color: _border),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    sectionTitle(
+                      'Quick sale presets',
+                      'Use for prices like 3 pcs = PHP 5 or 1 pack = PHP 70.',
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: presetLabelController,
+                      decoration: inputDecoration(
+                        'Preset label',
+                        icon: Icons.local_offer_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: presetQtyController,
+                            keyboardType: TextInputType.number,
+                            decoration: inputDecoration(
+                              'Pieces to deduct',
+                              icon: Icons.inventory_2_outlined,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: presetPriceController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: inputDecoration(
+                              'Sell price',
+                              prefixText: 'PHP ',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: addPreset,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('Add sale preset'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _accentBlue,
+                          side: const BorderSide(color: Color(0xFFCFE0FF)),
+                          backgroundColor: const Color(0xFFF5F8FF),
+                          minimumSize: const Size.fromHeight(46),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (sellingOptions.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: sellingOptions
+                            .map(
+                              (option) => Chip(
+                                label: Text(
+                                  '${option.label} • ${option.baseQuantity ?? 0} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()} • ${_peso(option.price)}',
+                                ),
+                                onDeleted: () => setLocalState(
+                                  () => sellingOptions.remove(option),
+                                ),
+                                backgroundColor: Colors.white,
+                                side: const BorderSide(color: _border),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: localSaving
+                                ? null
+                                : () => Navigator.pop(dialogContext, false),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _textPrimary,
+                              backgroundColor: const Color(0xFFF8FBFF),
+                              side: const BorderSide(color: _border),
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: localSaving ? null : saveAdvancedSetup,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accentBlue,
+                              disabledBackgroundColor: const Color(0xFFAFC6FF),
+                              minimumSize: const Size.fromHeight(48),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: localSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Save Setup',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    baseUnitController.dispose();
+    conversionNameController.dispose();
+    conversionQtyController.dispose();
+    presetLabelController.dispose();
+    presetQtyController.dispose();
+    presetPriceController.dispose();
+
+    if (saved == true) {
+      await _loadData();
+      if (!mounted) return saved;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Advanced setup updated successfully.')),
+      );
+    }
+
+    return saved;
+  }
+
   Future<void> _openEditDialog(ProductModel product) async {
     final nameController = TextEditingController(text: product.name);
     final purchaseController = TextEditingController(
@@ -101,23 +610,209 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setLocalState) {
-            return AlertDialog(
-              title: const Text('Edit Product'),
-              content: SingleChildScrollView(
+            InputDecoration inputDecoration(
+              String label, {
+              IconData? icon,
+              String? prefixText,
+            }) {
+              return InputDecoration(
+                labelText: label,
+                prefixIcon: icon == null
+                    ? null
+                    : Icon(icon, color: _accentBlue),
+                prefixText: prefixText,
+                prefixStyle: const TextStyle(
+                  color: _accentBlue,
+                  fontWeight: FontWeight.w800,
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF8FBFF),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _accentBlue, width: 1.3),
+                ),
+              );
+            }
+
+            Future<void> saveChanges() async {
+              final name = nameController.text.trim();
+              final purchase = double.tryParse(purchaseController.text.trim());
+              final selling = double.tryParse(sellingController.text.trim());
+              final quantity = int.tryParse(quantityController.text.trim());
+
+              if (name.isEmpty ||
+                  selectedCategory == null ||
+                  purchase == null ||
+                  selling == null ||
+                  quantity == null ||
+                  purchase <= 0 ||
+                  selling <= 0 ||
+                  quantity < 0) {
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter valid product details.'),
+                  ),
+                );
+                return;
+              }
+
+              if (!mounted) return;
+              setState(() => _saving = true);
+              try {
+                final matchedCategory = _categories.firstWhere(
+                  (category) => category['name'] == selectedCategory,
+                  orElse: () => <String, dynamic>{},
+                );
+
+                final isPieceBased = product.baseUnit.toLowerCase() == 'pcs';
+
+                await _productRepository.updateProduct(
+                  ProductModel(
+                    id: product.id,
+                    name: name,
+                    category: selectedCategory!,
+                    categoryId: matchedCategory['id'] as int?,
+                    purchasePrice: purchase,
+                    sellingPrice: selling,
+                    quantity: quantity,
+                    baseUnit: product.baseUnit,
+                    costPerUnit: isPieceBased ? purchase : product.costPerUnit,
+                    pricePerUnit: isPieceBased ? selling : product.pricePerUnit,
+                    image: product.image,
+                    createdAt: product.createdAt,
+                    updatedAt: DateTime.now(),
+                  ),
+                );
+
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext, true);
+              } finally {
+                if (mounted) {
+                  setState(() => _saving = false);
+                }
+              }
+            }
+
+            return Dialog(
+              backgroundColor: Colors.white,
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFFEEF4FF),
+                                Color(0xFFDCE8FF),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.edit_rounded,
+                            color: _accentBlue,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Edit Product',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: _textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Update the same product details you entered from stock-in.',
+                                style: TextStyle(
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w600,
+                                  color: _textSecondary.withValues(alpha: 0.92),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        InkWell(
+                          onTap: _saving
+                              ? null
+                              : () => Navigator.pop(dialogContext, false),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7FAFF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _border),
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: _textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _dialogInfoPill(
+                          icon: Icons.straighten_rounded,
+                          label: 'Base unit: ${product.baseUnit}',
+                        ),
+                        _dialogInfoPill(
+                          icon: Icons.sell_rounded,
+                          label: 'Per unit: ${_peso(product.pricePerUnit)}',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Product Name',
+                      decoration: inputDecoration(
+                        'Product Name',
+                        icon: Icons.inventory_2_outlined,
                       ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
+                      decoration: inputDecoration(
+                        'Category',
+                        icon: Icons.category_rounded,
                       ),
                       items: _categories
                           .map(
@@ -131,106 +826,162 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                           setLocalState(() => selectedCategory = value),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: purchaseController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Purchase Price',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: sellingController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Selling Price',
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: purchaseController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: inputDecoration(
+                              'Purchase Price',
+                              prefixText: 'PHP ',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: sellingController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: inputDecoration(
+                              'Selling Price',
+                              prefixText: 'PHP ',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: quantityController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Stock Quantity',
+                      decoration: inputDecoration(
+                        'Stock Quantity',
+                        icon: Icons.layers_outlined,
                       ),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7FAFF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _border),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: _accentBlue,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              product.baseUnit.toLowerCase() == 'pcs'
+                                  ? 'This will update the same product record from stock-in.'
+                                  : 'Advanced unit setup stays preserved here. This editor updates the main product details only.',
+                              style: const TextStyle(
+                                fontSize: 12.6,
+                                fontWeight: FontWeight.w600,
+                                color: _textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _saving
+                            ? null
+                            : () async {
+                                final savedAdvanced =
+                                    await _openAdvancedSetupDialog(product);
+                                if (savedAdvanced == true &&
+                                    dialogContext.mounted) {
+                                  Navigator.pop(dialogContext, true);
+                                }
+                              },
+                        icon: const Icon(Icons.tune_rounded),
+                        label: const Text('Advanced setup'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _accentBlue,
+                          side: const BorderSide(color: Color(0xFFCFE0FF)),
+                          backgroundColor: const Color(0xFFF5F8FF),
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _saving
+                                ? null
+                                : () => Navigator.pop(dialogContext, false),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _textPrimary,
+                              backgroundColor: const Color(0xFFF8FBFF),
+                              side: const BorderSide(color: _border),
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _saving ? null : saveChanges,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accentBlue,
+                              disabledBackgroundColor: const Color(0xFFAFC6FF),
+                              minimumSize: const Size.fromHeight(48),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: _saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Save Changes',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: _saving ? null : () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: _saving
-                      ? null
-                      : () async {
-                          final name = nameController.text.trim();
-                          final purchase =
-                              double.tryParse(purchaseController.text.trim());
-                          final selling =
-                              double.tryParse(sellingController.text.trim());
-                          final quantity =
-                              int.tryParse(quantityController.text.trim());
-
-                          if (name.isEmpty ||
-                              selectedCategory == null ||
-                              purchase == null ||
-                              selling == null ||
-                              quantity == null ||
-                              purchase <= 0 ||
-                              selling <= 0 ||
-                              quantity < 0) {
-                            ScaffoldMessenger.of(this.context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please enter valid product details.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (!mounted) return;
-                          setState(() => _saving = true);
-                          try {
-                            final matchedCategory = _categories.firstWhere(
-                              (category) =>
-                                  category['name'] == selectedCategory,
-                              orElse: () => <String, dynamic>{},
-                            );
-
-                            await _productRepository.updateProduct(
-                              ProductModel(
-                                id: product.id,
-                                name: name,
-                                category: selectedCategory!,
-                                categoryId: matchedCategory['id'] as int?,
-                                purchasePrice: purchase,
-                                sellingPrice: selling,
-                                quantity: quantity,
-                                image: product.image,
-                                createdAt: product.createdAt,
-                                updatedAt: DateTime.now(),
-                              ),
-                            );
-
-                            if (!dialogContext.mounted) return;
-                            Navigator.pop(dialogContext, true);
-                          } finally {
-                            if (mounted) {
-                              setState(() => _saving = false);
-                            }
-                          }
-                        },
-                  child: const Text('Save Changes'),
-                ),
-              ],
             );
           },
         );
@@ -369,7 +1120,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                               child: Padding(
                                 padding: EdgeInsets.all(24),
                                 child: Text(
-                                  'No products found.\nAdd products first to manage inventory.',
+                                  'No products found.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: _textSecondary,
@@ -655,6 +1406,31 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
               fontSize: 14,
               fontWeight: FontWeight.w800,
               color: valueColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogInfoPill({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF4FF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _accentBlue),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _accentBlue,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
             ),
           ),
         ],

@@ -132,8 +132,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         children: [
                           _sectionIntro(
                             title: 'Item details',
-                            description:
-                                'Start with the date, category, and product name.',
                             scale: scale,
                           ),
                           SizedBox(height: gap12),
@@ -176,10 +174,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _sectionIntro(
-                            title: 'Basic stock in',
+                            title: null,
                             description: vm.useAdvancedUnitSetup
                                 ? 'Use the smallest unit you want to track and sell.'
-                                : 'Enter the total cost, selling price, and quantity you bought.',
+                                : null,
                             scale: scale,
                           ),
                           SizedBox(height: gap12),
@@ -227,7 +225,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           _inputNumberField(
                             label: vm.useAdvancedUnitSetup
                                 ? 'Total quantity in smallest unit'
-                                : 'Qty bought',
+                                : 'Quantity bought',
                             controller: vm.quantityController,
                             showError: vm.showValidationErrors,
                             icon: Icons.shopping_cart_rounded,
@@ -277,7 +275,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         padding: cardPad,
                         radius: radius16,
                         titleFs: titleFs,
-                        title: 'Quick sell buttons',
+                        title: 'Optional quick sale presets',
                         icon: Icons.sell_rounded,
                         child: _sellingOptionsSection(
                           vm,
@@ -742,16 +740,20 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       barrierDismissible: true,
       builder: (dialogCtx) {
         return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: (18 * s).clamp(16, 24),
+            vertical: (24 * s).clamp(20, 28),
+          ),
           backgroundColor: _cardBg,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
+            borderRadius: BorderRadius.circular((24 * s).clamp(20, 28)),
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
+              (18 * s).clamp(16, 22),
+              (18 * s).clamp(16, 22),
+              (18 * s).clamp(16, 22),
               (16 * s).clamp(14, 20),
-              (14 * s).clamp(12, 18),
-              (16 * s).clamp(14, 20),
-              (12 * s).clamp(10, 16),
             ),
             child: Form(
               key: formKey,
@@ -760,34 +762,101 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Container(
+                        height: (42 * s).clamp(38, 48),
+                        width: (42 * s).clamp(38, 48),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _accentBlue.withOpacity(0.18),
+                              const Color(0xFF7CC8FF).withOpacity(0.12),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            (14 * s).clamp(12, 18),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.category_rounded,
+                          color: _accentBlue,
+                          size: (22 * s).clamp(20, 26),
+                        ),
+                      ),
+                      SizedBox(width: (12 * s).clamp(10, 14)),
                       Expanded(
-                        child: Text(
-                          "Pagdugang ug Bag-ong Kategorya",
-                          style: TextStyle(
-                            fontSize: (16 * s).clamp(14, 18),
-                            fontWeight: FontWeight.w900,
-                            color: _titleColor,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Pagdugang ug Bag-ong Kategorya",
+                              style: TextStyle(
+                                fontSize: (16 * s).clamp(14, 18),
+                                fontWeight: FontWeight.w900,
+                                color: _titleColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pop(dialogCtx),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: (36 * s).clamp(34, 40),
+                          width: (36 * s).clamp(34, 40),
+                          decoration: BoxDecoration(
+                            color: _fieldBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _cardBorder),
+                          ),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: _subtitleColor,
+                            size: (20 * s).clamp(18, 22),
                           ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(dialogCtx),
-                        icon: const Icon(Icons.close_rounded),
-                        splashRadius: 20,
-                      ),
                     ],
                   ),
-                  SizedBox(height: (10 * s).clamp(8, 12)),
-                  Text(
-                    "Example: Snacks, Inomnon, Pagkaon",
-                    style: TextStyle(
-                      color: _subtitleColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: (13.5 * s).clamp(12.5, 15),
+                  SizedBox(height: (16 * s).clamp(14, 18)),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: (12 * s).clamp(10, 14),
+                      vertical: (10 * s).clamp(8, 12),
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7FAFF),
+                      borderRadius: BorderRadius.circular(
+                        (14 * s).clamp(12, 18),
+                      ),
+                      border: Border.all(color: _cardBorder.withOpacity(0.9)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline_rounded,
+                          color: _accentBlue,
+                          size: (18 * s).clamp(16, 22),
+                        ),
+                        SizedBox(width: (8 * s).clamp(6, 10)),
+                        Expanded(
+                          child: Text(
+                            "Pananglitan: Snacks, Inomnon, Pagkaon",
+                            style: TextStyle(
+                              color: _subtitleColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: (12.8 * s).clamp(12, 14.5),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  SizedBox(height: (14 * s).clamp(12, 16)),
                   ValueListenableBuilder<String>(
                     valueListenable: value,
                     builder: (_, text, _) {
@@ -798,18 +867,34 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         maxLength: 30,
                         decoration: InputDecoration(
                           counterText: "",
-                          prefixIcon: const Icon(Icons.category_rounded),
+                          prefixIcon: Icon(
+                            Icons.folder_open_rounded,
+                            color: _accentBlue,
+                            size: (20 * s).clamp(18, 24),
+                          ),
                           labelText: "Ngalan sa Kategorya",
                           hintText: "e.g. Frozen Foods",
                           filled: true,
                           fillColor: _fieldBg,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: (14 * s).clamp(12, 16),
+                            vertical: (16 * s).clamp(14, 18),
+                          ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                            borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
                             borderSide: BorderSide(color: _cardBorder),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
-                            borderSide: const BorderSide(color: _accentBlue),
+                            borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
+                            borderSide: const BorderSide(color: _accentBlue, width: 1.4),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
+                            borderSide: const BorderSide(color: Colors.redAccent),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
+                            borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
                           ),
                         ),
                         onChanged: (v) => value.value = v,
@@ -831,7 +916,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       );
                     },
                   ),
-                  SizedBox(height: (6 * s).clamp(4, 10)),
+                  SizedBox(height: (10 * s).clamp(8, 12)),
                   Row(
                     children: [
                       Expanded(
@@ -839,11 +924,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           onPressed: () => Navigator.pop(dialogCtx),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _titleColor,
+                            backgroundColor: _fieldBg,
                             side: BorderSide(color: _cardBorder),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                              borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
                             ),
-                            padding: EdgeInsets.symmetric(vertical: (12 * s).clamp(10, 14)),
+                            padding: EdgeInsets.symmetric(vertical: (13 * s).clamp(11, 15)),
                           ),
                           child: Text(
                             "Cancel",
@@ -873,9 +959,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 backgroundColor: _accentBlue,
                                 disabledBackgroundColor: _accentBlue.withOpacity(0.30),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                                  borderRadius: BorderRadius.circular((14 * s).clamp(12, 18)),
                                 ),
-                                padding: EdgeInsets.symmetric(vertical: (12 * s).clamp(10, 14)),
+                                padding: EdgeInsets.symmetric(vertical: (13 * s).clamp(11, 15)),
                                 elevation: 0,
                               ),
                               child: Text(
@@ -995,30 +1081,34 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   Widget _sectionIntro({
-    required String title,
-    required String description,
+    String? title,
+    String? description,
     required double scale,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: (16 * scale).clamp(14.5, 18),
-            color: _titleColor,
+        if (title != null && title.isNotEmpty)
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: (16 * scale).clamp(14.5, 18),
+              color: _titleColor,
+            ),
           ),
-        ),
-        SizedBox(height: (4 * scale).clamp(3, 6)),
-        Text(
-          description,
-          style: TextStyle(
-            fontSize: (13 * scale).clamp(12, 14.5),
-            fontWeight: FontWeight.w600,
-            color: _subtitleColor,
+        if (description != null && description.isNotEmpty) ...[
+          if (title != null && title.isNotEmpty)
+            SizedBox(height: (4 * scale).clamp(3, 6)),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: (13 * scale).clamp(12, 14.5),
+              fontWeight: FontWeight.w600,
+              color: _subtitleColor,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -1944,7 +2034,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Add ready buttons the cashier can tap later, like 1 dozen, twin pack, 3 for 20, or 1 case.',
+          'Optional only. Add common sale presets like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap them faster later.',
           style: TextStyle(
             fontSize: (valueFs - 1).clamp(12, 15),
             fontWeight: FontWeight.w600,
@@ -1998,7 +2088,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: OutlinedButton.icon(
             onPressed: vm.addSellingOption,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Add quick sell button'),
+            label: const Text('Add sale preset'),
           ),
         ),
         if (vm.sellingOptions.isNotEmpty) ...[

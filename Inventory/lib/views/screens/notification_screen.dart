@@ -283,68 +283,13 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(18),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 22,
-                        vertical: 26,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _cardBg,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: _cardBorder),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF93A4CF,
-                            ).withValues(alpha: 0.16),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            height: 70,
-                            width: 70,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFFECF3FF),
-                                  Color(0xFFD8E8FF),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            child: const Icon(
-                              Icons.notifications_none_rounded,
-                              color: _accentBlue,
-                              size: 36,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No notifications right now.',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: _titleColor,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'You are all caught up.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _subtitleColor,
-                            ),
-                          ),
-                        ],
+                    child: const Text(
+                      'No notifications right now.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: _titleColor,
+                        fontSize: 16,
                       ),
                     ),
                   ),

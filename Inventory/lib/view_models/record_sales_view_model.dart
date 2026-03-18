@@ -23,6 +23,18 @@ class AppliedSellingOptionSummary {
   });
 }
 
+class _AutoPricingResult {
+  const _AutoPricingResult({
+    required this.quantity,
+    required this.subtotal,
+    required this.appliedOptionCounts,
+  });
+
+  final int quantity;
+  final double subtotal;
+  final Map<String, int> appliedOptionCounts;
+}
+
 class SalesViewModel extends ChangeNotifier {
   final void Function()? onCashUpdated;
 
@@ -119,6 +131,7 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void selectCategory(int index) {
+    if (selectedCategoryIndex == index) return;
     selectedCategoryIndex = index;
     notifyListeners();
   }
@@ -181,6 +194,108 @@ class SalesViewModel extends ChangeNotifier {
     appliedSellingOptionCounts.remove(id);
   }
 
+  List<ProductSellingOption> _autoPricingOptionsFor(ProductModel product) {
+    final unitPrice = getEffectiveUnitPrice(product);
+
+    return sellingOptionsFor(product)
+        .where((option) {
+          final qty = option.baseQuantity ?? 0;
+          return qty > 1 && option.price > 0 && option.price < (qty * unitPrice);
+        })
+        .toList()
+      ..sort((a, b) {
+        final qtyCompare = (b.baseQuantity ?? 0).compareTo(a.baseQuantity ?? 0);
+        if (qtyCompare != 0) return qtyCompare;
+        return a.price.compareTo(b.price);
+      });
+  }
+
+  _AutoPricingResult priceQuantity(ProductModel product, int qty) {
+    final clampedQty = qty.clamp(0, product.quantity);
+    if (clampedQty <= 0) {
+      return const _AutoPricingResult(
+        quantity: 0,
+        subtotal: 0,
+        appliedOptionCounts: <String, int>{},
+      );
+    }
+
+    final options = _autoPricingOptionsFor(product);
+    final appliedCounts = <String, int>{};
+    var remainingQty = clampedQty;
+    var subtotal = 0.0;
+
+    for (final option in options) {
+      final bundleQty = option.baseQuantity ?? 0;
+      if (bundleQty <= 1 || remainingQty < bundleQty) continue;
+
+      final count = remainingQty ~/ bundleQty;
+      if (count <= 0) continue;
+
+      appliedCounts[option.label] = count;
+      subtotal += option.price * count;
+      remainingQty -= bundleQty * count;
+    }
+
+    if (remainingQty > 0) {
+      subtotal += remainingQty * getEffectiveUnitPrice(product);
+    }
+
+    return _AutoPricingResult(
+      quantity: clampedQty,
+      subtotal: subtotal,
+      appliedOptionCounts: appliedCounts,
+    );
+  }
+
+  double subtotalForQuantity(ProductModel product, int qty) =>
+      priceQuantity(product, qty).subtotal;
+
+  Map<String, int> appliedOptionCountsForQuantity(ProductModel product, int qty) =>
+      Map<String, int>.from(priceQuantity(product, qty).appliedOptionCounts);
+
+  void _applyPricingToSelection(
+    ProductModel product,
+    _AutoPricingResult pricing, {
+    bool notify = true,
+  }) {
+    final id = product.id;
+    if (id == null) return;
+
+    if (pricing.appliedOptionCounts.isEmpty || pricing.quantity == 0) {
+      appliedSellingOptionCounts.remove(id);
+    } else {
+      appliedSellingOptionCounts[id] = Map<String, int>.from(pricing.appliedOptionCounts);
+    }
+
+    productQuantities[id] = pricing.quantity;
+    productAmounts[id] = pricing.subtotal;
+
+    final controller = controllers[id];
+    if (controller != null && controller.text != pricing.quantity.toString()) {
+      if (_controllerListeners.containsKey(id)) {
+        controller.removeListener(_controllerListeners[id]!);
+      }
+      controller.text = pricing.quantity.toString();
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+      if (_controllerListeners.containsKey(id)) {
+        controller.addListener(_controllerListeners[id]!);
+      }
+    }
+
+    final amountController = amountControllers[id];
+    if (amountController != null) {
+      amountController.text =
+          pricing.subtotal == 0 ? '' : pricing.subtotal.toStringAsFixed(2);
+    }
+
+    if (notify) {
+      calculateTotal();
+    }
+  }
+
   Future<void> loadProducts() async {
     if (_productRepository == null) return;
 
@@ -224,32 +339,20 @@ class SalesViewModel extends ChangeNotifier {
       _controllerListeners[id] = () {
         final text = controller.text.trim();
         if (text.isEmpty) {
-          productQuantities[id] = 0;
-          productAmounts[id] = 0;
-          calculateTotal();
+          _applyPricingToSelection(
+            p,
+            const _AutoPricingResult(
+              quantity: 0,
+              subtotal: 0,
+              appliedOptionCounts: <String, int>{},
+            ),
+          );
           return;
         }
 
         final parsed = int.tryParse(text) ?? 0;
         final clamped = parsed.clamp(0, p.quantity);
-        productQuantities[id] = clamped;
-        productAmounts[id] = clamped * getEffectiveUnitPrice(p);
-
-        if (parsed != clamped) {
-          controller
-            ..text = clamped.toString()
-            ..selection = TextSelection.fromPosition(
-              TextPosition(offset: controller.text.length),
-            );
-        }
-
-        final amountController = amountControllers[id];
-        if (amountController != null) {
-          amountController.text =
-              clamped == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
-        }
-
-        calculateTotal();
+        _applyPricingToSelection(p, priceQuantity(p, clamped));
       };
 
       controller.addListener(_controllerListeners[id]!);
@@ -275,45 +378,22 @@ class SalesViewModel extends ChangeNotifier {
 
   void setTypedQuantity(ProductModel product, String value) {
     if (product.id == null) return;
-    final id = product.id!;
-    final controller = controllers[id];
 
     if (value.trim().isEmpty) {
-      _clearAppliedSellingOptions(product);
-      productQuantities[id] = 0;
-      productAmounts[id] = 0;
-      calculateTotal();
+      _applyPricingToSelection(
+        product,
+        const _AutoPricingResult(
+          quantity: 0,
+          subtotal: 0,
+          appliedOptionCounts: <String, int>{},
+        ),
+      );
       return;
     }
 
     final parsed = int.tryParse(value) ?? 0;
     final clamped = parsed.clamp(0, product.quantity);
-
-    _clearAppliedSellingOptions(product);
-    productQuantities[id] = clamped;
-    productAmounts[id] = clamped * getEffectiveUnitPrice(product);
-
-    if (controller != null && controller.text != clamped.toString()) {
-      if (_controllerListeners.containsKey(id)) {
-        controller.removeListener(_controllerListeners[id]!);
-      }
-
-      controller.text = clamped.toString();
-      controller.selection = TextSelection.fromPosition(
-        TextPosition(offset: controller.text.length),
-      );
-
-      if (_controllerListeners.containsKey(id)) {
-        controller.addListener(_controllerListeners[id]!);
-      }
-    }
-
-    final amountController = amountControllers[id];
-    if (amountController != null) {
-      amountController.text = clamped == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
-    }
-
-    calculateTotal();
+    _applyPricingToSelection(product, priceQuantity(product, clamped));
   }
 
   void setTypedAmount(ProductModel product, String value) {
@@ -351,51 +431,14 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void applyUnitConversion(ProductModel product, ProductUnitConversion conversion) {
-    _clearAppliedSellingOptions(product);
     final nextQty = getQuantity(product) + conversion.baseQuantity;
     updateQuantity(product, nextQty);
   }
 
   void applySellingOption(ProductModel product, ProductSellingOption option) {
-    if (product.id == null) return;
-    final id = product.id!;
     final baseQty = option.baseQuantity ?? 0;
-    final price = option.price;
-    if (baseQty <= 0 || price <= 0) return;
-
-    final currentQty = productQuantities[id] ?? 0;
-    final currentAmount = productAmounts[id] ?? 0;
-    final nextQty = currentQty + baseQty;
-    if (nextQty > product.quantity) {
-      return;
-    }
-
-    productQuantities[id] = nextQty;
-    productAmounts[id] = currentAmount + price;
-    final counts = {...(appliedSellingOptionCounts[id] ?? <String, int>{})};
-    counts[option.label] = (counts[option.label] ?? 0) + 1;
-    appliedSellingOptionCounts[id] = counts;
-
-    final controller = controllers[id];
-    if (controller != null && controller.text != nextQty.toString()) {
-      if (_controllerListeners.containsKey(id)) {
-        controller.removeListener(_controllerListeners[id]!);
-      }
-      controller.text = nextQty.toString();
-      controller.selection = TextSelection.fromPosition(
-        TextPosition(offset: controller.text.length),
-      );
-      if (_controllerListeners.containsKey(id)) {
-        controller.addListener(_controllerListeners[id]!);
-      }
-    }
-
-    final amountController = amountControllers[id];
-    if (amountController != null) {
-      amountController.text = productAmounts[id]!.toStringAsFixed(2);
-    }
-
-    calculateTotal();
+    if (baseQty <= 0 || option.price <= 0) return;
+    updateQuantity(product, getQuantity(product) + baseQty);
   }
 
   void incrementQuantity(ProductModel product) {
@@ -404,7 +447,6 @@ class SalesViewModel extends ChangeNotifier {
     final currentQty = productQuantities[id] ?? 0;
 
     if (product.quantity > 0 && currentQty < product.quantity) {
-      _clearAppliedSellingOptions(product);
       updateQuantity(product, currentQty + 1);
     }
   }
@@ -415,43 +457,12 @@ class SalesViewModel extends ChangeNotifier {
     final currentQty = productQuantities[id] ?? 0;
 
     if (currentQty > 0) {
-      _clearAppliedSellingOptions(product);
       updateQuantity(product, currentQty - 1);
     }
   }
 
   void updateQuantity(ProductModel product, int qty) {
-    if (product.id == null) return;
-    final id = product.id!;
-
-    qty = qty.clamp(0, product.quantity);
-    _clearAppliedSellingOptions(product);
-    productQuantities[id] = qty;
-    productAmounts[id] = qty * getEffectiveUnitPrice(product);
-
-    final controller = controllers[id];
-    if (controller != null && controller.text != qty.toString()) {
-      if (_controllerListeners.containsKey(id)) {
-        controller.removeListener(_controllerListeners[id]!);
-      }
-
-      controller.text = qty.toString();
-      controller.selection = TextSelection.fromPosition(
-        TextPosition(offset: controller.text.length),
-      );
-
-      if (_controllerListeners.containsKey(id)) {
-        controller.addListener(_controllerListeners[id]!);
-      }
-    }
-
-    final amountController = amountControllers[id];
-    if (amountController != null) {
-      amountController.text =
-          qty == 0 ? '' : productAmounts[id]!.toStringAsFixed(2);
-    }
-
-    calculateTotal();
+    _applyPricingToSelection(product, priceQuantity(product, qty));
   }
 
   void setProductSelection(

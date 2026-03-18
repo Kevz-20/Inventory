@@ -250,13 +250,19 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                     SizedBox(height: (12 * scale).clamp(10, 16)),
                     Expanded(
                       child: utangan.isEmpty
-                          ? _emptyState(
-                              scale: scale,
-                              padH: padH,
-                              title: 'No customer utang yet',
-                              subtitle:
-                                  'Add a customer sale on credit to see records here.',
-                              icon: Icons.people_outline_rounded,
+                          ? Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: padH),
+                                child: Text(
+                                  'No customer utang yet',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: (15 * scale).clamp(14, 18),
+                                    fontWeight: FontWeight.w800,
+                                    color: _titleColor,
+                                  ),
+                                ),
+                              ),
                             )
                           : (filteredUtangan.isEmpty
                               ? _emptyState(
