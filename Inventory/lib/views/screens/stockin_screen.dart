@@ -3021,6 +3021,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return unit;
   }
 
+  bool _isLiquidBaseUnit(StockInViewModel vm) {
+    final normalized = vm.baseUnitLabel.trim().toLowerCase();
+    return normalized == 'ml' ||
+        normalized == 'milliliter' ||
+        normalized == 'millilitre';
+  }
+
+  List<({String label, int quantity})> _liquidQuickSaleSuggestions(
+    StockInViewModel vm,
+  ) {
+    if (!_isLiquidBaseUnit(vm)) return const [];
+    return const [
+      (label: '1 flat / lapad', quantity: 375),
+      (label: '1/2 liter', quantity: 500),
+      (label: '1 liter', quantity: 1000),
+    ];
+  }
+
   Widget _unitConversionSection(
     StockInViewModel vm, {
     required double scale,
@@ -3447,20 +3465,42 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     required double valueFs,
     required double gap12,
   }) {
+    final isLiquid = _isLiquidBaseUnit(vm);
+    final liquidSuggestions = _liquidQuickSaleSuggestions(vm);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
+          isLiquid
+              ? 'Optional only. Add common liquid sales like 1 flat/lapad, 1/2 liter, or 1 liter so the cashier can tap faster later.'
+              : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
           style: TextStyle(
             fontSize: (valueFs - 1).clamp(12, 15),
             fontWeight: FontWeight.w600,
             color: _subtitleColor,
           ),
         ),
+        if (liquidSuggestions.isNotEmpty) ...[
+          SizedBox(height: gap12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: liquidSuggestions.map((suggestion) {
+              return ActionChip(
+                label: Text(suggestion.label),
+                onPressed: () {
+                  vm.sellingOptionLabelController.text = suggestion.label;
+                  vm.sellingOptionQuantityController.text =
+                      suggestion.quantity.toString();
+                  setState(() {});
+                },
+              );
+            }).toList(),
+          ),
+        ],
         SizedBox(height: gap12),
         _inputTextField(
-          label: 'Quick button label',
+          label: isLiquid ? 'Sale label' : 'Quick button label',
           controller: vm.sellingOptionLabelController,
           showError: false,
           icon: Icons.local_offer_outlined,
@@ -3487,7 +3527,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             SizedBox(width: gap12),
             Expanded(
               child: _inputNumberField(
-                label: 'Bundle price',
+                label: isLiquid ? 'Usual price' : 'Bundle price',
                 controller: vm.sellingOptionPriceController,
                 showError: false,
                 isPeso: true,
@@ -3505,7 +3545,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: OutlinedButton.icon(
             onPressed: vm.addSellingOption,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Add quick button'),
+            label: Text(isLiquid ? 'Add sale sample' : 'Add quick button'),
           ),
         ),
         if (vm.sellingOptions.isNotEmpty) ...[
