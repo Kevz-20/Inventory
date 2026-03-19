@@ -25,8 +25,6 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFDDE5F8);
   static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
 
   bool _didMarkSeen = false;
 

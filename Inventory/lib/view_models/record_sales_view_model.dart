@@ -142,7 +142,6 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   bool supportsPesoEntry(ProductModel product) =>
-      product.baseUnit.toLowerCase() != 'pcs' &&
       getEffectiveUnitPrice(product) > 0;
 
   List<ProductUnitConversion> unitConversionsFor(ProductModel product) =>
@@ -210,7 +209,7 @@ class SalesViewModel extends ChangeNotifier {
       });
   }
 
-  _AutoPricingResult priceQuantity(ProductModel product, int qty) {
+  _AutoPricingResult _priceQuantity(ProductModel product, int qty) {
     final clampedQty = qty.clamp(0, product.quantity);
     if (clampedQty <= 0) {
       return const _AutoPricingResult(
@@ -249,10 +248,10 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   double subtotalForQuantity(ProductModel product, int qty) =>
-      priceQuantity(product, qty).subtotal;
+      _priceQuantity(product, qty).subtotal;
 
   Map<String, int> appliedOptionCountsForQuantity(ProductModel product, int qty) =>
-      Map<String, int>.from(priceQuantity(product, qty).appliedOptionCounts);
+      Map<String, int>.from(_priceQuantity(product, qty).appliedOptionCounts);
 
   void _applyPricingToSelection(
     ProductModel product,
@@ -352,7 +351,7 @@ class SalesViewModel extends ChangeNotifier {
 
         final parsed = int.tryParse(text) ?? 0;
         final clamped = parsed.clamp(0, p.quantity);
-        _applyPricingToSelection(p, priceQuantity(p, clamped));
+        _applyPricingToSelection(p, _priceQuantity(p, clamped));
       };
 
       controller.addListener(_controllerListeners[id]!);
@@ -393,7 +392,7 @@ class SalesViewModel extends ChangeNotifier {
 
     final parsed = int.tryParse(value) ?? 0;
     final clamped = parsed.clamp(0, product.quantity);
-    _applyPricingToSelection(product, priceQuantity(product, clamped));
+    _applyPricingToSelection(product, _priceQuantity(product, clamped));
   }
 
   void setTypedAmount(ProductModel product, String value) {
@@ -462,7 +461,7 @@ class SalesViewModel extends ChangeNotifier {
   }
 
   void updateQuantity(ProductModel product, int qty) {
-    _applyPricingToSelection(product, priceQuantity(product, qty));
+    _applyPricingToSelection(product, _priceQuantity(product, qty));
   }
 
   void setProductSelection(

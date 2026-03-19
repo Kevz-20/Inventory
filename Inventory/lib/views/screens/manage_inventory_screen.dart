@@ -95,6 +95,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
         .toList();
     final sellingOptions =
         (await _stockInRepository.getSellingOptions(product.id!)).toList();
+    if (!mounted) return null;
 
     final saved = await showDialog<bool>(
       context: context,
@@ -327,7 +328,10 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                         InkWell(
                           onTap: localSaving
                               ? null
-                              : () => Navigator.pop(dialogContext, false),
+                              : () {
+                                  FocusScope.of(dialogContext).unfocus();
+                                  Navigator.pop(dialogContext, false);
+                                },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             width: 38,
@@ -509,7 +513,10 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                           child: OutlinedButton(
                             onPressed: localSaving
                                 ? null
-                                : () => Navigator.pop(dialogContext, false),
+                                : () {
+                                    FocusScope.of(dialogContext).unfocus();
+                                    Navigator.pop(dialogContext, false);
+                                  },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: _textPrimary,
                               backgroundColor: const Color(0xFFF8FBFF),
@@ -566,13 +573,6 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
         );
       },
     );
-
-    baseUnitController.dispose();
-    conversionNameController.dispose();
-    conversionQtyController.dispose();
-    presetLabelController.dispose();
-    presetQtyController.dispose();
-    presetPriceController.dispose();
 
     if (saved == true) {
       await _loadData();
@@ -766,7 +766,10 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                         InkWell(
                           onTap: _saving
                               ? null
-                              : () => Navigator.pop(dialogContext, false),
+                              : () {
+                                  FocusScope.of(dialogContext).unfocus();
+                                  Navigator.pop(dialogContext, false);
+                                },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             width: 38,
@@ -930,7 +933,10 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                           child: OutlinedButton(
                             onPressed: _saving
                                 ? null
-                                : () => Navigator.pop(dialogContext, false),
+                                : () {
+                                    FocusScope.of(dialogContext).unfocus();
+                                    Navigator.pop(dialogContext, false);
+                                  },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: _textPrimary,
                               backgroundColor: const Color(0xFFF8FBFF),
@@ -949,7 +955,12 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _saving ? null : saveChanges,
+                            onPressed: _saving
+                                ? null
+                                : () {
+                                    FocusScope.of(dialogContext).unfocus();
+                                    saveChanges();
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _accentBlue,
                               disabledBackgroundColor: const Color(0xFFAFC6FF),
@@ -987,11 +998,6 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
         );
       },
     );
-
-    nameController.dispose();
-    purchaseController.dispose();
-    sellingController.dispose();
-    quantityController.dispose();
 
     if (saved == true) {
       await _loadData();

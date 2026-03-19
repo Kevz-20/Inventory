@@ -120,7 +120,6 @@ class _CapitalManagementScreenState
             final double titleFs = (16 * s).clamp(14.5, 18).toDouble();
             final double smallFs = (12 * s).clamp(11.5, 14).toDouble();
             final double balanceLabelFs = (13 * s).clamp(12, 15).toDouble();
-            final double balanceValueFs = (18 * s).clamp(16, 22).toDouble();
             final double bottomBtnFs = (16 * s).clamp(14.5, 18).toDouble();
             return Scaffold(
               backgroundColor: _pageBg,

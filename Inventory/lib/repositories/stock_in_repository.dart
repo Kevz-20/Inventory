@@ -183,6 +183,32 @@ class StockInRepository {
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
+  Future<void> updateBaseUnit(String previousName, String nextName) async {
+    final oldTrimmed = previousName.trim();
+    final newTrimmed = nextName.trim();
+    if (oldTrimmed.isEmpty || newTrimmed.isEmpty) return;
+
+    await db.update(
+      'base_unit_choice',
+      {
+        'name': newTrimmed,
+      },
+      where: 'LOWER(name) = ?',
+      whereArgs: [oldTrimmed.toLowerCase()],
+    );
+  }
+
+  Future<void> deleteBaseUnit(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    await db.delete(
+      'base_unit_choice',
+      where: 'LOWER(name) = ?',
+      whereArgs: [trimmed.toLowerCase()],
+    );
+  }
+
   Future<List<ProductUnitConversion>> getUnitConversions(int productId) async {
     final rows = await db.query(
       'product_unit_conversion',

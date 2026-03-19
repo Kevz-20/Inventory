@@ -843,6 +843,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final qty = vm.getQuantity(product);
     final hasSelection = subtotal > 0;
     final addedLabel = hasSelection ? 'Added: $qty ${product.baseUnit}' : null;
+    final effectiveUnitPrice = vm.getEffectiveUnitPrice(product);
+    final hasDefaultUnitPrice = effectiveUnitPrice > 0;
 
     return InkWell(
       borderRadius: BorderRadius.circular(_r(context, 20)),
@@ -883,9 +885,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       ),
                       SizedBox(height: _r(context, 4)),
                       Text(
-                        vm.supportsPesoEntry(product)
-                            ? '${currencyFormatter.format(vm.getEffectiveUnitPrice(product))} / ${product.baseUnit}'
-                            : currencyFormatter.format(product.sellingPrice),
+                        hasDefaultUnitPrice
+                            ? '${currencyFormatter.format(effectiveUnitPrice)} / ${product.baseUnit}'
+                            : 'Manual price',
                         style: TextStyle(
                           fontSize: _r(context, 14.5),
                           fontWeight: FontWeight.w900,
@@ -1121,12 +1123,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
   ) async {
     final sellingOptions = vm.sellingOptionsFor(product);
     final appliedCounts = vm.appliedSellingOptionCountMap(product);
+    final displayedUnitPrice = vm.getEffectiveUnitPrice(product);
+    final hasDefaultUnitPrice = displayedUnitPrice > 0;
+    final manualPriceAvailable = true;
     int localQty = vm.getQuantity(product);
     double localSubtotal = vm.getSubtotal(product);
     final localAppliedCounts = <String, int>{...appliedCounts};
+    bool isManualPricing = localQty > 0 &&
+        (localSubtotal - vm.subtotalForQuantity(product, localQty)).abs() > 0.009;
+    final qtyController = TextEditingController(
+      text: localQty > 0 ? localQty.toString() : '',
+    );
     final amountController = TextEditingController(
       text: localSubtotal > 0 ? localSubtotal.toStringAsFixed(2) : '',
     );
+
+    void syncQtyField() {
+      qtyController.text = localQty <= 0 ? '' : localQty.toString();
+      qtyController.selection = TextSelection.fromPosition(
+        TextPosition(offset: qtyController.text.length),
+      );
+    }
 
     void syncAmountField() {
       amountController.text =
@@ -1153,16 +1170,42 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   ),
                 )
                 .toList();
+            final quickSaleQuantities = sellingOptions
+                .map((option) => option.baseQuantity ?? 0)
+                .where((qty) => qty > 0)
+                .toSet();
+            final visibleConversions = vm
+                .unitConversionsFor(product)
+                .where((conversion) => !quickSaleQuantities.contains(conversion.baseQuantity))
+                .take(4)
+                .toList();
+
+            void syncAutomaticPricing() {
+              localSubtotal = vm.subtotalForQuantity(product, localQty);
+              localAppliedCounts
+                ..clear()
+                ..addAll(vm.appliedOptionCountsForQuantity(product, localQty));
+              syncAmountField();
+            }
 
             void setManualQty(int qty) {
               final clampedQty = qty.clamp(0, product.quantity);
               setSheetState(() {
                 localQty = clampedQty;
-                localSubtotal = vm.subtotalForQuantity(product, clampedQty);
-                localAppliedCounts
-                  ..clear()
-                  ..addAll(vm.appliedOptionCountsForQuantity(product, clampedQty));
-                syncAmountField();
+                if (localQty <= 0) {
+                  localSubtotal = 0;
+                  localAppliedCounts.clear();
+                  syncQtyField();
+                  syncAmountField();
+                  return;
+                }
+
+                if (isManualPricing) {
+                  localAppliedCounts.clear();
+                } else {
+                  syncAutomaticPricing();
+                }
+                syncQtyField();
               });
             }
 
@@ -1218,48 +1261,161 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _productImage(product),
+                          Container(
+                            padding: EdgeInsets.all(_r(context, 6)),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF7FAFF),
+                              borderRadius: BorderRadius.circular(_r(context, 18)),
+                              border: Border.all(color: _cardBorder),
+                            ),
+                            child: _productImage(product),
+                          ),
                           SizedBox(width: _r(context, 12)),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: _r(context, 18),
-                                    color: _titleColor,
+                            child: Container(
+                              padding: EdgeInsets.all(_r(context, 12)),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFF),
+                                borderRadius: BorderRadius.circular(_r(context, 20)),
+                                border: Border.all(color: _cardBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              product.name,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: _r(context, 18),
+                                                color: _titleColor,
+                                              ),
+                                            ),
+                                            SizedBox(height: _r(context, 4)),
+                                            Text(
+                                              hasDefaultUnitPrice
+                                                  ? '${currencyFormatter.format(displayedUnitPrice)} / ${product.baseUnit}'
+                                                  : 'Manual price',
+                                              style: TextStyle(
+                                                fontSize: _r(context, 14),
+                                                fontWeight: FontWeight.w800,
+                                                color: _subtitleColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (manualPriceAvailable)
+                                        Padding(
+                                          padding:
+                                              EdgeInsets.only(left: _r(context, 8)),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setSheetState(() {
+                                                isManualPricing =
+                                                    !isManualPricing;
+                                                if (!isManualPricing) {
+                                                  syncAutomaticPricing();
+                                                } else {
+                                                  localAppliedCounts.clear();
+                                                  syncAmountField();
+                                                }
+                                              });
+                                            },
+                                            child: AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 180,
+                                              ),
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: _r(context, 12),
+                                                vertical: _r(context, 9),
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: isManualPricing
+                                                    ? const Color(0xFF255FD5)
+                                                    : Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  _r(context, 999),
+                                                ),
+                                                border: Border.all(
+                                                  color: isManualPricing
+                                                      ? const Color(0xFF255FD5)
+                                                      : _cardBorder,
+                                                ),
+                                                boxShadow: isManualPricing
+                                                    ? [
+                                                        BoxShadow(
+                                                          color:
+                                                              const Color(
+                                                                0xFF255FD5,
+                                                              ).withOpacity(
+                                                                0.18,
+                                                              ),
+                                                          blurRadius:
+                                                              _r(context, 10),
+                                                          offset: Offset(
+                                                            0,
+                                                            _r(context, 4),
+                                                          ),
+                                                        ),
+                                                      ]
+                                                    : null,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    isManualPricing
+                                                        ? Icons.edit_off_outlined
+                                                        : Icons.edit_outlined,
+                                                    size: _r(context, 16),
+                                                    color: isManualPricing
+                                                        ? Colors.white
+                                                        : _titleColor,
+                                                  ),
+                                                  SizedBox(
+                                                    width: _r(context, 6),
+                                                  ),
+                                                  Text(
+                                                    isManualPricing
+                                                        ? 'Auto Price'
+                                                        : 'Manual Price',
+                                                    style: TextStyle(
+                                                      fontSize:
+                                                          _r(context, 12),
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: isManualPricing
+                                                          ? Colors.white
+                                                          : _titleColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(height: _r(context, 4)),
-                                Text(
-                                  vm.supportsPesoEntry(product)
-                                      ? '${currencyFormatter.format(vm.getEffectiveUnitPrice(product))} / ${product.baseUnit}'
-                                      : currencyFormatter.format(product.sellingPrice),
-                                  style: TextStyle(
-                                    fontSize: _r(context, 14),
-                                    fontWeight: FontWeight.w800,
-                                    color: _subtitleColor,
-                                  ),
-                                ),
-                                SizedBox(height: _r(context, 6)),
-                                Wrap(
-                                  spacing: _r(context, 8),
-                                  runSpacing: _r(context, 6),
-                                  children: [
-                                    _infoPill('Stock: ${product.stockDisplay}'),
-                                    _infoPill('Selected: $localQty ${product.baseUnit}'),
-                                  ],
-                                ),
-                              ],
+                                  SizedBox(height: _r(context, 8)),
+                                  _infoPill('Available: ${product.stockDisplay}'),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                       SizedBox(height: _r(context, 18)),
                       if (sellingOptions.isNotEmpty) ...[
-                        _sheetSectionLabel('Paspas nga baligya'),
+                        _sheetSectionLabel('Quick sale'),
                         SizedBox(height: _r(context, 8)),
                         Wrap(
                           spacing: _r(context, 10),
@@ -1277,7 +1433,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   vertical: _r(context, 12),
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF5F8FF),
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFFF8FBFF),
+                                      Color(0xFFEEF4FF),
+                                    ],
+                                  ),
                                   borderRadius: BorderRadius.circular(_r(context, 18)),
                                   border: Border.all(color: _cardBorder),
                                 ),
@@ -1344,110 +1507,131 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ],
                         SizedBox(height: _r(context, 16)),
                       ],
-                      _sheetSectionLabel('Manual nga qty'),
-                      SizedBox(height: _r(context, 8)),
-                      if (vm.supportsPesoEntry(product)) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FBFF),
-                            borderRadius: BorderRadius.circular(_r(context, 16)),
-                            border: Border.all(color: _cardBorder),
-                          ),
-                          child: TextField(
-                            controller: amountController,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(decimal: true),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: _r(context, 14),
+                      if (manualPriceAvailable) ...[
+                        if (isManualPricing) ...[
+                          _sheetSectionLabel('Manual price'),
+                          SizedBox(height: _r(context, 8)),
+                        ],
+                        if (isManualPricing) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FBFF),
+                              borderRadius: BorderRadius.circular(_r(context, 16)),
+                              border: Border.all(color: _cardBorder),
                             ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                              LengthLimitingTextInputFormatter(8),
-                            ],
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              hintText: '₱ amount',
+                            child: TextField(
+                              controller: amountController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: _r(context, 14),
+                              ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                                LengthLimitingTextInputFormatter(8),
+                              ],
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: 'Enter total amount',
+                              ),
+                              onChanged: (value) {
+                                final amount =
+                                    double.tryParse(value.replaceAll(',', '').trim()) ??
+                                        0;
+                                setSheetState(() {
+                                  localSubtotal = amount <= 0 ? 0 : amount;
+                                  localAppliedCounts.clear();
+                                });
+                              },
                             ),
-                            onChanged: (value) {
-                              final amount =
-                                  double.tryParse(value.replaceAll(',', '').trim()) ??
-                                      0;
-                              final unitPrice = vm.getEffectiveUnitPrice(product);
-                              final maxAmount = product.quantity * unitPrice;
-                              final clampedAmount = amount.clamp(0, maxAmount);
-                              final qty = unitPrice <= 0
-                                  ? 0
-                                  : (clampedAmount / unitPrice)
-                                      .floor()
-                                      .clamp(0, product.quantity);
-
-                              setSheetState(() {
-                                localQty = qty;
-                                localSubtotal = vm.subtotalForQuantity(product, qty);
-                                localAppliedCounts
-                                  ..clear()
-                                  ..addAll(
-                                    vm.appliedOptionCountsForQuantity(product, qty),
-                                  );
-                              });
-                            },
                           ),
-                        ),
-                        SizedBox(height: _r(context, 8)),
+                          SizedBox(height: _r(context, 8)),
+                        ],
                       ],
+                      _sheetSectionLabel('Quantity'),
+                      SizedBox(height: _r(context, 8)),
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.symmetric(
-                          horizontal: _r(context, 6),
-                          vertical: _r(context, 2),
+                          horizontal: _r(context, 8),
+                          vertical: _r(context, 4),
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF9FBFF),
-                          borderRadius: BorderRadius.circular(_r(context, 50)),
+                          color: const Color(0xFFF8FAFF),
+                          borderRadius: BorderRadius.circular(_r(context, 22)),
                           border: Border.all(color: _cardBorder),
                         ),
                         child: Row(
                           children: [
-                            IconButton(
-                              onPressed: localQty <= 0
-                                  ? null
-                                  : () => setManualQty(localQty - 1),
-                              icon: Icon(Icons.remove, size: _r(context, 18)),
+                            _qtyStepperButton(
+                              icon: Icons.remove,
+                              enabled: localQty > 0,
+                              onTap: () => setManualQty(localQty - 1),
                             ),
                             Expanded(
-                              child: Text(
-                                '$localQty',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: _r(context, 16),
-                                  fontWeight: FontWeight.w900,
-                                  color: _titleColor,
+                              child: Container(
+                                margin: EdgeInsets.symmetric(
+                                  horizontal: _r(context, 6),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: _r(context, 8),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(_r(context, 16)),
+                                  border: Border.all(color: _cardBorder),
+                                ),
+                                child: TextField(
+                                  controller: qtyController,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: _r(context, 18),
+                                    fontWeight: FontWeight.w900,
+                                    color: _titleColor,
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(6),
+                                  ],
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: '0',
+                                    hintStyle: TextStyle(
+                                      fontSize: _r(context, 18),
+                                      fontWeight: FontWeight.w700,
+                                      color: _subtitleColor,
+                                    ),
+                                    isDense: true,
+                                  ),
+                                  onChanged: (value) {
+                                    final parsed =
+                                        int.tryParse(value.trim()) ?? 0;
+                                    setManualQty(parsed);
+                                  },
                                 ),
                               ),
                             ),
-                            IconButton(
-                              onPressed: localQty >= product.quantity
-                                  ? null
-                                  : () => setManualQty(localQty + 1),
-                              icon: Icon(Icons.add, size: _r(context, 18)),
+                            _qtyStepperButton(
+                              icon: Icons.add,
+                              enabled: localQty < product.quantity,
+                              onTap: () => setManualQty(localQty + 1),
                             ),
                           ],
                         ),
                       ),
-                      if (vm.supportsPesoEntry(product) &&
-                          vm.unitConversionsFor(product).isNotEmpty) ...[
+                      if (manualPriceAvailable &&
+                          visibleConversions.isNotEmpty) ...[
                         SizedBox(height: _r(context, 10)),
                         Wrap(
                           spacing: _r(context, 8),
                           runSpacing: _r(context, 8),
-                          children: vm
-                              .unitConversionsFor(product)
-                              .take(4)
-                              .map((conversion) {
+                          children: visibleConversions.map((conversion) {
                             return ActionChip(
                               label: Text(
                                 '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
@@ -1465,7 +1649,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         width: double.infinity,
                         padding: EdgeInsets.all(_r(context, 14)),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F8FF),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFF8FBFF),
+                              Color(0xFFEFF4FF),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(_r(context, 18)),
                           border: Border.all(color: _cardBorder),
                         ),
@@ -1496,7 +1687,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => Navigator.pop(sheetCtx),
+                              onPressed: () {
+                                FocusScope.of(sheetCtx).unfocus();
+                                Navigator.pop(sheetCtx);
+                              },
                               style: OutlinedButton.styleFrom(
                                 minimumSize: Size.fromHeight(_r(context, 52)),
                                 side: BorderSide(color: _cardBorder),
@@ -1511,6 +1705,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
+                                FocusScope.of(sheetCtx).unfocus();
                                 vm.setProductSelection(
                                   product,
                                   qty: localQty,
@@ -1542,7 +1737,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       },
     );
 
-    amountController.dispose();
   }
 
   Widget _sheetSectionLabel(String label) {
@@ -1552,6 +1746,31 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         fontWeight: FontWeight.w900,
         fontSize: _r(context, 13),
         color: _titleColor,
+      ),
+    );
+  }
+
+  Widget _qtyStepperButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(_r(context, 16)),
+      child: Container(
+        height: _r(context, 42),
+        width: _r(context, 42),
+        decoration: BoxDecoration(
+          color: enabled ? Colors.white : const Color(0xFFF1F4FB),
+          borderRadius: BorderRadius.circular(_r(context, 16)),
+          border: Border.all(color: _cardBorder),
+        ),
+        child: Icon(
+          icon,
+          size: _r(context, 18),
+          color: enabled ? _titleColor : _subtitleColor.withOpacity(0.45),
+        ),
       ),
     );
   }
@@ -2396,9 +2615,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                                           '${entry.option.label} x${entry.count}',
                                                     )
                                                     .join('  •  ')
-                                                : vm.supportsPesoEntry(product)
+                                                : vm.getEffectiveUnitPrice(product) > 0
                                                     ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
-                                                    : '${currencyFormatter.format(product.sellingPrice)} x $qty',
+                                                    : '$qty ${product.baseUnit} • manual price',
                                             style: TextStyle(
                                               fontSize: _r(context, 13),
                                               fontWeight: FontWeight.w700,

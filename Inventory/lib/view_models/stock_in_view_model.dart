@@ -52,6 +52,8 @@ class StockInViewModel extends ChangeNotifier {
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController baseUnitController =
       TextEditingController(text: 'pcs');
+  final TextEditingController purchaseUnitController =
+      TextEditingController(text: 'pcs');
   final TextEditingController conversionNameController =
       TextEditingController();
   final TextEditingController conversionQuantityController =
@@ -69,6 +71,7 @@ class StockInViewModel extends ChangeNotifier {
       sellingPriceController.text.isNotEmpty ||
       quantityController.text.isNotEmpty ||
       baseUnitController.text.trim().toLowerCase() != 'pcs' ||
+      purchaseUnitController.text.trim().toLowerCase() != 'pcs' ||
       unitConversions.isNotEmpty ||
       sellingOptions.isNotEmpty ||
       selectedCategory != null ||
@@ -103,6 +106,7 @@ class StockInViewModel extends ChangeNotifier {
     sellingPriceController.dispose();
     quantityController.dispose();
     baseUnitController.dispose();
+    purchaseUnitController.dispose();
     conversionNameController.dispose();
     conversionQuantityController.dispose();
     sellingOptionLabelController.dispose();
@@ -203,6 +207,57 @@ class StockInViewModel extends ChangeNotifier {
     return raw.isEmpty ? 'pcs' : raw;
   }
 
+  String get purchaseUnitLabel {
+    final raw = purchaseUnitController.text.trim();
+    return raw.isEmpty ? baseUnitLabel : raw;
+  }
+
+  String get stockTypePreset {
+    final base = baseUnitLabel.toLowerCase();
+    if (!useAdvancedUnitSetup || base == 'pcs') return 'piece';
+    if (base == 'gram' || base == 'grams' || base == 'g') return 'weight';
+    if (base == 'ml' || base == 'milliliter' || base == 'millilitre') {
+      return 'liquid';
+    }
+    return 'custom';
+  }
+
+  List<String> get purchaseUnitOptions {
+    final items = <String>[baseUnitLabel];
+    for (final conversion in unitConversions) {
+      if (conversion.unitName.trim().isEmpty) continue;
+      if (!items.any(
+        (item) => item.toLowerCase() == conversion.unitName.toLowerCase(),
+      )) {
+        items.add(conversion.unitName);
+      }
+    }
+    return items;
+  }
+
+  int quantityFactorFor(String unit) {
+    final normalized = unit.trim().toLowerCase();
+    if (normalized.isEmpty || normalized == baseUnitLabel.toLowerCase()) {
+      return 1;
+    }
+
+    final match = unitConversions.where(
+      (item) => item.unitName.trim().toLowerCase() == normalized,
+    );
+
+    if (match.isEmpty) return 1;
+    return match.first.baseQuantity <= 0 ? 1 : match.first.baseQuantity;
+  }
+
+  int get convertedPurchaseQuantity {
+    final qtyText = quantityController.text.trim().replaceAll(',', '');
+    final enteredQty = double.tryParse(qtyText) ?? 0;
+    if (enteredQty <= 0) return 0;
+
+    final factor = quantityFactorFor(purchaseUnitLabel);
+    return (enteredQty * factor).round();
+  }
+
   bool get isExistingProductSelected => selectedProduct != null;
 
   bool get shouldShowSetupEditors => !isExistingProductSelected || editSavedSetup;
@@ -229,7 +284,39 @@ class StockInViewModel extends ChangeNotifier {
 
   void setBaseUnit(String value) {
     baseUnitController.text = value.trim();
+    if (purchaseUnitController.text.trim().isEmpty ||
+        purchaseUnitController.text.trim().toLowerCase() ==
+            baseUnitLabel.toLowerCase()) {
+      purchaseUnitController.text = value.trim();
+    }
     safeNotifyListeners();
+  }
+
+  void setPurchaseUnit(String value) {
+    purchaseUnitController.text = value.trim();
+    safeNotifyListeners();
+  }
+
+  void applyStockTypePreset(String preset) {
+    switch (preset) {
+      case 'piece':
+        setUseAdvancedUnitSetup(false);
+        break;
+      case 'weight':
+        useAdvancedUnitSetup = true;
+        baseUnitController.text = 'gram';
+        purchaseUnitController.text = 'kilo';
+        _upsertUnitConversion('kilo', 1000);
+        safeNotifyListeners();
+        break;
+      case 'liquid':
+        useAdvancedUnitSetup = true;
+        baseUnitController.text = 'mL';
+        purchaseUnitController.text = 'liter';
+        _upsertUnitConversion('liter', 1000);
+        safeNotifyListeners();
+        break;
+    }
   }
 
   Future<void> addNewBaseUnit(String value) async {
@@ -241,13 +328,42 @@ class StockInViewModel extends ChangeNotifier {
     setBaseUnit(trimmed);
   }
 
+  Future<void> updateBaseUnitChoice(String previousValue, String nextValue) async {
+    final previousTrimmed = previousValue.trim();
+    final nextTrimmed = nextValue.trim();
+    if (previousTrimmed.isEmpty || nextTrimmed.isEmpty) return;
+
+    await _repository.updateBaseUnit(previousTrimmed, nextTrimmed);
+    await loadBaseUnits();
+
+    if (baseUnitController.text.trim().toLowerCase() ==
+        previousTrimmed.toLowerCase()) {
+      setBaseUnit(nextTrimmed);
+    }
+  }
+
+  Future<void> deleteBaseUnitChoice(String value) async {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+
+    await _repository.deleteBaseUnit(trimmed);
+    await loadBaseUnits();
+
+    if (baseUnitController.text.trim().toLowerCase() == trimmed.toLowerCase()) {
+      setBaseUnit('pcs');
+    }
+  }
+
   void setUseAdvancedUnitSetup(bool value) {
     useAdvancedUnitSetup = value;
     if (!value) {
       baseUnitController.text = 'pcs';
+      purchaseUnitController.text = 'pcs';
       unitConversions = [];
       conversionNameController.clear();
       conversionQuantityController.clear();
+    } else if (purchaseUnitController.text.trim().isEmpty) {
+      purchaseUnitController.text = baseUnitLabel;
     }
     safeNotifyListeners();
   }
@@ -284,12 +400,7 @@ class StockInViewModel extends ChangeNotifier {
 
     if (name.isEmpty || qty <= 0) return;
 
-    unitConversions = [
-      ...unitConversions.where(
-        (item) => item.unitName.toLowerCase() != name.toLowerCase(),
-      ),
-      ProductUnitConversion(unitName: name, baseQuantity: qty),
-    ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
+    _upsertUnitConversion(name, qty);
 
     conversionNameController.clear();
     conversionQuantityController.clear();
@@ -300,7 +411,44 @@ class StockInViewModel extends ChangeNotifier {
     unitConversions = unitConversions
         .where((item) => item.unitName != conversion.unitName)
         .toList();
+    if (purchaseUnitController.text.trim().toLowerCase() ==
+        conversion.unitName.trim().toLowerCase()) {
+      purchaseUnitController.text = baseUnitLabel;
+    }
     safeNotifyListeners();
+  }
+
+  void updateUnitConversion(
+    ProductUnitConversion original, {
+    required String unitName,
+    required int baseQuantity,
+  }) {
+    final trimmedName = unitName.trim();
+    if (trimmedName.isEmpty || baseQuantity <= 0) return;
+
+    unitConversions = [
+      ...unitConversions.where(
+        (item) =>
+            item.unitName.toLowerCase() != original.unitName.toLowerCase() &&
+            item.unitName.toLowerCase() != trimmedName.toLowerCase(),
+      ),
+      ProductUnitConversion(unitName: trimmedName, baseQuantity: baseQuantity),
+    ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
+
+    if (purchaseUnitController.text.trim().toLowerCase() ==
+        original.unitName.trim().toLowerCase()) {
+      purchaseUnitController.text = trimmedName;
+    }
+    safeNotifyListeners();
+  }
+
+  void _upsertUnitConversion(String unitName, int baseQuantity) {
+    unitConversions = [
+      ...unitConversions.where(
+        (item) => item.unitName.toLowerCase() != unitName.toLowerCase(),
+      ),
+      ProductUnitConversion(unitName: unitName.trim(), baseQuantity: baseQuantity),
+    ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
   }
 
   void addSellingOption() {
@@ -380,13 +528,20 @@ class StockInViewModel extends ChangeNotifier {
     final sellingText = sellingPriceController.text.trim();
     final qtyText = quantityController.text.trim();
     final baseUnit = useAdvancedUnitSetup ? baseUnitLabel : 'pcs';
+    final purchaseUnit = useAdvancedUnitSetup ? purchaseUnitLabel : 'pcs';
+    final normalizedBaseUnit = baseUnit.trim().toLowerCase();
+    final requiresSellingPrice =
+        !(normalizedBaseUnit == 'ml' ||
+            normalizedBaseUnit == 'milliliter' ||
+            normalizedBaseUnit == 'millilitre');
 
     if (productName.isEmpty ||
         selectedCategory == null ||
         purchaseText.isEmpty ||
-        sellingText.isEmpty ||
+        (requiresSellingPrice && sellingText.isEmpty) ||
         qtyText.isEmpty ||
-        baseUnit.isEmpty) {
+        baseUnit.isEmpty ||
+        purchaseUnit.isEmpty) {
       showSnackBar(context, 'Please fill all required fields', success: false);
       return;
     }
@@ -405,7 +560,10 @@ class StockInViewModel extends ChangeNotifier {
 
     final sellingPrice = double.tryParse(sellingText.replaceAll(',', '')) ?? 0;
     final purchaseInput = double.tryParse(purchaseText.replaceAll(',', '')) ?? 0;
-    final newQuantity = int.tryParse(qtyText.replaceAll(',', '')) ?? 0;
+    final enteredQuantity = double.tryParse(qtyText.replaceAll(',', '')) ?? 0;
+    final newQuantity = useAdvancedUnitSetup
+        ? convertedPurchaseQuantity
+        : int.tryParse(qtyText.replaceAll(',', '')) ?? 0;
 
     if (purchaseInput <= 0) {
       showSnackBar(
@@ -417,7 +575,7 @@ class StockInViewModel extends ChangeNotifier {
       );
       return;
     }
-    if (sellingPrice <= 0) {
+    if (requiresSellingPrice && sellingPrice <= 0) {
       showSnackBar(
         context,
         'Selling price per $baseUnit must be greater than 0',
@@ -428,7 +586,17 @@ class StockInViewModel extends ChangeNotifier {
     if (newQuantity <= 0) {
       showSnackBar(
         context,
-        'Stock quantity in $baseUnit must be greater than 0',
+        useAdvancedUnitSetup
+            ? 'Bought quantity in $purchaseUnit must be greater than 0'
+            : 'Stock quantity in $baseUnit must be greater than 0',
+        success: false,
+      );
+      return;
+    }
+    if (useAdvancedUnitSetup && enteredQuantity <= 0) {
+      showSnackBar(
+        context,
+        'Bought quantity in $purchaseUnit must be greater than 0',
         success: false,
       );
       return;
@@ -538,8 +706,9 @@ class StockInViewModel extends ChangeNotifier {
     sellingPriceController.text = product.pricePerUnit.toStringAsFixed(
       product.pricePerUnit % 1 == 0 ? 0 : 2,
     );
-      quantityController.clear();
+    quantityController.clear();
     baseUnitController.text = product.baseUnit;
+    purchaseUnitController.text = product.baseUnit;
     if (!baseUnitOptions.contains(product.baseUnit)) {
       baseUnitOptions = [...baseUnitOptions, product.baseUnit]
         ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
@@ -562,6 +731,7 @@ class StockInViewModel extends ChangeNotifier {
     sellingPriceController.clear();
     quantityController.clear();
     baseUnitController.text = 'pcs';
+    purchaseUnitController.text = 'pcs';
     conversionNameController.clear();
     conversionQuantityController.clear();
     sellingOptionLabelController.clear();
