@@ -21,7 +21,6 @@ final stockInViewModelProvider =
 class StockInViewModel extends ChangeNotifier {
   late final StockInRepository _repository;
   late final ProductCategoryRepository _categoryRepo;
-
   bool isInitialized = false;
   bool showValidationErrors = false;
   bool _isDisposed = false;
@@ -123,7 +122,6 @@ class StockInViewModel extends ChangeNotifier {
     final db = await DBService.instance.database;
     _repository = StockInRepository(db);
     _categoryRepo = ProductCategoryRepository(db);
-
     await loadCategories();
     await loadProductNames();
     await loadBaseUnits();

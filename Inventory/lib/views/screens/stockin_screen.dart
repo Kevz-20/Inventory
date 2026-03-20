@@ -1350,7 +1350,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }) {
     final current = _currentStockType(vm);
 
-    Widget chip(String value, String label) {
+    Widget chip(
+      String value,
+      IconData icon,
+      String label,
+      String example,
+    ) {
       final selected = current == value;
       return Expanded(
         child: InkWell(
@@ -1363,37 +1368,64 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           },
           child: Container(
             padding: EdgeInsets.symmetric(
-              horizontal: (12 * scale).clamp(10, 14),
+              horizontal: (10 * scale).clamp(8, 12),
               vertical: (12 * scale).clamp(10, 14),
             ),
             decoration: BoxDecoration(
-              color: selected ? _accentBlue.withOpacity(0.10) : Colors.white,
+              color: selected ? _accentBlue.withValues(alpha: 0.10) : Colors.white,
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
                 color: selected
-                    ? _accentBlue.withOpacity(0.35)
-                    : _cardBorder.withOpacity(0.9),
+                    ? _accentBlue.withValues(alpha: 0.35)
+                    : _cardBorder.withValues(alpha: 0.9),
               ),
             ),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: (13.5 * scale).clamp(12.5, 15),
-                fontWeight: FontWeight.w800,
-                color: selected ? _accentBlue : _titleColor,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: (20 * scale).clamp(18, 24),
+                  color: selected ? _accentBlue : _subtitleColor,
+                ),
+                SizedBox(height: (4 * scale).clamp(3, 5)),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: (12.5 * scale).clamp(11.5, 14),
+                    fontWeight: FontWeight.w800,
+                    color: selected ? _accentBlue : _titleColor,
+                  ),
+                ),
+                SizedBox(height: (2 * scale).clamp(2, 3)),
+                Text(
+                  example,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: (10 * scale).clamp(9, 11),
+                    fontWeight: FontWeight.w500,
+                    color: _subtitleColor,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       );
     }
 
+    final gap = SizedBox(width: (8 * scale).clamp(6, 10));
+    final rowGap = SizedBox(height: (8 * scale).clamp(6, 10));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Track stock by',
+          'Paano mo ibinibilang ito?',
           style: TextStyle(
             fontSize: (13 * scale).clamp(12, 14.5),
             fontWeight: FontWeight.w700,
@@ -1403,13 +1435,37 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         SizedBox(height: (8 * scale).clamp(6, 10)),
         Row(
           children: [
-            chip('piece', 'By piece'),
-            SizedBox(width: (8 * scale).clamp(6, 10)),
-            chip('weight', 'By weight'),
-            SizedBox(width: (8 * scale).clamp(6, 10)),
-            chip('liquid', 'By liquid'),
-            SizedBox(width: (8 * scale).clamp(6, 10)),
-            chip('pack', 'By pack'),
+            chip(
+              'piece',
+              Icons.tag_rounded,
+              'Per Piece',
+              'candy, itlog,\nsigarilyo',
+            ),
+            gap,
+            chip(
+              'weight',
+              Icons.scale_outlined,
+              'Per Kilo',
+              'sibuyas, asin,\nasukal',
+            ),
+          ],
+        ),
+        rowGap,
+        Row(
+          children: [
+            chip(
+              'liquid',
+              Icons.water_drop_outlined,
+              'Per Liter',
+              'mantika, suka,\ntoyo',
+            ),
+            gap,
+            chip(
+              'pack',
+              Icons.inventory_2_outlined,
+              'Per Sachet',
+              '3-in-1, sabon,\nshampoo',
+            ),
           ],
         ),
       ],

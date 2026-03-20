@@ -35,7 +35,7 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final r = (double v) => _r(context, v);
+    double r(double v) => _r(context, v);
 
     // Light tinted backgrounds derived from the accent colour
     final iconBg     = accentColor.withOpacity(0.10);

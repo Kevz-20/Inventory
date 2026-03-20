@@ -2,7 +2,6 @@
 
 import 'dart:math' as math;
 
-import 'package:dswd_slp/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -190,13 +189,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     color: Colors.white,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: _blue.withOpacity(0.18),
+                                        color: _blue.withValues(alpha: 0.18),
                                         blurRadius: 28,
                                         spreadRadius: 2,
                                         offset: const Offset(0, 8),
                                       ),
                                       BoxShadow(
-                                        color: _blue.withOpacity(0.06),
+                                        color: _blue.withValues(alpha: 0.06),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -258,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: _navy.withOpacity(0.07),
+                                          color: _navy.withValues(alpha: 0.07),
                                           blurRadius: 16,
                                           offset: const Offset(0, 5),
                                         ),
@@ -382,8 +381,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                                   ? [
                                                       BoxShadow(
                                                         color: _blue
-                                                            .withOpacity(
-                                                                0.38),
+                                                            .withValues(
+                                                                alpha: 0.38),
                                                         blurRadius: 10,
                                                         spreadRadius: 1,
                                                       ),
@@ -591,12 +590,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF7A8AB5).withOpacity(0.16),
+                color: const Color(0xFF7A8AB5).withValues(alpha: 0.16),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
               BoxShadow(
-                color: Colors.white.withOpacity(0.80),
+                color: Colors.white.withValues(alpha: 0.80),
                 blurRadius: 2,
                 offset: const Offset(0, -1),
               ),
@@ -640,7 +639,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF7A8AB5).withOpacity(0.16),
+                color: const Color(0xFF7A8AB5).withValues(alpha: 0.16),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 18,
+      version: 19,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -448,6 +448,7 @@ class DBService {
             )
           ''');
 
+
           const defaultBaseUnits = [
             'pcs',
             'Piece / pcs',
@@ -463,6 +464,7 @@ class DBService {
             );
           }
         }
+
       },
 
       onConfigure: (db) async {

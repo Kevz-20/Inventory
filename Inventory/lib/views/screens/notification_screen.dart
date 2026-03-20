@@ -221,7 +221,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final r     = (double v) => _r(context, v);
+    double r(double v) => _r(context, v);
     final async = ref.watch(notificationsStreamProvider);
     async.whenData((_) => Future.microtask(_markSeenIfPossible));
 

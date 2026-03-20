@@ -113,7 +113,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
     final dateLabel  = DateFormat('EEE, MMM d, yyyy').format(DateTime.now());
     final showBanner = state.lowStockCount > 0 && !_bannerDismissed;
 
-    final onToggle = () =>
+    void onToggle() =>
         ref.read(homeViewModelProvider.notifier).toggleMoneyVisibility();
 
     return Scaffold(
@@ -715,6 +715,7 @@ class _VertDivider extends StatelessWidget {
 }
 
 // ─── Low Stock Banner ──────────────────────────────────────────────────────────
+// ignore: unused_element
 class _LowStockBanner extends StatelessWidget {
   const _LowStockBanner({
     required this.count, required this.onTap,

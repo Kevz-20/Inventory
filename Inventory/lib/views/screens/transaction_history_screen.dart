@@ -219,7 +219,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                           vm.setSelectedCategory(_cats[i]);
                           _autoScrollChips(i);
                         },
-                        itemBuilder: (_, __) => _buildList(vm),
+                        itemBuilder: (_, _) => _buildList(vm),
                       ),
                     ),
                   ]),
@@ -787,11 +787,15 @@ class _DetailsSheet extends StatelessWidget {
     final amtText   = '$amtPrefix${currency.format((tx.amount ?? 0).abs())}';
 
     Color accent = const Color(0xFF2D5BE3);
-    if (isHalinUtang || isOwnerPay || isDownpayment)
+    if (isHalinUtang || isOwnerPay || isDownpayment) {
       accent = const Color(0xFF6C3FC4);
-    else if (isExpense)    accent = const Color(0xFFD63031);
-    else if (isCapital)    accent = const Color(0xFFE67E00);
-    else if (isCustomerPay)accent = const Color(0xFF00897B);
+    } else if (isExpense) {
+      accent = const Color(0xFFD63031);
+    } else if (isCapital) {
+      accent = const Color(0xFFE67E00);
+    } else if (isCustomerPay) {
+      accent = const Color(0xFF00897B);
+    }
 
     final currentUser = [
       CurrentUser.firstName ?? '',
