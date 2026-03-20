@@ -38,6 +38,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     if (base == 'ml' || base == 'milliliter' || base == 'millilitre') {
       return 'liquid';
     }
+    if (base == 'half' || base == 'tungaon') return 'pack';
     return 'piece';
   }
 
@@ -114,6 +115,25 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             literConversion.first,
             unitName: 'liter',
             baseQuantity: 1000,
+          );
+        }
+        break;
+      case 'pack':
+        vm.setUseAdvancedUnitSetup(true);
+        vm.setBaseUnit('half');
+        vm.setPurchaseUnit('sachet');
+        final sachetConversion = vm.unitConversions.where(
+          (item) => item.unitName.trim().toLowerCase() == 'sachet',
+        );
+        if (sachetConversion.isEmpty) {
+          vm.conversionNameController.text = 'sachet';
+          vm.conversionQuantityController.text = '2';
+          vm.addUnitConversion();
+        } else if (sachetConversion.first.baseQuantity != 2) {
+          vm.updateUnitConversion(
+            sachetConversion.first,
+            unitName: 'sachet',
+            baseQuantity: 2,
           );
         }
         break;
@@ -1309,7 +1329,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 ),
               ),
               Text(
-                hasValue ? _formatCostPerUnitDisplay(perUnit) : 'â€”',
+                hasValue ? _formatCostPerUnitDisplay(perUnit) : '—',
                 style: TextStyle(
                   fontSize: (18 * scale).clamp(16, 22),
                   fontWeight: FontWeight.w900,
@@ -1388,6 +1408,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             chip('weight', 'By weight'),
             SizedBox(width: (8 * scale).clamp(6, 10)),
             chip('liquid', 'By liquid'),
+            SizedBox(width: (8 * scale).clamp(6, 10)),
+            chip('pack', 'By pack'),
           ],
         ),
       ],
@@ -3021,6 +3043,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         normalized == 'pieces') {
       return 'pieces';
     }
+    if (normalized == 'half' || normalized == 'tungaon') return 'halves';
     return unit;
   }
 
@@ -3031,6 +3054,11 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         normalized == 'millilitre';
   }
 
+  bool _isPackBaseUnit(StockInViewModel vm) {
+    final normalized = vm.baseUnitLabel.trim().toLowerCase();
+    return normalized == 'half' || normalized == 'tungaon';
+  }
+
   List<({String label, int quantity})> _liquidQuickSaleSuggestions(
     StockInViewModel vm,
   ) {
@@ -3039,6 +3067,18 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       (label: '1 flat / lapad', quantity: 375),
       (label: '1/2 liter', quantity: 500),
       (label: '1 liter', quantity: 1000),
+    ];
+  }
+
+  List<({String label, int quantity})> _packQuickSaleSuggestions(
+    StockInViewModel vm,
+  ) {
+    if (!_isPackBaseUnit(vm)) return const [];
+    return const [
+      (label: 'Tungaon', quantity: 1),
+      (label: '1 Sachet', quantity: 2),
+      (label: '6 pcs', quantity: 12),
+      (label: '1 Dozen', quantity: 24),
     ];
   }
 
@@ -3469,26 +3509,31 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     required double gap12,
   }) {
     final isLiquid = _isLiquidBaseUnit(vm);
+    final isPack = _isPackBaseUnit(vm);
     final liquidSuggestions = _liquidQuickSaleSuggestions(vm);
+    final packSuggestions = _packQuickSaleSuggestions(vm);
+    final suggestions = isPack ? packSuggestions : liquidSuggestions;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isLiquid
-              ? 'Optional only. Add common liquid sales like 1 flat/lapad, 1/2 liter, or 1 liter so the cashier can tap faster later.'
-              : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
+          isPack
+              ? 'Tap a preset to auto-fill (Tungaon, 1 Sachet, 6 pcs, 1 Dozen), or type your own.'
+              : isLiquid
+                  ? 'Optional only. Add common liquid sales like 1 flat/lapad, 1/2 liter, or 1 liter so the cashier can tap faster later.'
+                  : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
           style: TextStyle(
             fontSize: (valueFs - 1).clamp(12, 15),
             fontWeight: FontWeight.w600,
             color: _subtitleColor,
           ),
         ),
-        if (liquidSuggestions.isNotEmpty) ...[
+        if (suggestions.isNotEmpty) ...[
           SizedBox(height: gap12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: liquidSuggestions.map((suggestion) {
+            children: suggestions.map((suggestion) {
               return ActionChip(
                 label: Text(suggestion.label),
                 onPressed: () {
@@ -3576,7 +3621,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
     return Chip(
       label: Text(
-        '${option.label} Â· $qty ${vm.baseUnitLabel} Â· â‚±$priceText',
+        '${option.label} · $qty ${vm.baseUnitLabel} · ₱$priceText',
       ),
       onDeleted: () => vm.removeSellingOption(option),
       deleteIcon: const Icon(Icons.close_rounded, size: 18),

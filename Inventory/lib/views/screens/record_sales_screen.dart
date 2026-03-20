@@ -857,7 +857,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final effectiveUnitPrice = vm.getEffectiveUnitPrice(product);
     final hasDefaultUnitPrice = effectiveUnitPrice > 0;
 
-    // Accent bar colour — green=ok, orange=low(=10), red=out
+    // Accent bar colour ï¿½ green=ok, orange=low(=10), red=out
     final accentColor = product.quantity <= 0
         ? const Color(0xFFD63031)
         : product.quantity <= 10
@@ -1196,16 +1196,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final summaries = vm
-                .sellingOptionsFor(product)
-                .where((option) => (localAppliedCounts[option.label] ?? 0) > 0)
-                .map(
-                  (option) => AppliedSellingOptionSummary(
-                    option: option,
-                    count: localAppliedCounts[option.label]!,
-                  ),
-                )
-                .toList();
+
             final quickSaleQuantities = sellingOptions
                 .map((option) => option.baseQuantity ?? 0)
                 .where((qty) => qty > 0)
@@ -1245,11 +1236,36 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               });
             }
 
-            void applyPreset(ProductSellingOption option) {
+            void addOption(ProductSellingOption option) {
               final baseQty = option.baseQuantity ?? 0;
               if (baseQty <= 0) return;
-              setManualQty(localQty + baseQty);
+              final newQty = localQty + baseQty;
+              if (newQty > product.quantity) return;
+              setSheetState(() {
+                localQty = newQty;
+                localSubtotal += option.price;
+                localAppliedCounts[option.label] =
+                    (localAppliedCounts[option.label] ?? 0) + 1;
+              });
             }
+
+            void removeOption(ProductSellingOption option) {
+              final baseQty = option.baseQuantity ?? 0;
+              final count = localAppliedCounts[option.label] ?? 0;
+              if (count <= 0 || baseQty <= 0) return;
+              setSheetState(() {
+                localQty = (localQty - baseQty).clamp(0, product.quantity);
+                localSubtotal =
+                    (localSubtotal - option.price).clamp(0, double.infinity);
+                final newCount = count - 1;
+                if (newCount <= 0) {
+                  localAppliedCounts.remove(option.label);
+                } else {
+                  localAppliedCounts[option.label] = newCount;
+                }
+              });
+            }
+
 
             return SafeArea(
               top: false,
@@ -1348,7 +1364,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                           ],
                                         ),
                                       ),
-                                      if (manualPriceAvailable)
+                                      if (sellingOptions.isEmpty && manualPriceAvailable)
                                         Padding(
                                           padding:
                                               EdgeInsets.only(left: _r(context, 8)),
@@ -1451,99 +1467,89 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       ),
                       SizedBox(height: _r(context, 18)),
                       if (sellingOptions.isNotEmpty) ...[
-                        _sheetSectionLabel('Quick sale'),
-                        SizedBox(height: _r(context, 8)),
-                        Wrap(
-                          spacing: _r(context, 10),
-                          runSpacing: _r(context, 10),
-                          children: sellingOptions.map((option) {
-                            return InkWell(
-                              borderRadius: BorderRadius.circular(_r(context, 18)),
-                              onTap: () => applyPreset(option),
-                              child: Container(
-                                constraints: BoxConstraints(
-                                  minWidth: _r(context, 120),
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: _r(context, 14),
-                                  vertical: _r(context, 12),
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFFF8FBFF),
-                                      Color(0xFFEEF4FF),
+                        _sheetSectionLabel('How to sell?'),
+                        SizedBox(height: _r(context, 10)),
+                        ...sellingOptions.map((option) {
+                          final count =
+                              localAppliedCounts[option.label] ?? 0;
+                          final canAdd =
+                              (localQty + (option.baseQuantity ?? 0)) <=
+                                  product.quantity;
+                          return Container(
+                            margin: EdgeInsets.only(bottom: _r(context, 8)),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: _r(context, 16),
+                              vertical: _r(context, 14),
+                            ),
+                            decoration: BoxDecoration(
+                              color: count > 0
+                                  ? const Color(0xFFEEF4FF)
+                                  : Colors.white,
+                              borderRadius:
+                                  BorderRadius.circular(_r(context, 16)),
+                              border: Border.all(
+                                color: count > 0
+                                    ? const Color(0xFF2D5BE3)
+                                    : _cardBorder,
+                                width: count > 0 ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        option.label,
+                                        style: TextStyle(
+                                          fontSize: _r(context, 16),
+                                          fontWeight: FontWeight.w800,
+                                          color: _titleColor,
+                                        ),
+                                      ),
+                                      SizedBox(height: _r(context, 2)),
+                                      Text(
+                                        currencyFormatter.format(option.price),
+                                        style: TextStyle(
+                                          fontSize: _r(context, 14),
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF255FD5),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(_r(context, 18)),
-                                  border: Border.all(color: _cardBorder),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      option.label,
-                                      style: TextStyle(
-                                        fontSize: _r(context, 13),
-                                        fontWeight: FontWeight.w900,
-                                        color: _titleColor,
-                                      ),
-                                    ),
-                                    SizedBox(height: _r(context, 4)),
-                                    Text(
-                                      currencyFormatter.format(option.price),
-                                      style: TextStyle(
-                                        fontSize: _r(context, 12.5),
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF255FD5),
-                                      ),
-                                    ),
-                                  ],
+                                _qtyStepperButton(
+                                  icon: Icons.remove,
+                                  enabled: count > 0,
+                                  onTap: () => removeOption(option),
                                 ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        if (summaries.isNotEmpty) ...[
-                          SizedBox(height: _r(context, 10)),
-                          Wrap(
-                            spacing: _r(context, 8),
-                            runSpacing: _r(context, 8),
-                            children: summaries
-                                .map(
-                                  (entry) => Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: _r(context, 10),
-                                      vertical: _r(context, 6),
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF2D5BE3).withValues(
-                                        alpha: 0.10,
-                                      ),
-                                      borderRadius: BorderRadius.circular(
-                                        _r(context, 999),
-                                      ),
-                                      border: Border.all(color: _cardBorder),
-                                    ),
-                                    child: Text(
-                                      '${entry.option.label} x${entry.count}',
-                                      style: TextStyle(
-                                        fontSize: _r(context, 11.5),
-                                        fontWeight: FontWeight.w800,
-                                        color: _titleColor,
-                                      ),
+                                SizedBox(
+                                  width: _r(context, 44),
+                                  child: Text(
+                                    '$count',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: _r(context, 20),
+                                      fontWeight: FontWeight.w900,
+                                      color: _titleColor,
                                     ),
                                   ),
-                                )
-                                .toList(),
-                          ),
-                        ],
-                        SizedBox(height: _r(context, 16)),
+                                ),
+                                _qtyStepperButton(
+                                  icon: Icons.add,
+                                  enabled: canAdd,
+                                  onTap: () => addOption(option),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        SizedBox(height: _r(context, 14)),
                       ],
-                      if (manualPriceAvailable) ...[
+                      if (sellingOptions.isEmpty && manualPriceAvailable) ...[
                         if (isManualPricing) ...[
                           _sheetSectionLabel('Manual price'),
                           SizedBox(height: _r(context, 8)),
@@ -1588,97 +1594,99 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           SizedBox(height: _r(context, 8)),
                         ],
                       ],
-                      _sheetSectionLabel('Quantity'),
-                      SizedBox(height: _r(context, 8)),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: _r(context, 8),
-                          vertical: _r(context, 4),
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFF),
-                          borderRadius: BorderRadius.circular(_r(context, 22)),
-                          border: Border.all(color: _cardBorder),
-                        ),
-                        child: Row(
-                          children: [
-                            _qtyStepperButton(
-                              icon: Icons.remove,
-                              enabled: localQty > 0,
-                              onTap: () => setManualQty(localQty - 1),
-                            ),
-                            Expanded(
-                              child: Container(
-                                margin: EdgeInsets.symmetric(
-                                  horizontal: _r(context, 6),
-                                ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: _r(context, 8),
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                      BorderRadius.circular(_r(context, 16)),
-                                  border: Border.all(color: _cardBorder),
-                                ),
-                                child: TextField(
-                                  controller: qtyController,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: _r(context, 18),
-                                    fontWeight: FontWeight.w900,
-                                    color: _titleColor,
+                      if (sellingOptions.isEmpty) ...[
+                        _sheetSectionLabel('Quantity'),
+                        SizedBox(height: _r(context, 8)),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: _r(context, 8),
+                            vertical: _r(context, 4),
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFF),
+                            borderRadius: BorderRadius.circular(_r(context, 22)),
+                            border: Border.all(color: _cardBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              _qtyStepperButton(
+                                icon: Icons.remove,
+                                enabled: localQty > 0,
+                                onTap: () => setManualQty(localQty - 1),
+                              ),
+                              Expanded(
+                                child: Container(
+                                  margin: EdgeInsets.symmetric(
+                                    horizontal: _r(context, 6),
                                   ),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(6),
-                                  ],
-                                  decoration: InputDecoration(
-                                    border: InputBorder.none,
-                                    hintText: '0',
-                                    hintStyle: TextStyle(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: _r(context, 8),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius:
+                                        BorderRadius.circular(_r(context, 16)),
+                                    border: Border.all(color: _cardBorder),
+                                  ),
+                                  child: TextField(
+                                    controller: qtyController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
                                       fontSize: _r(context, 18),
-                                      fontWeight: FontWeight.w700,
-                                      color: _subtitleColor,
+                                      fontWeight: FontWeight.w900,
+                                      color: _titleColor,
                                     ),
-                                    isDense: true,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(6),
+                                    ],
+                                    decoration: InputDecoration(
+                                      border: InputBorder.none,
+                                      hintText: '0',
+                                      hintStyle: TextStyle(
+                                        fontSize: _r(context, 18),
+                                        fontWeight: FontWeight.w700,
+                                        color: _subtitleColor,
+                                      ),
+                                      isDense: true,
+                                    ),
+                                    onChanged: (value) {
+                                      final parsed =
+                                          int.tryParse(value.trim()) ?? 0;
+                                      setManualQty(parsed);
+                                    },
                                   ),
-                                  onChanged: (value) {
-                                    final parsed =
-                                        int.tryParse(value.trim()) ?? 0;
-                                    setManualQty(parsed);
-                                  },
                                 ),
                               ),
-                            ),
-                            _qtyStepperButton(
-                              icon: Icons.add,
-                              enabled: localQty < product.quantity,
-                              onTap: () => setManualQty(localQty + 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (manualPriceAvailable &&
-                          visibleConversions.isNotEmpty) ...[
-                        SizedBox(height: _r(context, 10)),
-                        Wrap(
-                          spacing: _r(context, 8),
-                          runSpacing: _r(context, 8),
-                          children: visibleConversions.map((conversion) {
-                            return ActionChip(
-                              label: Text(
-                                '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
+                              _qtyStepperButton(
+                                icon: Icons.add,
+                                enabled: localQty < product.quantity,
+                                onTap: () => setManualQty(localQty + 1),
                               ),
-                              onPressed: () => setManualQty(
-                                (localQty + conversion.baseQuantity)
-                                    .clamp(0, product.quantity),
-                              ),
-                            );
-                          }).toList(),
+                            ],
+                          ),
                         ),
+                        if (manualPriceAvailable &&
+                            visibleConversions.isNotEmpty) ...[
+                          SizedBox(height: _r(context, 10)),
+                          Wrap(
+                            spacing: _r(context, 8),
+                            runSpacing: _r(context, 8),
+                            children: visibleConversions.map((conversion) {
+                              return ActionChip(
+                                label: Text(
+                                  '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
+                                ),
+                                onPressed: () => setManualQty(
+                                  (localQty + conversion.baseQuantity)
+                                      .clamp(0, product.quantity),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ],
                       SizedBox(height: _r(context, 18)),
                       Container(
@@ -2165,7 +2173,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   (entry) =>
                                       '${entry.option.label} x${entry.count}',
                                 )
-                                .join('  •  ')
+                                .join('  ï¿½  ')
                             : 'Manual qty: $qty ${product.baseUnit}';
 
                         return Container(
@@ -2556,7 +2564,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                               borderRadius: BorderRadius.circular(_r(context, 999)),
                             ),
                             child: Text(
-                              "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
+                              "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} ï¿½ "
                               "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
                               style: TextStyle(
                                 fontSize: _r(context, 11.5),
@@ -2666,10 +2674,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                                       (entry) =>
                                                           '${entry.option.label} x${entry.count}',
                                                     )
-                                                    .join('  •  ')
+                                                    .join('  ï¿½  ')
                                                 : vm.getEffectiveUnitPrice(product) > 0
                                                     ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
-                                                    : '$qty ${product.baseUnit} • manual price',
+                                                    : '$qty ${product.baseUnit} ï¿½ manual price',
                                             style: TextStyle(
                                               fontSize: _r(context, 13),
                                               fontWeight: FontWeight.w700,
