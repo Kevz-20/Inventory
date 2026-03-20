@@ -1,4 +1,4 @@
-ï»¿// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'dart:io';
 
@@ -12,7 +12,6 @@ import '../../models/product_model.dart';
 import '../../models/product_selling_option.dart';
 import '../../view_models/record_sales_view_model.dart';
 import 'package:intl/intl.dart';
-import '../widgets/dashboard_background.dart';
 
 class RecordSalesScreen extends ConsumerStatefulWidget {
   const RecordSalesScreen({super.key});
@@ -33,18 +32,21 @@ class _ProductImageRef {
 
 final currencyFormatter = NumberFormat.currency(
   locale: 'en_PH',
-  symbol: 'â‚±',
+  symbol: '?',
   decimalDigits: 2,
 );
 
 class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     with RouteAware {
-  static const Color _pageBg = Color(0xFFF5F7FF);
-  static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _cardBgAlt = Color(0xFFF1F4FF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _pageBg      = Color(0xFFF0F4FF);
+  static const Color _cardBg      = Color(0xFFFFFFFF);
+  static const Color _cardBgAlt   = Color(0xFFEEF2FF);
+  static const Color _cardBorder  = Color(0xFFCDD5EE);
+  static const Color _titleColor  = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _brandDeep   = Color(0xFF1B3A7A);
+  static const Color _heroStart   = Color(0xFF1A3584);
+  static const Color _heroEnd     = Color(0xFF4B8AF0);
 
   bool isCash = true;
   bool isProductMode = false;
@@ -268,83 +270,92 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
 
     return Scaffold(
       backgroundColor: _pageBg,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F7FF),
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Image.asset(
-            'lib/assets/arrowleft.png',
-            width: _r(context, 22),
-            height: _r(context, 22),
-            fit: BoxFit.contain,
-          ),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Record Sale',
-          style: TextStyle(
-            color: _titleColor,
-            fontWeight: FontWeight.w900,
-            fontSize: _r(context, 20),
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          const DashboardBackground(),
-          Column(
-            children: [
-              Expanded(
-                child: vm.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        children: [
-                          Padding(
-                            padding: _pagePadding(context),
-                            child: Container(
-                              padding: EdgeInsets.all(_r(context, 14)),
-                              decoration: _surfaceDecoration(),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isCash ? 'Cash Sale' : 'Utang Sale',
-                                    style: TextStyle(
-                                      fontSize: _r(context, 21),
-                                      fontWeight: FontWeight.w900,
-                                      color: _titleColor,
-                                    ),
-                                  ),
-                                  SizedBox(height: _r(context, 14)),
-                                  _cashUtangSwitch(vm),
-                                  if (!isCash && vm.selectedCustomer != null)
-                                    Padding(
-                                      padding: EdgeInsets.only(top: _r(context, 10)),
-                                      child: _selectedUtangInfoCard(vm),
-                                    ),
-                                  SizedBox(height: _r(context, 10)),
-                                  _searchBar(vm),
-                                  SizedBox(height: _r(context, 10)),
-                                  if (isCash || (!isCash && isProductMode))
-                                    _categoryChips(vm),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: isCash || isProductMode
-                                ? _categoryProductView(vm)
-                                : _utangList(),
-                          ),
-                        ],
-                      ),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(_r(context, 64)),
+        child: AppBar(
+          backgroundColor: _cardBg,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          toolbarHeight: _r(context, 64),
+          leading: IconButton(
+            icon: Image.asset(
+              'lib/assets/arrowleft.png',
+              width: _r(context, 22),
+              height: _r(context, 22),
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: _r(context, 18),
+                color: _brandDeep,
               ),
-              if (isCash || (!isCash && isProductMode))
-                _bottomBar(vm, bottomPadding),
-            ],
+            ),
+            onPressed: () => context.pop(),
           ),
+          title: Text(
+            'Record Sale',
+            style: TextStyle(
+              color: _titleColor,
+              fontWeight: FontWeight.w900,
+              fontSize: _r(context, 20),
+            ),
+          ),
+          centerTitle: true,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(height: 1, color: _cardBorder),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: vm.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                    children: [
+                      Padding(
+                        padding: _pagePadding(context),
+                        child: Container(
+                          padding: EdgeInsets.all(_r(context, 14)),
+                          decoration: _surfaceDecoration(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isCash ? 'Cash Sale' : 'Utang Sale',
+                                style: TextStyle(
+                                  fontSize: _r(context, 21),
+                                  fontWeight: FontWeight.w900,
+                                  color: _titleColor,
+                                ),
+                              ),
+                              SizedBox(height: _r(context, 14)),
+                              _cashUtangSwitch(vm),
+                              if (!isCash && vm.selectedCustomer != null)
+                                Padding(
+                                  padding: EdgeInsets.only(top: _r(context, 10)),
+                                  child: _selectedUtangInfoCard(vm),
+                                ),
+                              SizedBox(height: _r(context, 10)),
+                              _searchBar(vm),
+                              SizedBox(height: _r(context, 10)),
+                              if (isCash || (!isCash && isProductMode))
+                                _categoryChips(vm),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: isCash || isProductMode
+                            ? _categoryProductView(vm)
+                            : _utangList(),
+                      ),
+                    ],
+                  ),
+          ),
+          if (isCash || (!isCash && isProductMode))
+            _bottomBar(vm, bottomPadding),
         ],
       ),
     );
@@ -846,28 +857,48 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final effectiveUnitPrice = vm.getEffectiveUnitPrice(product);
     final hasDefaultUnitPrice = effectiveUnitPrice > 0;
 
+    // Accent bar colour — green=ok, orange=low(=10), red=out
+    final accentColor = product.quantity <= 0
+        ? const Color(0xFFD63031)
+        : product.quantity <= 10
+            ? const Color(0xFFE67E00)
+            : const Color(0xFF00897B);
+
     return InkWell(
       borderRadius: BorderRadius.circular(_r(context, 20)),
       onTap: () => _showProductSellSheet(product, vm),
       child: Container(
         margin: EdgeInsets.symmetric(vertical: _r(context, 6)),
-        padding: EdgeInsets.all(_r(context, 14)),
         decoration: _surfaceDecoration(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(_r(context, 8)),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F8FF),
-                    borderRadius: BorderRadius.circular(_r(context, 16)),
-                    border: Border.all(color: _cardBorder),
-                  ),
-                  child: _productImage(product),
-                ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left accent bar
+              Container(
+                width: _r(context, 5),
+                color: accentColor,
+              ),
+              // Card content
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(_r(context, 14)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(_r(context, 8)),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF6F8FF),
+                              borderRadius: BorderRadius.circular(_r(context, 16)),
+                              border: Border.all(color: _cardBorder),
+                            ),
+                            child: _productImage(product),
+                          ),
                 SizedBox(width: _r(context, 12)),
                 Expanded(
                   child: Column(
@@ -982,15 +1013,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+                    ),           // closes SizedBox button
+                  ],             // closes Column(right).children
+                ),               // closes Column(right)
+              ],                 // closes Row(main).children
+            ),                   // closes Row(main)
+          ],                     // closes Column(outer).children
+        ),                       // closes Column(outer)
+      ),                         // closes Padding
+    ),                           // closes Expanded (in IntrinsicHeight Row)
+  ],                             // closes IntrinsicHeight Row.children
+  ),                             // closes IntrinsicHeight Row
+  ),                             // closes IntrinsicHeight
+  ),                             // closes Container
+  );                             // closes InkWell
   }
 
   Widget _infoPill(String label) {
@@ -1484,7 +1520,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                       vertical: _r(context, 6),
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF2F6BFF).withValues(
+                                      color: const Color(0xFF2D5BE3).withValues(
                                         alpha: 0.10,
                                       ),
                                       borderRadius: BorderRadius.circular(
@@ -1517,7 +1553,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             width: double.infinity,
                             padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF9FBFF),
+                              color: const Color(0xFFF8FAFF),
                               borderRadius: BorderRadius.circular(_r(context, 16)),
                               border: Border.all(color: _cardBorder),
                             ),
@@ -1917,7 +1953,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   ),
                   SizedBox(height: _r(context, 4)),
                   Text(
-                    "Available Credit: â‚±${availableCredit.toStringAsFixed(2)}",
+                    "Available Credit: ?${availableCredit.toStringAsFixed(2)}",
                     style: TextStyle(
                       fontSize: _r(context, 13.5),
                       color: _subtitleColor,
@@ -2129,13 +2165,13 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   (entry) =>
                                       '${entry.option.label} x${entry.count}',
                                 )
-                                .join('  â€¢  ')
+                                .join('  •  ')
                             : 'Manual qty: $qty ${product.baseUnit}';
 
                         return Container(
                           padding: EdgeInsets.all(_r(context, 14)),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF9FBFF),
+                            color: const Color(0xFFF8FAFF),
                             borderRadius: BorderRadius.circular(_r(context, 18)),
                             border: Border.all(color: _cardBorder),
                           ),
@@ -2320,23 +2356,39 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           ),
           SizedBox(width: _r(context, 12)),
           Expanded(
-            child: ElevatedButton(
-              onPressed: canCheckout ? () => _showSummary(context, vm) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canCheckout
-                    ? const Color(0xFF255FD5)
-                    : Colors.grey.shade400,
-                shape: RoundedRectangleBorder(
+            child: GestureDetector(
+              onTap: canCheckout ? () => _showSummary(context, vm) : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: _r(context, 56),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: canCheckout
+                      ? const LinearGradient(
+                          colors: [_heroStart, _heroEnd],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        )
+                      : null,
+                  color: canCheckout ? null : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(_r(context, 16)),
+                  boxShadow: canCheckout
+                      ? [
+                          BoxShadow(
+                            color: _heroStart.withOpacity(0.30),
+                            blurRadius: _r(context, 14),
+                            offset: Offset(0, _r(context, 5)),
+                          ),
+                        ]
+                      : null,
                 ),
-                elevation: canCheckout ? 4 : 0,
-                minimumSize: Size.fromHeight(_r(context, 56)),
-              ),
-              child: Text(
-                "Checkout",
-                style: TextStyle(
-                  fontSize: _r(context, 16),
-                  fontWeight: FontWeight.w900,
+                child: Text(
+                  'Checkout',
+                  style: TextStyle(
+                    fontSize: _r(context, 16),
+                    fontWeight: FontWeight.w900,
+                    color: canCheckout ? Colors.white : Colors.grey.shade500,
+                  ),
                 ),
               ),
             ),
@@ -2504,7 +2556,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                               borderRadius: BorderRadius.circular(_r(context, 999)),
                             ),
                             child: Text(
-                              "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} â€¢ "
+                              "${selectedCustomer['first_name']} ${selectedCustomer['last_name']} • "
                               "${dueDate != null ? DateFormat('MMM d, y').format(dueDate!) : 'No due date'}",
                               style: TextStyle(
                                 fontSize: _r(context, 11.5),
@@ -2524,10 +2576,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ? Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF9FBFF),
+                              color: const Color(0xFFF8FAFF),
                               borderRadius: BorderRadius.circular(_r(context, 22)),
                               border: Border.all(
-                                color: const Color(0xFFDDE5F8),
+                                color: const Color(0xFFCDD5EE),
                               ),
                             ),
                             child: Center(
@@ -2536,17 +2588,17 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 style: TextStyle(
                                   fontSize: _r(context, 14.5),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF60739B),
+                                  color: const Color(0xFF5B6D96),
                                 ),
                               ),
                             ),
                           )
                         : Container(
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF9FBFF),
+                              color: const Color(0xFFF8FAFF),
                               borderRadius: BorderRadius.circular(_r(context, 22)),
                               border: Border.all(
-                                color: const Color(0xFFDDE5F8),
+                                color: const Color(0xFFCDD5EE),
                               ),
                             ),
                             child: ListView.separated(
@@ -2569,7 +2621,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                     _r(context, 18),
                                   ),
                                   border: Border.all(
-                                    color: const Color(0xFFDDE5F8),
+                                    color: const Color(0xFFCDD5EE),
                                   ),
                                 ),
                                 child: Row(
@@ -2588,7 +2640,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                       ),
                                       child: Icon(
                                         Icons.inventory_2_rounded,
-                                        color: const Color(0xFF2F6BFF),
+                                        color: const Color(0xFF2D5BE3),
                                         size: _r(context, 22),
                                       ),
                                     ),
@@ -2603,7 +2655,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                             style: TextStyle(
                                               fontWeight: FontWeight.w900,
                                               fontSize: _r(context, 15.5),
-                                              color: const Color(0xFF213A6B),
+                                              color: const Color(0xFF1B3A7A),
                                             ),
                                           ),
                                           SizedBox(height: _r(context, 4)),
@@ -2614,14 +2666,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                                       (entry) =>
                                                           '${entry.option.label} x${entry.count}',
                                                     )
-                                                    .join('  â€¢  ')
+                                                    .join('  •  ')
                                                 : vm.getEffectiveUnitPrice(product) > 0
                                                     ? '$qty ${product.baseUnit} x ${currencyFormatter.format(vm.getEffectiveUnitPrice(product))}/${product.baseUnit}'
-                                                    : '$qty ${product.baseUnit} â€¢ manual price',
+                                                    : '$qty ${product.baseUnit} • manual price',
                                             style: TextStyle(
                                               fontSize: _r(context, 13),
                                               fontWeight: FontWeight.w700,
-                                              color: const Color(0xFF60739B),
+                                              color: const Color(0xFF5B6D96),
                                             ),
                                           ),
                                         ],
@@ -2646,7 +2698,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                         style: TextStyle(
                                           fontWeight: FontWeight.w900,
                                           fontSize: _r(context, 14.5),
-                                          color: const Color(0xFF213A6B),
+                                          color: const Color(0xFF1B3A7A),
                                         ),
                                       ),
                                     ),
@@ -2662,10 +2714,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                     width: double.infinity,
                     padding: EdgeInsets.all(_r(context, 16)),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF9FBFF),
+                      color: const Color(0xFFF8FAFF),
                       borderRadius: BorderRadius.circular(_r(context, 20)),
                       border: Border.all(
-                        color: const Color(0xFFDDE5F8),
+                        color: const Color(0xFFCDD5EE),
                       ),
                     ),
                     child: Column(
@@ -2679,7 +2731,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 fontSize: _r(context, 14.5),
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1,
-                                color: const Color(0xFF213A6B),
+                                color: const Color(0xFF1B3A7A),
                               ),
                             ),
                             FittedBox(
@@ -2689,7 +2741,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 style: TextStyle(
                                   fontSize: _r(context, 22),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF213A6B),
+                                  color: const Color(0xFF1B3A7A),
                                 ),
                               ),
                             ),
@@ -2705,7 +2757,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 style: TextStyle(
                                   fontSize: _r(context, 13.5),
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF60739B),
+                                  color: const Color(0xFF5B6D96),
                                 ),
                               ),
                               Text(
@@ -2713,7 +2765,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 style: TextStyle(
                                   fontSize: _r(context, 15),
                                   fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF213A6B),
+                                  color: const Color(0xFF1B3A7A),
                                 ),
                               ),
                             ],
@@ -2767,7 +2819,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: _r(context, 16),
-                              color: const Color(0xFF213A6B),
+                              color: const Color(0xFF1B3A7A),
                             ),
                           ),
                         ),
@@ -2817,7 +2869,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'Customer\'s available credit is â‚±${availableCredit2.toStringAsFixed(2)}. '
+                                      'Customer\'s available credit is ?${availableCredit2.toStringAsFixed(2)}. '
                                       'You cannot exceed this limit.',
                                     ),
                                     duration: const Duration(seconds: 3),

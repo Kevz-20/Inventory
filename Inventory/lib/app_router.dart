@@ -21,7 +21,6 @@ import 'views/screens/settings_screen.dart';
 import 'views/screens/manage_inventory_screen.dart';
 import 'views/screens/stockin_screen.dart';
 import 'views/screens/sync_center_screen.dart';
-import 'views/screens/transaction_record_screen.dart';
 import 'views/screens/transaction_history_screen.dart';
 import 'views/screens/income_statement_screen.dart';
 import 'views/screens/balance_sheet_screen.dart';
@@ -192,14 +191,6 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const ManageInventoryScreen(),
-        transition: PageTransitionType.forward,
-      ),
-    ),
-    GoRoute(
-      path: '/transaction_record',
-      pageBuilder: (context, state) => customPage(
-        state,
-        const TransactionRecordScreen(),
         transition: PageTransitionType.forward,
       ),
     ),

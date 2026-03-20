@@ -4,17 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../view_models/create_account_view_model.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class CreateAccountScreen extends ConsumerWidget {
   const CreateAccountScreen({super.key});
 
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _textPrimary = Color(0xFF1B3A7A);
+  static const Color _textSecondary = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,10 +30,14 @@ class CreateAccountScreen extends ConsumerWidget {
       backgroundColor: _pageBg,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
         leading: IconButton(
           icon: Image.asset(
             'lib/assets/arrowleft.png',
@@ -59,7 +63,6 @@ class CreateAccountScreen extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           Column(
             children: [
               Expanded(
@@ -96,7 +99,7 @@ class CreateAccountScreen extends ConsumerWidget {
                               width: double.infinity,
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF9FBFF),
+                                color: const Color(0xFFF8FAFF),
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(color: _cardBorder),
                               ),
@@ -312,7 +315,7 @@ class CreateAccountScreen extends ConsumerWidget {
       hintText: hint,
       errorText: errorText,
       filled: true,
-      fillColor: const Color(0xFFF9FBFF),
+      fillColor: const Color(0xFFF8FAFF),
       prefixIcon: icon == null ? null : Icon(icon),
       prefixIconColor: _accentBlue,
       hintStyle: const TextStyle(

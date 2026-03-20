@@ -84,7 +84,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
 
     final pesoFormatter = NumberFormat.currency(
       locale: 'en_PH',
-      symbol: '₱ ',
+      symbol: 'â‚± ',
       decimalDigits: 2,
     );
 
@@ -119,10 +119,9 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
           children: [
             HeroHeader(
               title: "Negosyo",
-              balance: homeState.isMoneyVisible ? balanceText : "₱ •••••",
+              balance: homeState.isMoneyVisible ? balanceText : "â‚± â€¢â€¢â€¢â€¢â€¢",
               mobileNumber: mobileText,
               isBalanceVisible: homeState.isMoneyVisible,
-              centerTitle: true,
               showBack: true,
               onBackTap: () => context.go('/home'),
               onBellTap: () => context.push('/notifications'),

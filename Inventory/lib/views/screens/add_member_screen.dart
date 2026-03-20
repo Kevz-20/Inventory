@@ -7,7 +7,7 @@ import '../../repositories/account_repository.dart';
 import '../../repositories/slpa_member_repository.dart';
 import '../../services/db_service.dart';
 import '../../view_models/add_member_view_model.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class AddMemberScreen extends StatefulWidget {
   const AddMemberScreen({
@@ -24,12 +24,12 @@ class AddMemberScreen extends StatefulWidget {
 }
 
 class _AddMemberScreenState extends State<AddMemberScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _textPrimary = Color(0xFF1B3A7A);
+  static const Color _textSecondary = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   bool pinVisible = false;
   bool confirmPinVisible = false;
@@ -68,10 +68,14 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       backgroundColor: _pageBg,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
         leading: widget.isFirstMember
             ? IconButton(
                 icon: Image.asset(
@@ -107,7 +111,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           Column(
             children: [
               Expanded(
@@ -489,7 +492,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       errorText: errorText,
       counterText: '',
       filled: true,
-      fillColor: const Color(0xFFF9FBFF),
+      fillColor: const Color(0xFFF8FAFF),
       suffixIcon: suffixIcon,
       prefixIcon: icon == null ? null : Icon(icon),
       prefixIconColor: _accentBlue,

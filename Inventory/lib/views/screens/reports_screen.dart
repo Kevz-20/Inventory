@@ -1,20 +1,20 @@
-﻿// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../services/db_service.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
 
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   Size _screenSize(BuildContext context) => MediaQuery.of(context).size;
 
@@ -83,7 +83,7 @@ class ReportsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _pageBg,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
@@ -104,10 +104,13 @@ class ReportsScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           SafeArea(
             top: false,
             child: Center(
@@ -445,7 +448,7 @@ class ReportsScreen extends StatelessWidget {
       margin: EdgeInsets.only(bottom: _r(context, 10)),
       padding: EdgeInsets.all(_r(context, 14)),
       decoration: BoxDecoration(
-        color: isFirst ? const Color(0xFFF3F7FF) : const Color(0xFFF9FBFF),
+        color: isFirst ? const Color(0xFFF3F7FF) : const Color(0xFFF8FAFF),
         borderRadius: BorderRadius.circular(_r(context, 18)),
         border: Border.all(
           color: isFirst ? const Color(0xFFCFE0FF) : _cardBorder,
@@ -561,7 +564,7 @@ class ReportsScreen extends StatelessWidget {
     final radius = BorderRadius.circular(_r(context, 22));
     final isPrimaryReport = label.toUpperCase().contains('INCOME');
     final startColor =
-        isPrimaryReport ? const Color(0xFFFDFEFF) : const Color(0xFFF9FBFF);
+        isPrimaryReport ? const Color(0xFFFDFEFF) : const Color(0xFFF8FAFF);
     final endColor =
         isPrimaryReport ? const Color(0xFFF1F5FF) : const Color(0xFFF3F7FF);
     const primaryTextColor = _titleColor;

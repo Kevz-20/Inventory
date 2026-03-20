@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unnecessary_to_list_in_spreads, deprecated_member_use
+// ignore_for_file: unnecessary_to_list_in_spreads, deprecated_member_use
 
 import 'dart:io' show File;
 
@@ -10,7 +10,33 @@ import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../models/current_user.dart';
 import '../../view_models/transaction_history_view_model.dart';
-import '../widgets/dashboard_background.dart';
+
+// ─── Design Tokens (matches home_screen.dart palette) ─────────────────────────
+class _C {
+  static const bg        = Color(0xFFF0F4FF);
+  static const surface   = Color(0xFFFFFFFF);
+  static const border    = Color(0xFFCDD5EE);
+  static const brandDeep = Color(0xFF1B3A7A);
+  static const brandMid  = Color(0xFF5B6D96);
+  static const textDark  = Color(0xFF1B3A7A);
+
+  // Transaction type accent colours
+  static const sale          = Color(0xFF2D5BE3);
+  static const saleBg        = Color(0xFFEEF2FF);
+  static const saleUtang     = Color(0xFF6C3FC4);
+  static const saleUtangBg   = Color(0xFFF3EEFF);
+  static const expense       = Color(0xFFD63031);
+  static const expenseBg     = Color(0xFFFFF0F0);
+  static const capital       = Color(0xFFE67E00);
+  static const capitalBg     = Color(0xFFFFF3E0);
+  static const custPayment   = Color(0xFF00897B);
+  static const custPaymentBg = Color(0xFFE0F2F1);
+  static const ownerPayment  = Color(0xFF6C3FC4);
+  static const ownerPaymentBg= Color(0xFFF3EEFF);
+
+  static const incomeGreen   = Color(0xFF0B7A52);
+  static const expenseRed    = Color(0xFFC04E4E);
+}
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -21,25 +47,16 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
-  static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
-
   late final TransactionHistoryViewModel viewModel;
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController         = ScrollController();
   final ScrollController _categoryScrollController = ScrollController();
   late final PageController _categoryPageController;
 
-  final NumberFormat _currencyFormatter = NumberFormat.currency(
-    locale: 'en_PH',
-    symbol: '\u20B1 ',
-    decimalDigits: 2,
+  final NumberFormat _currency = NumberFormat.currency(
+    locale: 'en_PH', symbol: '₱ ', decimalDigits: 2,
   );
 
-  static const List<TransactionCategory> _historyCategories = [
+  static const List<TransactionCategory> _cats = [
     TransactionCategory.all,
     TransactionCategory.expenses,
     TransactionCategory.sales,
@@ -47,6 +64,11 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     TransactionCategory.customerPayment,
     TransactionCategory.ownerPayment,
   ];
+
+  double _r(double v) {
+    final w = MediaQuery.of(context).size.width;
+    return v * (w / 390).clamp(0.85, 1.15);
+  }
 
   @override
   void initState() {
@@ -58,11 +80,9 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   void _autoScrollChips(int index) {
     if (!_categoryScrollController.hasClients) return;
-
-    const chipWidth = 110.0; // approx width including spacing
-    final screenWidth = MediaQuery.of(context).size.width;
-    final scrollTo = (index * chipWidth) - (screenWidth / 2) + (chipWidth / 2);
-
+    const chipW = 110.0;
+    final sw = MediaQuery.of(context).size.width;
+    final scrollTo = (index * chipW) - (sw / 2) + (chipW / 2);
     _categoryScrollController.animateTo(
       scrollTo.clamp(0, _categoryScrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 300),
@@ -85,99 +105,126 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     }
   }
 
+  // ── Type helpers ─────────────────────────────────────────────────────────────
+  Color _accentOf(TransactionItem tx) {
+    if (tx.type == 'Halin') return (tx.isUtangSale == true) ? _C.saleUtang : _C.sale;
+    if (tx.type == 'Gasto')             return _C.expense;
+    if (tx.type == 'Capital')           return _C.capital;
+    if (tx.type == 'Customer Payment')  return _C.custPayment;
+    if (tx.type == 'Owner Payment' || tx.type == 'Downpayment') return _C.ownerPayment;
+    return _C.sale;
+  }
+
+  Color _accentBgOf(TransactionItem tx) {
+    if (tx.type == 'Halin') return (tx.isUtangSale == true) ? _C.saleUtangBg : _C.saleBg;
+    if (tx.type == 'Gasto')             return _C.expenseBg;
+    if (tx.type == 'Capital')           return _C.capitalBg;
+    if (tx.type == 'Customer Payment')  return _C.custPaymentBg;
+    if (tx.type == 'Owner Payment' || tx.type == 'Downpayment') return _C.ownerPaymentBg;
+    return _C.saleBg;
+  }
+
+  IconData _iconOf(TransactionItem tx) {
+    if (tx.type == 'Gasto')             return Icons.receipt_long_rounded;
+    if (tx.type == 'Capital')           return Icons.account_balance_rounded;
+    if (tx.type == 'Customer Payment')  return Icons.people_alt_rounded;
+    if (tx.type == 'Owner Payment' || tx.type == 'Downpayment') return Icons.payments_outlined;
+    return Icons.shopping_bag_outlined;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final isTablet = width >= 700;
-    final maxContentWidth = isTablet ? 760.0 : double.infinity;
+    final isTablet = MediaQuery.of(context).size.width >= 700;
 
     return ChangeNotifierProvider.value(
       value: viewModel,
       child: Consumer<TransactionHistoryViewModel>(
         builder: (_, vm, _) {
           return Scaffold(
-            backgroundColor: _pageBg,
-            appBar: AppBar(
-              backgroundColor: _pageBg,
-              surfaceTintColor: Colors.transparent,
-              leading: IconButton(
-                icon: Image.asset(
-                  'lib/assets/arrowleft.png',
-                  width: 22,
-                  height: 22,
-                  fit: BoxFit.contain,
-                ),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/home');
-                  }
-                },
-              ),
-              title: const Text(
-                'History',
-                style: TextStyle(
-                  color: _textPrimary,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              centerTitle: true,
-              elevation: 0,
-            ),
-            body: Stack(
-              children: [
-                const DashboardBackground(),
-                SafeArea(
-                  top: false,
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: maxContentWidth),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                            child: Column(
-                              children: [
-                                _buildFilterPanel(vm),
-                                const SizedBox(height: 14),
-                                CategoryChipsWithDots(
-                                  scrollController: _categoryScrollController,
-                                  categories: _historyCategories,
-                                  selectedCategory: vm.selectedCategory,
-                                  onCategorySelected: (cat) {
-                                    final index = _historyCategories.indexOf(cat);
-                                    vm.setSelectedCategory(cat);
-                                    if (index >= 0) {
-                                      _categoryPageController.animateToPage(
-                                        index,
-                                        duration: const Duration(milliseconds: 280),
-                                        curve: Curves.easeInOut,
-                                      );
-                                      _autoScrollChips(index);
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: PageView.builder(
-                              controller: _categoryPageController,
-                              itemCount: _historyCategories.length,
-                              onPageChanged: (index) {
-                                vm.setSelectedCategory(_historyCategories[index]);
-                                _autoScrollChips(index);
-                              },
-                              itemBuilder: (context, index) => _buildHistoryList(vm),
-                            ),
-                          ),
-                        ],
-                      ),
+            backgroundColor: _C.bg,
+            appBar: PreferredSize(
+              preferredSize: Size.fromHeight(_r(64)),
+              child: AppBar(
+                backgroundColor: _C.surface,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                toolbarHeight: _r(64),
+                leading: IconButton(
+                  onPressed: () => context.canPop()
+                      ? context.pop() : context.go('/home'),
+                  icon: Image.asset(
+                    'lib/assets/arrowleft.png',
+                    width: _r(22), height: _r(22),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: _r(18),
+                      color: _C.brandDeep,
                     ),
                   ),
                 ),
-              ],
+                title: Text('History',
+                    style: TextStyle(
+                      fontSize: _r(18), fontWeight: FontWeight.w900,
+                      color: _C.brandDeep, letterSpacing: 0.2,
+                    )),
+                centerTitle: true,
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(1),
+                  child: Container(height: 1, color: _C.border),
+                ),
+              ),
+            ),
+
+            body: SafeArea(
+              top: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: isTablet ? 760.0 : double.infinity),
+                  child: Column(children: [
+                    // Filter + category chips
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          _r(16), _r(14), _r(16), _r(10)),
+                      child: Column(children: [
+                        _buildFilterPanel(vm),
+                        SizedBox(height: _r(12)),
+                        _CategoryChips(
+                          scrollController: _categoryScrollController,
+                          categories: _cats,
+                          selected: vm.selectedCategory,
+                          onSelect: (cat) {
+                            final idx = _cats.indexOf(cat);
+                            vm.setSelectedCategory(cat);
+                            if (idx >= 0) {
+                              _categoryPageController.animateToPage(idx,
+                                  duration: const Duration(milliseconds: 280),
+                                  curve: Curves.easeInOut);
+                              _autoScrollChips(idx);
+                            }
+                          },
+                          r: _r,
+                        ),
+                      ]),
+                    ),
+
+                    // Transaction list
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _categoryPageController,
+                        itemCount: _cats.length,
+                        onPageChanged: (i) {
+                          vm.setSelectedCategory(_cats[i]);
+                          _autoScrollChips(i);
+                        },
+                        itemBuilder: (_, __) => _buildList(vm),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
             ),
           );
         },
@@ -185,867 +232,779 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     );
   }
 
+  // ── Filter panel ─────────────────────────────────────────────────────────────
   Widget _buildFilterPanel(TransactionHistoryViewModel vm) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(_r(14)),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _cardBorder),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF8EA1D1).withValues(alpha: 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(_r(20)),
+        border: Border.all(color: _C.border, width: 1.5),
+        boxShadow: [BoxShadow(
+          color: _C.brandDeep.withOpacity(0.07),
+          blurRadius: _r(14), offset: Offset(0, _r(4)),
+        )],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LayoutBuilder(
-            builder: (context, c) {
-              final isCompact = c.maxWidth < 420;
-              final spacing = isCompact ? 8.0 : 12.0;
-
-              final startBox = _DatePickerBox(
-                title: 'Start Date',
-                date: vm.startDate ?? DateTime.now(),
-                onDateSelected: vm.setStartDate,
-                compact: isCompact,
-              );
-
-              final endBox = _DatePickerBox(
-                title: 'End Date',
-                date: vm.endDate ?? DateTime.now(),
-                onDateSelected: vm.setEndDate,
-                compact: isCompact,
-              );
-
-              return Row(
-                children: [
-                  Expanded(child: startBox),
-                  SizedBox(width: spacing),
-                  Expanded(child: endBox),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+      child: LayoutBuilder(builder: (context, c) {
+        final compact = c.maxWidth < 420;
+        return Row(children: [
+          Expanded(child: _DateBox(
+            title: 'Start Date', date: vm.startDate ?? DateTime.now(),
+            onPicked: vm.setStartDate, compact: compact, r: _r,
+          )),
+          SizedBox(width: _r(compact ? 8 : 12)),
+          Expanded(child: _DateBox(
+            title: 'End Date', date: vm.endDate ?? DateTime.now(),
+            onPicked: vm.setEndDate, compact: compact, r: _r,
+          )),
+        ]);
+      }),
     );
   }
 
-  Widget _buildHistoryList(TransactionHistoryViewModel vm) {
+  // ── List ─────────────────────────────────────────────────────────────────────
+  Widget _buildList(TransactionHistoryViewModel vm) {
     if (vm.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator(
+          color: _C.brandDeep, strokeWidth: 2.5));
     }
 
     if (vm.sections.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _cardBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF8EA1D1).withValues(alpha: 0.12),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+          padding: EdgeInsets.all(_r(24)),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: _r(80), height: _r(80),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF2FF), shape: BoxShape.circle,
+                border: Border.all(color: _C.border, width: 2),
+              ),
+              child: Icon(Icons.receipt_long_outlined,
+                  size: _r(38), color: _C.brandMid),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF2FF),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_outlined,
-                    color: _accentBlue,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Nothing to show yet',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: _textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  vm.emptyStateMessage,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: _textSecondary,
+            SizedBox(height: _r(18)),
+            Text('Nothing to show yet',
+                style: TextStyle(fontSize: _r(17),
+                    fontWeight: FontWeight.w900, color: _C.brandDeep)),
+            SizedBox(height: _r(8)),
+            Text(vm.emptyStateMessage,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: _r(13.5),
                     fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
+                    color: _C.brandMid, height: 1.5)),
+          ]),
         ),
       );
     }
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      padding: EdgeInsets.fromLTRB(_r(16), _r(4), _r(16), _r(20)),
       itemCount: vm.sections.length,
-      itemBuilder: (context, sectionIndex) {
-        final section = vm.sections[sectionIndex];
-        return _buildSection(section);
-      },
+      itemBuilder: (_, i) => _buildSection(vm.sections[i]),
     );
   }
 
+  // ── Section header ────────────────────────────────────────────────────────────
   Widget _buildSection(TransactionSection section) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: _r(10)),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(
+                horizontal: _r(14), vertical: _r(6)),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: _cardBorder),
+              color: _C.surface,
+              borderRadius: BorderRadius.circular(_r(999)),
+              border: Border.all(color: _C.border, width: 1.5),
+              boxShadow: [BoxShadow(
+                color: _C.brandDeep.withOpacity(0.05),
+                blurRadius: _r(8), offset: Offset(0, _r(2)),
+              )],
             ),
-            child: Text(
-              section.title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: _textPrimary,
-              ),
-            ),
+            child: Text(section.title,
+                style: TextStyle(
+                  fontSize: _r(13),
+                  fontWeight: FontWeight.w800,
+                  color: _C.brandDeep,
+                )),
           ),
         ),
-        ...section.items.map((tx) => _buildTransactionCard(tx, context)),
-        const SizedBox(height: 6),
+        ...section.items.map((tx) => _buildCard(tx)),
+        SizedBox(height: _r(4)),
       ],
     );
   }
 
-  Widget _buildTransactionCard(TransactionItem tx, BuildContext context) {
-    final isHalin = tx.type == 'Halin';
-    final isHalinUtang = isHalin && (tx.isUtangSale == true);
+  // ── Transaction card ──────────────────────────────────────────────────────────
+  Widget _buildCard(TransactionItem tx) {
+    final isHalin         = tx.type == 'Halin';
+    final isHalinUtang    = isHalin && (tx.isUtangSale == true);
+    final isExpense       = tx.type == 'Gasto';
+    final isCapital       = tx.type == 'Capital';
+    final isCustomerPay   = tx.type == 'Customer Payment';
+    final isOwnerPay      = tx.type == 'Owner Payment';
+    final isDownpayment   = tx.type == 'Downpayment';
 
-    final isExpense = tx.type == 'Gasto';
-    final isCapital = tx.type == 'Capital';
-    final isCustomerPayment = tx.type == 'Customer Payment';
-    final isOwnerPayment = tx.type == 'Owner Payment';
-    final isDownpayment = tx.type == 'Downpayment';
+    final typeLabel = isDownpayment ? 'Owner Payment'
+        : isHalinUtang ? 'Sale (Credit)' : isHalin ? 'Sale'
+        : isExpense ? 'Expense' : isCapital ? 'Capital'
+        : isCustomerPay ? 'Customer Payment'
+        : isOwnerPay ? 'Owner Payment' : tx.type;
 
-    final typeLabel = isDownpayment
-        ? 'Owner Payment'
-        : isHalinUtang
-            ? 'Halin (Utang)'
-            : isHalin
-                ? 'Halin'
-                : isExpense
-                    ? 'Gasto'
-                    : isCapital
-                        ? 'Capital'
-                        : isCustomerPayment
-                            ? 'Customer Payment'
-                            : isOwnerPayment
-                                ? 'Owner Payment'
-                                : tx.type;
+    final mainLabel = (isExpense || isCustomerPay || isOwnerPay || isDownpayment)
+        ? (isDownpayment
+            ? '${tx.description ?? ''} downpayment'
+            : (tx.description ?? ''))
+        : isCapital ? 'Capital Movement'
+        : (tx.productName ?? 'Product');
 
-    final descriptionLabel = isDownpayment
-        ? '${tx.description ?? ''} downpayment'
-        : (tx.description ?? '');
+    final isIncome = isCapital || isHalin || isCustomerPay;
+    final amtColor = isIncome ? _C.incomeGreen : _C.expenseRed;
+    final amtText  = isIncome
+        ? '+${_currency.format((tx.amount ?? 0).abs())}'
+        : '-${_currency.format((tx.amount ?? 0).abs())}';
 
-    final capitalNote = (tx.description ?? '').trim().isEmpty
-        ? 'N/A'
-        : tx.description!.trim();
-
-    final isIncome = isCapital || isHalin || isCustomerPayment;
-    final amountColor =
-        isIncome ? const Color(0xFF0B8E5F) : const Color(0xFFC04E4E);
-
-    final amountText = isIncome
-        ? '+${_currencyFormatter.format((tx.amount ?? 0).abs())}'
-        : '-${_currencyFormatter.format((tx.amount ?? 0).abs())}';
-
-    final accentColor = isCapital
-        ? const Color(0xFFF4A63D)
-        : isExpense
-            ? const Color(0xFFE46A5A)
-            : isCustomerPayment
-                ? const Color(0xFF1EAF8A)
-                : isOwnerPayment || isDownpayment
-                    ? const Color(0xFF7D6BF2)
-                    : _accentBlue;
+    final accent   = _accentOf(tx);
+    final accentBg = _accentBgOf(tx);
+    final icon     = _iconOf(tx);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (_) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: _TransactionDetailsSheet(transaction: tx),
-          ),
-        );
-      },
+      borderRadius: BorderRadius.circular(_r(20)),
+      onTap: () => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _DetailsSheet(
+            transaction: tx, currency: _currency, r: _r),
+      ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        margin: EdgeInsets.only(bottom: _r(10)),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          color: _cardBg,
-          border: Border.all(color: _cardBorder),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF8EA1D1).withValues(alpha: 0.14),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(_r(20)),
+          border: Border.all(color: _C.border, width: 1.5),
+          boxShadow: [BoxShadow(
+            color: _C.brandDeep.withOpacity(0.07),
+            blurRadius: _r(12), offset: Offset(0, _r(3)),
+          )],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    isExpense
-                        ? Icons.receipt_long_rounded
-                        : isCapital
-                            ? Icons.savings_rounded
-                            : isCustomerPayment
-                                ? Icons.people_alt_rounded
-                                : isOwnerPayment || isDownpayment
-                                    ? Icons.payments_outlined
-                                    : Icons.shopping_bag_outlined,
-                    color: accentColor,
-                    size: 24,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left accent bar
+              Container(
+                width: _r(5),
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.only(
+                    topLeft:    Radius.circular(_r(20)),
+                    bottomLeft: Radius.circular(_r(20)),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+              ),
+              // Card body
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      _r(12), _r(12), _r(14), _r(12)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        typeLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: _textSecondary,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Icon badge
+                          Container(
+                            width: _r(44), height: _r(44),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: accentBg,
+                              borderRadius: BorderRadius.circular(_r(13)),
+                            ),
+                            child: Icon(icon, color: accent, size: _r(22)),
+                          ),
+                          SizedBox(width: _r(11)),
+                          // Type + name
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(typeLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: _r(11.5),
+                                    fontWeight: FontWeight.w700,
+                                    color: _C.brandMid,
+                                  )),
+                              SizedBox(height: _r(3)),
+                              Text(mainLabel.isEmpty ? '—' : mainLabel,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: _r(14.5),
+                                    fontWeight: FontWeight.w800,
+                                    color: _C.textDark,
+                                    height: 1.25,
+                                  )),
+                            ],
+                          )),
+                          SizedBox(width: _r(8)),
+                          // Amount + time
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(amtText,
+                                  style: TextStyle(
+                                    fontSize: _r(13.5),
+                                    fontWeight: FontWeight.w900,
+                                    color: amtColor,
+                                  )),
+                              SizedBox(height: _r(4)),
+                              Text(DateFormat('hh:mm a').format(tx.createdAt),
+                                  style: TextStyle(
+                                    fontSize: _r(11.5),
+                                    color: _C.brandMid,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        (isExpense ||
-                                isCustomerPayment ||
-                                isOwnerPayment ||
-                                isDownpayment)
-                            ? descriptionLabel
-                            : isCapital
-                                ? 'Capital movement'
-                                : (tx.productName ?? 'Product'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: _textPrimary,
+
+                      // Meta chips
+                      Builder(builder: (_) {
+                        final chips = _metaChips(tx);
+                        if (chips.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: EdgeInsets.only(top: _r(10)),
+                          child: Wrap(
+                              spacing: _r(7), runSpacing: _r(7),
+                              children: chips),
+                        );
+                      }),
+
+                      // View receipt button
+                      if (isExpense && tx.receiptImagePath != null)
+                        Padding(
+                          padding: EdgeInsets.only(top: _r(10)),
+                          child: GestureDetector(
+                            onTap: () => showDialog(
+                              context: context,
+                              builder: (_) => Dialog(
+                                child: InteractiveViewer(
+                                  child: Image.file(
+                                      File(tx.receiptImagePath!),
+                                      fit: BoxFit.contain),
+                                ),
+                              ),
+                            ),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: _r(12), vertical: _r(7)),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(_r(10)),
+                                border: Border.all(
+                                    color: _C.border, width: 1),
+                              ),
+                              child: Row(mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                Icon(Icons.image_outlined,
+                                    size: _r(14), color: _C.brandDeep),
+                                SizedBox(width: _r(5)),
+                                Text('View Receipt',
+                                    style: TextStyle(
+                                      fontSize: _r(12),
+                                      fontWeight: FontWeight.w700,
+                                      color: _C.brandDeep,
+                                    )),
+                              ]),
+                            ),
+                          ),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        amountText,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: amountColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      DateFormat('hh:mm a').format(tx.createdAt),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: _textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildMetaWrap(tx, capitalNote)),
-                if (isExpense && tx.receiptImagePath != null) ...[
-                  const SizedBox(width: 10),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 130),
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _accentBlue,
-                        side: const BorderSide(color: Color(0xFFD6E0F6)),
-                        backgroundColor: const Color(0xFFF5F8FF),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (_) => Dialog(
-                            child: InteractiveViewer(
-                              child: Image.file(
-                                File(tx.receiptImagePath!),
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      child: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'View Receipt',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ),
-                ],
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMetaWrap(TransactionItem tx, String capitalNote) {
-    final isExpense = tx.type == 'Gasto';
-    final isCapital = tx.type == 'Capital';
-    final isHalin = tx.type == 'Halin';
+  List<Widget> _metaChips(TransactionItem tx) {
     final chips = <Widget>[];
 
-    if (isCapital) {
-      chips.add(_metaChip('Note: $capitalNote'));
-    } else if (isHalin && tx.quantity != null) {
-      chips.add(_metaChip('Qty: ${tx.quantity}'));
-    } else if (isExpense && tx.category != null) {
-      chips.add(_metaChip('Category: ${tx.category}'));
+    void add(String label, IconData icon) {
+      chips.add(Container(
+        padding: EdgeInsets.symmetric(
+            horizontal: _r(9), vertical: _r(5)),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEEF2FF),
+          borderRadius: BorderRadius.circular(_r(999)),
+          border: Border.all(color: _C.border, width: 1),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: _r(12), color: _C.brandMid),
+          SizedBox(width: _r(4)),
+          Text(label,
+              style: TextStyle(
+                fontSize: _r(11.5),
+                fontWeight: FontWeight.w700,
+                color: _C.brandMid,
+              )),
+        ]),
+      ));
+    }
+
+    if (tx.type == 'Capital') {
+      final note = (tx.description ?? '').trim().isEmpty
+          ? 'N/A' : tx.description!;
+      add('Note: $note', Icons.sticky_note_2_outlined);
+    } else if (tx.type == 'Halin' && tx.quantity != null) {
+      add('Qty: ${tx.quantity}', Icons.inventory_2_outlined);
+    } else if (tx.type == 'Gasto' && tx.category != null) {
+      add(tx.category!, Icons.label_outline_rounded);
     }
 
     if ((tx.recordedBy ?? '').trim().isNotEmpty) {
-      chips.add(_metaChip('By ${tx.recordedBy!.trim()}'));
+      add('By ${tx.recordedBy!.trim()}', Icons.person_outline_rounded);
     }
 
-    if (chips.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: chips,
-    );
-  }
-
-  Widget _metaChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F7FF),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFDCE5F8)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: _textSecondary,
-        ),
-      ),
-    );
+    return chips;
   }
 }
 
-// ---------------- Date Picker ----------------
-class _DatePickerBox extends StatelessWidget {
+// ─── Date Picker Box ───────────────────────────────────────────────────────────
+class _DateBox extends StatelessWidget {
+  const _DateBox({
+    required this.title, required this.date, required this.onPicked,
+    required this.compact, required this.r,
+  });
   final String title;
   final DateTime date;
-  final ValueChanged<DateTime?> onDateSelected;
+  final ValueChanged<DateTime?> onPicked;
   final bool compact;
-
-  const _DatePickerBox({
-    required this.title,
-    required this.date,
-    required this.onDateSelected,
-    this.compact = false,
-  });
+  final double Function(double) r;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final now = DateTime.now();
+        final now    = DateTime.now();
         final picked = await showDatePicker(
           context: context,
           initialDate: date.isAfter(now) ? now : date,
-          firstDate: DateTime(2000),
-          lastDate: now,
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
+          firstDate: DateTime(2000), lastDate: now,
+          builder: (ctx, child) => Theme(
+            data: Theme.of(ctx).copyWith(
               colorScheme: ColorScheme.light(
                 primary: AppColors.primary,
                 onPrimary: Colors.white,
                 onSurface: AppColors.textPrimary,
               ),
               dialogTheme: DialogThemeData(
-                backgroundColor: Colors.grey.shade100,
-              ),
+                  backgroundColor: Colors.grey.shade100),
             ),
             child: child!,
           ),
         );
-        if (picked != null && !picked.isAfter(now)) {
-          onDateSelected(picked);
-        }
+        if (picked != null && !picked.isAfter(now)) onPicked(picked);
       },
       child: Container(
         padding: EdgeInsets.symmetric(
-          vertical: compact ? 10 : 12,
-          horizontal: compact ? 12 : 14,
-        ),
+            vertical: r(compact ? 10 : 12),
+            horizontal: r(compact ? 11 : 13)),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFFFFFF),
-              Color(0xFFF7FAFF),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFDDE5F8)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF8EA1D1).withValues(alpha: 0.10),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          color: const Color(0xFFF8FAFF),
+          borderRadius: BorderRadius.circular(r(16)),
+          border: Border.all(color: const Color(0xFFCDD5EE), width: 1.5),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: compact ? 11.5 : 12.5,
-                      color: const Color(0xFF60739B),
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  SizedBox(height: compact ? 2 : 4),
-                  Text(
-                    DateFormat(compact ? 'MMM d, y' : 'MMMM d, y').format(date),
-                    style: TextStyle(
-                      fontSize: compact ? 13 : 15,
-                      color: const Color(0xFF213A6B),
-                      fontWeight: FontWeight.w800,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(width: compact ? 6 : 10),
-            Container(
-              width: compact ? 30 : 34,
-              height: compact ? 30 : 34,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFEAF2FF),
-                    Color(0xFFD8E7FF),
-                  ],
+        child: Row(children: [
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                    fontSize: r(11),
+                    color: const Color(0xFF5B6D96),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  )),
+              SizedBox(height: r(3)),
+              Text(
+                DateFormat(compact ? 'MMM d, y' : 'MMMM d, y').format(date),
+                style: TextStyle(
+                  fontSize: r(compact ? 12.5 : 14),
+                  color: const Color(0xFF1B3A7A),
+                  fontWeight: FontWeight.w800,
                 ),
-                borderRadius: BorderRadius.circular(12),
+                maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
-              child: Icon(
-                Icons.calendar_today_rounded,
-                size: compact ? 15 : 17,
-                color: const Color(0xFF2F6BFF),
-              ),
+            ],
+          )),
+          SizedBox(width: r(8)),
+          Container(
+            width: r(32), height: r(32),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(r(10)),
+              border: Border.all(color: const Color(0xFFCDD5EE), width: 1),
             ),
-          ],
-        ),
+            child: Icon(Icons.calendar_today_rounded,
+                size: r(15), color: const Color(0xFF2D5BE3)),
+          ),
+        ]),
       ),
     );
   }
 }
 
-// ---------------- Category Chips ----------------
-class CategoryChipsWithDots extends StatelessWidget {
-  final List<TransactionCategory> categories;
-  final TransactionCategory selectedCategory;
-  final Function(TransactionCategory) onCategorySelected;
-  final ScrollController scrollController;
-
-  const CategoryChipsWithDots({
-    super.key,
-    required this.categories,
-    required this.selectedCategory,
-    required this.onCategorySelected,
-    required this.scrollController,
+// ─── Category Chips ────────────────────────────────────────────────────────────
+class _CategoryChips extends StatelessWidget {
+  const _CategoryChips({
+    required this.scrollController, required this.categories,
+    required this.selected, required this.onSelect, required this.r,
   });
+  final ScrollController scrollController;
+  final List<TransactionCategory> categories;
+  final TransactionCategory selected;
+  final ValueChanged<TransactionCategory> onSelect;
+  final double Function(double) r;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 52,
-          child: ListView.separated(
-            controller: scrollController,
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.zero,
-            itemCount: categories.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (_, index) {
-              final category = categories[index];
-              final isSelected = selectedCategory == category;
-
-              return GestureDetector(
-                onTap: () => onCategorySelected(category),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+    return Column(children: [
+      SizedBox(
+        height: r(44),
+        child: ListView.separated(
+          controller: scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.zero,
+          itemCount: categories.length,
+          separatorBuilder: (_, _) => SizedBox(width: r(7)),
+          itemBuilder: (_, i) {
+            final cat   = categories[i];
+            final isSel = selected == cat;
+            return GestureDetector(
+              onTap: () => onSelect(cat),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: EdgeInsets.symmetric(
+                    horizontal: r(14), vertical: r(10)),
+                decoration: BoxDecoration(
+                  gradient: isSel
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1A3584), Color(0xFF4B8AF0)])
+                      : null,
+                  color: isSel ? null : const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(r(999)),
+                  border: Border.all(
+                    color: isSel ? Colors.transparent : const Color(0xFFCDD5EE),
+                    width: 1.5,
                   ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF205CC8)
-                        : Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF205CC8)
-                          : const Color(0xFFDDE5F8),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF8EA1D1).withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    category.displayName,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFF213A6B),
-                    ),
-                  ),
+                  boxShadow: [BoxShadow(
+                    color: const Color(0xFF1B3A7A).withOpacity(
+                        isSel ? 0.18 : 0.05),
+                    blurRadius: r(isSel ? 10 : 6),
+                    offset: Offset(0, r(isSel ? 4 : 2)),
+                  )],
                 ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: categories.map((category) {
-            final isSelected = selectedCategory == category;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: isSelected ? 8 : 6,
-              height: isSelected ? 8 : 6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected
-                    ? const Color(0xFF205CC8)
-                    : const Color(0xFFBFC9E2),
+                child: Text(cat.displayName,
+                    style: TextStyle(
+                      fontSize: r(13),
+                      fontWeight: FontWeight.w700,
+                      color: isSel ? Colors.white
+                          : const Color(0xFF1B3A7A),
+                    )),
               ),
             );
-          }).toList(),
+          },
         ),
-        const SizedBox(height: 6),
-      ],
-    );
+      ),
+      SizedBox(height: r(8)),
+      // Pill-style indicator dots
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: categories.map((cat) {
+          final isSel = selected == cat;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: EdgeInsets.symmetric(horizontal: r(3)),
+            width: isSel ? r(16) : r(6),
+            height: r(6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(r(999)),
+              color: isSel ? const Color(0xFF2456D0)
+                  : const Color(0xFFCDD5EE),
+            ),
+          );
+        }).toList(),
+      ),
+      SizedBox(height: r(4)),
+    ]);
   }
 }
 
-// ---------------- Transaction BottomSheet ----------------
-class _TransactionDetailsSheet extends StatelessWidget {
+// ─── Transaction Details Bottom Sheet ─────────────────────────────────────────
+class _DetailsSheet extends StatelessWidget {
+  const _DetailsSheet({
+    required this.transaction, required this.currency, required this.r,
+  });
   final TransactionItem transaction;
-
-  const _TransactionDetailsSheet({required this.transaction});
+  final NumberFormat currency;
+  final double Function(double) r;
 
   @override
   Widget build(BuildContext context) {
-    final isExpense = transaction.type == 'Gasto';
-    final isHalin = transaction.type == 'Halin';
-    final isCapital = transaction.type == 'Capital';
-    final isCustomerPayment = transaction.type == 'Customer Payment';
-    final isOwnerPayment = transaction.type == 'Owner Payment';
-    final isDownpayment = transaction.type == 'Downpayment';
-    final detailTypeLabel = isDownpayment ? 'Owner Payment' : transaction.type;
+    final tx           = transaction;
+    final isExpense    = tx.type == 'Gasto';
+    final isHalin      = tx.type == 'Halin';
+    final isHalinUtang = isHalin && (tx.isUtangSale == true);
+    final isCapital    = tx.type == 'Capital';
+    final isCustomerPay= tx.type == 'Customer Payment';
+    final isOwnerPay   = tx.type == 'Owner Payment';
+    final isDownpayment= tx.type == 'Downpayment';
 
-    final currentUserName = [
+    final typeLabel = isDownpayment ? 'Owner Payment'
+        : isHalinUtang ? 'Sale (Credit)' : isHalin ? 'Sale'
+        : isExpense ? 'Expense' : isCapital ? 'Capital'
+        : isCustomerPay ? 'Customer Payment'
+        : isOwnerPay ? 'Owner Payment' : tx.type;
+
+    final isIncome  = isCapital || isHalin || isCustomerPay;
+    final amtPrefix = isCapital ? '' : isIncome ? '+' : '-';
+    final amtText   = '$amtPrefix${currency.format((tx.amount ?? 0).abs())}';
+
+    Color accent = const Color(0xFF2D5BE3);
+    if (isHalinUtang || isOwnerPay || isDownpayment)
+      accent = const Color(0xFF6C3FC4);
+    else if (isExpense)    accent = const Color(0xFFD63031);
+    else if (isCapital)    accent = const Color(0xFFE67E00);
+    else if (isCustomerPay)accent = const Color(0xFF00897B);
+
+    final currentUser = [
       CurrentUser.firstName ?? '',
       CurrentUser.middleName ?? '',
       CurrentUser.lastName ?? '',
     ].where((s) => s.trim().isNotEmpty).join(' ').trim();
 
-    final capitalAddedBy = (transaction.recordedBy ?? '').trim().isEmpty
-        ? currentUserName
-        : transaction.recordedBy!.trim();
+    final recordedBy = (tx.recordedBy ?? '').trim().isEmpty
+        ? currentUser : tx.recordedBy!.trim();
 
-    final recordedByValue = (transaction.recordedBy ?? '').trim().isEmpty
-        ? currentUserName
-        : transaction.recordedBy!.trim();
-
-    final NumberFormat currency = NumberFormat.currency(
-      locale: 'en_PH',
-      symbol: '\u20B1 ',
-      decimalDigits: 2,
-    );
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Wrap(
-          children: [
-            Center(
-              child: Container(
-                width: 50,
-                height: 5,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-            ),
-            Text(
-              '$detailTypeLabel Details',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F4FF),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(r(28))),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: r(20), right: r(20), top: r(14),
+            bottom: r(24) + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isCapital ? 'Amount Added:' : 'Amount:',
-                  style: const TextStyle(fontSize: 16),
+            // Drag handle
+            Center(child: Container(
+              width: r(44), height: r(5),
+              margin: EdgeInsets.only(bottom: r(18)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFCDD5EE),
+                borderRadius: BorderRadius.circular(r(99)),
+              ),
+            )),
+
+            // Header card — coloured gradient
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(r(18)),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: [accent, Color.lerp(accent, Colors.white, 0.30)!],
                 ),
-                Text(
-                  isCapital
-                      ? currency.format(transaction.amount ?? 0)
-                      : '${(isCapital || isHalin || isCustomerPayment) ? '+' : '-'}${currency.format(transaction.amount ?? 0)}',
+                borderRadius: BorderRadius.circular(r(20)),
+                boxShadow: [BoxShadow(
+                  color: accent.withOpacity(0.28),
+                  blurRadius: r(20), offset: Offset(0, r(8)),
+                )],
+              ),
+              child: Row(children: [
+                Container(
+                  width: r(52), height: r(52),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.22),
+                    borderRadius: BorderRadius.circular(r(16)),
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.35), width: 1.5),
+                  ),
+                  child: Icon(
+                    isExpense ? Icons.receipt_long_rounded
+                        : isCapital ? Icons.account_balance_rounded
+                        : isCustomerPay ? Icons.people_alt_rounded
+                        : (isOwnerPay || isDownpayment)
+                            ? Icons.payments_outlined
+                            : Icons.shopping_bag_outlined,
+                    color: Colors.white, size: r(26),
+                  ),
+                ),
+                SizedBox(width: r(14)),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(typeLabel,
+                        style: TextStyle(
+                          fontSize: r(12),
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withOpacity(0.80),
+                        )),
+                    SizedBox(height: r(3)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(amtText,
+                          style: TextStyle(
+                            fontSize: r(28),
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -0.5, height: 1.0,
+                          )),
+                    ),
+                  ],
+                )),
+              ]),
+            ),
+
+            SizedBox(height: r(16)),
+
+            // Details card
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(r(16)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(r(20)),
+                border: Border.all(color: const Color(0xFFCDD5EE), width: 1.5),
+                boxShadow: [BoxShadow(
+                  color: const Color(0xFF1B3A7A).withOpacity(0.06),
+                  blurRadius: r(12), offset: Offset(0, r(3)),
+                )],
+              ),
+              child: Column(children: [
+                _row(r: r, icon: Icons.calendar_today_rounded,
+                    label: 'Date',
+                    value: DateFormat(isCapital
+                            ? 'MMMM d, y'
+                            : 'MMMM d, y  •  hh:mm a')
+                        .format(tx.createdAt)),
+                if (isExpense && tx.category != null) ...[
+                  _divider(r),
+                  _row(r: r, icon: Icons.label_outline_rounded,
+                      label: 'Category', value: tx.category!),
+                ],
+                if ((isHalin || isCapital) && tx.quantity != null) ...[
+                  _divider(r),
+                  _row(r: r, icon: Icons.inventory_2_outlined,
+                      label: 'Quantity', value: tx.quantity.toString()),
+                ],
+                if (isCapital) ...[
+                  _divider(r),
+                  _row(r: r, icon: Icons.person_outline_rounded,
+                      label: 'Added By', value: recordedBy),
+                ] else if (isHalin || isExpense || isCustomerPay ||
+                    isOwnerPay || isDownpayment) ...[
+                  _divider(r),
+                  _row(r: r, icon: Icons.person_outline_rounded,
+                      label: 'Recorded By', value: recordedBy),
+                ],
+              ]),
+            ),
+
+            // Receipt
+            if (isExpense && tx.receiptImagePath != null) ...[
+              SizedBox(height: r(16)),
+              Text('Receipt',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isHalin
-                        ? Colors.green
-                        : isExpense
-                            ? Colors.red
-                            : isCustomerPayment
-                                ? Colors.green
-                                : (isOwnerPayment || isDownpayment)
-                                    ? Colors.red
-                                    : Colors.green,
-                  ),
+                    fontSize: r(13), fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1B3A7A),
+                  )),
+              SizedBox(height: r(8)),
+              GestureDetector(
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (_) => Dialog(child: InteractiveViewer(
+                    child: Image.file(File(tx.receiptImagePath!),
+                        fit: BoxFit.contain),
+                  )),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Date:', style: TextStyle(fontSize: 16)),
-                Text(
-                  DateFormat(
-                    isCapital ? 'MMMM d, y' : 'MMMM d, y • hh:mm a',
-                  ).format(transaction.createdAt),
-                  style: const TextStyle(fontSize: 16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(r(16)),
+                  child: Image.file(File(tx.receiptImagePath!),
+                      height: r(170), width: double.infinity,
+                      fit: BoxFit.cover),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            if (isExpense && transaction.category != null)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Category:', style: TextStyle(fontSize: 16)),
-                  Text(transaction.category!, style: const TextStyle(fontSize: 16)),
-                ],
               ),
-
-            if ((isHalin || isCapital) && transaction.quantity != null)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Quantity:', style: TextStyle(fontSize: 16)),
-                  Text(transaction.quantity.toString(), style: const TextStyle(fontSize: 16)),
-                ],
-              ),
-
-            const SizedBox(height: 8),
-
-            if (isCapital)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Added By:', style: TextStyle(fontSize: 16)),
-                  Flexible(
-                    child: Text(
-                      capitalAddedBy,
-                      style: const TextStyle(fontSize: 16),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-
-            if (isHalin ||
-                isExpense ||
-                isCustomerPayment ||
-                isOwnerPayment ||
-                isDownpayment)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Recorded By:', style: TextStyle(fontSize: 16)),
-                  Flexible(
-                    child: Text(
-                      recordedByValue,
-                      style: const TextStyle(fontSize: 16),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-
-            const SizedBox(height: 16),
-
-            if (isExpense && transaction.receiptImagePath != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Receipt:', style: TextStyle(fontSize: 16)),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => Dialog(
-                          child: InteractiveViewer(
-                            child: Image.file(
-                              File(transaction.receiptImagePath!),
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(transaction.receiptImagePath!),
-                        height: 170,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-            const SizedBox(height: 20),
-          ],
+            ],
+          ]),
         ),
       ),
     );
   }
+
+  Widget _row({
+    required double Function(double) r,
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: r(10)),
+      child: Row(children: [
+        Container(
+          width: r(34), height: r(34),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(r(10)),
+          ),
+          child: Icon(icon, size: r(16), color: const Color(0xFF5B6D96)),
+        ),
+        SizedBox(width: r(12)),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: TextStyle(
+                  fontSize: r(11), fontWeight: FontWeight.w700,
+                  color: const Color(0xFF5B6D96),
+                )),
+            SizedBox(height: r(2)),
+            Text(value,
+                style: TextStyle(
+                  fontSize: r(14), fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1B3A7A),
+                )),
+          ],
+        )),
+      ]),
+    );
+  }
+
+  Widget _divider(double Function(double) r) => Container(
+    height: 1, color: const Color(0xFFEEF2FF),
+    margin: EdgeInsets.symmetric(horizontal: r(2)),
+  );
 }
-
-

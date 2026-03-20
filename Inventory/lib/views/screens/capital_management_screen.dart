@@ -8,7 +8,7 @@ import '../../core/app_colors.dart';
 import '../../providers/capital_management_repository_provider.dart';
 import '../../providers/capital_management_view_model_provider.dart';
 import '../widgets/adaptive_digits_text.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class CapitalManagementScreen extends ConsumerStatefulWidget {
   const CapitalManagementScreen({super.key});
@@ -50,13 +50,13 @@ class ThousandDecimalInputFormatter extends TextInputFormatter {
 
 class _CapitalManagementScreenState
     extends ConsumerState<CapitalManagementScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _fieldBg = Color(0xFFF9FBFF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _fieldBg = Color(0xFFF8FAFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
@@ -125,9 +125,13 @@ class _CapitalManagementScreenState
               backgroundColor: _pageBg,
               extendBody: true,
               appBar: AppBar(
-                backgroundColor: _pageBg,
+                backgroundColor: Colors.white,
                 elevation: 0,
                 centerTitle: true,
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(1),
+                  child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+                ),
                 titleSpacing: 0,
                 leadingWidth: 52,
                 leading: IconButton(
@@ -150,7 +154,6 @@ class _CapitalManagementScreenState
               ),
               body: Stack(
                 children: [
-                  const DashboardBackground(),
                   Column(
                     children: [
                       Expanded(
@@ -346,7 +349,6 @@ class _CapitalManagementScreenState
         backgroundColor: _pageBg,
         body: Stack(
           children: [
-            DashboardBackground(),
             Center(child: CircularProgressIndicator()),
           ],
         ),
@@ -355,7 +357,6 @@ class _CapitalManagementScreenState
         backgroundColor: _pageBg,
         body: Stack(
           children: [
-            const DashboardBackground(),
             Center(
               child: Text(
                 'Error: $err',

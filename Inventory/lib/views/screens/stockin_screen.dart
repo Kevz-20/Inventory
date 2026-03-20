@@ -10,7 +10,7 @@ import '../../core/app_colors.dart';
 import '../../models/product_selling_option.dart';
 import '../../models/product_unit_conversion.dart';
 import '../../view_models/stock_in_view_model.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class StockInScreen extends ConsumerStatefulWidget {
   const StockInScreen({super.key});
@@ -20,13 +20,13 @@ class StockInScreen extends ConsumerStatefulWidget {
 }
 
 class _StockInScreenState extends ConsumerState<StockInScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _fieldBg = Color(0xFFF9FBFF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _fieldBg = Color(0xFFF8FAFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
   late final ScrollController _scrollController;
   bool _showUnitOptions = false;
   bool _showQuickOptions = false;
@@ -216,7 +216,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         _showQuickOptions = _showQuickOptions || vm.sellingOptions.isNotEmpty;
         final w = constraints.maxWidth;
 
-        // Ã¢Å“â€¦ same scaling pattern as your other pages
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ same scaling pattern as your other pages
         final double scale = (w / 390).clamp(0.90, 1.20);
 
         final double padH = (16 * scale).clamp(14, 22);
@@ -243,7 +243,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         return Scaffold(
           backgroundColor: _pageBg,
           appBar: AppBar(
-            backgroundColor: _pageBg,
+            backgroundColor: Colors.white,
             elevation: 0,
             surfaceTintColor: Colors.transparent,
             leading: IconButton(
@@ -264,11 +264,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ),
             ),
             centerTitle: true,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+            ),
           ),
 
           body: Stack(
             children: [
-              const DashboardBackground(),
               ScrollbarTheme(
                 data: ScrollbarThemeData(
                   thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
@@ -303,7 +306,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                           SizedBox(height: gap12),
 
-                          // Ã¢Å“â€¦ Category Picker (Bottom Sheet)
+                          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Category Picker (Bottom Sheet)
                           _categoryPickerField(
                             vm,
                             scale: scale,
@@ -606,7 +609,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // Ã¢Å“â€¦ CATEGORY PICKER FIELD (BOTTOM SHEET) - responsive only
+  // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ CATEGORY PICKER FIELD (BOTTOM SHEET) - responsive only
   // ============================================================
   Widget _categoryPickerField(
     StockInViewModel vm, {
@@ -686,7 +689,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // Ã¢Å“â€¦ CATEGORY BOTTOM SHEET (responsive only)
+  // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ CATEGORY BOTTOM SHEET (responsive only)
   // ============================================================
   Future<String?> _showCategoryBottomSheet({
     required BuildContext context,
@@ -959,7 +962,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // Ã¢Å“â€¦ ADD CATEGORY DIALOG (responsive only)
+  // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ADD CATEGORY DIALOG (responsive only)
   // ============================================================
   Future<void> _showAddCategoryDialog(
     BuildContext context,
@@ -1306,7 +1309,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 ),
               ),
               Text(
-                hasValue ? _formatCostPerUnitDisplay(perUnit) : '—',
+                hasValue ? _formatCostPerUnitDisplay(perUnit) : 'â€”',
                 style: TextStyle(
                   fontSize: (18 * scale).clamp(16, 22),
                   fontWeight: FontWeight.w900,
@@ -3573,7 +3576,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
     return Chip(
       label: Text(
-        '${option.label} · $qty ${vm.baseUnitLabel} · ₱$priceText',
+        '${option.label} Â· $qty ${vm.baseUnitLabel} Â· â‚±$priceText',
       ),
       onDeleted: () => vm.removeSellingOption(option),
       deleteIcon: const Icon(Icons.close_rounded, size: 18),

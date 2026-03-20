@@ -9,7 +9,7 @@ import '../../core/app_colors.dart';
 import '../widgets/adaptive_digits_text.dart';
 import '../../services/db_service.dart';
 import '../../models/current_user.dart';
-import '../widgets/dashboard_background.dart';
+
 import '../widgets/primary_footer_nav.dart';
 
 class AddUtangPage extends StatefulWidget {
@@ -25,15 +25,15 @@ class AddUtangPage extends StatefulWidget {
 final NumberFormat currencyFormat = NumberFormat('#,##0');
 
 class _AddUtangPageState extends State<AddUtangPage> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _fieldBg = Color(0xFFF9FBFF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _fieldBg = Color(0xFFF8FAFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
-  // ✅ Default: One-Time Payment
+  // âœ… Default: One-Time Payment
   bool isInstallment = false;
 
   // ==============================
@@ -45,7 +45,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
   final TextEditingController durationController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
   final TextEditingController dueDateController =
-      TextEditingController(); // ✅ single date
+      TextEditingController(); // âœ… single date
 
   double remainingBalance = 0.0;
   double monthlyPayment = 0.0;
@@ -236,7 +236,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
         final remaining = total - down;
         final monthly = months > 0 ? remaining / months : remaining;
 
-        // ✅ Due Date = first installment due date
+        // âœ… Due Date = first installment due date
         final firstDueDate = dueDate;
         final nextDueDate = firstDueDate;
         final finalDueDate = addMonths(firstDueDate, months);
@@ -244,7 +244,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
         if (down > cashOnHand) {
           if (!mounted) return;
           showErrorSnackBar(
-            "Downpayment of ₱${currencyFormat.format(down)} exceeds available cash of ₱${currencyFormat.format(cashOnHand)}",
+            "Downpayment of â‚±${currencyFormat.format(down)} exceeds available cash of â‚±${currencyFormat.format(cashOnHand)}",
           );
           return;
         }
@@ -300,7 +300,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'updated_at': DateTime.now().toIso8601String(),
         });
       } else {
-        // ✅ One-time utang: due_date is the due date
+        // âœ… One-time utang: due_date is the due date
         await db.insert('payable', {
           'supplier_name': 'Owner',
           'item': itemController.text,
@@ -389,10 +389,14 @@ class _AddUtangPageState extends State<AddUtangPage> {
           backgroundColor: _pageBg,
           extendBody: true,
           appBar: AppBar(
-            backgroundColor: _pageBg,
+            backgroundColor: Colors.white,
             elevation: 0,
             surfaceTintColor: Colors.transparent,
             centerTitle: true,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+            ),
             leading: IconButton(
               icon: Image.asset(
                 'lib/assets/arrowleft.png',
@@ -419,7 +423,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
           ),
           body: Stack(
             children: [
-              const DashboardBackground(),
               Column(
                 children: [
                   SizedBox(height: (12 * s).clamp(10.0, 16.0)),
@@ -539,7 +542,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
 
             SizedBox(height: (8 * s).clamp(6.0, 10.0)),
 
-            // ✅ toggle inside the card
+            // âœ… toggle inside the card
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: (6 * s).clamp(6.0, 10.0),
@@ -693,7 +696,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
     List<TextInputFormatter>? inputFormatters,
     String? errorText,
 
-    // ✅ responsive
+    // âœ… responsive
     required double s,
     required double radius,
   }) {
@@ -719,7 +722,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
                   ? Padding(
                       padding: EdgeInsets.all((14 * s).clamp(12.0, 16.0)),
                       child: Text(
-                        "₱",
+                        "â‚±",
                         style: TextStyle(
                           fontSize: (20 * s).clamp(16.0, 22.0),
                           fontWeight: FontWeight.bold,
@@ -800,7 +803,7 @@ class _AddUtangPageState extends State<AddUtangPage> {
           ),
           SizedBox(height: (4 * s).clamp(3.0, 6.0)),
           AdaptiveDigitsText(
-            "₱${currencyFormat.format(amount)}",
+            "â‚±${currencyFormat.format(amount)}",
             style: TextStyle(
               fontSize: vFs,
               fontWeight: FontWeight.bold,

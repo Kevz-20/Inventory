@@ -10,7 +10,7 @@ import '../../models/payable_model.dart';
 import '../../repositories/capital_management_repository.dart';
 import '../../repositories/payable_repository.dart';
 import '../../services/db_service.dart';
-import '../widgets/dashboard_background.dart';
+
 import '../widgets/primary_footer_nav.dart';
 
 // ============================================================
@@ -71,13 +71,13 @@ class OwnerUtangScreen extends StatefulWidget {
 
 class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     with WidgetsBindingObserver {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _fieldBg = Color(0xFFF8FAFF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
 
@@ -232,7 +232,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
 
     double parseAmount(String v) =>
         double.tryParse(v.replaceAll(',', '')) ?? 0.0;
-    String money(double v) => "₱${currencyFormat.format(v)}";
+    String money(double v) => "â‚±${currencyFormat.format(v)}";
 
     await showDialog(
       context: context,
@@ -323,7 +323,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                             fontWeight: FontWeight.w800,
                           ),
                           decoration: InputDecoration(
-                            prefixText: "₱ ",
+                            prefixText: "â‚± ",
                             hintText: "Enter amount",
                             filled: true,
                             fillColor: _fieldBg,
@@ -458,7 +458,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      // ✅ keep logic: after payment, move next_due_date by +1 month (simple schedule)
+      // âœ… keep logic: after payment, move next_due_date by +1 month (simple schedule)
       if (item.isInstallment && newRemaining > 0) {
         final baseDate =
             DateTime.tryParse(item.nextDueDate ?? item.dueDate ?? '') ??
@@ -507,7 +507,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
   }
 
   // ============================================================
-  // ✅ UPDATED BOTTOMSHEET (less redundant)
+  // âœ… UPDATED BOTTOMSHEET (less redundant)
   // ============================================================
 
   Future<void> showOwnerUtangModal(Payable item) async {
@@ -638,7 +638,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                   children: [
                                     _rowLabelValue(
                                       "Total Amount",
-                                      "₱${currencyFormat.format(total)}",
+                                      "â‚±${currencyFormat.format(total)}",
                                       valueStyle: TextStyle(
                                         fontSize: (14.5 * s).clamp(13.0, 16.0),
                                         fontWeight: FontWeight.w800,
@@ -647,7 +647,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                     SizedBox(height: (8 * s).clamp(6.0, 10.0)),
                                     _rowLabelValue(
                                       "Paid so far",
-                                      "₱${currencyFormat.format(paidSoFar)}",
+                                      "â‚±${currencyFormat.format(paidSoFar)}",
                                       valueStyle: TextStyle(
                                         fontSize: (14.5 * s).clamp(13.0, 16.0),
                                         fontWeight: FontWeight.w900,
@@ -659,7 +659,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                     SizedBox(height: (8 * s).clamp(6.0, 10.0)),
                                     _rowLabelValue(
                                       "Remaining",
-                                      "₱${currencyFormat.format(remaining)}",
+                                      "â‚±${currencyFormat.format(remaining)}",
                                       valueStyle: TextStyle(
                                         fontSize: (15 * s).clamp(13.5, 16.5),
                                         fontWeight: FontWeight.w900,
@@ -692,7 +692,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                       Padding(
                                         padding: EdgeInsets.only(top: (4 * s).clamp(3.0, 6.0)),
                                         child: Text(
-                                          "Monthly: ₱${currencyFormat.format(item.planMonthly)}",
+                                          "Monthly: â‚±${currencyFormat.format(item.planMonthly)}",
                                           style: TextStyle(
                                             fontSize: (13 * s).clamp(11.5, 14.0),
                                             color: Colors.orange.shade900,
@@ -727,14 +727,14 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                 ),
                               ...paymentHistory.map((payment) {
                                 final paidLabel =
-                                    DateFormat('MMM dd, yyyy • hh:mm a').format(payment.paidAt);
+                                    DateFormat('MMM dd, yyyy â€¢ hh:mm a').format(payment.paidAt);
 
                                 final note = (payment.note?.isNotEmpty == true)
                                     ? payment.note!
                                     : 'Payment';
 
                                 final leftLabel =
-                                    '$note ₱${currencyFormat.format(payment.amount)}';
+                                    '$note â‚±${currencyFormat.format(payment.amount)}';
 
                                 return Container(
                                   margin: EdgeInsets.only(bottom: (8 * s).clamp(6.0, 10.0)),
@@ -831,7 +831,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                         builder: (context) => AlertDialog(
                                           title: const Text("Confirm Full Payment"),
                                           content: Text(
-                                            "Are you sure you want to record the full payment of ₱${currencyFormat.format(remaining)}?",
+                                            "Are you sure you want to record the full payment of â‚±${currencyFormat.format(remaining)}?",
                                           ),
                                           actions: [
                                             TextButton(
@@ -909,7 +909,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
   }
 
   // ============================================================
-  // ✅ RESPONSIVE UI BUILD (NO LOGIC CHANGES)
+  // âœ… RESPONSIVE UI BUILD (NO LOGIC CHANGES)
   // ============================================================
 
   @override
@@ -933,7 +933,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
           backgroundColor: _pageBg,
           extendBody: true,
           appBar: AppBar(
-            backgroundColor: _pageBg,
+            backgroundColor: Colors.white,
             elevation: 0,
             surfaceTintColor: Colors.transparent,
             leading: IconButton(
@@ -960,11 +960,14 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
               ),
             ),
             centerTitle: true,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+            ),
           ),
 
           body: Stack(
             children: [
-              const DashboardBackground(),
               Column(
                 children: [
                   SizedBox(height: gap16),
@@ -1073,7 +1076,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-  // ✅ Segmented filter (responsive)
+  // âœ… Segmented filter (responsive)
   Widget _buildFilterButtons({required double s, required double padH}) {
     final barH = (48 * s).clamp(44.0, 54.0);
     final innerPad = (4 * s).clamp(4.0, 6.0);
@@ -1154,7 +1157,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
     );
   }
 
-  // ✅ Card (responsive sizes only)
+  // âœ… Card (responsive sizes only)
   Widget _buildOwnerPayableCard(Payable item, {required double s}) {
     final total = item.amount.toDouble();
     final remaining = (item.remainingAmount ?? item.amount)
@@ -1227,8 +1230,8 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                   child: _miniStat(
                     label: item.isInstallment ? "Binulan" : "Nabayran",
                     value: item.isInstallment
-                        ? "₱${currencyFormat.format(monthly)}"
-                        : "₱${currencyFormat.format(paidSoFar)}",
+                        ? "â‚±${currencyFormat.format(monthly)}"
+                        : "â‚±${currencyFormat.format(paidSoFar)}",
                     valueColor: item.isInstallment
                         ? Colors.orange.shade900
                         : (paidSoFar <= 0
@@ -1241,7 +1244,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                 Expanded(
                   child: _miniStat(
                     label: "Balayran",
-                    value: "₱${currencyFormat.format(remaining)}",
+                    value: "â‚±${currencyFormat.format(remaining)}",
                     valueColor:
                         isFullyPaid ? Colors.green.shade700 : Colors.red.shade700,
                     s: s,

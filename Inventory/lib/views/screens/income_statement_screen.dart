@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../view_models/income_statement_view_model.dart';
 import '../widgets/adaptive_digits_text.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class IncomeStatementScreen extends ConsumerStatefulWidget {
   const IncomeStatementScreen({super.key});
@@ -19,12 +19,12 @@ class IncomeStatementScreen extends ConsumerStatefulWidget {
 }
 
 class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _textPrimary = Color(0xFF1B3A7A);
+  static const Color _textSecondary = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   static final DateFormat _dateFormat = DateFormat('MMMM d, yyyy');
 
@@ -110,10 +110,14 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       backgroundColor: _pageBg,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
         leading: IconButton(
           icon: Image.asset(
             'lib/assets/arrowleft.png',
@@ -139,7 +143,6 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           Column(
             children: [
               Expanded(
@@ -181,7 +184,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
                             ),
                             data: (income) {
                               final currency = NumberFormat.currency(
-                                symbol: '₱',
+                                symbol: 'â‚±',
                                 decimalDigits: 2,
                               );
 
@@ -394,7 +397,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FBFF),
+          color: const Color(0xFFF8FAFF),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _cardBorder),
         ),
@@ -504,7 +507,7 @@ class _IncomeStatementScreenState extends ConsumerState<IncomeStatementScreen> {
       decoration: BoxDecoration(
         color: highlight
             ? _accentBlue.withValues(alpha: 0.08)
-            : const Color(0xFFF9FBFF),
+            : const Color(0xFFF8FAFF),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: highlight

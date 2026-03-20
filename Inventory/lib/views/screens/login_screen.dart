@@ -59,269 +59,445 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   void triggerShake() => _shakeController.forward(from: 0);
 
+  // ─── Brand colours ────────────────────────────────────────────────────────
+  static const Color _navy = Color(0xFF1B3A7A);
+  static const Color _blue = Color(0xFF2D5BE3);
+  static const Color _blueSoft = Color(0xFFEEF2FF);
+  static const Color _blueMid = Color(0xFF204C93);
+  static const Color _textSub = Color(0xFF5B6D96);
+  static const Color _divider = Color(0xFFCDD5EE);
+
   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(loginViewModelProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final height = constraints.maxHeight;
+      backgroundColor: const Color(0xFFECF1FF),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFE8EEFF),
+              Color(0xFFF2F5FF),
+              Color(0xFFF5F8FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final height = constraints.maxHeight;
 
-            final isTablet = width >= 700;
-            final contentMaxWidth = isTablet ? 520.0 : 420.0;
-            final contentWidth = math.min(width, contentMaxWidth);
+              final isTablet = width >= 700;
+              final contentMaxWidth = isTablet ? 520.0 : 420.0;
+              final contentWidth = math.min(width, contentMaxWidth);
 
-            final horizontalPadding = isTablet ? 24.0 : 16.0;
+              final horizontalPadding = isTablet ? 32.0 : 24.0;
 
-            final veryShort = height < 650;
-            final short = height < 730;
+              final veryShort = height < 650;
+              final short = height < 730;
 
-            final logoHeight = veryShort
-                ? 50.0
-                : short
-                ? 62.0
-                : isTablet
-                ? 88.0
-                : 78.0;
+              // ── Sizing ──────────────────────────────────────────────────
+              final logoCircle = veryShort
+                  ? 68.0
+                  : short
+                  ? 82.0
+                  : isTablet
+                  ? 110.0
+                  : 96.0;
+              final logoHeight = logoCircle * 0.68;
 
-            final titleSize = veryShort
-                ? 16.0
-                : short
-                ? 18.0
-                : isTablet
-                ? 23.0
-                : 20.0;
+              final titleSize = veryShort
+                  ? 19.0
+                  : short
+                  ? 21.0
+                  : isTablet
+                  ? 27.0
+                  : 24.0;
+              final subtitleSize = veryShort ? 11.0 : 13.0;
 
-            final mobileFontSize = veryShort ? 13.0 : 16.0;
-            final pinLabelSize = veryShort ? 15.0 : 18.0;
-            final pinDotSize = veryShort ? 12.0 : 18.0;
+              // Larger mobile font benefits 40-55 users
+              final mobileLabelSize = veryShort ? 11.5 : 13.0;
+              final mobileValueSize = veryShort ? 14.5 : 16.5;
 
-            final gap1 = veryShort ? 6.0 : 10.0;
-            final gap2 = veryShort ? 12.0 : 20.0;
-            final gap3 = veryShort ? 8.0 : 12.0;
+              // "Enter your PIN" label
+              final pinLabelSize = veryShort ? 15.5 : 18.0;
+              final pinDotSize = veryShort ? 15.0 : 21.0;
 
-            final keypadSpacing = veryShort ? 8.0 : 12.0;
+              final gap1 = veryShort ? 6.0 : 10.0;
+              final gap2 = veryShort ? 14.0 : 22.0;
+              final gap3 = veryShort ? 10.0 : 14.0;
 
-            final reservedHeight =
-                logoHeight +
-                gap1 +
-                titleSize +
-                gap2 +
-                54 +
-                gap2 +
-                pinLabelSize +
-                gap3 +
-                pinDotSize +
-                gap2 +
-                50;
+              final keypadSpacing = veryShort ? 10.0 : 14.0;
 
-            final remainingHeight = height - reservedHeight - 40;
+              final reservedHeight =
+                  logoCircle +
+                  gap1 +
+                  titleSize +
+                  subtitleSize +
+                  gap2 +
+                  68 + // mobile card
+                  gap2 +
+                  pinLabelSize +
+                  gap3 +
+                  pinDotSize +
+                  gap2 +
+                  52; // bottom links
 
-            final widthBasedKeySize =
-                ((contentWidth -
-                            (horizontalPadding * 2) -
-                            (keypadSpacing * 2)) /
-                        3)
-                    .clamp(58.0, isTablet ? 105.0 : 90.0);
+              final remainingHeight = height - reservedHeight - 48;
 
-            final heightBasedKeySize =
-                ((remainingHeight - (keypadSpacing * 3)) / 4).clamp(48.0, 90.0);
+              final widthBasedKeySize =
+                  ((contentWidth -
+                              (horizontalPadding * 2) -
+                              (keypadSpacing * 2)) /
+                          3)
+                      .clamp(62.0, isTablet ? 110.0 : 94.0);
 
-            final keySize = math.min(widthBasedKeySize, heightBasedKeySize);
-            final keyFontSize = keySize * 0.32;
-            final backspaceIconSize = keySize * 0.34;
+              final heightBasedKeySize =
+                  ((remainingHeight - (keypadSpacing * 3)) / 4)
+                      .clamp(52.0, 94.0);
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: veryShort ? 8 : 14,
-                  ),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                'lib/assets/logo.png',
-                                height: logoHeight,
-                              ),
-                              SizedBox(height: gap1),
-                              Text(
-                                "E.M.P.O.W.E.R",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: titleSize,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                              SizedBox(height: gap2),
+              final keySize = math.min(widthBasedKeySize, heightBasedKeySize);
+              // Larger ratio → bigger numbers → easier for 40-55 users
+              final keyFontSize = keySize * 0.37;
+              final backspaceIconSize = keySize * 0.37;
 
-                              GestureDetector(
-                                onTap: () => viewModel.changeMobileNumber(
-                                  context,
-                                  ref: ref,
-                                ),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: veryShort ? 10 : 12,
-                                  ),
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: veryShort ? 8 : 16,
+                    ),
+                    child: Column(
+                      children: [
+                        // ── Main content ──────────────────────────────────
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // ── Logo in a glowing circle ──────────────
+                                Container(
+                                  width: logoCircle,
+                                  height: logoCircle,
                                   decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(25),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.grey.withAlpha(40),
-                                        blurRadius: 3,
+                                        color: _blue.withOpacity(0.18),
+                                        blurRadius: 28,
+                                        spreadRadius: 2,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                      BoxShadow(
+                                        color: _blue.withOpacity(0.06),
+                                        blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
                                     ],
                                   ),
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
+                                  child: Center(
+                                    child: Image.asset(
+                                      'lib/assets/logo.png',
+                                      height: logoHeight,
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(height: gap1 + 4),
+
+                                // ── Brand name ────────────────────────────
+                                Text(
+                                  'EMPOWER',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: titleSize,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 4,
+                                    color: _navy,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Sari-Sari Store Manager',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: subtitleSize,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.4,
+                                    color: _textSub,
+                                  ),
+                                ),
+
+                                SizedBox(height: gap2),
+
+                                // ── Mobile number card ────────────────────
+                                GestureDetector(
+                                  onTap: () => viewModel.changeMobileNumber(
+                                    context,
+                                    ref: ref,
+                                  ),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: veryShort ? 11 : 13,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: const Color(0xFFDDE4F8),
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _navy.withOpacity(0.07),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 5),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        // Phone icon badge
+                                        Container(
+                                          width: 42,
+                                          height: 42,
+                                          decoration: BoxDecoration(
+                                            color: _blueSoft,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(
+                                            Icons.phone_android_rounded,
+                                            color: _blue,
+                                            size: 22,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        // Label + value
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Mobile Number',
+                                                style: TextStyle(
+                                                  fontSize: mobileLabelSize,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: _textSub,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                viewModel.mobileNumber.isNotEmpty
+                                                    ? viewModel.mobileNumber
+                                                    : 'Not set — tap to add',
+                                                style: TextStyle(
+                                                  fontSize: mobileValueSize,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: _navy,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Edit badge
+                                        Container(
+                                          width: 34,
+                                          height: 34,
+                                          decoration: BoxDecoration(
+                                            color: _blueSoft,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                          child: const Icon(
+                                            Icons.edit_outlined,
+                                            color: _blue,
+                                            size: 17,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(height: gap2),
+
+                                // ── PIN section ───────────────────────────
+                                Text(
+                                  'Enter your PIN',
+                                  style: TextStyle(
+                                    fontSize: pinLabelSize,
+                                    fontWeight: FontWeight.w700,
+                                    color: _navy,
+                                  ),
+                                ),
+                                SizedBox(height: gap3),
+
+                                // PIN dots with shake + glow animation
+                                AnimatedBuilder(
+                                  animation: _shakeAnimation,
+                                  builder: (_, _) {
+                                    return Transform.translate(
+                                      offset:
+                                          Offset(_shakeAnimation.value, 0),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: List.generate(4, (i) {
+                                          final filled =
+                                              i < viewModel.pin.length;
+                                          return AnimatedContainer(
+                                            duration: const Duration(
+                                                milliseconds: 160),
+                                            curve: Curves.easeOut,
+                                            margin: EdgeInsets.symmetric(
+                                              horizontal:
+                                                  veryShort ? 8 : 11,
+                                            ),
+                                            width: pinDotSize,
+                                            height: pinDotSize,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: filled
+                                                  ? _blue
+                                                  : Colors.transparent,
+                                              border: Border.all(
+                                                color: filled
+                                                    ? _blue
+                                                    : const Color(
+                                                        0xFFABBAD8),
+                                                width: 2,
+                                              ),
+                                              boxShadow: filled
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: _blue
+                                                            .withOpacity(
+                                                                0.38),
+                                                        blurRadius: 10,
+                                                        spreadRadius: 1,
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                SizedBox(height: gap2),
+
+                                // ── Keypad ────────────────────────────────
+                                _buildKeypad(
+                                  keySize: keySize,
+                                  spacing: keypadSpacing,
+                                  fontSize: keyFontSize,
+                                  backspaceIconSize: backspaceIconSize,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // ── Bottom links ──────────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6, bottom: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    ref
+                                        .read(loginViewModelProvider)
+                                        .clearPin();
+                                    context.push('/create_account');
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        const Icon(
+                                          Icons.person_add_outlined,
+                                          size: 16,
+                                          color: _blueMid,
+                                        ),
+                                        const SizedBox(width: 5),
                                         Text(
-                                          "Mobile Number: ",
+                                          'Bag-ong Account',
                                           style: TextStyle(
-                                            fontSize: mobileFontSize,
+                                            fontSize: veryShort ? 12.0 : 13.5,
+                                            color: _blueMid,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
-                                        Text(
-                                          viewModel.mobileNumber.isNotEmpty
-                                              ? viewModel.mobileNumber
-                                              : 'Not set',
-                                          style: TextStyle(
-                                            fontSize: mobileFontSize,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Icon(Icons.swap_horiz),
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
-
-                              SizedBox(height: gap2),
-
-                              Text(
-                                "PIN",
-                                style: TextStyle(
-                                  fontSize: pinLabelSize,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              Container(
+                                width: 1,
+                                height: 18,
+                                color: _divider,
                               ),
-                              SizedBox(height: gap3),
-
-                              AnimatedBuilder(
-                                animation: _shakeAnimation,
-                                builder: (_, _) {
-                                  return Transform.translate(
-                                    offset: Offset(_shakeAnimation.value, 0),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    ref
+                                        .read(loginViewModelProvider)
+                                        .clearPin();
+                                    context.push('/forgot_pin');
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: List.generate(4, (i) {
-                                        return Container(
-                                          margin: EdgeInsets.symmetric(
-                                            horizontal: veryShort ? 5 : 8,
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.lock_reset_outlined,
+                                          size: 16,
+                                          color: _blueMid,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          'Nakalimot sa PIN?',
+                                          style: TextStyle(
+                                            fontSize: veryShort ? 12.0 : 13.5,
+                                            color: _blueMid,
+                                            fontWeight: FontWeight.w700,
                                           ),
-                                          width: pinDotSize,
-                                          height: pinDotSize,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: i < viewModel.pin.length
-                                                ? AppColors.primaryLight
-                                                : Colors.transparent,
-                                            border: Border.all(
-                                              color: Colors.black54,
-                                              width: 2,
-                                            ),
-                                          ),
-                                        );
-                                      }),
+                                        ),
+                                      ],
                                     ),
-                                  );
-                                },
-                              ),
-
-                              SizedBox(height: gap2),
-
-                              _buildKeypad(
-                                keySize: keySize,
-                                spacing: keypadSpacing,
-                                fontSize: keyFontSize,
-                                backspaceIconSize: backspaceIconSize,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  ref.read(loginViewModelProvider).clearPin();
-                                  context.push('/create_account');
-                                },
-                                child: Text(
-                                  "BAG-ONG ACCOUNT",
-                                  textAlign: TextAlign.left,
-                                  style: TextStyle(
-                                    fontSize: veryShort ? 11.5 : 13,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  ref.read(loginViewModelProvider).clearPin();
-                                  context.push('/forgot_pin');
-                                },
-                                child: Text(
-                                  "NAKALIMOT SA PIN?",
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: veryShort ? 11.5 : 13,
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -366,7 +542,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }) {
     final vm = ref.watch(loginViewModelProvider);
 
-    final keypad = [
+    const keypad = [
       ['1', '2', '3'],
       ['4', '5', '6'],
       ['7', '8', '9'],
@@ -403,24 +579,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       },
       onTapCancel: () => vm.setPressed(label.hashCode, false),
       child: AnimatedScale(
-        scale: vm.isPressed(label.hashCode) ? 0.85 : 1,
-        duration: const Duration(milliseconds: 120),
+        scale: vm.isPressed(label.hashCode) ? 0.86 : 1.0,
+        duration: const Duration(milliseconds: 110),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFE2E8F8),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withAlpha(40),
-                blurRadius: 3,
-                offset: const Offset(0, 2),
+                color: const Color(0xFF7A8AB5).withOpacity(0.16),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.80),
+                blurRadius: 2,
+                offset: const Offset(0, -1),
               ),
             ],
           ),
           child: Center(
             child: Text(
               label,
-              style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                color: _navy,
+              ),
             ),
           ),
         ),
@@ -439,21 +628,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       },
       onTapCancel: () => vm.setPressed(-1, false),
       child: AnimatedScale(
-        scale: vm.isPressed(-1) ? 0.85 : 1,
-        duration: const Duration(milliseconds: 120),
+        scale: vm.isPressed(-1) ? 0.86 : 1.0,
+        duration: const Duration(milliseconds: 110),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFE2E8F8),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withAlpha(40),
-                blurRadius: 3,
-                offset: const Offset(0, 2),
+                color: const Color(0xFF7A8AB5).withOpacity(0.16),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Center(child: Icon(Icons.backspace_outlined, size: iconSize)),
+          child: Center(
+            child: Icon(
+              Icons.backspace_outlined,
+              size: iconSize,
+              color: _navy,
+            ),
+          ),
         ),
       ),
     );

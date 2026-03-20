@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../models/account_model.dart';
 import '../../providers/profile_view_model_provider.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,12 +18,12 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _textPrimary = Color(0xFF1B3A7A);
+  static const Color _textSecondary = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   bool _editMode = false;
   late final TextEditingController firstNameCtrl;
@@ -64,10 +64,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       backgroundColor: _pageBg,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
         leading: IconButton(
           icon: Image.asset(
             'lib/assets/arrowleft.png',
@@ -93,7 +97,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           if (vm.isLoading)
             const Center(child: CircularProgressIndicator())
           else if (vm.error != null)
@@ -511,7 +514,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF9FBFF),
+            color: const Color(0xFFF8FAFF),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: _cardBorder),
           ),
@@ -599,7 +602,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFF9FBFF),
+        fillColor: const Color(0xFFF8FAFF),
         prefixIcon: Icon(icon),
         prefixIconColor: _accentBlue,
         border: OutlineInputBorder(

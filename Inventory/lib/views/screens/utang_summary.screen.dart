@@ -1,4 +1,4 @@
-﻿// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +10,7 @@ import '../../repositories/capital_management_repository.dart';
 import '../../repositories/customer_repository.dart';
 import '../../services/audit_log_service.dart';
 import '../../services/db_service.dart';
-import '../widgets/dashboard_background.dart';
+
 
 // ================================
 // MODEL FOR INDIVIDUAL UTANG ITEMS
@@ -83,12 +83,12 @@ class UtangSummaryPage extends StatefulWidget {
 }
 
 class _UtangSummaryPageState extends State<UtangSummaryPage> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
   static const Color _accentTeal = Color(0xFF22C7D6);
 
   List<UtangItem> customerItems = [];
@@ -98,7 +98,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
   double? creditLimit;
   double? availableCredit;
 
-  // ✅ NEW: history checker to prevent showing "Paid" for brand-new customer
+  // ? NEW: history checker to prevent showing "Paid" for brand-new customer
   bool get _hasUtangHistory => customerItems.isNotEmpty || customerPayments.isNotEmpty;
 
   DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
@@ -214,7 +214,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      "Remaining balance: ₱${currencyFormat.format(remainingBalance)}",
+                      "Remaining balance: ?${currencyFormat.format(remainingBalance)}",
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.red,
@@ -226,7 +226,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: "Enter payment amount",
-                        prefixText: "₱",
+                        prefixText: "?",
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {
@@ -400,7 +400,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                         final isSelected = selectedPreset == index;
 
                         return ChoiceChip(
-                          label: Text("₱$value"),
+                          label: Text("?$value"),
                           selected: isSelected,
                           onSelected: (_) {
                             setModalState(() {
@@ -419,7 +419,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: "Custom amount",
-                        prefixText: "₱",
+                        prefixText: "?",
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {
@@ -466,7 +466,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                       ScaffoldMessenger.of(this.context).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Credit limit increased by ₱${currencyFormat.format(amountToAdd)}',
+                                            'Credit limit increased by ?${currencyFormat.format(amountToAdd)}',
                                           ),
                                           backgroundColor: AppColors.success,
                                         ),
@@ -631,7 +631,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ),
                                 subtitle: Text(payTime),
                                 trailing: Text(
-                                  '₱${currencyFormat.format(pay.amount)}',
+                                  '?${currencyFormat.format(pay.amount)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -682,10 +682,14 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
         return Scaffold(
           backgroundColor: _pageBg,
           appBar: AppBar(
-            backgroundColor: _pageBg,
+            backgroundColor: Colors.white,
             elevation: 0,
             surfaceTintColor: Colors.transparent,
             centerTitle: true,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+            ),
             leading: IconButton(
               icon: Image.asset(
                 'lib/assets/arrowleft.png',
@@ -720,7 +724,6 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
           ),
           body: Stack(
             children: [
-              const DashboardBackground(),
               SafeArea(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(pad, 16, pad, 24),
@@ -774,7 +777,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                 ),
                               ),
                             ),
-                            // ✅ show "Paid" only if has history AND totalUtang <= 0
+                            // ? show "Paid" only if has history AND totalUtang <= 0
                             if (_hasUtangHistory && totalUtang <= 0)
                               Container(
                                 padding: EdgeInsets.symmetric(
@@ -801,7 +804,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            "₱${currencyFormat.format(totalUtang)}",
+                            "?${currencyFormat.format(totalUtang)}",
                             style: TextStyle(
                               fontSize: bigFs,
                               fontWeight: FontWeight.w900,
@@ -834,7 +837,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                         if (creditLimit != null || availableCredit != null)
                           _infoRow(
                             icon: Icons.credit_score,
-                            text: "Credit Limit: ₱${currencyFormat.format(creditLimit ?? 0)}",
+                            text: "Credit Limit: ?${currencyFormat.format(creditLimit ?? 0)}",
                             scale: scale,
                             iconSize: iconFs,
                             textSize: (15 * scale).clamp(13, 17),
@@ -849,7 +852,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                           _infoRow(
                             icon: Icons.account_balance_wallet,
                             text:
-                                "Available Credit: ₱${currencyFormat.format(availableCreditCalculated)}",
+                                "Available Credit: ?${currencyFormat.format(availableCreditCalculated)}",
                             scale: scale,
                             iconSize: iconFs,
                             textSize: (15 * scale).clamp(13, 17),
@@ -1074,7 +1077,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                     ),
                                                   ),
                                                 Text(
-                                                  "Total: ₱${currencyFormat.format(totalPerDate)}",
+                                                  "Total: ?${currencyFormat.format(totalPerDate)}",
                                                   style: TextStyle(
                                                     fontSize: (14 * scale).clamp(12.5, 16),
                                                     color: _subtitleColor,
@@ -1096,7 +1099,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                               alignment: Alignment.centerRight,
                                               child: Text(
                                                 remaining > 0
-                                                    ? "Remaining: ₱${currencyFormat.format(remaining)}"
+                                                    ? "Remaining: ?${currencyFormat.format(remaining)}"
                                                     : "Paid",
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
@@ -1117,7 +1120,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                             margin: EdgeInsets.symmetric(vertical: (4 * scale).clamp(3, 6)),
                                             padding: EdgeInsets.all((12 * scale).clamp(10, 14)),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFF9FBFF),
+                                              color: const Color(0xFFF8FAFF),
                                               borderRadius: BorderRadius.circular((12 * scale).clamp(10, 14)),
                                               border: Border.all(color: _cardBorder),
                                               boxShadow: [
@@ -1159,7 +1162,7 @@ class _UtangSummaryPageState extends State<UtangSummaryPage> {
                                                 FittedBox(
                                                   fit: BoxFit.scaleDown,
                                                   child: Text(
-                                                    "₱${currencyFormat.format(item.amount)}",
+                                                    "?${currencyFormat.format(item.amount)}",
                                                     style: TextStyle(
                                                       fontWeight: FontWeight.bold,
                                                       fontSize: (14 * scale).clamp(13, 16),

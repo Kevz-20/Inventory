@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/utang_customer_model.dart';
 import '../../services/db_service.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class CustomerUtangScreen extends StatefulWidget {
   const CustomerUtangScreen({super.key, this.initialCustomerId});
@@ -19,11 +19,11 @@ class CustomerUtangScreen extends StatefulWidget {
 
 class _CustomerUtangScreenState extends State<CustomerUtangScreen>
     with WidgetsBindingObserver {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _titleColor = Color(0xFF213A6B);
-  static const Color _subtitleColor = Color(0xFF60739B);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _titleColor = Color(0xFF1B3A7A);
+  static const Color _subtitleColor = Color(0xFF5B6D96);
 
   final currencyFormat = NumberFormat("#,##0.00", "en_PH");
   final searchController = TextEditingController();
@@ -187,7 +187,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
         return Scaffold(
           backgroundColor: _pageBg,
           appBar: AppBar(
-            backgroundColor: const Color(0xFFF5F7FF),
+            backgroundColor: const Color(0xFFF0F4FF),
             elevation: 0,
             surfaceTintColor: Colors.transparent,
             leading: IconButton(
@@ -208,6 +208,10 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
               ),
             ),
             centerTitle: true,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+            ),
             actions: [
               IconButton(
                 tooltip: 'Add Customer',
@@ -228,7 +232,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
           ),
           body: Stack(
             children: [
-              const DashboardBackground(),
               SafeArea(
                 top: false,
                 child: Column(
@@ -536,7 +539,7 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerRight,
                         child: Text(
-                          "₱${currencyFormat.format(item.totalAmount)}",
+                          "â‚±${currencyFormat.format(item.totalAmount)}",
                           style: TextStyle(
                             fontSize: (15.5 * scale).clamp(14, 20),
                             fontWeight: FontWeight.w900,
@@ -633,6 +636,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
       parts.add("Brgy. ${item.barangay!.trim()}");
     }
 
-    return parts.join(" • ");
+    return parts.join(" â€¢ ");
   }
 }

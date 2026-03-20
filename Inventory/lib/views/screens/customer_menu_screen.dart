@@ -133,7 +133,6 @@ class _CustomerMenuScreenState extends ConsumerState<CustomerMenuScreen>
                   : '\u20B1 \u2022\u2022\u2022\u2022\u2022',
               mobileNumber: mobileText,
               isBalanceVisible: homeState.isMoneyVisible,
-              centerTitle: true,
               showBack: true,
               onBackTap: () => context.go('/home'),
               onBellTap: () => context.push('/notifications'),

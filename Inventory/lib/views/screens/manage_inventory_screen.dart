@@ -9,7 +9,7 @@ import '../../repositories/product_category_repository.dart';
 import '../../repositories/product_repository.dart';
 import '../../repositories/stock_in_repository.dart';
 import '../../services/db_service.dart';
-import '../widgets/dashboard_background.dart';
+
 import '../widgets/primary_footer_nav.dart';
 
 class ManageInventoryScreen extends StatefulWidget {
@@ -20,12 +20,12 @@ class ManageInventoryScreen extends StatefulWidget {
 }
 
 class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _border = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _border = Color(0xFFCDD5EE);
+  static const Color _textPrimary = Color(0xFF1B3A7A);
+  static const Color _textSecondary = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -494,7 +494,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                             .map(
                               (option) => Chip(
                                 label: Text(
-                                  '${option.label} • ${option.baseQuantity ?? 0} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()} • ${_peso(option.price)}',
+                                  '${option.label} â€¢ ${option.baseQuantity ?? 0} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()} â€¢ ${_peso(option.price)}',
                                 ),
                                 onDeleted: () => setLocalState(
                                   () => sellingOptions.remove(option),
@@ -1050,7 +1050,7 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
       backgroundColor: _pageBg,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
@@ -1076,10 +1076,13 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
           ),
         ),
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           _loading
               ? const Center(child: CircularProgressIndicator())
               : Column(

@@ -8,7 +8,7 @@ import '../../core/app_colors.dart';
 import '../../models/cashflow_model.dart';
 import '../../view_models/cashflow_view_model.dart';
 import '../widgets/adaptive_digits_text.dart';
-import '../widgets/dashboard_background.dart';
+
 
 class CashFlowScreen extends ConsumerStatefulWidget {
   const CashFlowScreen({super.key});
@@ -18,12 +18,12 @@ class CashFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
-  static const Color _pageBg = Color(0xFFF5F7FF);
+  static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
-  static const Color _cardBorder = Color(0xFFDDE5F8);
-  static const Color _textPrimary = Color(0xFF213A6B);
-  static const Color _textSecondary = Color(0xFF60739B);
-  static const Color _accentBlue = Color(0xFF2F6BFF);
+  static const Color _cardBorder = Color(0xFFCDD5EE);
+  static const Color _textPrimary = Color(0xFF1B3A7A);
+  static const Color _textSecondary = Color(0xFF5B6D96);
+  static const Color _accentBlue = Color(0xFF2D5BE3);
 
   bool _loading = true;
   final ScrollController _listController = ScrollController();
@@ -58,9 +58,9 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   String _formatCurrency(double value) {
     final formatter = NumberFormat.currency(
       locale: 'en_PH',
-      symbol: '₱',
+      symbol: 'â‚±',
       decimalDigits: 0,
-      customPattern: '₱#,##0',
+      customPattern: 'â‚±#,##0',
     );
     return formatter.format(value);
   }
@@ -100,10 +100,14 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     return Scaffold(
       backgroundColor: _pageBg,
       appBar: AppBar(
-        backgroundColor: _pageBg,
+        backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFCDD5EE)),
+        ),
         leading: IconButton(
           icon: Image.asset(
             'lib/assets/arrowleft.png',
@@ -129,7 +133,6 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       ),
       body: Stack(
         children: [
-          const DashboardBackground(),
           Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxContentWidth),
@@ -178,7 +181,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     final hasCashIn = record.cashIn > 0;
     final hasCashOut = record.cashOut > 0;
 
-    // ✅ Build fallback name exactly like TransactionHistory
+    // âœ… Build fallback name exactly like TransactionHistory
     final currentUserName = [
       CurrentUser.firstName ?? '',
       CurrentUser.middleName ?? '',
@@ -267,7 +270,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                         children: [
                           _typeChip(chipText, chipColor),
                           Text(
-                            '${record.formattedDate} • ${record.formattedTime}',
+                            '${record.formattedDate} â€¢ ${record.formattedTime}',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontWeight: FontWeight.w600,
@@ -299,7 +302,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       child: _summaryCard(
                         label: 'Cash In',
                         value: record.cashIn == 0
-                            ? '—'
+                            ? 'â€”'
                             : _formatCurrency(record.cashIn),
                         color: Colors.green,
                         icon: Icons.arrow_downward_rounded,
@@ -310,7 +313,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       child: _summaryCard(
                         label: 'Cash Out',
                         value: record.cashOut == 0
-                            ? '—'
+                            ? 'â€”'
                             : _formatCurrency(record.cashOut),
                         color: Colors.red,
                         icon: Icons.arrow_upward_rounded,
@@ -353,7 +356,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       _detailRow('Time', record.formattedTime),
                       _divider(),
 
-                      // ✅ NEW: Recorded By
+                      // âœ… NEW: Recorded By
                       _detailRow(
                         'Recorded By',
                         recordedByValue,
@@ -366,7 +369,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       _detailRow(
                         'Cash In',
                         record.cashIn == 0
-                            ? '—'
+                            ? 'â€”'
                             : _formatCurrency(record.cashIn),
                         valueColor: Colors.green,
                         boldValue: true,
@@ -375,7 +378,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                       _detailRow(
                         'Cash Out',
                         record.cashOut == 0
-                            ? '—'
+                            ? 'â€”'
                             : _formatCurrency(record.cashOut),
                         valueColor: Colors.red,
                         boldValue: true,
@@ -480,7 +483,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(_r(context, 12)),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FBFF),
+        color: const Color(0xFFF8FAFF),
         borderRadius: BorderRadius.circular(_r(context, 16)),
         border: Border.all(color: _cardBorder),
       ),
