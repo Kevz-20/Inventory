@@ -32,7 +32,7 @@ class _ProductImageRef {
 
 final currencyFormatter = NumberFormat.currency(
   locale: 'en_PH',
-  symbol: '?',
+  symbol: '₱',
   decimalDigits: 2,
 );
 
@@ -1158,36 +1158,50 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     SalesViewModel vm,
   ) async {
     final sellingOptions = vm.sellingOptionsFor(product);
-    final appliedCounts = vm.appliedSellingOptionCountMap(product);
     final displayedUnitPrice = vm.getEffectiveUnitPrice(product);
     final hasDefaultUnitPrice = displayedUnitPrice > 0;
-    final manualPriceAvailable = true;
-    int localQty = vm.getQuantity(product);
-    double localSubtotal = vm.getSubtotal(product);
-    final localAppliedCounts = <String, int>{...appliedCounts};
-    bool isManualPricing = localQty > 0 &&
-        (localSubtotal - vm.subtotalForQuantity(product, localQty)).abs() > 0.009;
-    final qtyController = TextEditingController(
-      text: localQty > 0 ? localQty.toString() : '',
+
+    // Helpers: compute total qty/price from preset counts
+    int computePresetQty(Map<String, int> counts) {
+      return counts.entries.fold(0, (s, e) {
+        final idx = sellingOptions.indexWhere((o) => o.label == e.key);
+        if (idx < 0) return s;
+        return s + ((sellingOptions[idx].baseQuantity ?? 0) * e.value);
+      });
+    }
+
+    double computePresetPrice(Map<String, int> counts) {
+      return counts.entries.fold(0.0, (s, e) {
+        final idx = sellingOptions.indexWhere((o) => o.label == e.key);
+        if (idx < 0) return s;
+        return s + (sellingOptions[idx].price * e.value);
+      });
+    }
+
+    // Initialize state — separate base qty (stepper) from preset counts
+    final initialPresetCounts = Map<String, int>.from(
+      vm.appliedSellingOptionCountMap(product),
+    );
+    final initialTotalQty = vm.getQuantity(product);
+    int localBaseQty =
+        (initialTotalQty - computePresetQty(initialPresetCounts))
+            .clamp(0, product.quantity);
+    final localPresetCounts = <String, int>{...initialPresetCounts};
+
+    final initialSubtotal = vm.getSubtotal(product);
+    final expectedAuto =
+        (localBaseQty * displayedUnitPrice) +
+        computePresetPrice(initialPresetCounts);
+    bool isManualPricing =
+        initialTotalQty > 0 && (initialSubtotal - expectedAuto).abs() > 0.009;
+    double localManualAmount = initialSubtotal;
+
+    final baseQtyController = TextEditingController(
+      text: localBaseQty > 0 ? localBaseQty.toString() : '',
     );
     final amountController = TextEditingController(
-      text: localSubtotal > 0 ? localSubtotal.toStringAsFixed(2) : '',
+      text: initialSubtotal > 0 ? initialSubtotal.toStringAsFixed(2) : '',
     );
-
-    void syncQtyField() {
-      qtyController.text = localQty <= 0 ? '' : localQty.toString();
-      qtyController.selection = TextSelection.fromPosition(
-        TextPosition(offset: qtyController.text.length),
-      );
-    }
-
-    void syncAmountField() {
-      amountController.text =
-          localSubtotal <= 0 ? '' : localSubtotal.toStringAsFixed(2);
-      amountController.selection = TextSelection.fromPosition(
-        TextPosition(offset: amountController.text.length),
-      );
-    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1196,76 +1210,99 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            // Derived values — recomputed on every rebuild
+            int presetQty() => computePresetQty(localPresetCounts);
+            double presetPrice() => computePresetPrice(localPresetCounts);
+            int totalQty() => localBaseQty + presetQty();
 
-            final quickSaleQuantities = sellingOptions
-                .map((option) => option.baseQuantity ?? 0)
-                .where((qty) => qty > 0)
-                .toSet();
-            final visibleConversions = vm
-                .unitConversionsFor(product)
-                .where((conversion) => !quickSaleQuantities.contains(conversion.baseQuantity))
-                .take(4)
-                .toList();
-
-            void syncAutomaticPricing() {
-              localSubtotal = vm.subtotalForQuantity(product, localQty);
-              localAppliedCounts
-                ..clear()
-                ..addAll(vm.appliedOptionCountsForQuantity(product, localQty));
-              syncAmountField();
+            // Smart breakdown: try to fill localBaseQty with preset prices
+            // e.g. qty=3 with preset "3 pcs=₱5" → prices as ₱5, not 3×₱2
+            List<({String label, double total})> smartBaseBreakdown() {
+              int remaining = localBaseQty;
+              final result = <({String label, double total})>[];
+              for (final preset in sellingOptions) {
+                final pqty = preset.baseQuantity ?? 0;
+                if (pqty <= 0 || remaining < pqty) continue;
+                final times = remaining ~/ pqty;
+                result.add((
+                  label: '${preset.label} \u00d7$times',
+                  total: preset.price * times,
+                ));
+                remaining -= times * pqty;
+              }
+              if (remaining > 0 && hasDefaultUnitPrice) {
+                result.add((
+                  label: '$remaining ${product.baseUnit} \u00d7 ${currencyFormatter.format(displayedUnitPrice)}',
+                  total: remaining * displayedUnitPrice,
+                ));
+              }
+              return result;
             }
 
-            void setManualQty(int qty) {
-              final clampedQty = qty.clamp(0, product.quantity);
-              setSheetState(() {
-                localQty = clampedQty;
-                if (localQty <= 0) {
-                  localSubtotal = 0;
-                  localAppliedCounts.clear();
-                  syncQtyField();
-                  syncAmountField();
-                  return;
-                }
+            double autoSubtotal() {
+              final baseTotal = smartBaseBreakdown().fold(0.0, (s, e) => s + e.total);
+              return baseTotal + presetPrice();
+            }
 
-                if (isManualPricing) {
-                  localAppliedCounts.clear();
+            double finalSubtotal() =>
+                isManualPricing ? localManualAmount : autoSubtotal();
+
+            final visibleConversions = sellingOptions.isEmpty
+                ? vm.unitConversionsFor(product).take(4).toList()
+                : [];
+
+            void syncBaseQtyField() {
+              baseQtyController.text =
+                  localBaseQty <= 0 ? '' : localBaseQty.toString();
+              baseQtyController.selection = TextSelection.fromPosition(
+                TextPosition(offset: baseQtyController.text.length),
+              );
+            }
+
+            void syncAmountField() {
+              final s = finalSubtotal();
+              amountController.text =
+                  s <= 0 ? '' : s.toStringAsFixed(2);
+              amountController.selection = TextSelection.fromPosition(
+                TextPosition(offset: amountController.text.length),
+              );
+            }
+
+            void setBaseQty(int qty) {
+              final max = (product.quantity - presetQty()).clamp(0, product.quantity);
+              setSheetState(() {
+                localBaseQty = qty.clamp(0, max);
+                if (!isManualPricing) syncAmountField();
+                syncBaseQtyField();
+              });
+            }
+
+            void addPreset(ProductSellingOption option) {
+              if (totalQty() + (option.baseQuantity ?? 0) > product.quantity) {
+                return;
+              }
+              setSheetState(() {
+                localPresetCounts[option.label] =
+                    (localPresetCounts[option.label] ?? 0) + 1;
+                if (!isManualPricing) syncAmountField();
+              });
+            }
+
+            void removePreset(ProductSellingOption option) {
+              final count = localPresetCounts[option.label] ?? 0;
+              if (count <= 0) return;
+              setSheetState(() {
+                if (count == 1) {
+                  localPresetCounts.remove(option.label);
                 } else {
-                  syncAutomaticPricing();
+                  localPresetCounts[option.label] = count - 1;
                 }
-                syncQtyField();
+                if (!isManualPricing) syncAmountField();
               });
             }
 
-            void addOption(ProductSellingOption option) {
-              final baseQty = option.baseQuantity ?? 0;
-              if (baseQty <= 0) return;
-              final newQty = localQty + baseQty;
-              if (newQty > product.quantity) return;
-              setSheetState(() {
-                localQty = newQty;
-                localSubtotal += option.price;
-                localAppliedCounts[option.label] =
-                    (localAppliedCounts[option.label] ?? 0) + 1;
-              });
-            }
-
-            void removeOption(ProductSellingOption option) {
-              final baseQty = option.baseQuantity ?? 0;
-              final count = localAppliedCounts[option.label] ?? 0;
-              if (count <= 0 || baseQty <= 0) return;
-              setSheetState(() {
-                localQty = (localQty - baseQty).clamp(0, product.quantity);
-                localSubtotal =
-                    (localSubtotal - option.price).clamp(0, double.infinity);
-                final newCount = count - 1;
-                if (newCount <= 0) {
-                  localAppliedCounts.remove(option.label);
-                } else {
-                  localAppliedCounts[option.label] = newCount;
-                }
-              });
-            }
-
+            final hasActivity = totalQty() > 0 ||
+                (isManualPricing && localManualAmount > 0);
 
             return SafeArea(
               top: false,
@@ -1299,6 +1336,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Drag handle
                       Center(
                         child: Container(
                           width: _r(context, 46),
@@ -1310,6 +1348,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ),
                       ),
                       SizedBox(height: _r(context, 16)),
+
+                      // Product header
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1354,7 +1394,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                             Text(
                                               hasDefaultUnitPrice
                                                   ? '${currencyFormatter.format(displayedUnitPrice)} / ${product.baseUnit}'
-                                                  : 'Manual price',
+                                                  : 'No default price',
                                               style: TextStyle(
                                                 fontSize: _r(context, 14),
                                                 fontWeight: FontWeight.w800,
@@ -1364,97 +1404,68 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                           ],
                                         ),
                                       ),
-                                      if (sellingOptions.isEmpty && manualPriceAvailable)
-                                        Padding(
-                                          padding:
-                                              EdgeInsets.only(left: _r(context, 8)),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              setSheetState(() {
-                                                isManualPricing =
-                                                    !isManualPricing;
-                                                if (!isManualPricing) {
-                                                  syncAutomaticPricing();
-                                                } else {
-                                                  localAppliedCounts.clear();
-                                                  syncAmountField();
-                                                }
-                                              });
-                                            },
-                                            child: AnimatedContainer(
-                                              duration: const Duration(
-                                                milliseconds: 180,
-                                              ),
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: _r(context, 12),
-                                                vertical: _r(context, 9),
-                                              ),
-                                              decoration: BoxDecoration(
+                                      // Manual price toggle — always visible
+                                      Padding(
+                                        padding: EdgeInsets.only(left: _r(context, 8)),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setSheetState(() {
+                                              isManualPricing = !isManualPricing;
+                                              if (!isManualPricing) {
+                                                syncAmountField();
+                                              }
+                                            });
+                                          },
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 180),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: _r(context, 12),
+                                              vertical: _r(context, 9),
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isManualPricing
+                                                  ? const Color(0xFF255FD5)
+                                                  : Colors.white,
+                                              borderRadius: BorderRadius.circular(_r(context, 999)),
+                                              border: Border.all(
                                                 color: isManualPricing
                                                     ? const Color(0xFF255FD5)
-                                                    : Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                  _r(context, 999),
-                                                ),
-                                                border: Border.all(
-                                                  color: isManualPricing
-                                                      ? const Color(0xFF255FD5)
-                                                      : _cardBorder,
-                                                ),
-                                                boxShadow: isManualPricing
-                                                    ? [
-                                                        BoxShadow(
-                                                          color:
-                                                              const Color(
-                                                                0xFF255FD5,
-                                                              ).withOpacity(
-                                                                0.18,
-                                                              ),
-                                                          blurRadius:
-                                                              _r(context, 10),
-                                                          offset: Offset(
-                                                            0,
-                                                            _r(context, 4),
-                                                          ),
-                                                        ),
-                                                      ]
-                                                    : null,
+                                                    : _cardBorder,
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    isManualPricing
-                                                        ? Icons.edit_off_outlined
-                                                        : Icons.edit_outlined,
-                                                    size: _r(context, 16),
-                                                    color: isManualPricing
-                                                        ? Colors.white
-                                                        : _titleColor,
+                                              boxShadow: isManualPricing
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: const Color(0xFF255FD5).withOpacity(0.18),
+                                                        blurRadius: _r(context, 10),
+                                                        offset: Offset(0, _r(context, 4)),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  isManualPricing
+                                                      ? Icons.edit_off_outlined
+                                                      : Icons.edit_outlined,
+                                                  size: _r(context, 16),
+                                                  color: isManualPricing ? Colors.white : _titleColor,
+                                                ),
+                                                SizedBox(width: _r(context, 6)),
+                                                Text(
+                                                  isManualPricing ? 'Auto Price' : 'Manual Price',
+                                                  style: TextStyle(
+                                                    fontSize: _r(context, 12),
+                                                    fontWeight: FontWeight.w800,
+                                                    color: isManualPricing ? Colors.white : _titleColor,
                                                   ),
-                                                  SizedBox(
-                                                    width: _r(context, 6),
-                                                  ),
-                                                  Text(
-                                                    isManualPricing
-                                                        ? 'Auto Price'
-                                                        : 'Manual Price',
-                                                    style: TextStyle(
-                                                      fontSize:
-                                                          _r(context, 12),
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      color: isManualPricing
-                                                          ? Colors.white
-                                                          : _titleColor,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
+                                      ),
                                     ],
                                   ),
                                   SizedBox(height: _r(context, 8)),
@@ -1466,136 +1477,14 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ],
                       ),
                       SizedBox(height: _r(context, 18)),
-                      if (sellingOptions.isNotEmpty) ...[
-                        _sheetSectionLabel('How to sell?'),
-                        SizedBox(height: _r(context, 10)),
-                        ...sellingOptions.map((option) {
-                          final count =
-                              localAppliedCounts[option.label] ?? 0;
-                          final canAdd =
-                              (localQty + (option.baseQuantity ?? 0)) <=
-                                  product.quantity;
-                          return Container(
-                            margin: EdgeInsets.only(bottom: _r(context, 8)),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: _r(context, 16),
-                              vertical: _r(context, 14),
-                            ),
-                            decoration: BoxDecoration(
-                              color: count > 0
-                                  ? const Color(0xFFEEF4FF)
-                                  : Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(_r(context, 16)),
-                              border: Border.all(
-                                color: count > 0
-                                    ? const Color(0xFF2D5BE3)
-                                    : _cardBorder,
-                                width: count > 0 ? 1.5 : 1.0,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        option.label,
-                                        style: TextStyle(
-                                          fontSize: _r(context, 16),
-                                          fontWeight: FontWeight.w800,
-                                          color: _titleColor,
-                                        ),
-                                      ),
-                                      SizedBox(height: _r(context, 2)),
-                                      Text(
-                                        currencyFormatter.format(option.price),
-                                        style: TextStyle(
-                                          fontSize: _r(context, 14),
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF255FD5),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                _qtyStepperButton(
-                                  icon: Icons.remove,
-                                  enabled: count > 0,
-                                  onTap: () => removeOption(option),
-                                ),
-                                SizedBox(
-                                  width: _r(context, 44),
-                                  child: Text(
-                                    '$count',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: _r(context, 20),
-                                      fontWeight: FontWeight.w900,
-                                      color: _titleColor,
-                                    ),
-                                  ),
-                                ),
-                                _qtyStepperButton(
-                                  icon: Icons.add,
-                                  enabled: canAdd,
-                                  onTap: () => addOption(option),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                        SizedBox(height: _r(context, 14)),
-                      ],
-                      if (sellingOptions.isEmpty && manualPriceAvailable) ...[
-                        if (isManualPricing) ...[
-                          _sheetSectionLabel('Manual price'),
-                          SizedBox(height: _r(context, 8)),
-                        ],
-                        if (isManualPricing) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFF),
-                              borderRadius: BorderRadius.circular(_r(context, 16)),
-                              border: Border.all(color: _cardBorder),
-                            ),
-                            child: TextField(
-                              controller: amountController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: _r(context, 14),
-                              ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                                LengthLimitingTextInputFormatter(8),
-                              ],
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                hintText: 'Enter total amount',
-                              ),
-                              onChanged: (value) {
-                                final amount =
-                                    double.tryParse(value.replaceAll(',', '').trim()) ??
-                                        0;
-                                setSheetState(() {
-                                  localSubtotal = amount <= 0 ? 0 : amount;
-                                  localAppliedCounts.clear();
-                                });
-                              },
-                            ),
-                          ),
-                          SizedBox(height: _r(context, 8)),
-                        ],
-                      ],
-                      if (sellingOptions.isEmpty) ...[
-                        _sheetSectionLabel('Quantity'),
+
+                      // Individual qty stepper (shown when product has a unit price OR no presets)
+                      if (hasDefaultUnitPrice || sellingOptions.isEmpty) ...[
+                        _sheetSectionLabel(
+                          sellingOptions.isNotEmpty
+                              ? 'Individual ${product.baseUnit}'
+                              : 'Quantity',
+                        ),
                         SizedBox(height: _r(context, 8)),
                         Container(
                           width: double.infinity,
@@ -1612,25 +1501,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             children: [
                               _qtyStepperButton(
                                 icon: Icons.remove,
-                                enabled: localQty > 0,
-                                onTap: () => setManualQty(localQty - 1),
+                                enabled: localBaseQty > 0,
+                                onTap: () => setBaseQty(localBaseQty - 1),
                               ),
                               Expanded(
                                 child: Container(
-                                  margin: EdgeInsets.symmetric(
-                                    horizontal: _r(context, 6),
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: _r(context, 8),
-                                  ),
+                                  margin: EdgeInsets.symmetric(horizontal: _r(context, 6)),
+                                  padding: EdgeInsets.symmetric(horizontal: _r(context, 8)),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius:
-                                        BorderRadius.circular(_r(context, 16)),
+                                    borderRadius: BorderRadius.circular(_r(context, 16)),
                                     border: Border.all(color: _cardBorder),
                                   ),
                                   child: TextField(
-                                    controller: qtyController,
+                                    controller: baseQtyController,
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
@@ -1652,24 +1536,21 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                       ),
                                       isDense: true,
                                     ),
-                                    onChanged: (value) {
-                                      final parsed =
-                                          int.tryParse(value.trim()) ?? 0;
-                                      setManualQty(parsed);
-                                    },
+                                    onChanged: (value) =>
+                                        setBaseQty(int.tryParse(value.trim()) ?? 0),
                                   ),
                                 ),
                               ),
                               _qtyStepperButton(
                                 icon: Icons.add,
-                                enabled: localQty < product.quantity,
-                                onTap: () => setManualQty(localQty + 1),
+                                enabled: totalQty() < product.quantity,
+                                onTap: () => setBaseQty(localBaseQty + 1),
                               ),
                             ],
                           ),
                         ),
-                        if (manualPriceAvailable &&
-                            visibleConversions.isNotEmpty) ...[
+                        // Conversion shortcuts (only when no presets)
+                        if (sellingOptions.isEmpty && visibleConversions.isNotEmpty) ...[
                           SizedBox(height: _r(context, 10)),
                           Wrap(
                             spacing: _r(context, 8),
@@ -1679,16 +1560,178 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                 label: Text(
                                   '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
                                 ),
-                                onPressed: () => setManualQty(
-                                  (localQty + conversion.baseQuantity)
-                                      .clamp(0, product.quantity),
+                                onPressed: () => setBaseQty(
+                                  (localBaseQty + conversion.baseQuantity)
+                                      .clamp(0, product.quantity).toInt(),
                                 ),
                               );
                             }).toList(),
                           ),
                         ],
                       ],
+
+                      // Preset chips — each has its own fixed price, tap to add/remove
+                      if (sellingOptions.isNotEmpty) ...[
+                        SizedBox(height: _r(context, 14)),
+                        _sheetSectionLabel('Quick presets'),
+                        SizedBox(height: _r(context, 8)),
+                        Wrap(
+                          spacing: _r(context, 8),
+                          runSpacing: _r(context, 8),
+                          children: sellingOptions.map((option) {
+                            final count = localPresetCounts[option.label] ?? 0;
+                            final canAdd =
+                                totalQty() + (option.baseQuantity ?? 0) <=
+                                    product.quantity;
+                            return GestureDetector(
+                              onTap: canAdd ? () => addPreset(option) : null,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: _r(context, 14),
+                                  vertical: _r(context, 10),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: count > 0
+                                      ? const Color(0xFFEEF4FF)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(_r(context, 14)),
+                                  border: Border.all(
+                                    color: count > 0
+                                        ? const Color(0xFF2D5BE3)
+                                        : _cardBorder,
+                                    width: count > 0 ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          option.label,
+                                          style: TextStyle(
+                                            fontSize: _r(context, 14),
+                                            fontWeight: FontWeight.w800,
+                                            color: count > 0
+                                                ? _titleColor
+                                                : _subtitleColor,
+                                          ),
+                                        ),
+                                        Text(
+                                          currencyFormatter.format(option.price),
+                                          style: TextStyle(
+                                            fontSize: _r(context, 13),
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF255FD5),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (count > 0) ...[
+                                      SizedBox(width: _r(context, 8)),
+                                      GestureDetector(
+                                        onTap: () => removePreset(option),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: _r(context, 6),
+                                            vertical: _r(context, 2),
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2D5BE3),
+                                            borderRadius: BorderRadius.circular(_r(context, 99)),
+                                          ),
+                                          child: Text(
+                                            '\u00d7$count',
+                                            style: TextStyle(
+                                              fontSize: _r(context, 11),
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+
+                      // Manual price field
+                      if (isManualPricing) ...[
+                        SizedBox(height: _r(context, 14)),
+                        _sheetSectionLabel('Total amount'),
+                        SizedBox(height: _r(context, 8)),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(horizontal: _r(context, 10)),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFF),
+                            borderRadius: BorderRadius.circular(_r(context, 16)),
+                            border: Border.all(color: _cardBorder),
+                          ),
+                          child: TextField(
+                            controller: amountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: _r(context, 14),
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                              LengthLimitingTextInputFormatter(8),
+                            ],
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Enter total amount',
+                            ),
+                            onChanged: (value) {
+                              final amount =
+                                  double.tryParse(value.replaceAll(',', '').trim()) ?? 0;
+                              setSheetState(() {
+                                localManualAmount = amount <= 0 ? 0 : amount;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+
+                      // Breakdown badges (auto mode only)
+                      if (!isManualPricing &&
+                          (localBaseQty > 0 || localPresetCounts.isNotEmpty)) ...[
+                        SizedBox(height: _r(context, 10)),
+                        Wrap(
+                          spacing: _r(context, 6),
+                          runSpacing: _r(context, 6),
+                          children: [
+                            // Smart breakdown of individual qty (uses preset prices where possible)
+                            ...smartBaseBreakdown().map((e) =>
+                              _sellBreakdownBadge(
+                                '${e.label} = ${currencyFormatter.format(e.total)}',
+                              ),
+                            ),
+                            // Explicitly tapped preset chips
+                            ...localPresetCounts.entries.map((e) {
+                              final idx = sellingOptions.indexWhere((o) => o.label == e.key);
+                              if (idx < 0) return const SizedBox.shrink();
+                              final opt = sellingOptions[idx];
+                              return _sellBreakdownBadge(
+                                '${e.key} \u00d7${e.value} = ${currencyFormatter.format(opt.price * e.value)}',
+                              );
+                            }),
+                          ],
+                        ),
+                      ],
+
                       SizedBox(height: _r(context, 18)),
+
+                      // Subtotal row
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.all(_r(context, 14)),
@@ -1696,10 +1739,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           gradient: const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFFF8FBFF),
-                              Color(0xFFEFF4FF),
-                            ],
+                            colors: [Color(0xFFF8FBFF), Color(0xFFEFF4FF)],
                           ),
                           borderRadius: BorderRadius.circular(_r(context, 18)),
                           border: Border.all(color: _cardBorder),
@@ -1707,16 +1747,30 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Subtotal',
-                              style: TextStyle(
-                                fontSize: _r(context, 14),
-                                fontWeight: FontWeight.w800,
-                                color: _subtitleColor,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Subtotal',
+                                  style: TextStyle(
+                                    fontSize: _r(context, 14),
+                                    fontWeight: FontWeight.w800,
+                                    color: _subtitleColor,
+                                  ),
+                                ),
+                                if (totalQty() > 0)
+                                  Text(
+                                    '${totalQty()} ${product.baseUnit} total',
+                                    style: TextStyle(
+                                      fontSize: _r(context, 11),
+                                      fontWeight: FontWeight.w600,
+                                      color: _subtitleColor,
+                                    ),
+                                  ),
+                              ],
                             ),
                             Text(
-                              currencyFormatter.format(localSubtotal),
+                              currencyFormatter.format(finalSubtotal()),
                               style: TextStyle(
                                 fontSize: _r(context, 18),
                                 fontWeight: FontWeight.w900,
@@ -1727,6 +1781,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ),
                       ),
                       SizedBox(height: _r(context, 16)),
+
+                      // Action buttons
                       Row(
                         children: [
                           Expanded(
@@ -1748,16 +1804,18 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           SizedBox(width: _r(context, 10)),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: () {
-                                FocusScope.of(sheetCtx).unfocus();
-                                vm.setProductSelection(
-                                  product,
-                                  qty: localQty,
-                                  subtotal: localSubtotal,
-                                  appliedOptionCounts: localAppliedCounts,
-                                );
-                                Navigator.pop(sheetCtx);
-                              },
+                              onPressed: hasActivity
+                                  ? () {
+                                      FocusScope.of(sheetCtx).unfocus();
+                                      vm.setProductSelection(
+                                        product,
+                                        qty: totalQty(),
+                                        subtotal: finalSubtotal(),
+                                        appliedOptionCounts: localPresetCounts,
+                                      );
+                                      Navigator.pop(sheetCtx);
+                                    }
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 minimumSize: Size.fromHeight(_r(context, 52)),
                                 backgroundColor: const Color(0xFF255FD5),
@@ -1780,7 +1838,27 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         );
       },
     );
+  }
 
+  Widget _sellBreakdownBadge(String text) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: _r(context, 10),
+        vertical: _r(context, 4),
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F0FE),
+        borderRadius: BorderRadius.circular(_r(context, 99)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: _r(context, 12),
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF255FD5),
+        ),
+      ),
+    );
   }
 
   Widget _sheetSectionLabel(String label) {

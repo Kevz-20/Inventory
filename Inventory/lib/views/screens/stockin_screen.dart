@@ -206,6 +206,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final suggestedQty = _suggestedBaseQuantity(vm, unit);
     if (suggestedQty != null) {
       vm.conversionQuantityController.text = suggestedQty;
+    } else {
+      vm.conversionQuantityController.clear();
     }
   }
 
@@ -1439,14 +1441,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               'piece',
               Icons.tag_rounded,
               'Per Piece',
-              'candy, itlog,\nsigarilyo',
+              'itlog, sibuyas,\nbawang, lamas',
             ),
             gap,
             chip(
               'weight',
               Icons.scale_outlined,
               'Per Kilo',
-              'sibuyas, asin,\nasukal',
+              'asin, asukal,\nbigas',
             ),
           ],
         ),
@@ -3115,6 +3117,26 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return normalized == 'half' || normalized == 'tungaon';
   }
 
+  bool _isPieceBaseUnit(StockInViewModel vm) {
+    final normalized = vm.baseUnitLabel.trim().toLowerCase();
+    return normalized == 'pcs' ||
+        normalized == 'pc' ||
+        normalized == 'piece' ||
+        normalized == 'pieces';
+  }
+
+  List<({String label, int quantity})> _pieceQuickSaleSuggestions(
+    StockInViewModel vm,
+  ) {
+    if (!_isPieceBaseUnit(vm)) return const [];
+    return const [
+      (label: '1 kilo', quantity: 0),
+      (label: '3 pcs', quantity: 3),
+      (label: '6 pcs', quantity: 6),
+      (label: '1 dozen', quantity: 12),
+    ];
+  }
+
   List<({String label, int quantity})> _liquidQuickSaleSuggestions(
     StockInViewModel vm,
   ) {
@@ -3184,6 +3206,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                   final suggestedQty = _suggestedBaseQuantity(vm, text);
                   if (suggestedQty != null) {
                     vm.conversionQuantityController.text = suggestedQty;
+                  } else {
+                    vm.conversionQuantityController.clear();
                   }
                 }),
                 scale: scale,
@@ -3566,9 +3590,21 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }) {
     final isLiquid = _isLiquidBaseUnit(vm);
     final isPack = _isPackBaseUnit(vm);
+    final isPiece = _isPieceBaseUnit(vm);
     final liquidSuggestions = _liquidQuickSaleSuggestions(vm);
     final packSuggestions = _packQuickSaleSuggestions(vm);
-    final suggestions = isPack ? packSuggestions : liquidSuggestions;
+    final pieceSuggestions = _pieceQuickSaleSuggestions(vm);
+    final suggestions = isPack
+        ? packSuggestions
+        : isLiquid
+            ? liquidSuggestions
+            : isPiece
+                ? pieceSuggestions
+                : const <({String label, int quantity})>[];
+    final currentLabel =
+        vm.sellingOptionLabelController.text.trim().toLowerCase();
+    final isKiloLabel =
+        currentLabel == '1 kilo' || currentLabel == 'kilo' || currentLabel == 'kg';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3577,7 +3613,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ? 'Tap a preset to auto-fill (Tungaon, 1 Sachet, 6 pcs, 1 Dozen), or type your own.'
               : isLiquid
                   ? 'Optional only. Add common liquid sales like 1 flat/lapad, 1/2 liter, or 1 liter so the cashier can tap faster later.'
-                  : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
+                  : isPiece
+                      ? 'Add quick sale buttons like "3 pcs" or "1 dozen". For products also sold by kilo (like sibuyas), tap "1 kilo" and enter how many pieces equal 1 kilo.'
+                      : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
           style: TextStyle(
             fontSize: (valueFs - 1).clamp(12, 15),
             fontWeight: FontWeight.w600,
@@ -3594,8 +3632,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                 label: Text(suggestion.label),
                 onPressed: () {
                   vm.sellingOptionLabelController.text = suggestion.label;
-                  vm.sellingOptionQuantityController.text =
-                      suggestion.quantity.toString();
+                  if (suggestion.quantity > 0) {
+                    vm.sellingOptionQuantityController.text =
+                        suggestion.quantity.toString();
+                  } else {
+                    vm.sellingOptionQuantityController.clear();
+                  }
                   setState(() {});
                 },
               );
@@ -3608,6 +3650,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           controller: vm.sellingOptionLabelController,
           showError: false,
           icon: Icons.local_offer_outlined,
+          onChanged: (_) => setState(() {}),
           scale: scale,
           height: (58 * scale).clamp(54, 66),
           radius: radius,
@@ -3618,7 +3661,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           children: [
             Expanded(
               child: _inputNumberField(
-                label: 'How many ${_quantityUnitLabel(vm)} to deduct?',
+                label: isKiloLabel
+                    ? 'Pieces per kilo (estimate)'
+                    : 'How many ${_quantityUnitLabel(vm)} to deduct?',
                 controller: vm.sellingOptionQuantityController,
                 showError: false,
                 icon: Icons.inventory_2_outlined,
@@ -3676,9 +3721,16 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         : option.price.toStringAsFixed(2);
 
     return Chip(
-      label: Text(
-        '${option.label} · $qty ${vm.baseUnitLabel} · ₱$priceText',
-      ),
+      label: Text(() {
+        final labelLower = option.label.trim().toLowerCase();
+        final unitLower = vm.baseUnitLabel.trim().toLowerCase();
+        final labelShowsQty = labelLower.endsWith(unitLower) ||
+            labelLower.endsWith('pcs') ||
+            labelLower.endsWith('pieces');
+        return labelShowsQty
+            ? '${option.label}  \u2013  \u20B1$priceText'
+            : '${option.label}  \u2013  $qty ${vm.baseUnitLabel}  \u2013  \u20B1$priceText';
+      }()),
       onDeleted: () => vm.removeSellingOption(option),
       deleteIcon: const Icon(Icons.close_rounded, size: 18),
       backgroundColor: Colors.white,
@@ -3929,32 +3981,38 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    String text = newValue.text.replaceAll(',', '');
-    if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return oldValue;
-    if (text.isEmpty) return const TextEditingValue();
+    final raw = newValue.text.replaceAll(',', '');
+    if (!RegExp(r'^\d*\.?\d*$').hasMatch(raw)) return oldValue;
+    if (raw.isEmpty) return const TextEditingValue();
 
-    final parts = text.split('.');
+    // Count non-comma chars before cursor to restore cursor position
+    final cursorPos = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    int digitsBeforeCursor = 0;
+    for (int i = 0; i < cursorPos; i++) {
+      if (newValue.text[i] != ',') digitsBeforeCursor++;
+    }
+
+    final parts = raw.split('.');
     final intPart = parts[0];
     final decPart = parts.length > 1 ? '.${parts[1]}' : '';
 
-    String formattedInt = '';
-    if (intPart.isNotEmpty) {
-      final chars = intPart.split('').reversed.toList();
-      final chunks = <String>[];
-      for (var i = 0; i < chars.length; i += 3) {
-        chunks.add(chars.skip(i).take(3).join());
-      }
-      formattedInt = chunks
-          .map((e) => e.split('').reversed.join())
-          .toList()
-          .reversed
-          .join(',');
-    }
+    final result = '${_formatIntegerWithComma(intPart)}$decPart';
 
-    final result = '$formattedInt$decPart';
+    // Find new cursor offset by counting digits in formatted result
+    int newOffset = result.length;
+    int digitsSeen = 0;
+    for (int i = 0; i < result.length; i++) {
+      if (result[i] != ',') digitsSeen++;
+      if (digitsSeen == digitsBeforeCursor) {
+        newOffset = i + 1;
+        break;
+      }
+    }
+    if (digitsBeforeCursor == 0) newOffset = 0;
+
     return TextEditingValue(
       text: result,
-      selection: TextSelection.collapsed(offset: result.length),
+      selection: TextSelection.collapsed(offset: newOffset),
     );
   }
 }
@@ -3971,6 +4029,13 @@ class DecimalThousandsSeparatorInputFormatter extends TextInputFormatter {
     if (raw.isEmpty) return const TextEditingValue();
     if (!_amountPattern.hasMatch(raw)) return oldValue;
 
+    // Count non-comma chars before cursor to restore cursor position
+    final cursorPos = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    int digitsBeforeCursor = 0;
+    for (int i = 0; i < cursorPos; i++) {
+      if (newValue.text[i] != ',') digitsBeforeCursor++;
+    }
+
     final hasDot = raw.contains('.');
     final parts = raw.split('.');
     final intPartRaw = parts.first;
@@ -3979,9 +4044,21 @@ class DecimalThousandsSeparatorInputFormatter extends TextInputFormatter {
     final formattedInt = _formatIntegerWithComma(intPartRaw);
     final formatted = hasDot ? '$formattedInt.$fracPart' : formattedInt;
 
+    // Find new cursor offset by counting digits in formatted result
+    int newOffset = formatted.length;
+    int digitsSeen = 0;
+    for (int i = 0; i < formatted.length; i++) {
+      if (formatted[i] != ',') digitsSeen++;
+      if (digitsSeen == digitsBeforeCursor) {
+        newOffset = i + 1;
+        break;
+      }
+    }
+    if (digitsBeforeCursor == 0) newOffset = 0;
+
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(offset: newOffset),
     );
   }
 }

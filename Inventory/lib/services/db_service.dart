@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 19,
+      version: 20,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -439,6 +439,22 @@ class DBService {
           ''');
         }
 
+        if (oldVersion < 20) {
+          await addColumnIfMissing('product', 'updated_by', 'TEXT');
+          // Split "Pack / Sachet" into separate units
+          await db.rawInsert(
+            'INSERT OR IGNORE INTO base_unit_choice(name, created_at) VALUES(?, ?)',
+            ['Sachet', DateTime.now().toIso8601String()],
+          );
+          await db.rawInsert(
+            'INSERT OR IGNORE INTO base_unit_choice(name, created_at) VALUES(?, ?)',
+            ['Pack', DateTime.now().toIso8601String()],
+          );
+          await db.rawDelete(
+            "DELETE FROM base_unit_choice WHERE name = 'Pack / Sachet'",
+          );
+        }
+
         if (oldVersion < 18) {
           await db.execute('''
             CREATE TABLE IF NOT EXISTS base_unit_choice (
@@ -452,7 +468,8 @@ class DBService {
           const defaultBaseUnits = [
             'pcs',
             'Piece / pcs',
-            'Pack / Sachet',
+            'Sachet',
+            'Pack',
             'Gram / Kilogram',
             'mL',
           ];
@@ -680,6 +697,7 @@ class DBService {
         image TEXT,
         created_at TEXT,
         updated_at TEXT,
+        updated_by TEXT,
         server_id TEXT,
         sync_status TEXT NOT NULL DEFAULT 'pending',
         last_synced_at TEXT,
