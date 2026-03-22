@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/product_model.dart';
 import '../../models/product_selling_option.dart';
 import '../../models/product_unit_conversion.dart';
+import '../../providers/restock_product_provider.dart';
 import '../../repositories/account_repository.dart';
 import '../../repositories/product_category_repository.dart';
 import '../../repositories/product_repository.dart';
@@ -12,14 +14,14 @@ import '../../services/db_service.dart';
 
 import '../widgets/primary_footer_nav.dart';
 
-class ManageInventoryScreen extends StatefulWidget {
+class ManageInventoryScreen extends ConsumerStatefulWidget {
   const ManageInventoryScreen({super.key});
 
   @override
-  State<ManageInventoryScreen> createState() => _ManageInventoryScreenState();
+  ConsumerState<ManageInventoryScreen> createState() => _ManageInventoryScreenState();
 }
 
-class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
+class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
   static const Color _pageBg = Color(0xFFF0F4FF);
   static const Color _cardBg = Colors.white;
   static const Color _border = Color(0xFFCDD5EE);
@@ -1308,6 +1310,27 @@ class _ManageInventoryScreenState extends State<ManageInventoryScreen> {
                                           ),
                                         ),
                                         const SizedBox(height: 14),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            onPressed: () {
+                                              ref.read(restockProductProvider.notifier).state = product;
+                                              context.push('/stockin');
+                                            },
+                                            icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                                            label: const Text('Restock'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF00897B),
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(14),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
                                         Row(
                                           children: [
                                             Expanded(

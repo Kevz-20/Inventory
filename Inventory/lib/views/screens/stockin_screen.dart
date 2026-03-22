@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/app_colors.dart';
 import '../../models/product_selling_option.dart';
 import '../../models/product_unit_conversion.dart';
+import '../../providers/restock_product_provider.dart';
 import '../../view_models/stock_in_view_model.dart';
 
 
@@ -30,6 +31,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   late final ScrollController _scrollController;
   bool _showUnitOptions = false;
   bool _showQuickOptions = false;
+  bool _restockPopulated = false;
 
   String _currentStockType(StockInViewModel vm) {
     final base = vm.baseUnitLabel.trim().toLowerCase();
@@ -230,6 +232,25 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
     if (!vm.isInitialized) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // Restock flow: populate once when VM is ready
+    final restockProduct = ref.read(restockProductProvider);
+    if (restockProduct != null && !_restockPopulated) {
+      _restockPopulated = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Clear provider after frame — never modify providers during build
+        ref.read(restockProductProvider.notifier).state = null;
+        await vm.populateFromSelectedProduct(restockProduct);
+        if (!mounted) return;
+        setState(() {
+          _showUnitOptions = vm.useAdvancedUnitSetup || vm.unitConversions.isNotEmpty;
+          _showQuickOptions = vm.sellingOptions.isNotEmpty;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) vm.autocompleteFieldController?.text = restockProduct.name;
+        });
+      });
     }
 
     return LayoutBuilder(
