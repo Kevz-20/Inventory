@@ -30,9 +30,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   static const Color _accentBlue = Color(0xFF2D5BE3);
   late final ScrollController _scrollController;
   bool _showUnitOptions = false;
-  bool _showQuickOptions = false;
   bool _restockPopulated = false;
-  bool _showCostDetails = false;
 
   String _currentStockType(StockInViewModel vm) {
     final base = vm.baseUnitLabel.trim().toLowerCase();
@@ -84,6 +82,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return 'PHP ${value.toStringAsFixed(4)}';
   }
 
+  // ignore: unused_element
   String _costPerUnitLabel(StockInViewModel vm) {
     final unit = vm.baseUnitLabel.trim();
     if (unit.isEmpty) return 'Cost per unit';
@@ -170,24 +169,43 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   ) {
     final normalizedUnit = unit.trim().toLowerCase();
     final base = vm.baseUnitLabel.trim().toLowerCase();
+    // Returns value in HUMAN UNITS (kilo/liter/pcs) — UI multiplies by humanFactor before storing
 
-    if (normalizedUnit == 'kilo' &&
-        (base == 'gram' || base == 'grams' || base == 'g')) {
-      return '1000';
+    if (base == 'gram' || base == 'grams' || base == 'g') {
+      switch (normalizedUnit) {
+        case 'kilo': case 'kg': case 'kilogram': return '1';
+        case 'sack': return '50';
+        case 'bag': return '0.5';
+        case 'pack': return '0.5';
+      }
     }
 
-    if (normalizedUnit == 'liter' &&
-        (base == 'ml' || base == 'milliliter' || base == 'millilitre')) {
-      return '1000';
+    if (base == 'ml' || base == 'milliliter' || base == 'millilitre') {
+      switch (normalizedUnit) {
+        case 'liter': case 'litre': return '1';
+        case 'gallon': return '4';
+        case 'bottle': return '0.5';
+        case 'pack': return '0.5';
+      }
     }
 
-    if (normalizedUnit == 'gallon' &&
-        (base == 'ml' || base == 'milliliter' || base == 'millilitre')) {
-      return '4000';
+    if (base == 'pcs') {
+      switch (normalizedUnit) {
+        case 'dozen': return '12';
+        case 'tray': return '30';
+        case 'box': return '24';
+        case 'pack': return '12';
+        case 'case': return '144';
+      }
     }
 
-    if (normalizedUnit == 'dozen' && base == 'pcs') {
-      return '12';
+    if (base == 'half' || base == 'tungaon') {
+      switch (normalizedUnit) {
+        case 'sachet': return '1';
+        case 'box': return '24';
+        case 'dozen': return '12';
+        case 'case': return '100';
+      }
     }
 
     return null;
@@ -238,7 +256,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         if (!mounted) return;
         setState(() {
           _showUnitOptions = vm.useAdvancedUnitSetup || vm.unitConversions.isNotEmpty;
-          _showQuickOptions = vm.sellingOptions.isNotEmpty;
         });
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) vm.autocompleteFieldController?.text = restockProduct.name;
@@ -249,7 +266,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         _showUnitOptions = _showUnitOptions || vm.useAdvancedUnitSetup || vm.unitConversions.isNotEmpty;
-        _showQuickOptions = _showQuickOptions || vm.sellingOptions.isNotEmpty;
         final w = constraints.maxWidth;
 
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ same scaling pattern as your other pages
@@ -379,7 +395,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _cardLabel('Stock amounts', scale: scale),
+                          _cardLabel('Klase sa Produkto', scale: scale),
                           SizedBox(height: gap12),
                           _stockTypePresetRow(
                             vm,
@@ -545,9 +561,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             ),
                             SizedBox(height: gap12),
                             _advancedOptionRow(
-                              title: 'More sizes',
+                              title: 'Units & Prices',
                               description:
-                                  'Add bigger sizes for this item, like pack, tray, case, sack, or kilo.',
+                                  'Add sizes like pack, kilo, or tray — and optionally set a sell price for each.',
                               isOn: _showUnitOptions,
                               scale: scale,
                               onTap: () {
@@ -559,37 +575,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             ),
                             if (_showUnitOptions) ...[
                               SizedBox(height: gap12),
-                              _baseUnitPickerField(
-                                vm,
-                                scale: scale,
-                                radius: radius12,
-                                valueFs: valueFs,
-                              ),
-                              SizedBox(height: gap12),
                               _unitConversionSection(
-                                vm,
-                                scale: scale,
-                                radius: radius12,
-                                valueFs: valueFs,
-                                gap12: gap12,
-                              ),
-                            ],
-                            SizedBox(height: gap12),
-                            _advancedOptionRow(
-                              title: 'Quick sale presets',
-                              description:
-                                  'Save common sale shortcuts so checkout is faster later.',
-                              isOn: _showQuickOptions,
-                              scale: scale,
-                              onTap: () {
-                                setState(() {
-                                  _showQuickOptions = !_showQuickOptions;
-                                });
-                              },
-                            ),
-                            if (_showQuickOptions) ...[
-                              SizedBox(height: gap12),
-                              _sellingOptionsSection(
                                 vm,
                                 scale: scale,
                                 radius: radius12,
@@ -1356,43 +1342,18 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         ? vm.convertedPurchaseQuantity
         : int.tryParse(vm.quantityController.text.replaceAll(',', '').trim()) ?? 0;
     final hasValue = cost > 0 && qty > 0;
-    final perUnit = hasValue ? cost / qty : 0.0;
+    final perBaseUnit = hasValue ? cost / qty : 0.0;
 
-    final unitDisplay = vm.baseUnitLabel.trim();
-    final equivalentStock = hasValue
-        ? '${qty % 1 == 0 ? qty.toInt() : qty} $unitDisplay'
-        : '—';
-
-    final divider = Divider(height: 1, color: _cardBorder);
-
-    Widget previewRow(String label, String value) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: (8 * scale).clamp(6, 10)),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: (12.5 * scale).clamp(11.5, 14),
-                  fontWeight: FontWeight.w600,
-                  color: _subtitleColor,
-                ),
-              ),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: (13.5 * scale).clamp(12.5, 15),
-                fontWeight: FontWeight.w800,
-                color: _titleColor,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
+    final purchaseUnit = vm.useAdvancedUnitSetup
+        ? vm.purchaseUnitController.text.trim()
+        : '';
+    final purchaseFactor = purchaseUnit.isNotEmpty
+        ? vm.quantityFactorFor(purchaseUnit)
+        : 1;
+    final perUnit = perBaseUnit * (purchaseFactor > 1 ? purchaseFactor : 1);
+    final unitDisplay = (purchaseUnit.isNotEmpty && purchaseFactor > 1)
+        ? purchaseUnit
+        : vm.baseUnitLabel.trim();
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       width: double.infinity,
@@ -1412,7 +1373,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             children: [
               Expanded(
                 child: Text(
-                  _costPerUnitLabel(vm),
+                  'Cost per $unitDisplay',
                   style: TextStyle(
                     fontSize: (13.5 * scale).clamp(12.5, 15),
                     fontWeight: FontWeight.w700,
@@ -1430,26 +1391,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ),
             ],
           ),
-          SizedBox(height: (8 * scale).clamp(6, 10)),
-          GestureDetector(
-            onTap: () => setState(() => _showCostDetails = !_showCostDetails),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(
-                _showCostDetails ? 'Hide details' : 'Show details',
-                style: TextStyle(fontSize: (13 * scale).clamp(12, 14.5), fontWeight: FontWeight.w700, color: _accentBlue),
-              ),
-              Icon(
-                _showCostDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                color: _accentBlue, size: (18 * scale).clamp(16, 20),
-              ),
-            ]),
-          ),
-          if (_showCostDetails) ...[
-            divider,
-            previewRow('Smallest stock unit', unitDisplay.isEmpty ? '—' : unitDisplay),
-            divider,
-            previewRow('Equivalent stock', equivalentStock),
-          ],
         ],
       ),
     );
@@ -1536,15 +1477,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Paano mo ibinibilang ito?',
-          style: TextStyle(
-            fontSize: (13 * scale).clamp(12, 14.5),
-            fontWeight: FontWeight.w700,
-            color: _subtitleColor,
-          ),
-        ),
-        SizedBox(height: (8 * scale).clamp(6, 10)),
         Row(
           children: [
             chip(
@@ -1706,6 +1638,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _baseUnitPickerField(
     StockInViewModel vm, {
     required double scale,
@@ -1872,8 +1805,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final Map<String, double> suggestions = switch (stockType) {
       'weight' => {'kilo': 1000, 'sack': 50000, 'bag': 500},
       'liquid' => {'liter': 1000, 'gallon': 3785, 'bottle': 500},
-      'pack'   => {'box': 24, 'dozen': 12, 'tray': 30},
-      _        => {'box': 24, 'dozen': 12, 'tray': 30},
+      'pack'   => {'box': 24, 'dozen': 12, 'case': 100},
+      'piece'  => {'box': 24, 'tray': 30, 'pack': 12, 'case': 144},
+      _        => {'box': 24, 'dozen': 12, 'case': 100},
     };
 
     String? pendingNewUnit;
@@ -2128,6 +2062,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  // ignore: unused_element
   Future<String?> _showBaseUnitBottomSheet({
     required BuildContext context,
     required List<String> units,
@@ -2394,6 +2329,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  // ignore: unused_element
   Future<void> _showAddBaseUnitDialog(
     BuildContext context,
     StockInViewModel vm, {
@@ -2543,6 +2479,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     }
   }
 
+  // ignore: unused_element
   Future<void> _showEditBaseUnitDialog(
     BuildContext context,
     StockInViewModel vm,
@@ -2992,9 +2929,13 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       return const ['liter', 'bottle', 'gallon'];
     }
     if (base == 'pcs') {
-      return const ['box', 'tray', 'pack'];
+      return const ['box', 'tray', 'pack', 'case'];
     }
-    return const ['pack', 'box', 'tray'];
+    // Sachet / half / tungaon
+    if (base == 'half' || base == 'tungaon') {
+      return const ['box', 'dozen', 'case'];
+    }
+    return const ['pack', 'box', 'dozen'];
   }
 
   String _quantityUnitLabel(StockInViewModel vm) {
@@ -3010,6 +2951,33 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     }
     if (normalized == 'half' || normalized == 'tungaon') return 'halves';
     return unit;
+  }
+
+  // The "human unit" is the purchase unit when it's larger than the base unit.
+  // e.g. base=gram, purchase=kilo → humanUnit=kilo, humanFactor=1000
+  // e.g. base=pcs, purchase=pcs  → humanUnit=pcs,  humanFactor=1
+  int _humanUnitFactor(StockInViewModel vm) {
+    final factor = vm.quantityFactorFor(vm.purchaseUnitLabel);
+    return factor > 1 ? factor : 1;
+  }
+
+  String _humanUnitLabel(StockInViewModel vm) {
+    final factor = _humanUnitFactor(vm);
+    if (factor > 1) return vm.purchaseUnitLabel.trim();
+    return _quantityUnitLabel(vm);
+  }
+
+  // Display a base quantity in human-unit terms (e.g. 50000g → "50 kilo")
+  String _displayQty(int baseQty, StockInViewModel vm) {
+    final factor = _humanUnitFactor(vm);
+    if (factor > 1) {
+      final humanQty = baseQty / factor;
+      final str = humanQty % 1 == 0
+          ? humanQty.toStringAsFixed(0)
+          : humanQty.toStringAsFixed(1);
+      return '$str ${_humanUnitLabel(vm)}';
+    }
+    return '$baseQty ${_quantityUnitLabel(vm)}';
   }
 
   bool _isLiquidBaseUnit(StockInViewModel vm) {
@@ -3079,7 +3047,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Tap a common size to auto-fill it, or type your own custom unit.',
+          'Tap a size to auto-fill — the app handles the gram/mL conversion for you.',
           style: TextStyle(
             fontSize: (valueFs - 1).clamp(12, 15),
             fontWeight: FontWeight.w600,
@@ -3126,10 +3094,11 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             SizedBox(width: gap12),
             Expanded(
               child: _inputNumberField(
-                label: 'How many ${_quantityUnitLabel(vm)} is this?',
+                label: '1 unit = how many ${_humanUnitLabel(vm)}?',
                 controller: vm.conversionQuantityController,
                 showError: false,
-                icon: Icons.water_drop_outlined,
+                allowDecimal: true,
+                icon: Icons.straighten_rounded,
                 scale: scale,
                 height: (58 * scale).clamp(54, 66),
                 radius: radius,
@@ -3139,12 +3108,23 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           ],
         ),
         SizedBox(height: gap12),
+        _inputNumberField(
+          label: 'Sell price for this size (optional)',
+          controller: vm.conversionPriceController,
+          showError: false,
+          isPeso: true,
+          scale: scale,
+          height: (58 * scale).clamp(54, 66),
+          radius: radius,
+          valueFs: valueFs,
+        ),
+        SizedBox(height: gap12),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: vm.addUnitConversion,
+            onPressed: () => vm.addUnitConversion(humanFactor: _humanUnitFactor(vm)),
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Add another unit'),
+            label: const Text('Add unit'),
           ),
         ),
         if (vm.unitConversions.isNotEmpty) ...[
@@ -3174,9 +3154,16 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         scale: MediaQuery.of(context).size.width / 390,
       ),
       child: Chip(
-        label: Text(
-          '${conversion.unitName} = ${conversion.baseQuantity} ${vm.baseUnitLabel}',
-        ),
+        label: Text(() {
+          final qtyDisplay = _displayQty(conversion.baseQuantity, vm);
+          final base = '${conversion.unitName} = $qtyDisplay';
+          final sp = conversion.sellPrice;
+          if (sp != null && sp > 0) {
+            final priceStr = sp % 1 == 0 ? sp.toStringAsFixed(0) : sp.toStringAsFixed(2);
+            return '$base  \u2013  \u20B1$priceStr';
+          }
+          return base;
+        }()),
         onDeleted: () => vm.removeUnitConversion(conversion),
         deleteIcon: const Icon(Icons.close_rounded, size: 18),
         backgroundColor: Colors.white,
@@ -3227,6 +3214,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final unitController = TextEditingController(text: conversion.unitName);
     final quantityController = TextEditingController(
       text: conversion.baseQuantity.toString(),
+    );
+    final sp = conversion.sellPrice;
+    final priceController = TextEditingController(
+      text: sp != null && sp > 0
+          ? (sp % 1 == 0 ? sp.toStringAsFixed(0) : sp.toStringAsFixed(2))
+          : '',
     );
     final formKey = GlobalKey<FormState>();
     final qtyValue = ValueNotifier<String>(conversion.baseQuantity.toString());
@@ -3425,6 +3418,26 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       );
                     },
                   ),
+                  SizedBox(height: (10 * s).clamp(8, 12)),
+                  TextFormField(
+                    controller: priceController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.sell_outlined),
+                      labelText: 'Sell price for this size (optional)',
+                      prefixText: '\u20B1 ',
+                      filled: true,
+                      fillColor: _fieldBg,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                        borderSide: BorderSide(color: _cardBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular((12 * s).clamp(10, 16)),
+                        borderSide: const BorderSide(color: _accentBlue),
+                      ),
+                    ),
+                  ),
                   SizedBox(height: (12 * s).clamp(10, 14)),
                   Row(
                     children: [
@@ -3443,6 +3456,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                               'name': unitController.text.trim(),
                               'qty': quantityController.text.trim(),
                               'reference': referenceUnit.value,
+                              'price': priceController.text.trim(),
                             });
                           },
                           style: ElevatedButton.styleFrom(
@@ -3465,15 +3479,19 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final name = (result?['name'] ?? '').trim();
     final qtyText = (result?['qty'] ?? '').trim();
     final reference = (result?['reference'] ?? vm.baseUnitLabel).trim();
+    final priceText = (result?['price'] ?? '').trim().replaceAll(',', '');
     final qty = int.tryParse(qtyText) ?? 0;
     if (name.isEmpty || qty <= 0) return;
     final convertedQty = qty * vm.quantityFactorFor(reference);
     if (convertedQty <= 0) return;
+    final editedPrice = double.tryParse(priceText);
 
     vm.updateUnitConversion(
       conversion,
       unitName: name,
       baseQuantity: convertedQty,
+      sellPrice: (editedPrice != null && editedPrice > 0) ? editedPrice : null,
+      clearSellPrice: priceText.isEmpty,
     );
   }
 
@@ -3488,6 +3506,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         normalized == 'g';
   }
 
+  // ignore: unused_element
   Widget _sellingOptionsSection(
     StockInViewModel vm, {
     required double scale,

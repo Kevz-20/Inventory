@@ -89,14 +89,28 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
     final baseUnitController = TextEditingController(text: product.baseUnit);
     final conversionNameController = TextEditingController();
     final conversionQtyController = TextEditingController();
-    final presetLabelController = TextEditingController();
-    final presetQtyController = TextEditingController();
-    final presetPriceController = TextEditingController();
+    final conversionPriceController = TextEditingController();
 
-    final conversions = (await _stockInRepository.getUnitConversions(product.id!))
-        .toList();
-    final sellingOptions =
-        (await _stockInRepository.getSellingOptions(product.id!)).toList();
+    final loadedConversions = (await _stockInRepository.getUnitConversions(product.id!)).toList();
+    final loadedSellingOptions = (await _stockInRepository.getSellingOptions(product.id!)).toList();
+
+    // Merge selling options into conversions (backward compat)
+    for (final option in loadedSellingOptions) {
+      final matchIdx = loadedConversions.indexWhere(
+        (c) => c.unitName.toLowerCase() == option.label.toLowerCase(),
+      );
+      if (matchIdx >= 0) {
+        loadedConversions[matchIdx] = loadedConversions[matchIdx].copyWith(sellPrice: option.price);
+      } else {
+        loadedConversions.add(ProductUnitConversion(
+          unitName: option.label,
+          baseQuantity: option.baseQuantity ?? 1,
+          sellPrice: option.price > 0 ? option.price : null,
+        ));
+      }
+    }
+    loadedConversions.sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
+    final conversions = loadedConversions;
     if (!mounted) return null;
 
     final saved = await showDialog<bool>(
@@ -111,49 +125,22 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
               final qty = int.tryParse(conversionQtyController.text.trim()) ?? 0;
               if (name.isEmpty || qty <= 0) return;
 
+              final priceText = conversionPriceController.text.trim().replaceAll(',', '');
+              final price = double.tryParse(priceText);
               setLocalState(() {
                 conversions
                   ..removeWhere(
                     (item) => item.unitName.toLowerCase() == name.toLowerCase(),
                   )
-                  ..add(ProductUnitConversion(unitName: name, baseQuantity: qty))
+                  ..add(ProductUnitConversion(
+                    unitName: name,
+                    baseQuantity: qty,
+                    sellPrice: (price != null && price > 0) ? price : null,
+                  ))
                   ..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
                 conversionNameController.clear();
                 conversionQtyController.clear();
-              });
-            }
-
-            void addPreset() {
-              final label = presetLabelController.text.trim();
-              final qty = int.tryParse(presetQtyController.text.trim()) ?? 0;
-              final price = double.tryParse(presetPriceController.text.trim()) ?? 0;
-              if (label.isEmpty || qty <= 0 || price <= 0) return;
-
-              setLocalState(() {
-                sellingOptions
-                  ..removeWhere(
-                    (item) => item.label.toLowerCase() == label.toLowerCase(),
-                  )
-                  ..add(
-                    ProductSellingOption(
-                      label: label,
-                      mode: 'preset',
-                      unitName: baseUnitController.text.trim().isEmpty
-                          ? 'pcs'
-                          : baseUnitController.text.trim(),
-                      baseQuantity: qty,
-                      price: price,
-                    ),
-                  )
-                  ..sort((a, b) {
-                    final qtyCompare =
-                        (b.baseQuantity ?? 0).compareTo(a.baseQuantity ?? 0);
-                    if (qtyCompare != 0) return qtyCompare;
-                    return a.label.toLowerCase().compareTo(b.label.toLowerCase());
-                  });
-                presetLabelController.clear();
-                presetQtyController.clear();
-                presetPriceController.clear();
+                conversionPriceController.clear();
               });
             }
 
@@ -165,6 +152,18 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                 );
                 return;
               }
+
+              // Auto-generate selling options from priced conversions
+              final derivedSellingOptions = conversions
+                  .where((c) => c.sellPrice != null && c.sellPrice! > 0)
+                  .map((c) => ProductSellingOption(
+                        label: c.unitName,
+                        mode: 'preset',
+                        unitName: nextBaseUnit,
+                        baseQuantity: c.baseQuantity,
+                        price: c.sellPrice!,
+                      ))
+                  .toList();
 
               setLocalState(() => localSaving = true);
               try {
@@ -193,13 +192,7 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                 );
                 await _stockInRepository.replaceSellingOptions(
                   product.id!,
-                  sellingOptions
-                      .map(
-                        (option) => option.copyWith(
-                          unitName: nextBaseUnit,
-                        ),
-                      )
-                      .toList(),
+                  derivedSellingOptions,
                 );
 
                 if (!dialogContext.mounted) return;
@@ -361,8 +354,8 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                     ),
                     const SizedBox(height: 16),
                     sectionTitle(
-                      'More units',
-                      'Example: 1 pack = 50 pcs, 1 dozen = 12 pcs.',
+                      'Units & Prices',
+                      'Add sizes like pack, kilo, tray — and optionally set a sell price.',
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -390,12 +383,21 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    TextField(
+                      controller: conversionPriceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: inputDecoration(
+                        'Sell price (optional)',
+                        prefixText: 'PHP ',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: addConversion,
                         icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add unit conversion'),
+                        label: const Text('Add unit'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF0E766E),
                           side: const BorderSide(color: Color(0xFF90D3C7)),
@@ -412,109 +414,20 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: conversions
-                            .map(
-                              (conversion) => Chip(
-                                label: Text(
-                                  '${conversion.unitName} = ${conversion.baseQuantity} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()}',
-                                ),
-                                onDeleted: () => setLocalState(
-                                  () => conversions.remove(conversion),
-                                ),
-                                backgroundColor: Colors.white,
-                                side: const BorderSide(color: _border),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
-                    const SizedBox(height: 18),
-                    sectionTitle(
-                      'Quick sale presets',
-                      'Use for prices like 3 pcs = PHP 5 or 1 pack = PHP 70.',
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: presetLabelController,
-                      decoration: inputDecoration(
-                        'Preset label',
-                        icon: Icons.local_offer_outlined,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: presetQtyController,
-                            keyboardType: TextInputType.number,
-                            decoration: inputDecoration(
-                              'Pieces to deduct',
-                              icon: Icons.inventory_2_outlined,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: presetPriceController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: inputDecoration(
-                              'Sell price',
-                              prefixText: 'PHP ',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: addPreset,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add sale preset'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _accentBlue,
-                          side: const BorderSide(color: Color(0xFFCFE0FF)),
-                          backgroundColor: const Color(0xFFF5F8FF),
-                          minimumSize: const Size.fromHeight(46),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (sellingOptions.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: sellingOptions
-                            .map(
-                              (option) {
-                                final baseUnit = baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim();
-                                final qty = option.baseQuantity ?? 0;
-                                final labelLower = option.label.trim().toLowerCase();
-                                final unitLower = baseUnit.toLowerCase();
-                                final labelShowsQty = labelLower.endsWith(unitLower) ||
-                                    labelLower.contains(' $unitLower') ||
-                                    labelLower.contains('$qty');
-                                final chipLabel = labelShowsQty
-                                    ? '${option.label} \u2013 ${_peso(option.price)}'
-                                    : '${option.label} \u2013 $qty $baseUnit \u2013 ${_peso(option.price)}';
-                                return Chip(
-                                  label: Text(chipLabel),
-                                  onDeleted: () => setLocalState(
-                                    () => sellingOptions.remove(option),
-                                  ),
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(color: _border),
-                                );
-                              })
-                            .toList(),
+                        children: conversions.map((conversion) {
+                          final baseUnit = baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim();
+                          final sp = conversion.sellPrice;
+                          final baseLabel = '${conversion.unitName} = ${conversion.baseQuantity} $baseUnit';
+                          final chipLabel = (sp != null && sp > 0)
+                              ? '$baseLabel \u2013 ${_peso(sp)}'
+                              : baseLabel;
+                          return Chip(
+                            label: Text(chipLabel),
+                            onDeleted: () => setLocalState(() => conversions.remove(conversion)),
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(color: _border),
+                          );
+                        }).toList(),
                       ),
                     ],
                     const SizedBox(height: 18),

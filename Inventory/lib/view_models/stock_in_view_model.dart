@@ -57,6 +57,8 @@ class StockInViewModel extends ChangeNotifier {
       TextEditingController();
   final TextEditingController conversionQuantityController =
       TextEditingController();
+  final TextEditingController conversionPriceController =
+      TextEditingController();
   final TextEditingController sellingOptionLabelController =
       TextEditingController();
   final TextEditingController sellingOptionQuantityController =
@@ -108,6 +110,7 @@ class StockInViewModel extends ChangeNotifier {
     purchaseUnitController.dispose();
     conversionNameController.dispose();
     conversionQuantityController.dispose();
+    conversionPriceController.dispose();
     sellingOptionLabelController.dispose();
     sellingOptionQuantityController.dispose();
     sellingOptionPriceController.dispose();
@@ -391,17 +394,21 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  void addUnitConversion() {
+  void addUnitConversion({int humanFactor = 1}) {
     final name = conversionNameController.text.trim();
     final qtyText = conversionQuantityController.text.trim().replaceAll(',', '');
-    final qty = int.tryParse(qtyText) ?? 0;
+    final priceText = conversionPriceController.text.trim().replaceAll(',', '');
+    final enteredQty = double.tryParse(qtyText) ?? 0.0;
+    final qty = (enteredQty * (humanFactor > 0 ? humanFactor : 1)).round();
+    final price = double.tryParse(priceText);
 
     if (name.isEmpty || qty <= 0) return;
 
-    _upsertUnitConversion(name, qty);
+    _upsertUnitConversion(name, qty, sellPrice: (price != null && price > 0) ? price : null);
 
     conversionNameController.clear();
     conversionQuantityController.clear();
+    conversionPriceController.clear();
     safeNotifyListeners();
   }
 
@@ -420,17 +427,20 @@ class StockInViewModel extends ChangeNotifier {
     ProductUnitConversion original, {
     required String unitName,
     required int baseQuantity,
+    double? sellPrice,
+    bool clearSellPrice = false,
   }) {
     final trimmedName = unitName.trim();
     if (trimmedName.isEmpty || baseQuantity <= 0) return;
 
+    final effectiveSellPrice = clearSellPrice ? null : (sellPrice ?? original.sellPrice);
     unitConversions = [
       ...unitConversions.where(
         (item) =>
             item.unitName.toLowerCase() != original.unitName.toLowerCase() &&
             item.unitName.toLowerCase() != trimmedName.toLowerCase(),
       ),
-      ProductUnitConversion(unitName: trimmedName, baseQuantity: baseQuantity),
+      ProductUnitConversion(unitName: trimmedName, baseQuantity: baseQuantity, sellPrice: effectiveSellPrice),
     ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
 
     if (purchaseUnitController.text.trim().toLowerCase() ==
@@ -440,12 +450,12 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  void _upsertUnitConversion(String unitName, int baseQuantity) {
+  void _upsertUnitConversion(String unitName, int baseQuantity, {double? sellPrice}) {
     unitConversions = [
       ...unitConversions.where(
         (item) => item.unitName.toLowerCase() != unitName.toLowerCase(),
       ),
-      ProductUnitConversion(unitName: unitName.trim(), baseQuantity: baseQuantity),
+      ProductUnitConversion(unitName: unitName.trim(), baseQuantity: baseQuantity, sellPrice: sellPrice),
     ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
   }
 
@@ -624,18 +634,36 @@ class StockInViewModel extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
 
+    // Auto-generate selling options from priced unit conversions
+    final derivedSellingOptions = unitConversions
+        .where((c) => c.sellPrice != null && c.sellPrice! > 0)
+        .map((c) => ProductSellingOption(
+              label: c.unitName,
+              mode: 'preset',
+              unitName: baseUnit,
+              baseQuantity: c.baseQuantity,
+              price: c.sellPrice!,
+            ))
+        .toList();
+    // Merge with any standalone selling options not covered by a conversion
+    final conversionNames = unitConversions.map((c) => c.unitName.toLowerCase()).toSet();
+    final standaloneOptions = sellingOptions
+        .where((o) => !conversionNames.contains(o.label.toLowerCase()))
+        .toList();
+    final finalSellingOptions = [...derivedSellingOptions, ...standaloneOptions];
+
     try {
       String message;
       if (selectedProduct != null) {
         await _repository.updateProduct(stock);
         await _repository.replaceUnitConversions(stock.id!, unitConversions);
-        await _repository.replaceSellingOptions(stock.id!, sellingOptions);
+        await _repository.replaceSellingOptions(stock.id!, finalSellingOptions);
         message = 'Product updated successfully';
       } else {
         final newId = await _repository.addProduct(stock);
         stock.id = newId;
         await _repository.replaceUnitConversions(newId, unitConversions);
-        await _repository.replaceSellingOptions(newId, sellingOptions);
+        await _repository.replaceSellingOptions(newId, finalSellingOptions);
         allProducts.add(stock);
         message = 'Product saved successfully';
       }
@@ -698,9 +726,30 @@ class StockInViewModel extends ChangeNotifier {
     unitConversions = product.id == null
         ? []
         : await _repository.getUnitConversions(product.id!);
-    sellingOptions = product.id == null
-        ? []
+    final loadedSellingOptions = product.id == null
+        ? <ProductSellingOption>[]
         : await _repository.getSellingOptions(product.id!);
+
+    // Merge selling options into unit conversions (backward compat)
+    for (final option in loadedSellingOptions) {
+      final matchIdx = unitConversions.indexWhere(
+        (c) => c.unitName.toLowerCase() == option.label.toLowerCase(),
+      );
+      if (matchIdx >= 0) {
+        unitConversions[matchIdx] =
+            unitConversions[matchIdx].copyWith(sellPrice: option.price);
+      } else {
+        unitConversions.add(ProductUnitConversion(
+          unitName: option.label,
+          baseQuantity: option.baseQuantity ?? 1,
+          sellPrice: option.price > 0 ? option.price : null,
+        ));
+      }
+    }
+    unitConversions.sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
+    // sellingOptions are now embedded in conversions; will be regenerated on save
+    sellingOptions = [];
+
     useAdvancedUnitSetup =
         product.baseUnit.toLowerCase() != 'pcs' || unitConversions.isNotEmpty;
 
@@ -733,6 +782,7 @@ class StockInViewModel extends ChangeNotifier {
     purchaseUnitController.text = 'pcs';
     conversionNameController.clear();
     conversionQuantityController.clear();
+    conversionPriceController.clear();
     sellingOptionLabelController.clear();
     sellingOptionQuantityController.clear();
     sellingOptionPriceController.clear();

@@ -1171,6 +1171,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final displayedUnitPrice = vm.getEffectiveUnitPrice(product);
     final hasDefaultUnitPrice = displayedUnitPrice > 0;
 
+    // Derive per-unit price from cheapest bundle if no explicit price is set
+    // e.g. "3 pcs = ₱5" → derivedUnitPrice = 5/3 ≈ 1.67
+    final cheapestBundle = sellingOptions.isEmpty
+        ? null
+        : sellingOptions.reduce((a, b) =>
+            (a.baseQuantity ?? 1) < (b.baseQuantity ?? 1) ? a : b);
+    final derivedUnitPrice = hasDefaultUnitPrice
+        ? displayedUnitPrice
+        : (cheapestBundle != null && (cheapestBundle.baseQuantity ?? 0) > 0
+            ? cheapestBundle.price / cheapestBundle.baseQuantity!
+            : 0.0);
+    final hasAnyUnitPrice = derivedUnitPrice > 0;
+
     // Find the best human-friendly unit for price display (e.g. ₱60/kilo not ₱0.06/gram)
     final priceConversions = vm.unitConversionsFor(product);
     final primaryConversion = priceConversions.isEmpty
@@ -1210,8 +1223,22 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final localPresetCounts = <String, int>{...initialPresetCounts};
 
     final initialSubtotal = vm.getSubtotal(product);
+    // Compute expected using bundle-aware pricing (mirrors smartBaseBreakdown logic)
+    double bundleAwareBaseTotal(int qty) {
+      int rem = qty;
+      double total = 0;
+      for (final preset in sellingOptions) {
+        final pqty = preset.baseQuantity ?? 0;
+        if (pqty <= 0 || rem < pqty) continue;
+        final times = rem ~/ pqty;
+        total += preset.price * times;
+        rem -= times * pqty;
+      }
+      if (rem > 0 && derivedUnitPrice > 0) total += rem * derivedUnitPrice;
+      return total;
+    }
     final expectedAuto =
-        (localBaseQty * displayedUnitPrice) +
+        bundleAwareBaseTotal(localBaseQty) +
         computePresetPrice(initialPresetCounts);
     bool isManualPricing =
         initialTotalQty > 0 && (initialSubtotal - expectedAuto).abs() > 0.009;
@@ -1271,10 +1298,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 ));
                 remaining -= times * pqty;
               }
-              if (remaining > 0 && hasDefaultUnitPrice) {
+              if (remaining > 0 && derivedUnitPrice > 0) {
                 result.add((
-                  label: '$remaining ${product.baseUnit} \u00d7 ${currencyFormatter.format(displayedUnitPrice)}',
-                  total: remaining * displayedUnitPrice,
+                  label: '$remaining ${product.baseUnit} \u00d7 ${currencyFormatter.format(derivedUnitPrice)}',
+                  total: remaining * derivedUnitPrice,
                 ));
               }
               return result;
@@ -1289,8 +1316,19 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 ? localByAmount
                 : (isManualPricing ? localManualAmount : autoSubtotal());
 
-            final visibleConversions =
-                vm.unitConversionsFor(product).take(4).toList();
+            // Hide conversion chip if a preset already covers that unit (avoids duplicate pack chips)
+            // e.g. conversion "pack" is hidden if preset "1 pack" exists
+            bool presetCoversUnit(String unitName) {
+              final u = unitName.trim().toLowerCase();
+              return sellingOptions.any((o) {
+                final label = o.label.trim().toLowerCase();
+                return label == u || label.contains(u) || u.contains(label);
+              });
+            }
+            final visibleConversions = vm.unitConversionsFor(product)
+                .where((c) => !presetCoversUnit(c.unitName))
+                .take(4)
+                .toList();
 
             void syncBaseQtyField() {
               baseQtyController.text =
@@ -1719,8 +1757,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         }),
                       ],
 
-                      // Individual qty stepper (shown when product has a unit price OR no presets)
-                      if (!isAmountMode && (hasDefaultUnitPrice || sellingOptions.isEmpty)) ...[
+                      // Individual qty stepper (shown when any price exists — explicit or derived from bundle)
+                      if (!isAmountMode && (hasAnyUnitPrice || sellingOptions.isEmpty)) ...[
                         _sheetSectionLabel(
                           sellingOptions.isNotEmpty
                               ? 'Individual ${product.baseUnit}'

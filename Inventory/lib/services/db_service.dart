@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -415,6 +415,7 @@ class DBService {
               product_id INTEGER NOT NULL,
               unit_name TEXT NOT NULL,
               base_quantity INTEGER NOT NULL,
+              sell_price REAL,
               created_at TEXT,
               updated_at TEXT,
               UNIQUE(product_id, unit_name),
@@ -437,6 +438,14 @@ class DBService {
               FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
             )
           ''');
+        }
+
+        if (oldVersion < 21) {
+          await addColumnIfMissing(
+            'product_unit_conversion',
+            'sell_price',
+            'REAL',
+          );
         }
 
         if (oldVersion < 20) {
@@ -842,6 +851,7 @@ class DBService {
         product_id INTEGER NOT NULL,
         unit_name TEXT NOT NULL,
         base_quantity INTEGER NOT NULL,
+        sell_price REAL,
         created_at TEXT,
         updated_at TEXT,
         UNIQUE(product_id, unit_name),
