@@ -856,6 +856,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final addedLabel = hasSelection ? 'Added: $qty ${product.baseUnit}' : null;
     final effectiveUnitPrice = vm.getEffectiveUnitPrice(product);
     final hasDefaultUnitPrice = effectiveUnitPrice > 0;
+    final cardConversions = vm.unitConversionsFor(product);
+    final cardPrimaryConversion = cardConversions.isEmpty
+        ? null
+        : cardConversions.reduce((a, b) =>
+            a.baseQuantity < b.baseQuantity ? a : b);
+    final cardHumanPrice = cardPrimaryConversion != null
+        ? effectiveUnitPrice * cardPrimaryConversion.baseQuantity
+        : effectiveUnitPrice;
+    final cardHumanUnit =
+        cardPrimaryConversion?.unitName ?? product.baseUnit;
 
     // Accent bar colour � green=ok, orange=low(=10), red=out
     final accentColor = product.quantity <= 0
@@ -917,7 +927,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       SizedBox(height: _r(context, 4)),
                       Text(
                         hasDefaultUnitPrice
-                            ? '${currencyFormatter.format(effectiveUnitPrice)} / ${product.baseUnit}'
+                            ? '${currencyFormatter.format(cardHumanPrice)} / $cardHumanUnit'
                             : 'Manual price',
                         style: TextStyle(
                           fontSize: _r(context, 14.5),
@@ -1161,6 +1171,17 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final displayedUnitPrice = vm.getEffectiveUnitPrice(product);
     final hasDefaultUnitPrice = displayedUnitPrice > 0;
 
+    // Find the best human-friendly unit for price display (e.g. ₱60/kilo not ₱0.06/gram)
+    final priceConversions = vm.unitConversionsFor(product);
+    final primaryConversion = priceConversions.isEmpty
+        ? null
+        : priceConversions.reduce((a, b) =>
+            a.baseQuantity < b.baseQuantity ? a : b);
+    final humanPrice = primaryConversion != null
+        ? displayedUnitPrice * primaryConversion.baseQuantity
+        : displayedUnitPrice;
+    final humanUnit = primaryConversion?.unitName ?? product.baseUnit;
+
     // Helpers: compute total qty/price from preset counts
     int computePresetQty(Map<String, int> counts) {
       return counts.entries.fold(0, (s, e) {
@@ -1194,7 +1215,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         computePresetPrice(initialPresetCounts);
     bool isManualPricing =
         initialTotalQty > 0 && (initialSubtotal - expectedAuto).abs() > 0.009;
+    bool isAmountMode = false;
     double localManualAmount = initialSubtotal;
+    double localByAmount = 0;
 
     final baseQtyController = TextEditingController(
       text: localBaseQty > 0 ? localBaseQty.toString() : '',
@@ -1202,6 +1225,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
     final amountController = TextEditingController(
       text: initialSubtotal > 0 ? initialSubtotal.toStringAsFixed(2) : '',
     );
+    final byAmountController = TextEditingController();
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1213,7 +1237,24 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             // Derived values — recomputed on every rebuild
             int presetQty() => computePresetQty(localPresetCounts);
             double presetPrice() => computePresetPrice(localPresetCounts);
-            int totalQty() => localBaseQty + presetQty();
+            int byAmountDeduction() {
+              if (displayedUnitPrice <= 0 || localByAmount <= 0) return 0;
+              return (localByAmount / displayedUnitPrice)
+                  .floor()
+                  .clamp(0, product.quantity);
+            }
+
+            final baseUnit = product.baseUnit.toLowerCase().trim();
+            final showByAmountToggle = hasDefaultUnitPrice &&
+                (baseUnit == 'ml' ||
+                    baseUnit == 'milliliter' ||
+                    baseUnit == 'millilitre' ||
+                    baseUnit == 'gram' ||
+                    baseUnit == 'grams' ||
+                    baseUnit == 'g');
+
+            int totalQty() =>
+                isAmountMode ? byAmountDeduction() : localBaseQty + presetQty();
 
             // Smart breakdown: try to fill localBaseQty with preset prices
             // e.g. qty=3 with preset "3 pcs=₱5" → prices as ₱5, not 3×₱2
@@ -1244,12 +1285,12 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               return baseTotal + presetPrice();
             }
 
-            double finalSubtotal() =>
-                isManualPricing ? localManualAmount : autoSubtotal();
+            double finalSubtotal() => isAmountMode
+                ? localByAmount
+                : (isManualPricing ? localManualAmount : autoSubtotal());
 
-            final visibleConversions = sellingOptions.isEmpty
-                ? vm.unitConversionsFor(product).take(4).toList()
-                : [];
+            final visibleConversions =
+                vm.unitConversionsFor(product).take(4).toList();
 
             void syncBaseQtyField() {
               baseQtyController.text =
@@ -1301,8 +1342,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
               });
             }
 
-            final hasActivity = totalQty() > 0 ||
-                (isManualPricing && localManualAmount > 0);
+            final hasActivity = (isAmountMode && localByAmount > 0) ||
+                (!isAmountMode &&
+                    (totalQty() > 0 ||
+                        (isManualPricing && localManualAmount > 0)));
 
             return SafeArea(
               top: false,
@@ -1393,7 +1436,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                             SizedBox(height: _r(context, 4)),
                                             Text(
                                               hasDefaultUnitPrice
-                                                  ? '${currencyFormatter.format(displayedUnitPrice)} / ${product.baseUnit}'
+                                                  ? '${currencyFormatter.format(humanPrice)} / $humanUnit'
                                                   : 'No default price',
                                               style: TextStyle(
                                                 fontSize: _r(context, 14),
@@ -1411,6 +1454,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                           onTap: () {
                                             setSheetState(() {
                                               isManualPricing = !isManualPricing;
+                                              if (isManualPricing) isAmountMode = false;
                                               if (!isManualPricing) {
                                                 syncAmountField();
                                               }
@@ -1476,10 +1520,207 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           ),
                         ],
                       ),
+                      // By ₱ / By Qty mode toggle — only for mL/gram products with a price
+                      if (showByAmountToggle) ...[
+                        SizedBox(height: _r(context, 12)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setSheetState(() {
+                                  isAmountMode = false;
+                                }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: _r(context, 10),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: !isAmountMode
+                                        ? const Color(0xFF255FD5)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(_r(context, 12)),
+                                    border: Border.all(
+                                      color: !isAmountMode
+                                          ? const Color(0xFF255FD5)
+                                          : _cardBorder,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'By Quantity',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: _r(context, 13),
+                                      fontWeight: FontWeight.w800,
+                                      color: !isAmountMode
+                                          ? Colors.white
+                                          : _subtitleColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: _r(context, 8)),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setSheetState(() {
+                                  isAmountMode = true;
+                                  isManualPricing = false;
+                                }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: _r(context, 10),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isAmountMode
+                                        ? const Color(0xFF255FD5)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(_r(context, 12)),
+                                    border: Border.all(
+                                      color: isAmountMode
+                                          ? const Color(0xFF255FD5)
+                                          : _cardBorder,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'By ₱ Amount',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: _r(context, 13),
+                                      fontWeight: FontWeight.w800,
+                                      color: isAmountMode
+                                          ? Colors.white
+                                          : _subtitleColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
                       SizedBox(height: _r(context, 18)),
 
+                      // Amount mode input — enter ₱ amount, system derives qty
+                      if (isAmountMode) ...[
+                        _sheetSectionLabel('Pila ang bayad?'),
+                        SizedBox(height: _r(context, 8)),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: _r(context, 16),
+                            vertical: _r(context, 4),
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFF),
+                            borderRadius: BorderRadius.circular(_r(context, 16)),
+                            border: Border.all(color: _cardBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                '₱',
+                                style: TextStyle(
+                                  fontSize: _r(context, 24),
+                                  fontWeight: FontWeight.w900,
+                                  color: _titleColor,
+                                ),
+                              ),
+                              SizedBox(width: _r(context, 8)),
+                              Expanded(
+                                child: TextField(
+                                  controller: byAmountController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  autofocus: true,
+                                  style: TextStyle(
+                                    fontSize: _r(context, 28),
+                                    fontWeight: FontWeight.w900,
+                                    color: _titleColor,
+                                  ),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+                                    LengthLimitingTextInputFormatter(8),
+                                  ],
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    hintText: '0',
+                                    hintStyle: TextStyle(
+                                      fontSize: _r(context, 28),
+                                      fontWeight: FontWeight.w900,
+                                      color: _subtitleColor.withOpacity(0.4),
+                                    ),
+                                    isDense: true,
+                                  ),
+                                  onChanged: (value) {
+                                    final amount = double.tryParse(value.trim()) ?? 0;
+                                    setSheetState(() => localByAmount = amount);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: _r(context, 10)),
+                        // Deduction preview
+                        Builder(builder: (context) {
+                          final deduction = byAmountDeduction();
+                          final exceedsStock = displayedUnitPrice > 0 &&
+                              localByAmount > 0 &&
+                              (localByAmount / displayedUnitPrice).floor() >
+                                  product.quantity;
+                          if (localByAmount <= 0) return const SizedBox.shrink();
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: _r(context, 14),
+                              vertical: _r(context, 10),
+                            ),
+                            decoration: BoxDecoration(
+                              color: exceedsStock
+                                  ? const Color(0xFFFFF3F0)
+                                  : const Color(0xFFEEF7F0),
+                              borderRadius: BorderRadius.circular(_r(context, 12)),
+                              border: Border.all(
+                                color: exceedsStock
+                                    ? const Color(0xFFFFB3A7)
+                                    : const Color(0xFF81C995),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  exceedsStock
+                                      ? Icons.warning_amber_rounded
+                                      : Icons.check_circle_outline_rounded,
+                                  size: _r(context, 16),
+                                  color: exceedsStock
+                                      ? const Color(0xFFD63031)
+                                      : const Color(0xFF2E7D32),
+                                ),
+                                SizedBox(width: _r(context, 8)),
+                                Expanded(
+                                  child: Text(
+                                    exceedsStock
+                                        ? 'Not enough stock. Max: ${product.quantity} ${product.baseUnit}'
+                                        : '≈ $deduction ${product.baseUnit} ang ibabawas',
+                                    style: TextStyle(
+                                      fontSize: _r(context, 13),
+                                      fontWeight: FontWeight.w700,
+                                      color: exceedsStock
+                                          ? const Color(0xFFD63031)
+                                          : const Color(0xFF2E7D32),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+
                       // Individual qty stepper (shown when product has a unit price OR no presets)
-                      if (hasDefaultUnitPrice || sellingOptions.isEmpty) ...[
+                      if (!isAmountMode && (hasDefaultUnitPrice || sellingOptions.isEmpty)) ...[
                         _sheetSectionLabel(
                           sellingOptions.isNotEmpty
                               ? 'Individual ${product.baseUnit}'
@@ -1550,7 +1791,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           ),
                         ),
                         // Conversion shortcuts (only when no presets)
-                        if (sellingOptions.isEmpty && visibleConversions.isNotEmpty) ...[
+                        if (visibleConversions.isNotEmpty) ...[
                           SizedBox(height: _r(context, 10)),
                           Wrap(
                             spacing: _r(context, 8),
@@ -1703,7 +1944,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       ],
 
                       // Breakdown badges (auto mode only)
-                      if (!isManualPricing &&
+                      if (!isAmountMode &&
+                          !isManualPricing &&
                           (localBaseQty > 0 || localPresetCounts.isNotEmpty)) ...[
                         SizedBox(height: _r(context, 10)),
                         Wrap(

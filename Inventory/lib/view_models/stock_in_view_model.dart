@@ -527,16 +527,9 @@ class StockInViewModel extends ChangeNotifier {
     final qtyText = quantityController.text.trim();
     final baseUnit = useAdvancedUnitSetup ? baseUnitLabel : 'pcs';
     final purchaseUnit = useAdvancedUnitSetup ? purchaseUnitLabel : 'pcs';
-    final normalizedBaseUnit = baseUnit.trim().toLowerCase();
-    final requiresSellingPrice =
-        !(normalizedBaseUnit == 'ml' ||
-            normalizedBaseUnit == 'milliliter' ||
-            normalizedBaseUnit == 'millilitre');
-
     if (productName.isEmpty ||
         selectedCategory == null ||
         purchaseText.isEmpty ||
-        (requiresSellingPrice && sellingText.isEmpty) ||
         qtyText.isEmpty ||
         baseUnit.isEmpty ||
         purchaseUnit.isEmpty) {
@@ -556,7 +549,12 @@ class StockInViewModel extends ChangeNotifier {
       }
     }
 
-    final sellingPrice = double.tryParse(sellingText.replaceAll(',', '')) ?? 0;
+    final sellingPriceEntered = double.tryParse(sellingText.replaceAll(',', '')) ?? 0;
+    // Convert selling price from per-purchase-unit → per-base-unit for storage
+    final purchaseFactor = useAdvancedUnitSetup ? quantityFactorFor(purchaseUnitLabel) : 1;
+    final sellingPrice = (sellingPriceEntered > 0 && purchaseFactor > 1)
+        ? sellingPriceEntered / purchaseFactor
+        : sellingPriceEntered;
     final purchaseInput = double.tryParse(purchaseText.replaceAll(',', '')) ?? 0;
     final enteredQuantity = double.tryParse(qtyText.replaceAll(',', '')) ?? 0;
     final newQuantity = useAdvancedUnitSetup
@@ -566,17 +564,7 @@ class StockInViewModel extends ChangeNotifier {
     if (purchaseInput <= 0) {
       showSnackBar(
         context,
-        useAdvancedUnitSetup
-            ? 'Total stock cost must be greater than 0'
-            : 'Purchase price must be greater than 0',
-        success: false,
-      );
-      return;
-    }
-    if (requiresSellingPrice && sellingPrice <= 0) {
-      showSnackBar(
-        context,
-        'Selling price per $baseUnit must be greater than 0',
+        'Total stock cost must be greater than 0',
         success: false,
       );
       return;
@@ -584,9 +572,7 @@ class StockInViewModel extends ChangeNotifier {
     if (newQuantity <= 0) {
       showSnackBar(
         context,
-        useAdvancedUnitSetup
-            ? 'Bought quantity in $purchaseUnit must be greater than 0'
-            : 'Stock quantity in $baseUnit must be greater than 0',
+        'Bought quantity in $purchaseUnit must be greater than 0',
         success: false,
       );
       return;
@@ -612,10 +598,9 @@ class StockInViewModel extends ChangeNotifier {
 
     selectedProduct ??= existingProduct;
 
-    final purchaseTotal =
-        useAdvancedUnitSetup ? purchaseInput : purchaseInput * newQuantity;
+    final purchaseTotal = purchaseInput;
     final incomingCostPerUnit =
-        useAdvancedUnitSetup ? purchaseTotal / newQuantity : purchaseInput;
+        newQuantity > 0 ? purchaseTotal / newQuantity : purchaseInput;
     final previousQty = selectedProduct?.quantity ?? 0;
     final previousCostPerUnit = selectedProduct?.costPerUnit ?? 0.0;
     final mergedQuantity = previousQty + newQuantity;
@@ -701,9 +686,7 @@ class StockInViewModel extends ChangeNotifier {
     autocompleteFieldController?.text = product.name;
     setCategoryByName(product.category);
     purchasePriceController.clear();
-    sellingPriceController.text = product.pricePerUnit.toStringAsFixed(
-      product.pricePerUnit % 1 == 0 ? 0 : 2,
-    );
+    sellingPriceController.clear();
     quantityController.clear();
     baseUnitController.text = product.baseUnit;
     purchaseUnitController.text = product.baseUnit;
@@ -720,6 +703,24 @@ class StockInViewModel extends ChangeNotifier {
         : await _repository.getSellingOptions(product.id!);
     useAdvancedUnitSetup =
         product.baseUnit.toLowerCase() != 'pcs' || unitConversions.isNotEmpty;
+
+    // After loading conversions, set the purchase unit and convert selling price
+    // back to per-purchase-unit so the field shows the human-friendly value
+    if (unitConversions.isNotEmpty && product.pricePerUnit > 0) {
+      // Use the smallest conversion as the primary purchase unit (e.g. kilo for rice)
+      final primary = unitConversions.reduce((a, b) =>
+          a.baseQuantity < b.baseQuantity ? a : b);
+      purchaseUnitController.text = primary.unitName;
+      final displayPrice = product.pricePerUnit * primary.baseQuantity;
+      sellingPriceController.text = displayPrice.toStringAsFixed(
+        displayPrice % 1 == 0 ? 0 : 2,
+      );
+    } else if (product.pricePerUnit > 0) {
+      sellingPriceController.text = product.pricePerUnit.toStringAsFixed(
+        product.pricePerUnit % 1 == 0 ? 0 : 2,
+      );
+    }
+
     safeNotifyListeners();
   }
 

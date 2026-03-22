@@ -636,6 +636,6 @@ class _CustomerUtangScreenState extends State<CustomerUtangScreen>
       parts.add("Brgy. ${item.barangay!.trim()}");
     }
 
-    return parts.join(" â€¢ ");
+    return parts.join(" \u2022 ");
   }
 }

@@ -32,6 +32,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   bool _showUnitOptions = false;
   bool _showQuickOptions = false;
   bool _restockPopulated = false;
+  bool _showCostDetails = false;
 
   String _currentStockType(StockInViewModel vm) {
     final base = vm.baseUnitLabel.trim().toLowerCase();
@@ -53,6 +54,26 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       case 'piece':
       default:
         return 'Default selling price per piece';
+    }
+  }
+
+  String _boughtAsHelperText(StockInViewModel vm) {
+    switch (_currentStockType(vm)) {
+      case 'weight': return 'e.g. kilo, sack, pack';
+      case 'liquid': return 'e.g. liter, gallon, bottle';
+      case 'pack':   return 'e.g. sachet, box, dozen';
+      case 'piece':
+      default:       return 'e.g. box, tray, dozen';
+    }
+  }
+
+  String _stockTypeDescription(String type) {
+    switch (type) {
+      case 'weight': return 'Para sa bugas, asukal, asin, o sibuyas. Gibaligya per kilo, gisulod per gram.';
+      case 'liquid': return 'Para sa mantika, suka, toyo, o gas. Gibaligya per liter, gisulod per mL.';
+      case 'pack':   return 'Para sa 3-in-1, sabon, shampoo sachet. Ang "tungaon" (half) mao ang gamay nga bahin.';
+      case 'piece':
+      default:       return 'Para sa itlog, tinapay, candy, o bawang. Gibilang per piraso.';
     }
   }
 
@@ -142,34 +163,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     }
   }
 
-  ({String qty, String reference})? _suggestedUnitConversion(
-    StockInViewModel vm,
-    String unit,
-  ) {
-    final normalizedUnit = unit.trim().toLowerCase();
-    final base = vm.baseUnitLabel.trim().toLowerCase();
-
-    if (normalizedUnit == 'kilo' &&
-        (base == 'gram' || base == 'grams' || base == 'g')) {
-      return (qty: '1000', reference: vm.baseUnitLabel);
-    }
-
-    if (normalizedUnit == 'liter' &&
-        (base == 'ml' || base == 'milliliter' || base == 'millilitre')) {
-      return (qty: '1000', reference: vm.baseUnitLabel);
-    }
-
-    if (normalizedUnit == 'gallon' &&
-        (base == 'ml' || base == 'milliliter' || base == 'millilitre')) {
-      return (qty: '4', reference: 'liter');
-    }
-
-    if (normalizedUnit == 'dozen' && base == 'pcs') {
-      return (qty: '12', reference: vm.baseUnitLabel);
-    }
-
-    return null;
-  }
 
   String? _suggestedBaseQuantity(
     StockInViewModel vm,
@@ -394,16 +387,37 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             radius: radius12,
                           ),
                           SizedBox(height: gap12),
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: (12 * scale).clamp(10, 14),
+                              vertical: (10 * scale).clamp(8, 12),
+                            ),
+                            decoration: BoxDecoration(
+                              color: _accentBlue.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(radius12),
+                              border: Border.all(
+                                color: _accentBlue.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Text(
+                              _stockTypeDescription(_currentStockType(vm)),
+                              style: TextStyle(
+                                fontSize: (12.5 * scale).clamp(11.5, 14),
+                                fontWeight: FontWeight.w600,
+                                color: _accentBlue,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: gap12),
                           LayoutBuilder(
                             builder: (context, amountsConstraints) {
                               final useTwoColumns = amountsConstraints.maxWidth >= 560;
                               final showSellingPriceField =
                                   _currentStockType(vm) != 'liquid';
-                              final fields = [
+                              final topFields = [
                                 _inputNumberField(
-                                  label: vm.useAdvancedUnitSetup
-                                      ? 'Total cost of bought stock'
-                                      : 'Total cost',
+                                  label: 'Tagpila tanan?',
                                   controller: vm.purchasePriceController,
                                   showError: vm.showValidationErrors,
                                   isPeso: true,
@@ -414,9 +428,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   valueFs: valueFs,
                                 ),
                                 _inputNumberField(
-                                  label: vm.useAdvancedUnitSetup
-                                      ? 'Bought quantity'
-                                      : 'Quantity bought',
+                                  label: 'Pila kabuok?',
                                   controller: vm.quantityController,
                                   showError: vm.showValidationErrors,
                                   icon: Icons.shopping_cart_rounded,
@@ -428,49 +440,71 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   radius: radius12,
                                   valueFs: valueFs,
                                 ),
-                                if (vm.useAdvancedUnitSetup)
-                                  _purchaseUnitPickerField(
-                                    vm,
-                                    scale: scale,
-                                    radius: radius12,
-                                    valueFs: valueFs,
-                                  ),
-                                if (showSellingPriceField)
-                                  _inputNumberField(
-                                    label: _sellingPriceLabel(vm),
-                                    controller: vm.sellingPriceController,
-                                    showError: vm.showValidationErrors,
-                                    isPeso: true,
-                                    onChanged: (_) => setState(() {}),
-                                    scale: scale,
-                                    height: fieldH,
-                                    radius: radius12,
-                                    valueFs: valueFs,
-                                  ),
                               ];
 
+                              Widget topRow;
                               if (!useTwoColumns) {
-                                return Column(
+                                topRow = Column(
                                   children: [
-                                    for (var i = 0; i < fields.length; i++) ...[
-                                      if (i > 0) SizedBox(height: gap12),
-                                      fields[i],
-                                    ],
+                                    topFields[0],
+                                    SizedBox(height: gap12),
+                                    topFields[1],
+                                  ],
+                                );
+                              } else {
+                                topRow = Row(
+                                  children: [
+                                    Expanded(child: topFields[0]),
+                                    SizedBox(width: gap12),
+                                    Expanded(child: topFields[1]),
                                   ],
                                 );
                               }
 
-                              return Wrap(
-                                spacing: gap12,
-                                runSpacing: gap12,
-                                children: fields
-                                    .map(
-                                      (field) => SizedBox(
-                                        width: (amountsConstraints.maxWidth - gap12) / 2,
-                                        child: field,
-                                      ),
+                              // Sukod + selling price always side by side
+                              final sukodAndPrice = (vm.useAdvancedUnitSetup || showSellingPriceField)
+                                  ? Column(
+                                      children: [
+                                        SizedBox(height: gap12),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            if (vm.useAdvancedUnitSetup) ...[
+                                              Expanded(
+                                                child: _purchaseUnitPickerField(
+                                                  vm,
+                                                  scale: scale,
+                                                  radius: radius12,
+                                                  valueFs: valueFs,
+                                                ),
+                                              ),
+                                              if (showSellingPriceField) SizedBox(width: gap12),
+                                            ],
+                                            if (showSellingPriceField)
+                                              Expanded(
+                                                child: _inputNumberField(
+                                                  label: _sellingPriceLabel(vm),
+                                                  controller: vm.sellingPriceController,
+                                                  showError: vm.showValidationErrors,
+                                                  isPeso: true,
+                                                  onChanged: (_) => setState(() {}),
+                                                  scale: scale,
+                                                  height: fieldH,
+                                                  radius: radius12,
+                                                  valueFs: valueFs,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     )
-                                    .toList(),
+                                  : const SizedBox.shrink();
+
+                              return Column(
+                                children: [
+                                  topRow,
+                                  sukodAndPrice,
+                                ],
                               );
                             },
                           ),
@@ -1324,6 +1358,41 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final hasValue = cost > 0 && qty > 0;
     final perUnit = hasValue ? cost / qty : 0.0;
 
+    final unitDisplay = vm.baseUnitLabel.trim();
+    final equivalentStock = hasValue
+        ? '${qty % 1 == 0 ? qty.toInt() : qty} $unitDisplay'
+        : '—';
+
+    final divider = Divider(height: 1, color: _cardBorder);
+
+    Widget previewRow(String label, String value) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: (8 * scale).clamp(6, 10)),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: (12.5 * scale).clamp(11.5, 14),
+                  fontWeight: FontWeight.w600,
+                  color: _subtitleColor,
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: (13.5 * scale).clamp(12.5, 15),
+                fontWeight: FontWeight.w800,
+                color: _titleColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       width: double.infinity,
@@ -1361,6 +1430,26 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ),
             ],
           ),
+          SizedBox(height: (8 * scale).clamp(6, 10)),
+          GestureDetector(
+            onTap: () => setState(() => _showCostDetails = !_showCostDetails),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(
+                _showCostDetails ? 'Hide details' : 'Show details',
+                style: TextStyle(fontSize: (13 * scale).clamp(12, 14.5), fontWeight: FontWeight.w700, color: _accentBlue),
+              ),
+              Icon(
+                _showCostDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                color: _accentBlue, size: (18 * scale).clamp(16, 20),
+              ),
+            ]),
+          ),
+          if (_showCostDetails) ...[
+            divider,
+            previewRow('Smallest stock unit', unitDisplay.isEmpty ? '—' : unitDisplay),
+            divider,
+            previewRow('Equivalent stock', equivalentStock),
+          ],
         ],
       ),
     );
@@ -1461,14 +1550,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             chip(
               'piece',
               Icons.tag_rounded,
-              'Per Piece',
+              'Piraso',
               'itlog, sibuyas,\nbawang, lamas',
             ),
             gap,
             chip(
               'weight',
               Icons.scale_outlined,
-              'Per Kilo',
+              'Tinimbang',
               'asin, asukal,\nbigas',
             ),
           ],
@@ -1479,14 +1568,14 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             chip(
               'liquid',
               Icons.water_drop_outlined,
-              'Per Liter',
+              'Likido',
               'mantika, suka,\ntoyo',
             ),
             gap,
             chip(
               'pack',
               Icons.inventory_2_outlined,
-              'Per Sachet',
+              'Sachet',
               '3-in-1, sabon,\nshampoo',
             ),
           ],
@@ -1719,59 +1808,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
     return InkWell(
       borderRadius: BorderRadius.circular(radius),
-      onTap: () async {
-        final selected = await _showBaseUnitBottomSheet(
-          context: context,
-          units: vm.purchaseUnitOptions,
-          selected: vm.purchaseUnitController.text.trim(),
-          scale: scale,
-          title: 'Select bought unit',
-          addButtonLabel: 'Add unit',
-          allowManageActions: true,
-          baseUnitLabel: vm.baseUnitLabel,
-        );
-
-        if (selected == null) return;
-        if (selected == '__add_new__') {
-          await _showAddPurchaseUnitDialog(context, vm, scale: scale);
-          return;
-        }
-        if (selected.startsWith('edit::')) {
-          final unitName = selected.replaceFirst('edit::', '');
-          final conversion = vm.unitConversions
-              .where(
-                (item) => item.unitName.trim().toLowerCase() ==
-                    unitName.trim().toLowerCase(),
-              )
-              .cast<ProductUnitConversion?>()
-              .firstWhere((item) => item != null, orElse: () => null);
-          if (conversion != null) {
-            await _showEditPurchaseUnitDialog(
-              context,
-              vm,
-              conversion,
-              scale: scale,
-            );
-          }
-          return;
-        }
-        if (selected.startsWith('delete::')) {
-          final unitName = selected.replaceFirst('delete::', '');
-          final conversion = vm.unitConversions
-              .where(
-                (item) => item.unitName.trim().toLowerCase() ==
-                    unitName.trim().toLowerCase(),
-              )
-              .cast<ProductUnitConversion?>()
-              .firstWhere((item) => item != null, orElse: () => null);
-          if (conversion != null) {
-            vm.removeUnitConversion(conversion);
-          }
-          return;
-        }
-
-        vm.setPurchaseUnit(selected);
-      },
+      onTap: () => _showSukodSheet(vm, scale: scale),
       child: InputDecorator(
         decoration: InputDecoration(
           filled: true,
@@ -1781,7 +1818,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
-          labelText: 'Bought as',
+          labelText: 'Unsa nga sukod?',
+          helperText: _boughtAsHelperText(vm),
+          helperStyle: TextStyle(
+            fontSize: (11 * scale).clamp(10, 12.5),
+            color: _subtitleColor,
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: isError ? Colors.red : _cardBorder),
@@ -1816,6 +1858,272 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showSukodSheet(StockInViewModel vm, {required double scale}) async {
+    final stockType = _currentStockType(vm);
+    final existingUnits = vm.purchaseUnitOptions
+        .where((u) => u.trim().toLowerCase() != vm.baseUnitLabel.trim().toLowerCase())
+        .toList();
+
+    // Quick-add suggestions per type (name → baseQuantity)
+    final Map<String, double> suggestions = switch (stockType) {
+      'weight' => {'kilo': 1000, 'sack': 50000, 'bag': 500},
+      'liquid' => {'liter': 1000, 'gallon': 3785, 'bottle': 500},
+      'pack'   => {'box': 24, 'dozen': 12, 'tray': 30},
+      _        => {'box': 24, 'dozen': 12, 'tray': 30},
+    };
+
+    String? pendingNewUnit;
+    final sizeCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.55,
+            minChildSize: 0.4,
+            maxChildSize: 0.85,
+            builder: (_, scrollCtrl) => Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 10, bottom: 6),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Text(
+                      'Unsa nga sukod?',
+                      style: TextStyle(
+                        fontSize: (17 * scale).clamp(15, 19),
+                        fontWeight: FontWeight.w800,
+                        color: _titleColor,
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollCtrl,
+                      padding: EdgeInsets.all((16 * scale).clamp(14, 20)),
+                      children: [
+                        // Existing units
+                        if (existingUnits.isNotEmpty) ...[
+                          Text(
+                            'Existing units',
+                            style: TextStyle(
+                              fontSize: (12.5 * scale).clamp(11.5, 14),
+                              fontWeight: FontWeight.w700,
+                              color: _subtitleColor,
+                            ),
+                          ),
+                          SizedBox(height: (8 * scale).clamp(6, 10)),
+                          Wrap(
+                            spacing: (8 * scale).clamp(6, 10),
+                            runSpacing: (8 * scale).clamp(6, 10),
+                            children: existingUnits.map((unit) {
+                              final selected = vm.purchaseUnitController.text.trim().toLowerCase() == unit.trim().toLowerCase();
+                              return GestureDetector(
+                                onTap: () {
+                                  vm.setPurchaseUnit(unit);
+                                  Navigator.pop(ctx);
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: (14 * scale).clamp(12, 16),
+                                    vertical: (8 * scale).clamp(7, 10),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selected ? _accentBlue : _accentBlue.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: selected ? _accentBlue : _accentBlue.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    unit,
+                                    style: TextStyle(
+                                      fontSize: (13.5 * scale).clamp(12.5, 15),
+                                      fontWeight: FontWeight.w700,
+                                      color: selected ? Colors.white : _accentBlue,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          SizedBox(height: (16 * scale).clamp(12, 20)),
+                        ],
+
+                        // Quick-add suggestions
+                        Text(
+                          'Dugangi',
+                          style: TextStyle(
+                            fontSize: (12.5 * scale).clamp(11.5, 14),
+                            fontWeight: FontWeight.w700,
+                            color: _subtitleColor,
+                          ),
+                        ),
+                        SizedBox(height: (8 * scale).clamp(6, 10)),
+                        Wrap(
+                          spacing: (8 * scale).clamp(6, 10),
+                          runSpacing: (8 * scale).clamp(6, 10),
+                          children: suggestions.entries.map((entry) {
+                            final alreadyExists = vm.unitConversions.any(
+                              (c) => c.unitName.trim().toLowerCase() == entry.key.toLowerCase(),
+                            );
+                            if (alreadyExists) return const SizedBox.shrink();
+                            return GestureDetector(
+                              onTap: () {
+                                vm.conversionNameController.text = entry.key;
+                                vm.conversionQuantityController.text = entry.value.toStringAsFixed(0);
+                                vm.addUnitConversion();
+                                vm.setPurchaseUnit(entry.key);
+                                Navigator.pop(ctx);
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: (14 * scale).clamp(12, 16),
+                                  vertical: (8 * scale).clamp(7, 10),
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.green.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  '+ ${entry.key} (${entry.value.toStringAsFixed(0)} ${vm.baseUnitLabel})',
+                                  style: TextStyle(
+                                    fontSize: (13 * scale).clamp(12, 14.5),
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        // Custom unit section
+                        SizedBox(height: (16 * scale).clamp(12, 20)),
+                        if (pendingNewUnit == null)
+                          GestureDetector(
+                            onTap: () => setSheet(() => pendingNewUnit = ''),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: (14 * scale).clamp(12, 16),
+                                vertical: (10 * scale).clamp(8, 12),
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  style: BorderStyle.solid,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add_circle_outline_rounded,
+                                      color: _subtitleColor,
+                                      size: (20 * scale).clamp(18, 24)),
+                                  SizedBox(width: (8 * scale).clamp(6, 10)),
+                                  Text(
+                                    'Iba pa (custom)...',
+                                    style: TextStyle(
+                                      fontSize: (13.5 * scale).clamp(12.5, 15),
+                                      fontWeight: FontWeight.w600,
+                                      color: _subtitleColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else ...[
+                          Text(
+                            'Bag-ong unit',
+                            style: TextStyle(
+                              fontSize: (12.5 * scale).clamp(11.5, 14),
+                              fontWeight: FontWeight.w700,
+                              color: _subtitleColor,
+                            ),
+                          ),
+                          SizedBox(height: (8 * scale).clamp(6, 10)),
+                          TextField(
+                            controller: sizeCtrl,
+                            autofocus: true,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: _fieldBg,
+                              labelText: 'Pila ka ${vm.baseUnitLabel} ang 1 ${pendingNewUnit!.isEmpty ? "unit" : pendingNewUnit!}?',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onChanged: (v) => setSheet(() {}),
+                          ),
+                          SizedBox(height: (8 * scale).clamp(6, 10)),
+                          TextField(
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: _fieldBg,
+                              labelText: 'Ngalan sa unit (e.g. galon, bote)',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onChanged: (v) => setSheet(() => pendingNewUnit = v),
+                          ),
+                          SizedBox(height: (10 * scale).clamp(8, 12)),
+                          ElevatedButton(
+                            onPressed: () {
+                              final name = pendingNewUnit!.trim();
+                              final qty = double.tryParse(sizeCtrl.text.trim()) ?? 0;
+                              if (name.isEmpty || qty <= 0) return;
+                              vm.conversionNameController.text = name;
+                              vm.conversionQuantityController.text = qty.toStringAsFixed(0);
+                              vm.addUnitConversion();
+                              vm.setPurchaseUnit(name);
+                              Navigator.pop(ctx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accentBlue,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 44),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('I-save'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -2673,428 +2981,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _showAddPurchaseUnitDialog(
-    BuildContext context,
-    StockInViewModel vm, {
-    required double scale,
-  }) async {
-    final s = scale.clamp(0.90, 1.20);
-
-    if (vm.baseUnitLabel.toLowerCase() == 'pcs') {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (dialogCtx) {
-          return Dialog(
-            backgroundColor: _cardBg,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
-            ),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                (16 * s).clamp(14, 20),
-                (16 * s).clamp(14, 20),
-                (16 * s).clamp(14, 20),
-                (14 * s).clamp(12, 18),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Set Smallest Unit First',
-                          style: TextStyle(
-                            fontSize: (16 * s).clamp(14, 18),
-                            fontWeight: FontWeight.w900,
-                            color: _titleColor,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(dialogCtx),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'For rice or weight-based products, change Smallest unit to gram first before adding kilo or sack.',
-                    style: TextStyle(
-                      color: _subtitleColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: (13.5 * s).clamp(12.5, 15),
-                    ),
-                  ),
-                  SizedBox(height: (14 * s).clamp(12, 16)),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(dialogCtx),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _accentBlue,
-                        elevation: 0,
-                      ),
-                      child: const Text('Okay'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-      return;
-    }
-
-    final unitController = TextEditingController();
-    final quantityController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    final value = ValueNotifier<String>('');
-    final qtyValue = ValueNotifier<String>('');
-    final referenceUnit = ValueNotifier<String>(vm.baseUnitLabel);
-    final selectedSuggestedUnit = ValueNotifier<String?>(null);
-    final suggestedUnits = _suggestedPurchaseUnits(vm);
-
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogCtx) {
-        return Dialog(
-          backgroundColor: _cardBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              (16 * s).clamp(14, 20),
-              (14 * s).clamp(12, 18),
-              (16 * s).clamp(14, 20),
-              (12 * s).clamp(10, 16),
-            ),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Add Bought Unit',
-                          style: TextStyle(
-                            fontSize: (16 * s).clamp(14, 18),
-                            fontWeight: FontWeight.w900,
-                            color: _titleColor,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(dialogCtx),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Tell the app what known unit this bought unit is based on.',
-                    style: TextStyle(
-                      color: _subtitleColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: (13.5 * s).clamp(12.5, 15),
-                    ),
-                  ),
-                  SizedBox(height: (12 * s).clamp(10, 14)),
-                  Text(
-                    'Choose a common unit or select Custom.',
-                    style: TextStyle(
-                      color: _subtitleColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: (12.5 * s).clamp(12, 14),
-                    ),
-                  ),
-                  SizedBox(height: (8 * s).clamp(6, 10)),
-                  ValueListenableBuilder<String?>(
-                    valueListenable: selectedSuggestedUnit,
-                    builder: (context, currentUnit, child) {
-                      return Wrap(
-                        spacing: (8 * s).clamp(6, 10),
-                        runSpacing: (8 * s).clamp(6, 10),
-                        children: [
-                          for (final unit in suggestedUnits)
-                            ChoiceChip(
-                              label: Text(unit),
-                              selected: currentUnit == unit,
-                              onSelected: (_) {
-                                selectedSuggestedUnit.value = unit;
-                                unitController.text = unit;
-                                value.value = unit;
-                                final suggested = _suggestedUnitConversion(
-                                  vm,
-                                  unit,
-                                );
-                                if (suggested != null) {
-                                  quantityController.text = suggested.qty;
-                                  qtyValue.value = suggested.qty;
-                                  referenceUnit.value = suggested.reference;
-                                } else {
-                                  quantityController.clear();
-                                  qtyValue.value = '';
-                                  referenceUnit.value = vm.baseUnitLabel;
-                                }
-                              },
-                            ),
-                          ChoiceChip(
-                            label: const Text('Custom'),
-                            selected: currentUnit == '__custom__',
-                            onSelected: (_) {
-                              selectedSuggestedUnit.value = '__custom__';
-                              unitController.clear();
-                              value.value = '';
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  SizedBox(height: (10 * s).clamp(8, 12)),
-                  ValueListenableBuilder<String?>(
-                    valueListenable: selectedSuggestedUnit,
-                    builder: (context, currentUnit, child) {
-                      if (currentUnit != '__custom__') {
-                        return Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: (14 * s).clamp(12, 16),
-                            vertical: (14 * s).clamp(12, 16),
-                          ),
-                          decoration: BoxDecoration(
-                            color: _fieldBg,
-                            borderRadius: BorderRadius.circular(
-                              (12 * s).clamp(10, 16),
-                            ),
-                            border: Border.all(color: _cardBorder),
-                          ),
-                          child: Text(
-                            unitController.text.isEmpty
-                                ? 'No unit selected yet.'
-                                : 'Selected unit: ${unitController.text}',
-                            style: TextStyle(
-                              color: unitController.text.isEmpty
-                                  ? _subtitleColor
-                                  : _titleColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: (13.5 * s).clamp(12.5, 15),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return ValueListenableBuilder<String>(
-                        valueListenable: value,
-                        builder: (context, currentValue, child) {
-                          return TextFormField(
-                            controller: unitController,
-                            maxLength: 40,
-                            decoration: InputDecoration(
-                              counterText: '',
-                              prefixIcon: const Icon(Icons.inventory_2_outlined),
-                              labelText: 'Unit name',
-                              hintText: 'e.g. kilo, sack, tray',
-                              filled: true,
-                              fillColor: _fieldBg,
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(
-                                  (12 * s).clamp(10, 16),
-                                ),
-                                borderSide: BorderSide(color: _cardBorder),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(
-                                  (12 * s).clamp(10, 16),
-                                ),
-                                borderSide:
-                                    const BorderSide(color: _accentBlue),
-                              ),
-                            ),
-                            onChanged: (text) => value.value = text,
-                            validator: (text) {
-                              final name = (text ?? '').trim();
-                              if (name.isEmpty) {
-                                return 'Please enter a unit name.';
-                              }
-                              final exists = vm.purchaseUnitOptions.any(
-                                (item) =>
-                                    item.trim().toLowerCase() ==
-                                    name.toLowerCase(),
-                              );
-                              if (exists) return 'Unit already exists.';
-                              return null;
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  SizedBox(height: (10 * s).clamp(8, 12)),
-                  ValueListenableBuilder<String>(
-                    valueListenable: qtyValue,
-                    builder: (context, currentQtyText, child) {
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: quantityController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.straighten_rounded),
-                                labelText: 'How many?',
-                                hintText: 'e.g. 50',
-                                filled: true,
-                                fillColor: _fieldBg,
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    (12 * s).clamp(10, 16),
-                                  ),
-                                  borderSide: BorderSide(color: _cardBorder),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    (12 * s).clamp(10, 16),
-                                  ),
-                                  borderSide:
-                                      const BorderSide(color: _accentBlue),
-                                ),
-                              ),
-                              onChanged: (text) => qtyValue.value = text,
-                              validator: (text) {
-                                final qty = int.tryParse((text ?? '').trim()) ?? 0;
-                                if (qty <= 0) return 'Enter a valid quantity.';
-                                return null;
-                              },
-                            ),
-                          ),
-                          SizedBox(width: (10 * s).clamp(8, 12)),
-                          Expanded(
-                            child: ValueListenableBuilder<String>(
-                              valueListenable: referenceUnit,
-                              builder: (context, currentUnit, child) {
-                                return _unitReferenceDropdown(
-                                  options: vm.purchaseUnitOptions,
-                                  value: currentUnit,
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      referenceUnit.value = value;
-                                    }
-                                  },
-                                  scale: s,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  SizedBox(height: (6 * s).clamp(4, 10)),
-                  ValueListenableBuilder<String>(
-                    valueListenable: qtyValue,
-                    builder: (context, qtyText, child) {
-                      return ValueListenableBuilder<String>(
-                        valueListenable: referenceUnit,
-                        builder: (context, currentUnit, child) {
-                          final qty = int.tryParse(qtyText.trim()) ?? 0;
-                          final converted = qty <= 0
-                              ? 0
-                              : qty * vm.quantityFactorFor(currentUnit);
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                vm.baseUnitLabel.toLowerCase() == 'pcs'
-                                    ? 'Common units like dozen can fill automatically. Example: 1 dozen = 12 pcs.'
-                                    : (vm.baseUnitLabel.toLowerCase() == 'ml'
-                                        ? 'Common units like liter and gallon can fill automatically.'
-                                        : 'Common units like kilo can fill automatically.'),
-                                style: TextStyle(
-                                  color: _subtitleColor,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: (12.8 * s).clamp(12, 14.5),
-                                ),
-                              ),
-                              SizedBox(height: (6 * s).clamp(4, 8)),
-                              Text(
-                                converted > 0
-                                    ? 'This will be saved as $converted ${vm.baseUnitLabel}.'
-                                    : 'The app will save stock in ${vm.baseUnitLabel}.',
-                                style: TextStyle(
-                                  color: _subtitleColor,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: (12.8 * s).clamp(12, 14.5),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  SizedBox(height: (12 * s).clamp(10, 14)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(dialogCtx),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      SizedBox(width: (10 * s).clamp(8, 12)),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (formKey.currentState?.validate() != true) return;
-                            if (unitController.text.trim().isEmpty) return;
-                            Navigator.pop(dialogCtx, {
-                              'name': unitController.text.trim(),
-                              'qty': quantityController.text.trim(),
-                              'reference': referenceUnit.value,
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _accentBlue,
-                            elevation: 0,
-                          ),
-                          child: const Text('Add'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    final name = (result?['name'] ?? '').trim();
-    final qtyText = (result?['qty'] ?? '').trim();
-    final reference = (result?['reference'] ?? vm.baseUnitLabel).trim();
-    final qty = int.tryParse(qtyText) ?? 0;
-    if (name.isEmpty || qty <= 0) return;
-    final convertedQty = qty * vm.quantityFactorFor(reference);
-    if (convertedQty <= 0) return;
-
-    vm.conversionNameController.text = name;
-    vm.conversionQuantityController.text = convertedQty.toString();
-    vm.addUnitConversion();
-    vm.setPurchaseUnit(name);
   }
 
   List<String> _suggestedPurchaseUnits(StockInViewModel vm) {

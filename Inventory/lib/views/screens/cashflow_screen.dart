@@ -270,7 +270,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                         children: [
                           _typeChip(chipText, chipColor),
                           Text(
-                            '${record.formattedDate} â€¢ ${record.formattedTime}',
+                            '${record.formattedDate} \u2022 ${record.formattedTime}',
                             style: TextStyle(
                               color: Colors.grey[700],
                               fontWeight: FontWeight.w600,

@@ -119,7 +119,7 @@ class _NegosyoMenuScreenState extends ConsumerState<NegosyoMenuScreen>
           children: [
             HeroHeader(
               title: "Negosyo",
-              balance: homeState.isMoneyVisible ? balanceText : "â‚± â€¢â€¢â€¢â€¢â€¢",
+              balance: homeState.isMoneyVisible ? balanceText : "\u20B1 \u2022\u2022\u2022\u2022\u2022",
               mobileNumber: mobileText,
               isBalanceVisible: homeState.isMoneyVisible,
               showBack: true,

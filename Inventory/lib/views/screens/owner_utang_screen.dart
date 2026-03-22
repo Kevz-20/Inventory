@@ -727,7 +727,7 @@ class _OwnerUtangScreenState extends State<OwnerUtangScreen>
                                 ),
                               ...paymentHistory.map((payment) {
                                 final paidLabel =
-                                    DateFormat('MMM dd, yyyy â€¢ hh:mm a').format(payment.paidAt);
+                                    DateFormat('MMM dd, yyyy \u2022 hh:mm a').format(payment.paidAt);
 
                                 final note = (payment.note?.isNotEmpty == true)
                                     ? payment.note!

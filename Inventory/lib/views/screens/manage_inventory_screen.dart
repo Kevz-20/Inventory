@@ -494,17 +494,26 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                         runSpacing: 8,
                         children: sellingOptions
                             .map(
-                              (option) => Chip(
-                                label: Text(
-                                  '${option.label} â€¢ ${option.baseQuantity ?? 0} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()} â€¢ ${_peso(option.price)}',
-                                ),
-                                onDeleted: () => setLocalState(
-                                  () => sellingOptions.remove(option),
-                                ),
-                                backgroundColor: Colors.white,
-                                side: const BorderSide(color: _border),
-                              ),
-                            )
+                              (option) {
+                                final baseUnit = baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim();
+                                final qty = option.baseQuantity ?? 0;
+                                final labelLower = option.label.trim().toLowerCase();
+                                final unitLower = baseUnit.toLowerCase();
+                                final labelShowsQty = labelLower.endsWith(unitLower) ||
+                                    labelLower.contains(' $unitLower') ||
+                                    labelLower.contains('$qty');
+                                final chipLabel = labelShowsQty
+                                    ? '${option.label} \u2013 ${_peso(option.price)}'
+                                    : '${option.label} \u2013 $qty $baseUnit \u2013 ${_peso(option.price)}';
+                                return Chip(
+                                  label: Text(chipLabel),
+                                  onDeleted: () => setLocalState(
+                                    () => sellingOptions.remove(option),
+                                  ),
+                                  backgroundColor: Colors.white,
+                                  side: const BorderSide(color: _border),
+                                );
+                              })
                             .toList(),
                       ),
                     ],
