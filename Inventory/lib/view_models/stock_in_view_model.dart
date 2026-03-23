@@ -57,6 +57,8 @@ class StockInViewModel extends ChangeNotifier {
       TextEditingController();
   final TextEditingController conversionQuantityController =
       TextEditingController();
+  final TextEditingController conversionPriceController =
+      TextEditingController();
   final TextEditingController sellingOptionLabelController =
       TextEditingController();
   final TextEditingController sellingOptionQuantityController =
@@ -108,6 +110,7 @@ class StockInViewModel extends ChangeNotifier {
     purchaseUnitController.dispose();
     conversionNameController.dispose();
     conversionQuantityController.dispose();
+    conversionPriceController.dispose();
     sellingOptionLabelController.dispose();
     sellingOptionQuantityController.dispose();
     sellingOptionPriceController.dispose();
@@ -394,14 +397,17 @@ class StockInViewModel extends ChangeNotifier {
   void addUnitConversion() {
     final name = conversionNameController.text.trim();
     final qtyText = conversionQuantityController.text.trim().replaceAll(',', '');
+    final priceText = conversionPriceController.text.trim().replaceAll(',', '');
     final qty = int.tryParse(qtyText) ?? 0;
+    final price = double.tryParse(priceText);
 
     if (name.isEmpty || qty <= 0) return;
 
-    _upsertUnitConversion(name, qty);
+    _upsertUnitConversion(name, qty, sellPrice: price);
 
     conversionNameController.clear();
     conversionQuantityController.clear();
+    conversionPriceController.clear();
     safeNotifyListeners();
   }
 
@@ -420,6 +426,7 @@ class StockInViewModel extends ChangeNotifier {
     ProductUnitConversion original, {
     required String unitName,
     required int baseQuantity,
+    double? sellPrice,
   }) {
     final trimmedName = unitName.trim();
     if (trimmedName.isEmpty || baseQuantity <= 0) return;
@@ -430,7 +437,11 @@ class StockInViewModel extends ChangeNotifier {
             item.unitName.toLowerCase() != original.unitName.toLowerCase() &&
             item.unitName.toLowerCase() != trimmedName.toLowerCase(),
       ),
-      ProductUnitConversion(unitName: trimmedName, baseQuantity: baseQuantity),
+      ProductUnitConversion(
+        unitName: trimmedName,
+        baseQuantity: baseQuantity,
+        sellPrice: sellPrice ?? original.sellPrice,
+      ),
     ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
 
     if (purchaseUnitController.text.trim().toLowerCase() ==
@@ -440,12 +451,27 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
-  void _upsertUnitConversion(String unitName, int baseQuantity) {
+  /// Updates the base quantity of an existing unit conversion (e.g., mL per gallon).
+  /// Preserves the sell price if already set.
+  void setUnitFactor(String unitName, int baseQuantity) {
+    if (baseQuantity <= 0) return;
+    final existing = unitConversions.where(
+      (c) => c.unitName.trim().toLowerCase() == unitName.trim().toLowerCase(),
+    ).firstOrNull;
+    _upsertUnitConversion(unitName, baseQuantity, sellPrice: existing?.sellPrice);
+    safeNotifyListeners();
+  }
+
+  void _upsertUnitConversion(String unitName, int baseQuantity, {double? sellPrice}) {
     unitConversions = [
       ...unitConversions.where(
         (item) => item.unitName.toLowerCase() != unitName.toLowerCase(),
       ),
-      ProductUnitConversion(unitName: unitName.trim(), baseQuantity: baseQuantity),
+      ProductUnitConversion(
+        unitName: unitName.trim(),
+        baseQuantity: baseQuantity,
+        sellPrice: sellPrice,
+      ),
     ]..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
   }
 
@@ -599,13 +625,11 @@ class StockInViewModel extends ChangeNotifier {
     selectedProduct ??= existingProduct;
 
     final purchaseTotal = purchaseInput;
-    final incomingCostPerUnit =
-        newQuantity > 0 ? purchaseTotal / newQuantity : purchaseInput;
     final previousQty = selectedProduct?.quantity ?? 0;
     final previousCostPerUnit = selectedProduct?.costPerUnit ?? 0.0;
     final mergedQuantity = previousQty + newQuantity;
     final mergedCostPerUnit = mergedQuantity <= 0
-        ? incomingCostPerUnit
+        ? (newQuantity > 0 ? purchaseTotal / newQuantity : purchaseTotal)
         : ((previousQty * previousCostPerUnit) + purchaseTotal) / mergedQuantity;
 
     final stock = ProductModel(
@@ -706,15 +730,17 @@ class StockInViewModel extends ChangeNotifier {
 
     // After loading conversions, set the purchase unit and convert selling price
     // back to per-purchase-unit so the field shows the human-friendly value
-    if (unitConversions.isNotEmpty && product.pricePerUnit > 0) {
+    if (unitConversions.isNotEmpty) {
       // Use the smallest conversion as the primary purchase unit (e.g. kilo for rice)
       final primary = unitConversions.reduce((a, b) =>
           a.baseQuantity < b.baseQuantity ? a : b);
       purchaseUnitController.text = primary.unitName;
-      final displayPrice = product.pricePerUnit * primary.baseQuantity;
-      sellingPriceController.text = displayPrice.toStringAsFixed(
-        displayPrice % 1 == 0 ? 0 : 2,
-      );
+      if (product.pricePerUnit > 0) {
+        final displayPrice = product.pricePerUnit * primary.baseQuantity;
+        sellingPriceController.text = displayPrice.toStringAsFixed(
+          displayPrice % 1 == 0 ? 0 : 2,
+        );
+      }
     } else if (product.pricePerUnit > 0) {
       sellingPriceController.text = product.pricePerUnit.toStringAsFixed(
         product.pricePerUnit % 1 == 0 ? 0 : 2,
@@ -733,6 +759,7 @@ class StockInViewModel extends ChangeNotifier {
     purchaseUnitController.text = 'pcs';
     conversionNameController.clear();
     conversionQuantityController.clear();
+    conversionPriceController.clear();
     sellingOptionLabelController.clear();
     sellingOptionQuantityController.clear();
     sellingOptionPriceController.clear();

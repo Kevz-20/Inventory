@@ -3,6 +3,7 @@ class ProductUnitConversion {
   final int? productId;
   final String unitName;
   final int baseQuantity;
+  final double? sellPrice;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -11,6 +12,7 @@ class ProductUnitConversion {
     this.productId,
     required this.unitName,
     required this.baseQuantity,
+    this.sellPrice,
     this.createdAt,
     this.updatedAt,
   });
@@ -21,6 +23,7 @@ class ProductUnitConversion {
       'product_id': productId,
       'unit_name': unitName,
       'base_quantity': baseQuantity,
+      'sell_price': sellPrice,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -32,6 +35,7 @@ class ProductUnitConversion {
       productId: map['product_id'] as int?,
       unitName: (map['unit_name'] ?? '').toString(),
       baseQuantity: (map['base_quantity'] as num?)?.toInt() ?? 0,
+      sellPrice: (map['sell_price'] as num?)?.toDouble(),
       createdAt: map['created_at'] == null
           ? null
           : DateTime.tryParse(map['created_at'].toString()),
@@ -46,6 +50,7 @@ class ProductUnitConversion {
     int? productId,
     String? unitName,
     int? baseQuantity,
+    double? sellPrice,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -54,6 +59,7 @@ class ProductUnitConversion {
       productId: productId ?? this.productId,
       unitName: unitName ?? this.unitName,
       baseQuantity: baseQuantity ?? this.baseQuantity,
+      sellPrice: sellPrice ?? this.sellPrice,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

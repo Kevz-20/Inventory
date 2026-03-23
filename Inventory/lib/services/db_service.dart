@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -452,6 +452,18 @@ class DBService {
           );
           await db.rawDelete(
             "DELETE FROM base_unit_choice WHERE name = 'Pack / Sachet'",
+          );
+        }
+
+        if (oldVersion < 21) {
+          await addColumnIfMissing(
+            'product_unit_conversion',
+            'sell_price',
+            'REAL',
+          );
+          await db.rawInsert(
+            'INSERT OR IGNORE INTO base_unit_choice(name, created_at) VALUES(?, ?)',
+            ['half', DateTime.now().toIso8601String()],
           );
         }
 

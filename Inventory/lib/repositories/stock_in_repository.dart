@@ -238,6 +238,7 @@ class StockInRepository {
           'product_id': productId,
           'unit_name': conversion.unitName.trim(),
           'base_quantity': conversion.baseQuantity,
+          'sell_price': conversion.sellPrice,
           'created_at': now,
           'updated_at': now,
         });

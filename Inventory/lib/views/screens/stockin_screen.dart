@@ -29,10 +29,12 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   static const Color _subtitleColor = Color(0xFF5B6D96);
   static const Color _accentBlue = Color(0xFF2D5BE3);
   late final ScrollController _scrollController;
+  final TextEditingController _unitFactorController = TextEditingController();
+  String _lastUnitForFactor = '';
   bool _showUnitOptions = false;
   bool _showQuickOptions = false;
   bool _restockPopulated = false;
-  bool _showCostDetails = false;
+
 
   String _currentStockType(StockInViewModel vm) {
     final base = vm.baseUnitLabel.trim().toLowerCase();
@@ -215,6 +217,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _unitFactorController.dispose();
     super.dispose();
   }
 
@@ -415,6 +418,21 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                               final useTwoColumns = amountsConstraints.maxWidth >= 560;
                               final showSellingPriceField =
                                   _currentStockType(vm) != 'liquid';
+
+                              final qtyField = _inputNumberField(
+                                label: 'Pila kabuok?',
+                                controller: vm.quantityController,
+                                showError: vm.showValidationErrors,
+                                icon: Icons.shopping_cart_rounded,
+                                isPeso: false,
+                                allowDecimal: vm.useAdvancedUnitSetup,
+                                onChanged: (_) => setState(() {}),
+                                scale: scale,
+                                height: fieldH,
+                                radius: radius12,
+                                valueFs: valueFs,
+                              );
+
                               final topFields = [
                                 _inputNumberField(
                                   label: 'Tagpila tanan?',
@@ -427,19 +445,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   radius: radius12,
                                   valueFs: valueFs,
                                 ),
-                                _inputNumberField(
-                                  label: 'Pila kabuok?',
-                                  controller: vm.quantityController,
-                                  showError: vm.showValidationErrors,
-                                  icon: Icons.shopping_cart_rounded,
-                                  isPeso: false,
-                                  allowDecimal: vm.useAdvancedUnitSetup,
-                                  onChanged: (_) => setState(() {}),
-                                  scale: scale,
-                                  height: fieldH,
-                                  radius: radius12,
-                                  valueFs: valueFs,
-                                ),
+                                qtyField,
                               ];
 
                               Widget topRow;
@@ -453,6 +459,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 );
                               } else {
                                 topRow = Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Expanded(child: topFields[0]),
                                     SizedBox(width: gap12),
@@ -461,7 +468,20 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 );
                               }
 
-                              // Sukod + selling price always side by side
+                              // Sync factor controller when purchase unit changes
+                              final currentPurchaseUnit = vm.purchaseUnitLabel;
+                              final currentBaseUnit = vm.baseUnitLabel;
+                              final showFactorField = vm.useAdvancedUnitSetup &&
+                                  currentPurchaseUnit.toLowerCase() != currentBaseUnit.toLowerCase();
+                              if (_lastUnitForFactor != currentPurchaseUnit) {
+                                _lastUnitForFactor = currentPurchaseUnit;
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (!mounted) return;
+                                  final factor = vm.quantityFactorFor(currentPurchaseUnit);
+                                  _unitFactorController.text = factor > 1 ? factor.toString() : '';
+                                });
+                              }
+
                               final sukodAndPrice = (vm.useAdvancedUnitSetup || showSellingPriceField)
                                   ? Column(
                                       children: [
@@ -478,7 +498,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                                   valueFs: valueFs,
                                                 ),
                                               ),
-                                              if (showSellingPriceField) SizedBox(width: gap12),
+                                              SizedBox(width: gap12),
                                             ],
                                             if (showSellingPriceField)
                                               Expanded(
@@ -493,7 +513,27 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                                   radius: radius12,
                                                   valueFs: valueFs,
                                                 ),
-                                              ),
+                                              )
+                                            else if (showFactorField)
+                                              Expanded(
+                                                child: _inputNumberField(
+                                                  label: '${currentBaseUnit} per ${currentPurchaseUnit}',
+                                                  controller: _unitFactorController,
+                                                  showError: false,
+                                                  icon: Icons.straighten_rounded,
+                                                  onChanged: (text) {
+                                                    final qty = int.tryParse(text.replaceAll(',', '')) ?? 0;
+                                                    if (qty > 0) vm.setUnitFactor(currentPurchaseUnit, qty);
+                                                    setState(() {});
+                                                  },
+                                                  scale: scale,
+                                                  height: fieldH,
+                                                  radius: radius12,
+                                                  valueFs: valueFs,
+                                                ),
+                                              )
+                                            else
+                                              const Spacer(),
                                           ],
                                         ),
                                       ],
@@ -545,7 +585,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             ),
                             SizedBox(height: gap12),
                             _advancedOptionRow(
-                              title: 'More sizes',
+                              title: 'Wholesale',
                               description:
                                   'Add bigger sizes for this item, like pack, tray, case, sack, or kilo.',
                               isOn: _showUnitOptions,
@@ -576,7 +616,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             ],
                             SizedBox(height: gap12),
                             _advancedOptionRow(
-                              title: 'Quick sale presets',
+                              title: 'Retail / Tingi',
                               description:
                                   'Save common sale shortcuts so checkout is faster later.',
                               isOn: _showQuickOptions,
@@ -766,7 +806,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   // ============================================================
-  // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ CATEGORY BOTTOM SHEET (responsive only)
+  //  CATEGORY BOTTOM SHEET (responsive only)
   // ============================================================
   Future<String?> _showCategoryBottomSheet({
     required BuildContext context,
@@ -1430,26 +1470,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ),
             ],
           ),
-          SizedBox(height: (8 * scale).clamp(6, 10)),
-          GestureDetector(
-            onTap: () => setState(() => _showCostDetails = !_showCostDetails),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(
-                _showCostDetails ? 'Hide details' : 'Show details',
-                style: TextStyle(fontSize: (13 * scale).clamp(12, 14.5), fontWeight: FontWeight.w700, color: _accentBlue),
-              ),
-              Icon(
-                _showCostDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                color: _accentBlue, size: (18 * scale).clamp(16, 20),
-              ),
-            ]),
-          ),
-          if (_showCostDetails) ...[
-            divider,
-            previewRow('Smallest stock unit', unitDisplay.isEmpty ? '—' : unitDisplay),
-            divider,
-            previewRow('Equivalent stock', equivalentStock),
-          ],
         ],
       ),
     );
@@ -3012,6 +3032,11 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return unit;
   }
 
+  bool _isWeightBaseUnit(StockInViewModel vm) {
+    final normalized = vm.baseUnitLabel.trim().toLowerCase();
+    return normalized == 'gram' || normalized == 'grams' || normalized == 'g';
+  }
+
   bool _isLiquidBaseUnit(StockInViewModel vm) {
     final normalized = vm.baseUnitLabel.trim().toLowerCase();
     return normalized == 'ml' ||
@@ -3105,7 +3130,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           children: [
             Expanded(
               child: _inputTextField(
-                label: 'Other unit name',
+                label: 'Unit name',
                 controller: vm.conversionNameController,
                 showError: false,
                 icon: Icons.label_outline_rounded,
@@ -3126,10 +3151,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             SizedBox(width: gap12),
             Expanded(
               child: _inputNumberField(
-                label: 'How many ${_quantityUnitLabel(vm)} is this?',
+                label: '${_quantityUnitLabel(vm)} per unit',
                 controller: vm.conversionQuantityController,
                 showError: false,
                 icon: Icons.water_drop_outlined,
+                scale: scale,
+                height: (58 * scale).clamp(54, 66),
+                radius: radius,
+                valueFs: valueFs,
+              ),
+            ),
+            SizedBox(width: gap12),
+            Expanded(
+              child: _inputNumberField(
+                label: 'Sell price (optional)',
+                controller: vm.conversionPriceController,
+                showError: false,
+                isPeso: true,
+                icon: Icons.sell_outlined,
                 scale: scale,
                 height: (58 * scale).clamp(54, 66),
                 radius: radius,
@@ -3144,7 +3183,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
           child: OutlinedButton.icon(
             onPressed: vm.addUnitConversion,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Add another unit'),
+            label: const Text('Add wholesale unit'),
           ),
         ),
         if (vm.unitConversions.isNotEmpty) ...[
@@ -3165,6 +3204,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     ProductUnitConversion conversion,
     StockInViewModel vm,
   ) {
+    final priceText = (conversion.sellPrice != null && conversion.sellPrice! > 0)
+        ? ' · ₱${conversion.sellPrice!.toStringAsFixed(conversion.sellPrice! % 1 == 0 ? 0 : 2)}'
+        : '';
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: () => _showEditPurchaseUnitDialog(
@@ -3175,7 +3217,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       ),
       child: Chip(
         label: Text(
-          '${conversion.unitName} = ${conversion.baseQuantity} ${vm.baseUnitLabel}',
+          '${conversion.unitName} = ${conversion.baseQuantity} ${vm.baseUnitLabel}$priceText',
         ),
         onDeleted: () => vm.removeUnitConversion(conversion),
         deleteIcon: const Icon(Icons.close_rounded, size: 18),
@@ -3227,6 +3269,13 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final unitController = TextEditingController(text: conversion.unitName);
     final quantityController = TextEditingController(
       text: conversion.baseQuantity.toString(),
+    );
+    final sellPriceController = TextEditingController(
+      text: (conversion.sellPrice != null && conversion.sellPrice! > 0)
+          ? conversion.sellPrice!.toStringAsFixed(
+              conversion.sellPrice! % 1 == 0 ? 0 : 2,
+            )
+          : '',
     );
     final formKey = GlobalKey<FormState>();
     final qtyValue = ValueNotifier<String>(conversion.baseQuantity.toString());
@@ -3425,6 +3474,33 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       );
                     },
                   ),
+                  SizedBox(height: (10 * s).clamp(8, 12)),
+                  TextFormField(
+                    controller: sellPriceController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                    ],
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.sell_outlined),
+                      prefixText: '₱ ',
+                      labelText: 'Wholesale sell price (optional)',
+                      filled: true,
+                      fillColor: _fieldBg,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          (12 * s).clamp(10, 16),
+                        ),
+                        borderSide: BorderSide(color: _cardBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          (12 * s).clamp(10, 16),
+                        ),
+                        borderSide: const BorderSide(color: _accentBlue),
+                      ),
+                    ),
+                  ),
                   SizedBox(height: (12 * s).clamp(10, 14)),
                   Row(
                     children: [
@@ -3443,6 +3519,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                               'name': unitController.text.trim(),
                               'qty': quantityController.text.trim(),
                               'reference': referenceUnit.value,
+                              'sell_price': sellPriceController.text.trim(),
                             });
                           },
                           style: ElevatedButton.styleFrom(
@@ -3462,18 +3539,25 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       },
     );
 
+    unitController.dispose();
+    quantityController.dispose();
+    sellPriceController.dispose();
+
     final name = (result?['name'] ?? '').trim();
     final qtyText = (result?['qty'] ?? '').trim();
     final reference = (result?['reference'] ?? vm.baseUnitLabel).trim();
+    final sellPriceText = (result?['sell_price'] ?? '').trim().replaceAll(',', '');
     final qty = int.tryParse(qtyText) ?? 0;
     if (name.isEmpty || qty <= 0) return;
     final convertedQty = qty * vm.quantityFactorFor(reference);
     if (convertedQty <= 0) return;
+    final sellPrice = double.tryParse(sellPriceText);
 
     vm.updateUnitConversion(
       conversion,
       unitName: name,
       baseQuantity: convertedQty,
+      sellPrice: sellPrice,
     );
   }
 
@@ -3498,16 +3582,26 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final isLiquid = _isLiquidBaseUnit(vm);
     final isPack = _isPackBaseUnit(vm);
     final isPiece = _isPieceBaseUnit(vm);
+    final isWeight = _isWeightBaseUnit(vm);
     final liquidSuggestions = _liquidQuickSaleSuggestions(vm);
     final packSuggestions = _packQuickSaleSuggestions(vm);
     final pieceSuggestions = _pieceQuickSaleSuggestions(vm);
+    // Weight: common per-piece sales (quantity=0 means user fills grams manually)
+    const weightSuggestions = <({String label, int quantity})>[
+      (label: '1 piece', quantity: 0),
+      (label: '¼ kilo', quantity: 250),
+      (label: '½ kilo', quantity: 500),
+      (label: '1 kilo', quantity: 1000),
+    ];
     final suggestions = isPack
         ? packSuggestions
         : isLiquid
             ? liquidSuggestions
             : isPiece
                 ? pieceSuggestions
-                : const <({String label, int quantity})>[];
+                : isWeight
+                    ? weightSuggestions
+                    : const <({String label, int quantity})>[];
     final currentLabel =
         vm.sellingOptionLabelController.text.trim().toLowerCase();
     final isKiloLabel =
@@ -3520,9 +3614,11 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               ? 'Tap a preset to auto-fill (Tungaon, 1 Sachet, 6 pcs, 1 Dozen), or type your own.'
               : isLiquid
                   ? 'Optional only. Add common liquid sales like 1 flat/lapad, 1/2 liter, or 1 liter so the cashier can tap faster later.'
-                  : isPiece
-                      ? 'Add quick sale buttons like "3 pcs" or "1 dozen". For products also sold by kilo (like sibuyas), tap "1 kilo" and enter how many pieces equal 1 kilo.'
-                      : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
+                  : isWeight
+                      ? 'For per-piece selling (e.g. 1 sibuyas = 50g = ₱2), tap "1 piece" and enter the grams and price. Also add ¼ or ½ kilo quick buttons.'
+                      : isPiece
+                          ? 'Add quick sale buttons like "3 pcs" or "1 dozen". For products also sold by kilo (like sibuyas), tap "1 kilo" and enter how many pieces equal 1 kilo.'
+                          : 'Optional only. Add common quick buttons like 1 dozen, twin pack, 3 for 20, or 1 case so the cashier can tap faster later.',
           style: TextStyle(
             fontSize: (valueFs - 1).clamp(12, 15),
             fontWeight: FontWeight.w600,
@@ -3570,7 +3666,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
               child: _inputNumberField(
                 label: isKiloLabel
                     ? 'Pieces per kilo (estimate)'
-                    : 'How many ${_quantityUnitLabel(vm)} to deduct?',
+                    : isWeight
+                        ? 'Grams to deduct per sale'
+                        : 'How many ${_quantityUnitLabel(vm)} to deduct?',
                 controller: vm.sellingOptionQuantityController,
                 showError: false,
                 icon: Icons.inventory_2_outlined,
