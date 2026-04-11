@@ -189,6 +189,38 @@ class StockInViewModel extends ChangeNotifier {
     safeNotifyListeners();
   }
 
+  Future<void> updateCategoryChoice(String previousName, String nextName) async {
+    final previousTrimmed = previousName.trim();
+    final nextTrimmed = nextName.trim();
+    if (previousTrimmed.isEmpty || nextTrimmed.isEmpty) return;
+
+    await _categoryRepo.updateCategory(previousTrimmed, nextTrimmed);
+    await loadCategories();
+
+    if (selectedCategory?.trim().toLowerCase() == previousTrimmed.toLowerCase()) {
+      selectedCategory = nextTrimmed;
+      final row = categoryRows.where((c) => c['name'] == nextTrimmed).toList();
+      selectedCategoryId = row.isNotEmpty ? row.first['id'] as int? : null;
+    }
+
+    safeNotifyListeners();
+  }
+
+  Future<void> deleteCategoryChoice(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    await _categoryRepo.deleteCategory(trimmed);
+    await loadCategories();
+
+    if (selectedCategory?.trim().toLowerCase() == trimmed.toLowerCase()) {
+      selectedCategory = null;
+      selectedCategoryId = null;
+    }
+
+    safeNotifyListeners();
+  }
+
   void pickDate(DateTime date) {
     selectedDate = date;
     safeNotifyListeners();

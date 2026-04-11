@@ -10,24 +10,19 @@ import '../../view_models/home_view_model.dart';
 import '../widgets/primary_footer_nav.dart';
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────────
-// Palette aligned with login_screen.dart (navy / blue family)
 class _C {
-  // Surface & background
   static const bg         = Color(0xFFF0F4FF);
   static const surface    = Color(0xFFFFFFFF);
   static const border     = Color(0xFFCDD5EE);
 
-  // Brand — navy / blue  (same as login screen)
   static const brandDeep  = Color(0xFF1B3A7A);
   static const brandMid   = Color(0xFF5B6D96);
   static const textDark   = Color(0xFF1B3A7A);
 
-  // Hero card gradient
   static const heroStart  = Color(0xFF1A3584);
   static const heroMid    = Color(0xFF2456D0);
   static const heroEnd    = Color(0xFF4B8AF0);
 
-  // Feature-card icon palette  (diverse colours for quick visual scanning)
   static const red        = Color(0xFFD63031);
   static const redBg      = Color(0xFFFFF0F0);
   static const green      = Color(0xFF00897B);
@@ -41,10 +36,6 @@ class _C {
   static const teal       = Color(0xFF0097A7);
   static const tealBg     = Color(0xFFE0F7FA);
 
-  // Status / utility
-  static const amber       = Color(0xFFB7770D);
-  static const amberBg     = Color(0xFFFFF8E1);
-  static const amberBorder = Color(0xFFFFCC02);
   static const warn        = Color(0xFFD63031);
   static const liveDot     = Color(0xFF00C853);
 }
@@ -58,8 +49,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
-  bool _bannerDismissed = false;
-
   @override
   void initState() {
     super.initState();
@@ -82,36 +71,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    _bannerDismissed = false;
     ref.read(homeViewModelProvider.notifier).fetchHomeData();
   }
 
   double get _w => MediaQuery.of(context).size.width;
   double _r(double v) => v * (_w / 390).clamp(0.85, 1.15);
 
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning!';
-    if (h < 18) return 'Good afternoon!';
-    return 'Good evening!';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final size       = MediaQuery.of(context).size;
-    // Tablet (≥700 px) → fixed no-scroll; phone → scrollable
+    final size      = MediaQuery.of(context).size;
     final isNoScroll = size.width >= 700;
 
     final state    = ref.watch(homeViewModelProvider);
     final currency = NumberFormat.currency(
         locale: 'en_PH', symbol: '₱', decimalDigits: 2);
 
-    final cashText   = state.isMoneyVisible
+    final cashText  = state.isMoneyVisible
         ? currency.format(state.cashOnHand) : '₱ ••••••';
-    final salesText  = state.isMoneyVisible
+    final salesText = state.isMoneyVisible
         ? currency.format(state.todaySales) : '₱ ••••••';
-    final dateLabel  = DateFormat('EEE, MMM d, yyyy').format(DateTime.now());
-    final showBanner = state.lowStockCount > 0 && !_bannerDismissed;
+    final dateLabel = DateFormat('EEE, MMM d, yyyy').format(DateTime.now());
 
     void onToggle() =>
         ref.read(homeViewModelProvider.notifier).toggleMoneyVisibility();
@@ -123,25 +102,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
           const PrimaryFooterNav(selectedTab: PrimaryFooterTab.home),
       body: isNoScroll
           ? _PhoneBody(
-              cashText:        cashText,
-              salesText:       salesText,
-              dateLabel:       dateLabel,
-              greeting:        _greeting,
-              state:           state,
-              showBanner:      showBanner,
-              onToggle:        onToggle,
-              onDismissBanner: () => setState(() => _bannerDismissed = true),
-              r:               _r,
+              cashText:  cashText,
+              salesText: salesText,
+              dateLabel: dateLabel,
+              state:     state,
+              onToggle:  onToggle,
+              r:         _r,
             )
           : _ScrollBody(
-              cashText:        cashText,
-              salesText:       salesText,
-              dateLabel:       dateLabel,
-              greeting:        _greeting,
-              state:           state,
-              showBanner:      showBanner,
-              onToggle:        onToggle,
-              onDismissBanner: () => setState(() => _bannerDismissed = true),
+              cashText:  cashText,
+              salesText: salesText,
+              dateLabel: dateLabel,
+              state:     state,
+              onToggle:  onToggle,
               onRefresh: () async =>
                   ref.read(homeViewModelProvider.notifier).fetchHomeData(),
               r: _r,
@@ -161,7 +134,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
         automaticallyImplyLeading: false,
         toolbarHeight: _r(70),
         titleSpacing: 0,
-        // Subtle bottom separator (matches login card borders)
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: _C.border),
@@ -170,7 +142,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
           padding: EdgeInsets.fromLTRB(_r(20), _r(6), _r(20), 0),
           child: Row(
             children: [
-              // Logo — rounded rect, gradient fallback matching hero palette
               Container(
                 width: _r(44), height: _r(44),
                 decoration: BoxDecoration(
@@ -200,18 +171,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
               ),
               SizedBox(width: _r(12)),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('EMPOWER', style: TextStyle(
-                        fontSize: _r(19), fontWeight: FontWeight.w900,
-                        color: _C.brandDeep, letterSpacing: 0.9)),
-                    Text('Sari-Sari Store Manager', style: TextStyle(
-                        fontSize: _r(11.5), fontWeight: FontWeight.w600,
-                        color: _C.brandMid)),
-                  ],
-                ),
+                child: Text('EMPOWER', style: TextStyle(
+                    fontSize: _r(19), fontWeight: FontWeight.w900,
+                    color: _C.brandDeep, letterSpacing: 0.9)),
               ),
               _NavIconButton(
                 icon: Icons.notifications_outlined,
@@ -234,24 +196,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with RouteAware {
   }
 }
 
-// ─── Phone body — NO SCROLL ────────────────────────────────────────────────────
+// ─── Phone body — fixed layout ─────────────────────────────────────────────────
 class _PhoneBody extends StatelessWidget {
   const _PhoneBody({
     required this.cashText,
     required this.salesText,
     required this.dateLabel,
-    required this.greeting,
     required this.state,
-    required this.showBanner,
     required this.onToggle,
-    required this.onDismissBanner,
     required this.r,
   });
 
-  final String cashText, salesText, dateLabel, greeting;
+  final String cashText, salesText, dateLabel;
   final HomeState state;
-  final bool showBanner;
-  final VoidCallback onToggle, onDismissBanner;
+  final VoidCallback onToggle;
   final double Function(double) r;
 
   @override
@@ -268,7 +226,6 @@ class _PhoneBody extends StatelessWidget {
             children: [
               _HeroCard(
                 cashText:           cashText,
-                greeting:           greeting,
                 dateLabel:          dateLabel,
                 isMoneyVisible:     state.isMoneyVisible,
                 onToggleVisibility: onToggle,
@@ -286,8 +243,6 @@ class _PhoneBody extends StatelessWidget {
                 r: r,
               ),
               SizedBox(height: r(12)),
-              _SectionLabel(r: r),
-              SizedBox(height: r(8)),
             ],
           ),
         ),
@@ -302,25 +257,21 @@ class _PhoneBody extends StatelessWidget {
   }
 }
 
-// ─── Tablet body — SCROLLABLE ──────────────────────────────────────────────────
+// ─── Scrollable body ───────────────────────────────────────────────────────────
 class _ScrollBody extends StatelessWidget {
   const _ScrollBody({
     required this.cashText,
     required this.salesText,
     required this.dateLabel,
-    required this.greeting,
     required this.state,
-    required this.showBanner,
     required this.onToggle,
-    required this.onDismissBanner,
     required this.onRefresh,
     required this.r,
   });
 
-  final String cashText, salesText, dateLabel, greeting;
+  final String cashText, salesText, dateLabel;
   final HomeState state;
-  final bool showBanner;
-  final VoidCallback onToggle, onDismissBanner;
+  final VoidCallback onToggle;
   final Future<void> Function() onRefresh;
   final double Function(double) r;
 
@@ -338,7 +289,6 @@ class _ScrollBody extends StatelessWidget {
           children: [
             _HeroCard(
               cashText:           cashText,
-              greeting:           greeting,
               dateLabel:          dateLabel,
               isMoneyVisible:     state.isMoneyVisible,
               onToggleVisibility: onToggle,
@@ -356,8 +306,6 @@ class _ScrollBody extends StatelessWidget {
               r: r,
             ),
             SizedBox(height: r(18)),
-            _SectionLabel(r: r),
-            SizedBox(height: r(12)),
             _FeatureGrid(fillHeight: false, r: r),
             SizedBox(height: r(16)),
           ],
@@ -420,23 +368,21 @@ class _NavIconButton extends StatelessWidget {
 class _HeroCard extends StatelessWidget {
   const _HeroCard({
     required this.cashText,
-    required this.greeting,
     required this.dateLabel,
     required this.isMoneyVisible,
     required this.onToggleVisibility,
     required this.compact,
     required this.r,
   });
-  final String cashText, greeting, dateLabel;
+  final String cashText, dateLabel;
   final bool isMoneyVisible, compact;
   final VoidCallback onToggleVisibility;
   final double Function(double) r;
 
   @override
   Widget build(BuildContext context) {
-    final vPad       = compact ? r(16) : r(22);
-    final amountSize = compact ? r(34) : r(38);
-    final greetSize  = compact ? r(14) : r(15);
+    final vPad       = compact ? r(18) : r(24);
+    final amountSize = compact ? r(36) : r(40);
 
     return Container(
       width: double.infinity,
@@ -478,98 +424,89 @@ class _HeroCard extends StatelessWidget {
           ),
         ),
 
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // ── Row 1: greeting + eye toggle ──────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  greeting,
-                  style: TextStyle(
-                    fontSize: greetSize,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withOpacity(0.90),
-                    letterSpacing: 0.2,
-                  ),
-                ),
+        // Eye toggle — top right
+        Positioned(
+          top: 0, right: 0,
+          child: GestureDetector(
+            onTap: onToggleVisibility,
+            child: Container(
+              width: r(38), height: r(38),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(r(11)),
+                border: Border.all(
+                    color: Colors.white.withOpacity(0.30), width: 1.5),
               ),
-              GestureDetector(
-                onTap: onToggleVisibility,
-                child: Container(
-                  width: r(38), height: r(38),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(r(11)),
-                    border: Border.all(
-                        color: Colors.white.withOpacity(0.30), width: 1.5),
-                  ),
-                  child: Icon(
-                    isMoneyVisible
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: r(18),
-                    color: Colors.white,
-                  ),
-                ),
+              child: Icon(
+                isMoneyVisible
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                size: r(18),
+                color: Colors.white,
               ),
-            ],
-          ),
-
-          SizedBox(height: compact ? r(12) : r(16)),
-
-          // ── Row 2: live dot + label ────────────────────────────────────────
-          Row(children: [
-            Container(
-              width: r(8), height: r(8),
-              decoration: const BoxDecoration(
-                color: _C.liveDot, shape: BoxShape.circle,
-              ),
-            ),
-            SizedBox(width: r(6)),
-            Text(
-              'Cash on Hand',
-              style: TextStyle(
-                fontSize: r(12.5),
-                fontWeight: FontWeight.w700,
-                color: Colors.white.withOpacity(0.78),
-                letterSpacing: 0.5,
-              ),
-            ),
-          ]),
-
-          SizedBox(height: r(5)),
-
-          // ── Amount ────────────────────────────────────────────────────────
-          Text(
-            cashText,
-            style: TextStyle(
-              fontSize: amountSize,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.8,
-              height: 1.0,
             ),
           ),
+        ),
 
-          SizedBox(height: compact ? r(12) : r(16)),
+        // Content column
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: r(compact ? 4 : 6)),
 
-          // ── Date footer ───────────────────────────────────────────────────
-          Row(children: [
-            Icon(Icons.calendar_today_rounded,
-                size: r(13), color: Colors.white.withOpacity(0.68)),
-            SizedBox(width: r(5)),
+            // Live dot + label
+            Row(children: [
+              Container(
+                width: r(8), height: r(8),
+                decoration: const BoxDecoration(
+                  color: _C.liveDot, shape: BoxShape.circle,
+                ),
+              ),
+              SizedBox(width: r(6)),
+              Text(
+                'Cash on Hand',
+                style: TextStyle(
+                  fontSize: r(13),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withOpacity(0.78),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ]),
+
+            SizedBox(height: r(6)),
+
+            // Amount
             Text(
-              dateLabel,
+              cashText,
               style: TextStyle(
-                fontSize: r(12),
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.72),
+                fontSize: amountSize,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: -0.8,
+                height: 1.0,
               ),
             ),
-          ]),
-        ]),
+
+            SizedBox(height: r(compact ? 14 : 18)),
+
+            // Date footer
+            Row(children: [
+              Icon(Icons.calendar_today_rounded,
+                  size: r(13), color: Colors.white.withOpacity(0.68)),
+              SizedBox(width: r(5)),
+              Text(
+                dateLabel,
+                style: TextStyle(
+                  fontSize: r(12),
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(0.72),
+                ),
+              ),
+            ]),
+          ],
+        ),
       ]),
     );
   }
@@ -712,143 +649,6 @@ class _VertDivider extends StatelessWidget {
     margin: EdgeInsets.symmetric(vertical: r(10)),
     color: _C.border,
   );
-}
-
-// ─── Low Stock Banner ──────────────────────────────────────────────────────────
-// ignore: unused_element
-class _LowStockBanner extends StatelessWidget {
-  const _LowStockBanner({
-    required this.count, required this.onTap,
-    required this.onDismiss, required this.r,
-  });
-  final int count;
-  final VoidCallback onTap, onDismiss;
-  final double Function(double) r;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: r(14), vertical: r(11)),
-        decoration: BoxDecoration(
-          color: _C.amberBg,
-          borderRadius: BorderRadius.circular(r(16)),
-          border: Border.all(color: _C.amberBorder, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: _C.amber.withOpacity(0.10),
-              blurRadius: r(10), offset: Offset(0, r(3)),
-            ),
-          ],
-        ),
-        child: Row(children: [
-          Container(
-            width: r(38), height: r(38),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _C.amber.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(r(11)),
-            ),
-            child: Icon(Icons.warning_amber_rounded,
-                color: _C.amber, size: r(21)),
-          ),
-          SizedBox(width: r(11)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$count item${count == 1 ? '' : 's'} running low on stock',
-                  style: TextStyle(
-                    fontSize: r(13),
-                    fontWeight: FontWeight.w800,
-                    color: _C.amber,
-                  ),
-                ),
-                SizedBox(height: r(1)),
-                Text(
-                  'Tap to review inventory',
-                  style: TextStyle(
-                    fontSize: r(11.5),
-                    fontWeight: FontWeight.w600,
-                    color: _C.amber.withOpacity(0.70),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: r(6)),
-          Icon(Icons.arrow_forward_ios_rounded,
-              size: r(12), color: _C.amber.withOpacity(0.72)),
-          SizedBox(width: r(8)),
-          GestureDetector(
-            onTap: onDismiss,
-            child: Container(
-              width: r(28), height: r(28),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: _C.amber.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(r(8)),
-              ),
-              child: Icon(Icons.close_rounded,
-                  size: r(14), color: _C.amber),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-// ─── Section Label ─────────────────────────────────────────────────────────────
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.r});
-  final double Function(double) r;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Accent bar — navy to match brand
-        Container(
-          width: r(4), height: r(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [_C.heroStart, _C.heroEnd],
-            ),
-            borderRadius: BorderRadius.circular(r(4)),
-          ),
-        ),
-        SizedBox(width: r(9)),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: r(13.5),
-                fontWeight: FontWeight.w800,
-                color: _C.brandDeep,
-                letterSpacing: 0.3,
-              ),
-            ),
-            Text(
-              'Tap any button to continue',
-              style: TextStyle(
-                fontSize: r(11),
-                fontWeight: FontWeight.w600,
-                color: _C.brandMid,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 }
 
 // ─── Feature Grid ──────────────────────────────────────────────────────────────

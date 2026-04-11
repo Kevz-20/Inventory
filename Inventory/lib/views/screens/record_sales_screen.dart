@@ -1291,8 +1291,15 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                 ? localByAmount
                 : (isManualPricing ? localManualAmount : autoSubtotal());
 
-            final visibleConversions =
-                vm.unitConversionsFor(product).take(4).toList();
+            final sellingOptionNames = sellingOptions
+                .map((o) => o.label.trim().toLowerCase())
+                .toSet();
+            final visibleConversions = vm
+                .unitConversionsFor(product)
+                .where((c) =>
+                    !sellingOptionNames.contains(c.unitName.trim().toLowerCase()))
+                .take(4)
+                .toList();
 
             void syncBaseQtyField() {
               baseQtyController.text =
@@ -1800,9 +1807,20 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             runSpacing: _r(context, 8),
                             children: visibleConversions.map((conversion) {
                               return ActionChip(
-                                label: Text(
-                                  '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})',
-                                ),
+                                label: Text(() {
+                                  final nameLower = conversion.unitName.trim().toLowerCase();
+                                  final qtyStr = conversion.baseQuantity.toString();
+                                  final unitLower = product.baseUnit.trim().toLowerCase();
+                                  // Skip suffix if the label already encodes the quantity
+                                  // e.g. "3 pcs" already tells you it's 3 pcs
+                                  final alreadyEncoded = nameLower.contains(qtyStr) ||
+                                      nameLower.endsWith(unitLower) ||
+                                      nameLower.endsWith('pcs') ||
+                                      nameLower.endsWith('pieces');
+                                  return alreadyEncoded
+                                      ? conversion.unitName
+                                      : '${conversion.unitName} (${conversion.baseQuantity} ${product.baseUnit})';
+                                }()),
                                 onPressed: () => setBaseQty(
                                   (localBaseQty + conversion.baseQuantity)
                                       .clamp(0, product.quantity).toInt(),
@@ -2037,7 +2055,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                               },
                               style: OutlinedButton.styleFrom(
                                 minimumSize: Size.fromHeight(_r(context, 52)),
-                                side: BorderSide(color: _cardBorder),
+                                foregroundColor: AppColors.error,
+                                side: const BorderSide(color: AppColors.error),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(_r(context, 16)),
                                 ),
@@ -3135,9 +3154,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
                             minimumSize: Size.fromHeight(_r(context, 54)),
-                            side: const BorderSide(
-                              color: Color(0xFFD0DCF6),
-                            ),
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(color: AppColors.error),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                 _r(context, 20),
@@ -3149,7 +3167,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: _r(context, 16),
-                              color: const Color(0xFF1B3A7A),
+                              color: AppColors.error,
                             ),
                           ),
                         ),

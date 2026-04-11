@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_colors.dart';
+import '../../models/product_model.dart';
 import '../../providers/restock_product_provider.dart';
 import '../../view_models/stock_in_view_model.dart';
 
@@ -89,6 +90,39 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return 'Cost per $unit';
   }
 
+  void _prunePresetUnits(
+    StockInViewModel vm, {
+    required Set<String> allowedUnits,
+  }) {
+    const presetUnits = {'kilo', 'liter', 'sachet'};
+    final normalizedAllowed = allowedUnits.map((e) => e.toLowerCase()).toSet();
+
+    vm.unitConversions = vm.unitConversions.where((item) {
+      final normalized = item.unitName.trim().toLowerCase();
+      return !presetUnits.contains(normalized) || normalizedAllowed.contains(normalized);
+    }).toList();
+
+    vm.sellingOptions = vm.sellingOptions.where((item) {
+      final normalized = item.label.trim().toLowerCase();
+      return !presetUnits.contains(normalized) || normalizedAllowed.contains(normalized);
+    }).toList();
+  }
+
+  void _resetStockTypeDetails(StockInViewModel vm) {
+    vm.purchasePriceController.clear();
+    vm.sellingPriceController.clear();
+    vm.quantityController.clear();
+    vm.purchaseUnitController.clear();
+    vm.conversionNameController.clear();
+    vm.conversionQuantityController.clear();
+    vm.conversionPriceController.clear();
+    vm.sellingOptionLabelController.clear();
+    vm.sellingOptionQuantityController.clear();
+    vm.sellingOptionPriceController.clear();
+    vm.unitConversions = [];
+    vm.sellingOptions = [];
+  }
+
   void _applyStockTypePreset(StockInViewModel vm, String preset) {
     switch (preset) {
       case 'piece':
@@ -97,6 +131,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       case 'weight':
         vm.setUseAdvancedUnitSetup(true);
         vm.setBaseUnit('gram');
+        _prunePresetUnits(vm, allowedUnits: {'kilo'});
         vm.setPurchaseUnit('kilo');
         final kiloConversion = vm.unitConversions.where(
           (item) => item.unitName.trim().toLowerCase() == 'kilo',
@@ -116,6 +151,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       case 'liquid':
         vm.setUseAdvancedUnitSetup(true);
         vm.setBaseUnit('mL');
+        _prunePresetUnits(vm, allowedUnits: {'liter'});
         vm.setPurchaseUnit('liter');
         final literConversion = vm.unitConversions.where(
           (item) => item.unitName.trim().toLowerCase() == 'liter',
@@ -135,21 +171,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       case 'pack':
         vm.setUseAdvancedUnitSetup(true);
         vm.setBaseUnit('half');
-        vm.setPurchaseUnit('sachet');
-        final sachetConversion = vm.unitConversions.where(
-          (item) => item.unitName.trim().toLowerCase() == 'sachet',
-        );
-        if (sachetConversion.isEmpty) {
-          vm.conversionNameController.text = 'sachet';
-          vm.conversionQuantityController.text = '2';
-          vm.addUnitConversion();
-        } else if (sachetConversion.first.baseQuantity != 2) {
-          vm.updateUnitConversion(
-            sachetConversion.first,
-            unitName: 'sachet',
-            baseQuantity: 2,
-          );
-        }
+        _prunePresetUnits(vm, allowedUnits: const {});
+        vm.setPurchaseUnit('half');
         break;
     }
   }
@@ -356,7 +379,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _cardLabel('Stock amounts', scale: scale),
+                          _cardLabel('Purchase Details', scale: scale),
                           SizedBox(height: gap12),
                           _stockTypePresetRow(
                             vm,
@@ -371,7 +394,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   _currentStockType(vm) != 'liquid';
 
                               final qtyField = _inputNumberField(
-                                label: 'Pila kabuok?',
+                                label: _purchaseQuantityLabel(vm),
                                 controller: vm.quantityController,
                                 showError: vm.showValidationErrors,
                                 icon: Icons.shopping_cart_rounded,
@@ -384,9 +407,16 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 valueFs: valueFs,
                               );
 
+                              final purchaseUnitField = _purchaseUnitPickerField(
+                                vm,
+                                scale: scale,
+                                radius: radius12,
+                                valueFs: valueFs,
+                              );
+
                               final topFields = [
                                 _inputNumberField(
-                                  label: 'Tagpila tanan?',
+                                  label: 'Total Cost',
                                   controller: vm.purchasePriceController,
                                   showError: vm.showValidationErrors,
                                   isPeso: true,
@@ -396,7 +426,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   radius: radius12,
                                   valueFs: valueFs,
                                 ),
-                                qtyField,
+                                vm.useAdvancedUnitSetup ? purchaseUnitField : qtyField,
                               ];
 
                               Widget topRow;
@@ -442,12 +472,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                           children: [
                                             if (vm.useAdvancedUnitSetup) ...[
                                               Expanded(
-                                                child: _purchaseUnitPickerField(
-                                                  vm,
-                                                  scale: scale,
-                                                  radius: radius12,
-                                                  valueFs: valueFs,
-                                                ),
+                                                child: qtyField,
                                               ),
                                               SizedBox(width: gap12),
                                             ],
@@ -527,7 +552,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             _cardLabel('Unit variants', scale: scale),
                             SizedBox(height: gap12),
                             _advancedOptionRow(
-                              title: 'I-on kung naay lain-laing sizes',
+                              title: 'Enable product size variants',
                               description: '',
                               isOn: _showUnitOptions,
                               scale: scale,
@@ -668,6 +693,40 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
         if (selected == '__add_new__') {
           await _showAddCategoryDialog(context, vm, scale: scale);
+          return;
+        }
+
+        if (selected.startsWith('edit::')) {
+          final categoryName = selected.replaceFirst('edit::', '');
+          await _showEditCategoryDialog(context, vm, categoryName, scale: scale);
+          return;
+        }
+
+        if (selected.startsWith('delete::')) {
+          final categoryName = selected.replaceFirst('delete::', '');
+          final confirmed = await _showDeleteCategoryDialog(
+            context,
+            categoryName,
+            scale: scale,
+          );
+          if (confirmed != true) return;
+
+          try {
+            await vm.deleteCategoryChoice(categoryName);
+            if (!context.mounted) return;
+            vm.showSnackBar(
+              context,
+              '$categoryName deleted successfully',
+              success: true,
+            );
+          } catch (e) {
+            if (!context.mounted) return;
+            vm.showSnackBar(
+              context,
+              e.toString().replaceFirst('Exception: ', ''),
+              success: false,
+            );
+          }
           return;
         }
 
@@ -972,6 +1031,27 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                         ),
                                       ),
                                     ),
+                                    PopupMenuButton<String>(
+                                      icon: Icon(
+                                        Icons.more_horiz_rounded,
+                                        color: isSelected
+                                            ? _accentBlue
+                                            : _subtitleColor,
+                                      ),
+                                      onSelected: (action) {
+                                        Navigator.pop(sheetCtx, '$action::$item');
+                                      },
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem<String>(
+                                          value: 'edit',
+                                          child: Text('Edit'),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
                                     if (isSelected)
                                       const Icon(
                                         Icons.check_circle_rounded,
@@ -1266,6 +1346,180 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     vm.setCategoryByName(name);
   }
 
+  Future<void> _showEditCategoryDialog(
+    BuildContext context,
+    StockInViewModel vm,
+    String currentCategory, {
+    required double scale,
+  }) async {
+    final controller = TextEditingController(text: currentCategory);
+    final formKey = GlobalKey<FormState>();
+    final value = ValueNotifier<String>(currentCategory);
+    final s = scale.clamp(0.90, 1.20);
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: (18 * s).clamp(16, 24),
+            vertical: (24 * s).clamp(20, 28),
+          ),
+          backgroundColor: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular((24 * s).clamp(20, 28)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              (18 * s).clamp(16, 22),
+              (18 * s).clamp(16, 22),
+              (18 * s).clamp(16, 22),
+              (16 * s).clamp(14, 20),
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edit Kategorya',
+                    style: TextStyle(
+                      fontSize: (16 * s).clamp(14, 18),
+                      fontWeight: FontWeight.w900,
+                      color: _titleColor,
+                    ),
+                  ),
+                  SizedBox(height: (14 * s).clamp(12, 18)),
+                  ValueListenableBuilder<String>(
+                    valueListenable: value,
+                    builder: (_, text, _) {
+                      return TextFormField(
+                        controller: controller,
+                        autofocus: true,
+                        maxLength: 40,
+                        decoration: InputDecoration(
+                          counterText: '',
+                          prefixIcon: const Icon(Icons.category_rounded),
+                          labelText: 'Category name',
+                          filled: true,
+                          fillColor: _fieldBg,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: _cardBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: _accentBlue),
+                          ),
+                        ),
+                        onChanged: (v) => value.value = v,
+                        validator: (v) {
+                          final name = (v ?? '').trim();
+                          if (name.isEmpty) return 'Please enter a category name.';
+                          final exists = vm.categoryNames.any(
+                            (item) =>
+                                item.trim().toLowerCase() == name.toLowerCase() &&
+                                item.trim().toLowerCase() !=
+                                    currentCategory.trim().toLowerCase(),
+                          );
+                          if (exists) return 'Category already exists.';
+                          return null;
+                        },
+                      );
+                    },
+                  ),
+                  SizedBox(height: (8 * s).clamp(6, 10)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(dialogCtx),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(8, 12)),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (formKey.currentState?.validate() != true) return;
+                            Navigator.pop(dialogCtx, controller.text.trim());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _accentBlue,
+                            elevation: 0,
+                          ),
+                          child: const Text('Save'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    final trimmed = (result ?? '').trim();
+    if (trimmed.isEmpty || trimmed == currentCategory.trim()) return;
+
+    try {
+      await vm.updateCategoryChoice(currentCategory, trimmed);
+      if (!context.mounted) return;
+      vm.showSnackBar(context, 'Category updated successfully', success: true);
+    } catch (e) {
+      if (!context.mounted) return;
+      vm.showSnackBar(
+        context,
+        e.toString().replaceFirst('Exception: ', ''),
+        success: false,
+      );
+    }
+  }
+
+  Future<bool?> _showDeleteCategoryDialog(
+    BuildContext context,
+    String categoryName, {
+    required double scale,
+  }) async {
+    final s = scale.clamp(0.90, 1.20);
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
+          ),
+          title: const Text('Delete category?'),
+          content: Text(
+            'Remove $categoryName from your category list?',
+            style: TextStyle(
+              color: _subtitleColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _card({
     required Widget child,
     required double padding,
@@ -1411,7 +1665,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(radius),
           onTap: () {
+            if (selected) return;
             setState(() {
+              _resetStockTypeDetails(vm);
               _applyStockTypePreset(vm, value);
               _showUnitOptions = value != 'piece';
             });
@@ -1748,7 +2004,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
-          labelText: 'Unsa nga sukod?',
+          labelText: 'Unit',
           helperText: _boughtAsHelperText(vm),
           helperStyle: TextStyle(
             fontSize: (11 * scale).clamp(10, 12.5),
@@ -1869,7 +2125,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         SizedBox(width: (10 * s).clamp(8, 12)),
                         Expanded(
                           child: Text(
-                            'Unsa nga sukod?',
+                            'Unit',
                             style: TextStyle(
                               fontSize: (16 * s).clamp(14, 18),
                               fontWeight: FontWeight.w900,
@@ -2816,6 +3072,293 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  Future<String?> _showProductBottomSheet({
+    required BuildContext context,
+    required List<ProductModel> products,
+    required int? selectedProductId,
+    required double scale,
+  }) async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (sheetCtx) {
+        final search = ValueNotifier('');
+        final maxHeight = MediaQuery.of(sheetCtx).size.height * 0.78;
+        final s = scale.clamp(0.90, 1.20);
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            decoration: BoxDecoration(
+              color: _cardBg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                  color: Colors.black.withOpacity(0.10),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: (16 * s).clamp(14, 20),
+                right: (16 * s).clamp(14, 20),
+                top: (10 * s).clamp(8, 12),
+                bottom: (16 * s).clamp(14, 20) +
+                    MediaQuery.of(sheetCtx).viewInsets.bottom,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: 5,
+                    width: (48 * s).clamp(44, 54),
+                    decoration: BoxDecoration(
+                      color: _cardBorder,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  Row(
+                    children: [
+                      Container(
+                        height: (36 * s).clamp(34, 42),
+                        width: (36 * s).clamp(34, 42),
+                        decoration: BoxDecoration(
+                          color: _accentBlue.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(
+                            (12 * s).clamp(10, 16),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.inventory_2_rounded,
+                          color: _accentBlue,
+                          size: (20 * s).clamp(18, 24),
+                        ),
+                      ),
+                      SizedBox(width: (10 * s).clamp(8, 12)),
+                      Expanded(
+                        child: Text(
+                          'Pili ug Produkto',
+                          style: TextStyle(
+                            fontSize: (16 * s).clamp(14, 18),
+                            fontWeight: FontWeight.w900,
+                            color: _titleColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  ValueListenableBuilder<String>(
+                    valueListenable: search,
+                    builder: (_, value, _) => TextField(
+                      onChanged: (v) => search.value = v,
+                      decoration: InputDecoration(
+                        hintText: 'Search product...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: value.trim().isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () => search.value = '',
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                        filled: true,
+                        fillColor: _fieldBg,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: _cardBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: _accentBlue),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: (12 * s).clamp(10, 14)),
+                  Expanded(
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: search,
+                      builder: (_, value, _) {
+                        final q = value.trim().toLowerCase();
+                        final filtered = q.isEmpty
+                            ? products
+                            : products.where((product) {
+                                final name = product.name.toLowerCase();
+                                final category = product.category.toLowerCase();
+                                return name.contains(q) || category.contains(q);
+                              }).toList();
+
+                        if (filtered.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Walay match nga produkto.',
+                              style: TextStyle(
+                                color: _subtitleColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) =>
+                              SizedBox(height: (8 * s).clamp(6, 10)),
+                          itemBuilder: (_, i) {
+                            final item = filtered[i];
+                            final isSelected = item.id == selectedProductId;
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? _accentBlue.withOpacity(0.10)
+                                    : _fieldBg,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? _accentBlue.withOpacity(0.35)
+                                      : _cardBorder.withOpacity(0.8),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      onTap: () => Navigator.pop(
+                                        sheetCtx,
+                                        'select::${item.id}',
+                                      ),
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: (14 * s).clamp(12, 16),
+                                          vertical: (12 * s).clamp(10, 14),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                color: isSelected
+                                                    ? _accentBlue
+                                                    : _titleColor,
+                                                fontSize: (14 * s).clamp(13, 16),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              height: (4 * s).clamp(3, 6),
+                                            ),
+                                            Text(
+                                              '${item.category} • ${item.stockDisplay}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: _subtitleColor,
+                                                fontSize:
+                                                    (12.5 * s).clamp(11.5, 14),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => Navigator.pop(
+                                      sheetCtx,
+                                      'edit::${item.id}',
+                                    ),
+                                    icon: Icon(
+                                      Icons.edit_outlined,
+                                      color: _accentBlue,
+                                      size: (20 * s).clamp(18, 22),
+                                    ),
+                                    tooltip: 'Edit product',
+                                  ),
+                                  IconButton(
+                                    onPressed: () => Navigator.pop(
+                                      sheetCtx,
+                                      'delete::${item.id}',
+                                    ),
+                                    icon: Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: AppColors.error,
+                                      size: (20 * s).clamp(18, 22),
+                                    ),
+                                    tooltip: 'Delete product',
+                                  ),
+                                  SizedBox(width: (4 * s).clamp(2, 6)),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: (8 * s).clamp(6, 10)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool?> _showDeleteProductDialog(
+    BuildContext context,
+    String productName, {
+    required double scale,
+  }) async {
+    final s = scale.clamp(0.90, 1.20);
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular((18 * s).clamp(16, 22)),
+          ),
+          title: const Text('Delete product?'),
+          content: Text(
+            'Remove $productName from your product list?',
+            style: TextStyle(
+              color: _subtitleColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.error,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _inputTextField({
     required String label,
     required TextEditingController controller,
@@ -2955,6 +3498,27 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return unit;
   }
 
+  String _purchaseQuantityLabel(StockInViewModel vm) {
+    final unit = vm.purchaseUnitLabel.trim();
+    if (unit.isEmpty) return 'Pila kabuok?';
+
+    final normalized = unit.toLowerCase();
+    if (normalized == 'pcs' ||
+        normalized == 'pc' ||
+        normalized == 'piece' ||
+        normalized == 'pieces') {
+      return 'Pila kabuok?';
+    }
+
+    return 'Pila ka $unit?';
+  }
+
+  String _deductQuantityLabel(StockInViewModel vm) {
+    final unit = _quantityUnitLabel(vm).trim();
+    if (unit.isEmpty) return 'Quantity to deduct';
+    return '$unit to deduct';
+  }
+
   bool _isWeightBaseUnit(StockInViewModel vm) {
     final normalized = vm.baseUnitLabel.trim().toLowerCase();
     return normalized == 'gram' || normalized == 'grams' || normalized == 'g';
@@ -2978,6 +3542,28 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         normalized == 'pc' ||
         normalized == 'piece' ||
         normalized == 'pieces';
+  }
+
+  bool _shouldShowUnifiedItem(StockInViewModel vm, String name) {
+    final normalized = name.trim().toLowerCase();
+    if (normalized == 'kilo') return _isWeightBaseUnit(vm);
+    if (normalized == 'liter') return _isLiquidBaseUnit(vm);
+    if (normalized == 'sachet') return !_isPackBaseUnit(vm);
+    return true;
+  }
+
+  bool _shouldHideUnpricedAutoConversion(String name, double? price) {
+    return price == null || price <= 0;
+  }
+
+  String _displayUnifiedItemName(String name) {
+    final trimmed = name.trim();
+    final normalized = trimmed.toLowerCase();
+    if ((normalized == 'kilo' || normalized == 'liter') &&
+        !RegExp(r'^\d').hasMatch(trimmed)) {
+      return '1 $trimmed';
+    }
+    return trimmed;
   }
 
   List<({String label, int quantity})> _pieceQuickSaleSuggestions(
@@ -3070,7 +3656,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         .map((so) =>
             (name: so.label, qty: so.baseQuantity ?? 0, price: so.price))
         .toList();
-    final allItems = [...fromConversions, ...fromSOOnly];
+    final allItems = [...fromConversions, ...fromSOOnly]
+        .where((item) => _shouldShowUnifiedItem(vm, item.name))
+        .where((item) => !_shouldHideUnpricedAutoConversion(item.name, item.price))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3103,7 +3692,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       child: Text.rich(
                         TextSpan(children: [
                           TextSpan(
-                            text: item.name,
+                            text: _displayUnifiedItemName(item.name),
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
                               color: _titleColor,
@@ -3164,7 +3753,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             SizedBox(width: gap12),
             Expanded(
               child: _inputNumberField(
-                label: '${_quantityUnitLabel(vm)} inside',
+                label: _deductQuantityLabel(vm),
                 controller: vm.conversionQuantityController,
                 showError: false,
                 onChanged: (_) => setState(() {}),
