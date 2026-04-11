@@ -1858,7 +1858,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     ),
                     SizedBox(width: (10 * s).clamp(8, 12)),
                     Text(
-                      'Unsang klase ang produkto?',
+                      'Product Type',
                       style: TextStyle(
                         fontSize: (16 * s).clamp(14, 18),
                         fontWeight: FontWeight.w900,
