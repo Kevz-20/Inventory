@@ -38,34 +38,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final base = vm.baseUnitLabel.trim().toLowerCase();
     if (!vm.useAdvancedUnitSetup || base == 'pcs') return 'piece';
     if (base == 'gram' || base == 'grams' || base == 'g') return 'weight';
-    if (base == 'ml' || base == 'milliliter' || base == 'millilitre') {
-      return 'liquid';
-    }
+    if (base == 'ml' || base == 'milliliter' || base == 'millilitre') return 'liquid';
     if (base == 'half' || base == 'tungaon') return 'pack';
+    if (base == 'stick' || base == 'sticks') return 'stick';
     return 'piece';
   }
 
   String _sellingPriceLabel(StockInViewModel vm) {
     switch (_currentStockType(vm)) {
-      case 'weight':
-        return 'Default selling price per kilo';
-      case 'liquid':
-        return 'Default selling price per liter';
+      case 'weight': return 'Default selling price per kilo';
+      case 'liquid': return 'Default selling price per liter';
+      case 'stick':  return 'Default selling price per stick';
+      case 'pack':   return 'Default selling price per half';
       case 'piece':
-      default:
-        return 'Default selling price per piece';
+      default:       return 'Default selling price per piece';
     }
   }
 
-  String _boughtAsHelperText(StockInViewModel vm) {
-    switch (_currentStockType(vm)) {
-      case 'weight': return 'e.g. kilo, sack, pack';
-      case 'liquid': return 'e.g. liter, gallon, bottle';
-      case 'pack':   return 'e.g. sachet, box, dozen';
-      case 'piece':
-      default:       return 'e.g. box, tray, dozen';
-    }
-  }
+
 
 
 
@@ -77,7 +67,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   String _costPerUnitLabel(StockInViewModel vm) {
-    final unit = vm.baseUnitLabel.trim();
+    final unit = vm.useAdvancedUnitSetup
+        ? vm.purchaseUnitLabel.trim()
+        : vm.baseUnitLabel.trim();
     if (unit.isEmpty) return 'Cost per unit';
 
     final normalized = unit.toLowerCase();
@@ -174,6 +166,20 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         _prunePresetUnits(vm, allowedUnits: const {});
         vm.setPurchaseUnit('half');
         break;
+      case 'stick':
+        vm.setUseAdvancedUnitSetup(true);
+        vm.setBaseUnit('stick');
+        _prunePresetUnits(vm, allowedUnits: const {});
+        vm.setPurchaseUnit('kaha');
+        final kahaConversion = vm.unitConversions.where(
+          (item) => item.unitName.trim().toLowerCase() == 'kaha',
+        );
+        if (kahaConversion.isEmpty) {
+          vm.conversionNameController.text = 'kaha';
+          vm.conversionQuantityController.text = '20';
+          vm.addUnitConversion();
+        }
+        break;
     }
   }
 
@@ -200,9 +206,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       return '4000';
     }
 
-    if (normalizedUnit == 'dozen' && base == 'pcs') {
-      return '12';
-    }
+    if (normalizedUnit == 'dozen' && base == 'pcs') return '12';
+    if (normalizedUnit == 'kaha' && (base == 'stick' || base == 'sticks')) return '20';
+    if (normalizedUnit == 'ream' && (base == 'stick' || base == 'sticks')) return '200';
+    if (normalizedUnit == 'twin' && (base == 'half' || base == 'tungaon')) return '2';
+    if (normalizedUnit == 'dozen' && (base == 'half' || base == 'tungaon')) return '24';
+    if ((normalizedUnit == 'sack' || normalizedUnit == 'sack 50kg') &&
+        (base == 'gram' || base == 'grams' || base == 'g')) { return '50000'; }
+    if (normalizedUnit == 'sack 25kg' &&
+        (base == 'gram' || base == 'grams' || base == 'g')) { return '25000'; }
 
     return null;
   }
@@ -549,19 +561,44 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _cardLabel('Unit variants', scale: scale),
-                            SizedBox(height: gap12),
-                            _advancedOptionRow(
-                              title: 'Enable product size variants',
-                              description: '',
-                              isOn: _showUnitOptions,
-                              scale: scale,
-                              onTap: () {
-                                setState(() {
-                                  _showUnitOptions = !_showUnitOptions;
-                                  vm.setUseAdvancedUnitSetup(_showUnitOptions);
-                                });
-                              },
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _cardLabel('Unit variants', scale: scale),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _showUnitOptions = !_showUnitOptions;
+                                      vm.setUseAdvancedUnitSetup(_showUnitOptions);
+                                    });
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    width: (44 * scale).clamp(40, 48),
+                                    height: (26 * scale).clamp(24, 30),
+                                    padding: EdgeInsets.all((3 * scale).clamp(2.5, 3.5)),
+                                    decoration: BoxDecoration(
+                                      color: _showUnitOptions
+                                          ? const Color(0xFF1D9E75)
+                                          : const Color(0xFFCCD6E9),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Align(
+                                      alignment: _showUnitOptions
+                                          ? Alignment.centerRight
+                                          : Alignment.centerLeft,
+                                      child: Container(
+                                        width: (20 * scale).clamp(18, 23),
+                                        height: (20 * scale).clamp(18, 23),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             if (_showUnitOptions) ...[
                               SizedBox(height: gap12),
@@ -653,7 +690,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           ),
                         )
                       : Text(
-                          'I-Save ang Stock',
+                          'Save',
                           style: TextStyle(
                             fontSize: bottomBtnFs,
                             fontWeight: FontWeight.w700,
@@ -1564,11 +1601,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final cost =
         double.tryParse(vm.purchasePriceController.text.replaceAll(',', '').trim()) ??
             0;
+    final enteredQty =
+        double.tryParse(vm.quantityController.text.replaceAll(',', '').trim()) ?? 0;
     final qty = vm.useAdvancedUnitSetup
         ? vm.convertedPurchaseQuantity
         : int.tryParse(vm.quantityController.text.replaceAll(',', '').trim()) ?? 0;
     final hasValue = cost > 0 && qty > 0;
-    final perUnit = hasValue ? cost / qty : 0.0;
+    final perUnit = vm.useAdvancedUnitSetup
+        ? (cost > 0 && enteredQty > 0 ? cost / enteredQty : 0.0)
+        : (hasValue ? cost / qty : 0.0);
 
     final unitDisplay = vm.baseUnitLabel.trim();
     final equivalentStock = hasValue
@@ -1647,126 +1688,267 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
+  // Stock-type definitions used by both the picker field and the bottom sheet
+  static const _stockTypes = [
+    (
+      value: 'piece',
+      icon: Icons.tag_rounded,
+      label: 'Piece / Pcs',
+      examples: 'itlog, sibuyas, bawang, kendi, bote',
+    ),
+    (
+      value: 'weight',
+      icon: Icons.scale_outlined,
+      label: 'Kilo',
+      examples: 'bigas, asukal, asin',
+    ),
+    (
+      value: 'liquid',
+      icon: Icons.water_drop_outlined,
+      label: 'Liquid',
+      examples: 'mantika, suka, toyo, alcohol',
+    ),
+    (
+      value: 'pack',
+      icon: Icons.inventory_2_outlined,
+      label: 'Sachet',
+      examples: '3-in-1 kape, sabon, shampoo sachet',
+    ),
+    (
+      value: 'stick',
+      icon: Icons.smoking_rooms_rounded,
+      label: 'Stick',
+      examples: 'sigarilyo, posporo',
+    ),
+  ];
+
   Widget _stockTypePresetRow(
     StockInViewModel vm, {
     required double scale,
     required double radius,
   }) {
     final current = _currentStockType(vm);
+    final currentDef = _stockTypes.firstWhere(
+      (t) => t.value == current,
+      orElse: () => _stockTypes.first,
+    );
 
-    Widget chip(
-      String value,
-      IconData icon,
-      String label,
-      String example,
-    ) {
-      final selected = current == value;
-      return Expanded(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(radius),
-          onTap: () {
-            if (selected) return;
-            setState(() {
-              _resetStockTypeDetails(vm);
-              _applyStockTypePreset(vm, value);
-              _showUnitOptions = value != 'piece';
-            });
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: (10 * scale).clamp(8, 12),
-              vertical: (12 * scale).clamp(10, 14),
-            ),
-            decoration: BoxDecoration(
-              color: selected ? _accentBlue.withValues(alpha: 0.10) : Colors.white,
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: selected
-                    ? _accentBlue.withValues(alpha: 0.35)
-                    : _cardBorder.withValues(alpha: 0.9),
+    return InkWell(
+      borderRadius: BorderRadius.circular(radius),
+      onTap: () async {
+        final picked = await _showStockTypeSheet(
+          context: context,
+          current: current,
+          scale: scale,
+        );
+        if (picked == null || picked == current) return;
+        setState(() {
+          _resetStockTypeDetails(vm);
+          _applyStockTypePreset(vm, picked);
+          _showUnitOptions = picked != 'piece';
+        });
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: _fieldBg,
+          prefixIcon: Icon(
+            currentDef.icon,
+            color: _accentBlue,
+            size: (22 * scale).clamp(20, 26),
+          ),
+          labelText: 'Product type',
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(color: _cardBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(radius),
+            borderSide: BorderSide(color: _accentBlue),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    currentDef.label,
+                    style: TextStyle(
+                      fontSize: (14.5 * scale).clamp(13, 16),
+                      fontWeight: FontWeight.w800,
+                      color: _titleColor,
+                    ),
+                  ),
+                  Text(
+                    currentDef.examples,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: (11.5 * scale).clamp(10.5, 13),
+                      fontWeight: FontWeight.w500,
+                      color: _subtitleColor,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: _subtitleColor,
+              size: (22 * scale).clamp(20, 26),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _showStockTypeSheet({
+    required BuildContext context,
+    required String current,
+    required double scale,
+  }) {
+    final s = scale.clamp(0.90, 1.20);
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              (16 * s).clamp(14, 20),
+              (10 * s).clamp(8, 14),
+              (16 * s).clamp(14, 20),
+              (20 * s).clamp(16, 24),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  icon,
-                  size: (20 * scale).clamp(18, 24),
-                  color: selected ? _accentBlue : _subtitleColor,
-                ),
-                SizedBox(height: (4 * scale).clamp(3, 5)),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: (12.5 * scale).clamp(11.5, 14),
-                    fontWeight: FontWeight.w800,
-                    color: selected ? _accentBlue : _titleColor,
+                // Handle bar
+                Container(
+                  height: 5,
+                  width: (48 * s).clamp(44, 54),
+                  decoration: BoxDecoration(
+                    color: _cardBorder,
+                    borderRadius: BorderRadius.circular(99),
                   ),
                 ),
-                SizedBox(height: (2 * scale).clamp(2, 3)),
-                Text(
-                  example,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: (10 * scale).clamp(9, 11),
-                    fontWeight: FontWeight.w500,
-                    color: _subtitleColor,
-                    height: 1.3,
-                  ),
+                SizedBox(height: (14 * s).clamp(12, 18)),
+                // Title
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all((8 * s).clamp(6, 10)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular((10 * s).clamp(8, 12)),
+                      ),
+                      child: Icon(Icons.category_outlined,
+                          color: _accentBlue, size: (20 * s).clamp(18, 24)),
+                    ),
+                    SizedBox(width: (10 * s).clamp(8, 12)),
+                    Text(
+                      'Unsang klase ang produkto?',
+                      style: TextStyle(
+                        fontSize: (16 * s).clamp(14, 18),
+                        fontWeight: FontWeight.w900,
+                        color: _titleColor,
+                      ),
+                    ),
+                  ],
                 ),
+                SizedBox(height: (14 * s).clamp(12, 18)),
+                // Options list
+                ..._stockTypes.map((type) {
+                  final selected = type.value == current;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: (8 * s).clamp(6, 10)),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular((14 * s).clamp(12, 16)),
+                      onTap: () => Navigator.pop(ctx, type.value),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: (14 * s).clamp(12, 16),
+                          vertical: (12 * s).clamp(10, 14),
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? _accentBlue.withOpacity(0.08)
+                              : _fieldBg,
+                          borderRadius: BorderRadius.circular((14 * s).clamp(12, 16)),
+                          border: Border.all(
+                            color: selected
+                                ? _accentBlue.withOpacity(0.40)
+                                : _cardBorder.withOpacity(0.8),
+                            width: selected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all((8 * s).clamp(6, 10)),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? _accentBlue.withOpacity(0.12)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular((10 * s).clamp(8, 12)),
+                              ),
+                              child: Icon(
+                                type.icon,
+                                size: (20 * s).clamp(18, 24),
+                                color: selected ? _accentBlue : _subtitleColor,
+                              ),
+                            ),
+                            SizedBox(width: (12 * s).clamp(10, 14)),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    type.label,
+                                    style: TextStyle(
+                                      fontSize: (14.5 * s).clamp(13, 16),
+                                      fontWeight: FontWeight.w800,
+                                      color: selected ? _accentBlue : _titleColor,
+                                    ),
+                                  ),
+                                  SizedBox(height: (2 * s).clamp(1, 3)),
+                                  Text(
+                                    type.examples,
+                                    style: TextStyle(
+                                      fontSize: (12 * s).clamp(11, 13.5),
+                                      fontWeight: FontWeight.w500,
+                                      color: _subtitleColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (selected)
+                              Icon(Icons.check_circle_rounded,
+                                  color: _accentBlue,
+                                  size: (20 * s).clamp(18, 24)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
-        ),
-      );
-    }
-
-    final gap = SizedBox(width: (8 * scale).clamp(6, 10));
-    final rowGap = SizedBox(height: (8 * scale).clamp(6, 10));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(height: (8 * scale).clamp(6, 10)),
-        Row(
-          children: [
-            chip(
-              'piece',
-              Icons.tag_rounded,
-              'Piraso/Pcs',
-              'itlog, sibuyas,\nbawang, lamas',
-            ),
-            gap,
-            chip(
-              'weight',
-              Icons.scale_outlined,
-              'Tinimbang/Kilo',
-              'asin, asukal,\nbigas',
-            ),
-          ],
-        ),
-        rowGap,
-        Row(
-          children: [
-            chip(
-              'liquid',
-              Icons.water_drop_outlined,
-              'Liquid',
-              'mantika, suka,\ntoyo',
-            ),
-            gap,
-            chip(
-              'pack',
-              Icons.inventory_2_outlined,
-              'Sachet',
-              '3-in-1, sabon,\nshampoo',
-            ),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -2005,11 +2187,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             size: (22 * scale).clamp(20, 26),
           ),
           labelText: 'Unit',
-          helperText: _boughtAsHelperText(vm),
-          helperStyle: TextStyle(
-            fontSize: (11 * scale).clamp(10, 12.5),
-            color: _subtitleColor,
-          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: isError ? Colors.red : _cardBorder),
@@ -2220,7 +2397,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 side: BorderSide(color: _cardBorder),
                               ),
                               child: Text(
-                                'Kansela',
+                                'Cancel',
                                 style: TextStyle(
                                   fontSize: (14 * s).clamp(13, 15.5),
                                   fontWeight: FontWeight.w700,
@@ -2250,7 +2427,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                 elevation: 0,
                               ),
                               child: Text(
-                                'I-save',
+                                'Save',
                                 style: TextStyle(
                                   fontSize: (14 * s).clamp(13, 15.5),
                                   fontWeight: FontWeight.w700,
@@ -3406,83 +3583,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     );
   }
 
-  Widget _advancedOptionRow({
-    required String title,
-    required String description,
-    required bool isOn,
-    required double scale,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular((14 * scale).clamp(12, 18)),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: (14 * scale).clamp(12, 16),
-          vertical: (14 * scale).clamp(12, 16),
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular((14 * scale).clamp(12, 18)),
-          border: Border.all(color: _cardBorder),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: (14.5 * scale).clamp(13.5, 16),
-                      fontWeight: FontWeight.w800,
-                      color: _titleColor,
-                    ),
-                  ),
-                  if (description.isNotEmpty) ...[
-                    SizedBox(height: (4 * scale).clamp(3, 6)),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: (12.8 * scale).clamp(12, 14.5),
-                        fontWeight: FontWeight.w600,
-                        color: _subtitleColor,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            SizedBox(width: (12 * scale).clamp(10, 14)),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: (44 * scale).clamp(40, 48),
-              height: (26 * scale).clamp(24, 30),
-              padding: EdgeInsets.all((3 * scale).clamp(2.5, 3.5)),
-              decoration: BoxDecoration(
-                color: isOn ? const Color(0xFF1D9E75) : const Color(0xFFCCD6E9),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Align(
-                alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: (20 * scale).clamp(18, 22),
-                  height: (20 * scale).clamp(18, 22),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _quantityUnitLabel(StockInViewModel vm) {
     final unit = vm.baseUnitLabel.trim();
     if (unit.isEmpty) return 'unit';
@@ -3700,8 +3800,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             ),
                           ),
                           TextSpan(
-                            text:
-                                '  —  ${item.qty} ${vm.baseUnitLabel}  —  $priceLabel',
+                            text: '  —  $priceLabel',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: _subtitleColor,
@@ -3780,10 +3879,24 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         SizedBox(height: gap12),
         SizedBox(
           width: double.infinity,
-          child: OutlinedButton.icon(
+          height: (52 * scale).clamp(48, 58),
+          child: ElevatedButton.icon(
             onPressed: () => _addUnifiedVariant(vm),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Add size / button'),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text(
+              'Add Size / Button',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _accentBlue,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radius),
+              ),
+            ),
           ),
         ),
       ],

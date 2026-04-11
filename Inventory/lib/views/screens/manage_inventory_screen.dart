@@ -89,8 +89,6 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
     final baseUnitController = TextEditingController(text: product.baseUnit);
     final conversionNameController = TextEditingController();
     final conversionQtyController = TextEditingController();
-    final presetLabelController = TextEditingController();
-    final presetQtyController = TextEditingController();
     final presetPriceController = TextEditingController();
 
     final conversions = (await _stockInRepository.getUnitConversions(product.id!))
@@ -109,6 +107,7 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
             void addConversion() {
               final name = conversionNameController.text.trim();
               final qty = int.tryParse(conversionQtyController.text.trim()) ?? 0;
+              final price = double.tryParse(presetPriceController.text.trim().replaceAll(',', ''));
               if (name.isEmpty || qty <= 0) return;
 
               setLocalState(() {
@@ -116,43 +115,34 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                   ..removeWhere(
                     (item) => item.unitName.toLowerCase() == name.toLowerCase(),
                   )
-                  ..add(ProductUnitConversion(unitName: name, baseQuantity: qty))
+                  ..add(ProductUnitConversion(unitName: name, baseQuantity: qty, sellPrice: price))
                   ..sort((a, b) => b.baseQuantity.compareTo(a.baseQuantity));
-                conversionNameController.clear();
-                conversionQtyController.clear();
-              });
-            }
 
-            void addPreset() {
-              final label = presetLabelController.text.trim();
-              final qty = int.tryParse(presetQtyController.text.trim()) ?? 0;
-              final price = double.tryParse(presetPriceController.text.trim()) ?? 0;
-              if (label.isEmpty || qty <= 0 || price <= 0) return;
-
-              setLocalState(() {
-                sellingOptions
-                  ..removeWhere(
-                    (item) => item.label.toLowerCase() == label.toLowerCase(),
-                  )
-                  ..add(
-                    ProductSellingOption(
-                      label: label,
+                if (price != null && price > 0) {
+                  final baseUnit = baseUnitController.text.trim().isEmpty
+                      ? 'pcs'
+                      : baseUnitController.text.trim();
+                  sellingOptions
+                    ..removeWhere(
+                      (item) => item.label.toLowerCase() == name.toLowerCase(),
+                    )
+                    ..add(ProductSellingOption(
+                      label: name,
                       mode: 'preset',
-                      unitName: baseUnitController.text.trim().isEmpty
-                          ? 'pcs'
-                          : baseUnitController.text.trim(),
+                      unitName: baseUnit,
                       baseQuantity: qty,
                       price: price,
-                    ),
-                  )
-                  ..sort((a, b) {
-                    final qtyCompare =
-                        (b.baseQuantity ?? 0).compareTo(a.baseQuantity ?? 0);
-                    if (qtyCompare != 0) return qtyCompare;
-                    return a.label.toLowerCase().compareTo(b.label.toLowerCase());
-                  });
-                presetLabelController.clear();
-                presetQtyController.clear();
+                    ))
+                    ..sort((a, b) {
+                      final qtyCompare =
+                          (b.baseQuantity ?? 0).compareTo(a.baseQuantity ?? 0);
+                      if (qtyCompare != 0) return qtyCompare;
+                      return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+                    });
+                }
+
+                conversionNameController.clear();
+                conversionQtyController.clear();
                 presetPriceController.clear();
               });
             }
@@ -242,31 +232,6 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
               );
             }
 
-            Widget sectionTitle(String title, String subtitle) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: _textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: _textSecondary,
-                    ),
-                  ),
-                ],
-              );
-            }
-
             return Dialog(
               insetPadding: const EdgeInsets.symmetric(
                 horizontal: 18,
@@ -308,20 +273,11 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Advanced Setup',
+                                'Unit Variants',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
                                   color: _textPrimary,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Edit unit conversions and quick sale presets for this product.',
-                                style: TextStyle(
-                                  fontSize: 12.8,
-                                  fontWeight: FontWeight.w600,
-                                  color: _textSecondary,
                                 ),
                               ),
                             ],
@@ -351,28 +307,112 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    TextField(
-                      controller: baseUnitController,
-                      decoration: inputDecoration(
-                        'Base unit',
-                        icon: Icons.straighten_rounded,
-                      ),
-                    ),
                     const SizedBox(height: 16),
-                    sectionTitle(
-                      'More units',
-                      'Example: 1 pack = 50 pcs, 1 dozen = 12 pcs.',
-                    ),
-                    const SizedBox(height: 10),
+                    // ── Merged list ──────────────────────────────────────
+                    Builder(builder: (context) {
+                      final baseUnit = baseUnitController.text.trim().isEmpty
+                          ? 'pcs'
+                          : baseUnitController.text.trim();
+                      final convNames = conversions
+                          .map((c) => c.unitName.toLowerCase())
+                          .toSet();
+
+                      // Build unified rows: conversions first
+                      final rows = <({String name, int qty, double? price})>[];
+                      for (final c in conversions) {
+                        final match = sellingOptions.where(
+                          (o) => o.label.toLowerCase() == c.unitName.toLowerCase(),
+                        ).firstOrNull;
+                        rows.add((
+                          name: c.unitName,
+                          qty: c.baseQuantity,
+                          price: match?.price ?? c.sellPrice,
+                        ));
+                      }
+                      // selling-only options
+                      for (final o in sellingOptions) {
+                        if (!convNames.contains(o.label.toLowerCase())) {
+                          rows.add((
+                            name: o.label,
+                            qty: o.baseQuantity ?? 0,
+                            price: o.price,
+                          ));
+                        }
+                      }
+
+                      if (rows.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        children: [
+                          ...rows.map((row) {
+                            final priceLabel = (row.price != null && row.price! > 0)
+                                ? '₱${row.price!.toStringAsFixed(row.price! % 1 == 0 ? 0 : 2)}'
+                                : 'Walay presyo';
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FBFF),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: _border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.straighten_rounded,
+                                        color: _accentBlue, size: 18),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text.rich(TextSpan(children: [
+                                        TextSpan(
+                                          text: row.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            color: _textPrimary,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: '  —  $priceLabel',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: _textSecondary,
+                                            fontSize: 12.5,
+                                          ),
+                                        ),
+                                      ])),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => setLocalState(() {
+                                        conversions.removeWhere((c) =>
+                                            c.unitName.toLowerCase() ==
+                                            row.name.toLowerCase());
+                                        sellingOptions.removeWhere((o) =>
+                                            o.label.toLowerCase() ==
+                                            row.name.toLowerCase());
+                                      }),
+                                      child: const Icon(Icons.close_rounded,
+                                          color: _textSecondary, size: 20),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 4),
+                        ],
+                      );
+                    }),
+                    // ── Add form ─────────────────────────────────────────
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: TextField(
                             controller: conversionNameController,
                             decoration: inputDecoration(
-                              'Unit name',
-                              icon: Icons.folder_open_rounded,
+                              'Name (e.g. kilo, gallon)',
+                              icon: Icons.label_outline_rounded,
                             ),
                           ),
                         ),
@@ -382,141 +422,46 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                             controller: conversionQtyController,
                             keyboardType: TextInputType.number,
                             decoration: inputDecoration(
-                              'Equivalent pieces',
-                              icon: Icons.adjust_rounded,
+                              'Qty inside',
+                              icon: Icons.straighten_rounded,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: addConversion,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add unit conversion'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF0E766E),
-                          side: const BorderSide(color: Color(0xFF90D3C7)),
-                          backgroundColor: const Color(0xFFF1FBF8),
-                          minimumSize: const Size.fromHeight(46),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (conversions.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: conversions
-                            .map(
-                              (conversion) => Chip(
-                                label: Text(
-                                  '${conversion.unitName} = ${conversion.baseQuantity} ${baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim()}',
-                                ),
-                                onDeleted: () => setLocalState(
-                                  () => conversions.remove(conversion),
-                                ),
-                                backgroundColor: Colors.white,
-                                side: const BorderSide(color: _border),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ],
-                    const SizedBox(height: 18),
-                    sectionTitle(
-                      'Quick sale presets',
-                      'Use for prices like 3 pcs = PHP 5 or 1 pack = PHP 70.',
-                    ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     TextField(
-                      controller: presetLabelController,
+                      controller: presetPriceController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration: inputDecoration(
-                        'Preset label',
-                        icon: Icons.local_offer_outlined,
+                        'Selling price (optional)',
+                        prefixText: '₱ ',
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: presetQtyController,
-                            keyboardType: TextInputType.number,
-                            decoration: inputDecoration(
-                              'Pieces to deduct',
-                              icon: Icons.inventory_2_outlined,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: presetPriceController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: inputDecoration(
-                              'Sell price',
-                              prefixText: 'PHP ',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: addPreset,
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Add sale preset'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _accentBlue,
-                          side: const BorderSide(color: Color(0xFFCFE0FF)),
-                          backgroundColor: const Color(0xFFF5F8FF),
-                          minimumSize: const Size.fromHeight(46),
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: addConversion,
+                        icon: const Icon(Icons.add_rounded, color: Colors.white),
+                        label: const Text(
+                          'Add Size / Button',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _accentBlue,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
                       ),
                     ),
-                    if (sellingOptions.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: sellingOptions
-                            .map(
-                              (option) {
-                                final baseUnit = baseUnitController.text.trim().isEmpty ? 'pcs' : baseUnitController.text.trim();
-                                final qty = option.baseQuantity ?? 0;
-                                final labelLower = option.label.trim().toLowerCase();
-                                final unitLower = baseUnit.toLowerCase();
-                                final labelShowsQty = labelLower.endsWith(unitLower) ||
-                                    labelLower.contains(' $unitLower') ||
-                                    labelLower.contains('$qty');
-                                final chipLabel = labelShowsQty
-                                    ? '${option.label} \u2013 ${_peso(option.price)}'
-                                    : '${option.label} \u2013 $qty $baseUnit \u2013 ${_peso(option.price)}';
-                                return Chip(
-                                  label: Text(chipLabel),
-                                  onDeleted: () => setLocalState(
-                                    () => sellingOptions.remove(option),
-                                  ),
-                                  backgroundColor: Colors.white,
-                                  side: const BorderSide(color: _border),
-                                );
-                              })
-                            .toList(),
-                      ),
-                    ],
                     const SizedBox(height: 18),
                     Row(
                       children: [
@@ -879,38 +824,6 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF7FAFF),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _border),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.info_outline_rounded,
-                            color: _accentBlue,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              product.baseUnit.toLowerCase() == 'pcs'
-                                  ? 'This will update the same product record from stock-in.'
-                                  : 'Advanced unit setup stays preserved here. This editor updates the main product details only.',
-                              style: const TextStyle(
-                                fontSize: 12.6,
-                                fontWeight: FontWeight.w600,
-                                color: _textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -924,8 +837,8 @@ class _ManageInventoryScreenState extends ConsumerState<ManageInventoryScreen> {
                                   Navigator.pop(dialogContext, true);
                                 }
                               },
-                        icon: const Icon(Icons.tune_rounded),
-                        label: const Text('Advanced setup'),
+                        icon: const Icon(Icons.straighten_rounded),
+                        label: const Text('Unit Variants'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _accentBlue,
                           side: const BorderSide(color: Color(0xFFCFE0FF)),

@@ -1002,30 +1002,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ],
                       ),
                     ),
-                    SizedBox(height: _r(context, 8)),
-                    SizedBox(
-                      width: _r(context, 92),
-                      height: _r(context, 40),
-                      child: ElevatedButton(
-                        onPressed: () => _showProductSellSheet(product, vm),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: subtotal > 0
-                              ? const Color(0xFF173D86)
-                              : const Color(0xFF255FD5),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(_r(context, 14)),
-                          ),
-                        ),
-                        child: Text(
-                          subtotal > 0 ? 'Edit' : 'Sell',
-                          style: TextStyle(
-                            fontSize: _r(context, 12.5),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ),           // closes SizedBox button
                   ],             // closes Column(right).children
                 ),               // closes Column(right)
               ],                 // closes Row(main).children
