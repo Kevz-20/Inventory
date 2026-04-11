@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 21,
+      version: 22,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -415,6 +415,7 @@ class DBService {
               product_id INTEGER NOT NULL,
               unit_name TEXT NOT NULL,
               base_quantity INTEGER NOT NULL,
+              sell_price REAL,
               created_at TEXT,
               updated_at TEXT,
               UNIQUE(product_id, unit_name),
@@ -464,6 +465,16 @@ class DBService {
           await db.rawInsert(
             'INSERT OR IGNORE INTO base_unit_choice(name, created_at) VALUES(?, ?)',
             ['half', DateTime.now().toIso8601String()],
+          );
+        }
+
+        if (oldVersion < 22) {
+          // Ensure sell_price column exists for fresh installs that were created
+          // at version 21 before the _createDB was updated to include the column.
+          await addColumnIfMissing(
+            'product_unit_conversion',
+            'sell_price',
+            'REAL',
           );
         }
 
@@ -854,6 +865,7 @@ class DBService {
         product_id INTEGER NOT NULL,
         unit_name TEXT NOT NULL,
         base_quantity INTEGER NOT NULL,
+        sell_price REAL,
         created_at TEXT,
         updated_at TEXT,
         UNIQUE(product_id, unit_name),

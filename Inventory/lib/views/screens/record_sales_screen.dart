@@ -862,7 +862,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
         : cardConversions.reduce((a, b) =>
             a.baseQuantity < b.baseQuantity ? a : b);
     final cardHumanPrice = cardPrimaryConversion != null
-        ? effectiveUnitPrice * cardPrimaryConversion.baseQuantity
+        ? (cardPrimaryConversion.sellPrice != null && cardPrimaryConversion.sellPrice! > 0
+            ? cardPrimaryConversion.sellPrice!
+            : effectiveUnitPrice * cardPrimaryConversion.baseQuantity)
         : effectiveUnitPrice;
     final cardHumanUnit =
         cardPrimaryConversion?.unitName ?? product.baseUnit;
