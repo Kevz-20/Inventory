@@ -1223,16 +1223,26 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
             }
 
             final baseUnit = product.baseUnit.toLowerCase().trim();
-            final showByAmountToggle = hasDefaultUnitPrice &&
-                (baseUnit == 'ml' ||
-                    baseUnit == 'milliliter' ||
-                    baseUnit == 'millilitre' ||
-                    baseUnit == 'gram' ||
-                    baseUnit == 'grams' ||
-                    baseUnit == 'g');
+            final isVolumeUnit = baseUnit == 'ml' ||
+                baseUnit == 'milliliter' ||
+                baseUnit == 'millilitre' ||
+                baseUnit == 'gram' ||
+                baseUnit == 'grams' ||
+                baseUnit == 'g';
+            final showByAmountToggle = hasDefaultUnitPrice && isVolumeUnit;
 
-            int totalQty() =>
-                isAmountMode ? byAmountDeduction() : localBaseQty + presetQty();
+            int manualDeduction() {
+              if (!isVolumeUnit || displayedUnitPrice <= 0 || localManualAmount <= 0) return 0;
+              return (localManualAmount / displayedUnitPrice)
+                  .floor()
+                  .clamp(0, product.quantity);
+            }
+
+            int totalQty() {
+              if (isAmountMode) return byAmountDeduction();
+              if (isManualPricing && isVolumeUnit && displayedUnitPrice > 0) return manualDeduction();
+              return localBaseQty + presetQty();
+            }
 
             // Smart breakdown: try to fill localBaseQty with preset prices
             // e.g. qty=3 with preset "3 pcs=₱5" → prices as ₱5, not 3×₱2
@@ -1483,7 +1493,9 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                                 ),
                                                 SizedBox(width: _r(context, 6)),
                                                 Text(
-                                                  isManualPricing ? 'Auto Price' : 'Manual Price',
+                                                  isManualPricing
+                                                      ? 'Use Auto Price'
+                                                      : 'Use Manual Total',
                                                   style: TextStyle(
                                                     fontSize: _r(context, 12),
                                                     fontWeight: FontWeight.w800,
@@ -1499,6 +1511,10 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   ),
                                   SizedBox(height: _r(context, 8)),
                                   _infoPill('Available: ${product.stockDisplay}'),
+                                  SizedBox(height: _r(context, 8)),
+                                  _sheetHelperText(
+                                    'Use the stock unit for direct deduction, saved sale buttons for common bundles, or manual total if you need to override the price.',
+                                  ),
                                 ],
                               ),
                             ),
@@ -1569,7 +1585,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                     ),
                                   ),
                                   child: Text(
-                                    'By ₱ Amount',
+                                    'Customer Pays by Amount',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: _r(context, 13),
@@ -1584,13 +1600,17 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             ),
                           ],
                         ),
+                        SizedBox(height: _r(context, 10)),
+                        _sheetHelperText(
+                          'Best for liquids and timbang items like mantika or rice. Enter the peso amount and the app will estimate how much stock to deduct.',
+                        ),
                       ],
 
                       SizedBox(height: _r(context, 18)),
 
                       // Amount mode input — enter ₱ amount, system derives qty
                       if (isAmountMode) ...[
-                        _sheetSectionLabel('Pila ang bayad?'),
+                        _sheetSectionLabel('Pila ang bayad sa customer?'),
                         SizedBox(height: _r(context, 8)),
                         Container(
                           width: double.infinity,
@@ -1708,10 +1728,16 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       if (!isAmountMode && (hasDefaultUnitPrice || sellingOptions.isEmpty)) ...[
                         _sheetSectionLabel(
                           sellingOptions.isNotEmpty
-                              ? 'Individual ${product.baseUnit}'
-                              : 'Quantity',
+                              ? 'Sell by ${product.baseUnit}'
+                              : 'Quantity to sell',
                         ),
                         SizedBox(height: _r(context, 8)),
+                        if (sellingOptions.isNotEmpty) ...[
+                          _sheetHelperText(
+                            'Use this for direct piece-by-piece or unit-by-unit selling. Example: 1 stick, 2 pcs, 500 mL, or 1 kilo worth of stock.',
+                          ),
+                          SizedBox(height: _r(context, 8)),
+                        ],
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
@@ -1810,7 +1836,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       // Preset chips — each has its own fixed price, tap to add/remove
                       if (sellingOptions.isNotEmpty) ...[
                         SizedBox(height: _r(context, 14)),
-                        _sheetSectionLabel('Quick presets'),
+                        _sheetSectionLabel('Saved sale buttons'),
+                        SizedBox(height: _r(context, 8)),
+                        _sheetHelperText(
+                          'Use these for common sales like 3 pcs / 20, half dozen, 1 gallon, kaha, case, or ream.',
+                        ),
                         SizedBox(height: _r(context, 8)),
                         Wrap(
                           spacing: _r(context, 8),
@@ -1902,7 +1932,11 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       // Manual price field
                       if (isManualPricing) ...[
                         SizedBox(height: _r(context, 14)),
-                        _sheetSectionLabel('Total amount'),
+                        _sheetSectionLabel('Manual total amount'),
+                        SizedBox(height: _r(context, 8)),
+                        _sheetHelperText(
+                          'Use this only when you need to override the saved price, such as a special deal or manual wholesale total.',
+                        ),
                         SizedBox(height: _r(context, 8)),
                         Container(
                           width: double.infinity,
@@ -1937,6 +1971,58 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                             },
                           ),
                         ),
+                        if (isVolumeUnit && displayedUnitPrice > 0 && localManualAmount > 0) ...[
+                          SizedBox(height: _r(context, 10)),
+                          Builder(builder: (context) {
+                            final deduction = manualDeduction();
+                            final exceedsStock = deduction > product.quantity;
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: _r(context, 14),
+                                vertical: _r(context, 10),
+                              ),
+                              decoration: BoxDecoration(
+                                color: exceedsStock
+                                    ? const Color(0xFFFFF3F0)
+                                    : const Color(0xFFEEF7F0),
+                                borderRadius: BorderRadius.circular(_r(context, 12)),
+                                border: Border.all(
+                                  color: exceedsStock
+                                      ? const Color(0xFFFFB3A7)
+                                      : const Color(0xFF81C995),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    exceedsStock
+                                        ? Icons.warning_amber_rounded
+                                        : Icons.check_circle_outline_rounded,
+                                    size: _r(context, 16),
+                                    color: exceedsStock
+                                        ? const Color(0xFFD63031)
+                                        : const Color(0xFF2E7D32),
+                                  ),
+                                  SizedBox(width: _r(context, 8)),
+                                  Expanded(
+                                    child: Text(
+                                      exceedsStock
+                                          ? 'Not enough stock. Max: ${product.quantity} ${product.baseUnit}'
+                                          : '≈ $deduction ${product.baseUnit} ang ibabawas',
+                                      style: TextStyle(
+                                        fontSize: _r(context, 13),
+                                        fontWeight: FontWeight.w700,
+                                        color: exceedsStock
+                                            ? const Color(0xFFD63031)
+                                            : const Color(0xFF2E7D32),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
                       ],
 
                       // Breakdown badges (auto mode only)
@@ -2096,6 +2182,18 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
           fontWeight: FontWeight.w700,
           color: const Color(0xFF255FD5),
         ),
+      ),
+    );
+  }
+
+  Widget _sheetHelperText(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: _r(context, 12),
+        color: _subtitleColor,
+        height: 1.35,
       ),
     );
   }

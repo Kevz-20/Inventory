@@ -67,6 +67,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   }
 
   String _costPerUnitLabel(StockInViewModel vm) {
+    if (_isLiquidBaseUnit(vm)) return 'Cost per mL';
+
     final unit = vm.useAdvancedUnitSetup
         ? vm.purchaseUnitLabel.trim()
         : vm.baseUnitLabel.trim();
@@ -82,11 +84,74 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return 'Cost per $unit';
   }
 
+  List<String> _filteredBaseUnitOptions(StockInViewModel vm) {
+    final type = _currentStockType(vm);
+    late final List<String> defaults;
+
+    switch (type) {
+      case 'liquid':
+        defaults = const ['mL'];
+        break;
+      case 'weight':
+        defaults = const ['gram'];
+        break;
+      case 'pack':
+        defaults = const ['half'];
+        break;
+      case 'stick':
+        defaults = const ['stick'];
+        break;
+      case 'piece':
+      default:
+        defaults = const ['pcs'];
+        break;
+    }
+
+    final visible = <String>[...defaults];
+    final current = vm.baseUnitController.text.trim();
+
+    bool alreadyExists(String value) =>
+        visible.any((item) => item.toLowerCase() == value.toLowerCase());
+
+    for (final unit in vm.baseUnitOptions) {
+      final trimmed = unit.trim();
+      if (trimmed.isEmpty) continue;
+      if (alreadyExists(trimmed)) continue;
+
+      final normalized = trimmed.toLowerCase();
+      final matchesType = switch (type) {
+        'liquid' =>
+          normalized == 'ml' ||
+              normalized == 'milliliter' ||
+              normalized == 'millilitre',
+        'weight' =>
+          normalized == 'gram' ||
+              normalized == 'grams' ||
+              normalized == 'g',
+        'pack' => normalized == 'half' || normalized == 'tungaon',
+        'stick' => normalized == 'stick' || normalized == 'sticks',
+        _ =>
+          normalized == 'pcs' ||
+              normalized == 'pc' ||
+              normalized == 'piece' ||
+              normalized == 'pieces',
+      };
+
+      if (matchesType) visible.add(trimmed);
+    }
+
+    if (current.isNotEmpty && !alreadyExists(current)) {
+      visible.add(current);
+    }
+
+    return visible;
+  }
+
   void _prunePresetUnits(
     StockInViewModel vm, {
     required Set<String> allowedUnits,
   }) {
-    const presetUnits = {'kilo', 'liter', 'sachet'};
+    const presetUnits = {'kilo', 'liter', 'gallon', 'sachet'};
     final normalizedAllowed = allowedUnits.map((e) => e.toLowerCase()).toSet();
 
     vm.unitConversions = vm.unitConversions.where((item) {
@@ -143,7 +208,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       case 'liquid':
         vm.setUseAdvancedUnitSetup(true);
         vm.setBaseUnit('mL');
-        _prunePresetUnits(vm, allowedUnits: {'liter'});
+        _prunePresetUnits(vm, allowedUnits: {'liter', 'gallon'});
         vm.setPurchaseUnit('liter');
         final literConversion = vm.unitConversions.where(
           (item) => item.unitName.trim().toLowerCase() == 'liter',
@@ -157,6 +222,20 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             literConversion.first,
             unitName: 'liter',
             baseQuantity: 1000,
+          );
+        }
+        final gallonConversion = vm.unitConversions.where(
+          (item) => item.unitName.trim().toLowerCase() == 'gallon',
+        );
+        if (gallonConversion.isEmpty) {
+          vm.conversionNameController.text = 'gallon';
+          vm.conversionQuantityController.text = '3785';
+          vm.addUnitConversion();
+        } else if (gallonConversion.first.baseQuantity != 3785) {
+          vm.updateUnitConversion(
+            gallonConversion.first,
+            unitName: 'gallon',
+            baseQuantity: 3785,
           );
         }
         break;
@@ -203,7 +282,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
 
     if (normalizedUnit == 'gallon' &&
         (base == 'ml' || base == 'milliliter' || base == 'millilitre')) {
-      return '4000';
+      return '3785';
     }
 
     if (normalizedUnit == 'dozen' && base == 'pcs') return '12';
@@ -402,8 +481,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           LayoutBuilder(
                             builder: (context, amountsConstraints) {
                               final useTwoColumns = amountsConstraints.maxWidth >= 560;
-                              final showSellingPriceField =
-                                  _currentStockType(vm) != 'liquid';
+                              const showSellingPriceField = true;
 
                               final qtyField = _inputNumberField(
                                 label: _purchaseQuantityLabel(vm),
@@ -502,28 +580,28 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                                   valueFs: valueFs,
                                                 ),
                                               )
-                                            else if (showFactorField)
-                                              Expanded(
-                                                child: _inputNumberField(
-                                                  label: '${currentBaseUnit} per ${currentPurchaseUnit}',
-                                                  controller: _unitFactorController,
-                                                  showError: false,
-                                                  icon: Icons.straighten_rounded,
-                                                  onChanged: (text) {
-                                                    final qty = int.tryParse(text.replaceAll(',', '')) ?? 0;
-                                                    if (qty > 0) vm.setUnitFactor(currentPurchaseUnit, qty);
-                                                    setState(() {});
-                                                  },
-                                                  scale: scale,
-                                                  height: fieldH,
-                                                  radius: radius12,
-                                                  valueFs: valueFs,
-                                                ),
-                                              )
                                             else
                                               const Spacer(),
                                           ],
                                         ),
+                                        if (showFactorField) ...[
+                                          SizedBox(height: gap12),
+                                          _inputNumberField(
+                                            label: '${currentBaseUnit} per ${currentPurchaseUnit}',
+                                            controller: _unitFactorController,
+                                            showError: false,
+                                            icon: Icons.straighten_rounded,
+                                            onChanged: (text) {
+                                              final qty = int.tryParse(text.replaceAll(',', '')) ?? 0;
+                                              if (qty > 0) vm.setUnitFactor(currentPurchaseUnit, qty);
+                                              setState(() {});
+                                            },
+                                            scale: scale,
+                                            height: fieldH,
+                                            radius: radius12,
+                                            valueFs: valueFs,
+                                          ),
+                                        ],
                                       ],
                                     )
                                   : const SizedBox.shrink();
@@ -564,7 +642,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                _cardLabel('Unit variants', scale: scale),
+                                _cardLabel('Sizes and sale buttons', scale: scale),
                                 GestureDetector(
                                   onTap: () {
                                     setState(() {
@@ -922,7 +1000,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   color: _accentBlue),
                               SizedBox(width: (6 * s).clamp(5, 8)),
                               Text(
-                                'Add Kategorya',
+                                'Add',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   color: _accentBlue,
@@ -1212,40 +1290,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         ),
                       ),
                     ],
-                  ),
-                  SizedBox(height: (16 * s).clamp(14, 18)),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: (12 * s).clamp(10, 14),
-                      vertical: (10 * s).clamp(8, 12),
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF7FAFF),
-                      borderRadius: BorderRadius.circular(
-                        (14 * s).clamp(12, 18),
-                      ),
-                      border: Border.all(color: _cardBorder.withOpacity(0.9)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline_rounded,
-                          color: _accentBlue,
-                          size: (18 * s).clamp(16, 22),
-                        ),
-                        SizedBox(width: (8 * s).clamp(6, 10)),
-                        Expanded(
-                          child: Text(
-                            "Pananglitan: Snacks, Inomnon, Pagkaon",
-                            style: TextStyle(
-                              color: _subtitleColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: (12.8 * s).clamp(12, 14.5),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                   SizedBox(height: (14 * s).clamp(12, 16)),
                   ValueListenableBuilder<String>(
@@ -1607,9 +1651,11 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
         ? vm.convertedPurchaseQuantity
         : int.tryParse(vm.quantityController.text.replaceAll(',', '').trim()) ?? 0;
     final hasValue = cost > 0 && qty > 0;
-    final perUnit = vm.useAdvancedUnitSetup
-        ? (cost > 0 && enteredQty > 0 ? cost / enteredQty : 0.0)
-        : (hasValue ? cost / qty : 0.0);
+    final perUnit = _isLiquidBaseUnit(vm)
+        ? (hasValue ? cost / qty : 0.0)
+        : vm.useAdvancedUnitSetup
+            ? (cost > 0 && enteredQty > 0 ? cost / enteredQty : 0.0)
+            : (hasValue ? cost / qty : 0.0);
 
     final unitDisplay = vm.baseUnitLabel.trim();
     final equivalentStock = hasValue
@@ -1693,32 +1739,32 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     (
       value: 'piece',
       icon: Icons.tag_rounded,
-      label: 'Piece / Pcs',
-      examples: 'itlog, sibuyas, bawang, kendi, bote',
+      label: 'By piece / piraso',
+      examples: 'itlog, kendi, bottles, eggs, single items',
     ),
     (
       value: 'weight',
       icon: Icons.scale_outlined,
-      label: 'Kilo',
-      examples: 'bigas, asukal, asin',
+      label: 'By weight / kilo',
+      examples: 'bigas, sibuyas, asukal, products sold by weight',
     ),
     (
       value: 'liquid',
       icon: Icons.water_drop_outlined,
-      label: 'Liquid',
-      examples: 'mantika, suka, toyo, alcohol',
+      label: 'Liquid / refill',
+      examples: 'mantika, suka, toyo, alcohol, refill items',
     ),
     (
       value: 'pack',
       icon: Icons.inventory_2_outlined,
-      label: 'Sachet',
-      examples: '3-in-1 kape, sabon, shampoo sachet',
+      label: 'Twin / sachet / half-pack',
+      examples: 'twin coffee, shampoo sachet, promo packs',
     ),
     (
       value: 'stick',
       icon: Icons.smoking_rooms_rounded,
-      label: 'Stick',
-      examples: 'sigarilyo, posporo',
+      label: 'Stick / kaha / ream',
+      examples: 'sigarilyo, posporo, items sold by stick or bundle',
     ),
   ];
 
@@ -1757,7 +1803,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
-          labelText: 'Product type',
+          labelText: 'Product Type',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: _cardBorder),
@@ -1782,6 +1828,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       color: _titleColor,
                     ),
                   ),
+                  SizedBox(height: (3 * scale).clamp(2, 4)),
                   Text(
                     currentDef.examples,
                     maxLines: 1,
@@ -1858,7 +1905,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     ),
                     SizedBox(width: (10 * s).clamp(8, 12)),
                     Text(
-                      'Product Type',
+                      'Choose Product Type',
                       style: TextStyle(
                         fontSize: (16 * s).clamp(14, 18),
                         fontWeight: FontWeight.w900,
@@ -1867,7 +1914,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: (14 * s).clamp(12, 18)),
+                SizedBox(height: (10 * s).clamp(8, 12)),
+              
                 // Options list
                 ..._stockTypes.map((type) {
                   final selected = type.value == current;
@@ -2088,10 +2136,11 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       onTap: () async {
         final selected = await _showBaseUnitBottomSheet(
           context: context,
-          units: vm.baseUnitOptions,
+          units: _filteredBaseUnitOptions(vm),
           selected: vm.baseUnitController.text.trim(),
           scale: scale,
-          allowManageActions: true,
+          title: 'Select stock unit',
+          allowManageActions: false,
         );
 
         if (selected == null) return;
@@ -2126,7 +2175,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
-          labelText: 'Smallest unit',
+          labelText: 'Stock unit',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: isError ? Colors.red : _cardBorder),
@@ -2186,7 +2235,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             color: _accentBlue,
             size: (22 * scale).clamp(20, 26),
           ),
-          labelText: 'Unit',
+          labelText: 'Bought as',
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(radius),
             borderSide: BorderSide(color: isError ? Colors.red : _cardBorder),
@@ -2302,7 +2351,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                         SizedBox(width: (10 * s).clamp(8, 12)),
                         Expanded(
                           child: Text(
-                            'Unit',
+                            'Bought As',
                             style: TextStyle(
                               fontSize: (16 * s).clamp(14, 18),
                               fontWeight: FontWeight.w900,
@@ -3686,6 +3735,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       (label: '1 flat / lapad', quantity: 375),
       (label: '1/2 liter', quantity: 500),
       (label: '1 liter', quantity: 1000),
+      (label: '1 gallon', quantity: 3785),
     ];
   }
 
