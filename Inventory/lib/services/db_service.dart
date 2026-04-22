@@ -21,7 +21,7 @@ class DBService {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 22,
+      version: 24,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         Future<void> addColumnIfMissing(
@@ -321,7 +321,6 @@ class DBService {
           await addSyncColumns('expenses');
           await addSyncColumns('payable');
           await addSyncColumns('capital_management');
-          await addSyncColumns('fixed_asset');
           await addSyncColumns('sales', includeUpdatedAt: false);
           await addSyncColumns('stock_in');
 
@@ -335,7 +334,6 @@ class DBService {
             'expenses',
             'payable',
             'capital_management',
-            'fixed_asset',
             'sales',
             'stock_in',
           ];
@@ -354,7 +352,6 @@ class DBService {
             'expenses',
             'payable',
             'capital_management',
-            'fixed_asset',
             'stock_in',
           ];
 
@@ -476,6 +473,32 @@ class DBService {
             'sell_price',
             'REAL',
           );
+        }
+
+        if (oldVersion < 23) {
+          await addColumnIfMissing('sales', 'created_by_member_id', 'INTEGER');
+          await addColumnIfMissing('stock_in', 'created_by_member_id', 'INTEGER');
+          await addColumnIfMissing('expenses', 'created_by_member_id', 'INTEGER');
+        }
+
+        if (oldVersion < 24) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS member_duty_log (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              account_id INTEGER NOT NULL,
+              member_id INTEGER NOT NULL,
+              member_name TEXT NOT NULL,
+              started_at TEXT NOT NULL,
+              ended_at TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              sync_status TEXT NOT NULL DEFAULT 'pending',
+              last_synced_at TEXT,
+              is_deleted INTEGER NOT NULL DEFAULT 0,
+              FOREIGN KEY (account_id) REFERENCES account(id),
+              FOREIGN KEY (member_id) REFERENCES slpa_member(id)
+            )
+          ''');
         }
 
         if (oldVersion < 18) {
@@ -631,27 +654,6 @@ class DBService {
 ''');
 
     await db.execute('''
-      CREATE TABLE type_choices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE source_choices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE category_choices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL
-      )
-    ''');
-
-    await db.execute('''
       CREATE TABLE security_questions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         question TEXT NOT NULL
@@ -754,11 +756,13 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        created_by_member_id INTEGER,
         server_id TEXT,
         sync_status TEXT NOT NULL DEFAULT 'pending',
         last_synced_at TEXT,
         is_deleted INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (customer_id) REFERENCES customer(id)
+        FOREIGN KEY (customer_id) REFERENCES customer(id),
+        FOREIGN KEY (created_by_member_id) REFERENCES slpa_member(id)
       )
     ''');
 
@@ -818,29 +822,9 @@ class DBService {
       )
     ''');
 
-    // Fixed asset
-    await db.execute('''
-      CREATE TABLE fixed_asset (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id INTEGER,
-        name TEXT,
-        category TEXT,
-        cost REAL,
-        date_acquired TEXT,
-        accumulated_depreciation REAL,
-        created_at TEXT,
-        updated_at TEXT,
-        server_id TEXT,
-        sync_status TEXT NOT NULL DEFAULT 'pending',
-        last_synced_at TEXT,
-        is_deleted INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (account_id) REFERENCES account (id)
-      )
-    ''');
-
     // Stock in
     await db.execute('''
-      CREATE TABLE stock_in ( 
+      CREATE TABLE stock_in (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         account_id INTEGER,
         product_id INTEGER,
@@ -850,12 +834,14 @@ class DBService {
         image TEXT,
         created_at TEXT,
         updated_at TEXT,
+        created_by_member_id INTEGER,
         server_id TEXT,
         sync_status TEXT NOT NULL DEFAULT 'pending',
         last_synced_at TEXT,
         is_deleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (account_id) REFERENCES account (id),
-        FOREIGN KEY (product_id) REFERENCES product (id)
+        FOREIGN KEY (product_id) REFERENCES product (id),
+        FOREIGN KEY (created_by_member_id) REFERENCES slpa_member(id)
       )
     ''');
 
@@ -1032,12 +1018,14 @@ class DBService {
         created_by_first_name TEXT,
         created_by_middle_name TEXT,
         created_by_last_name TEXT,
+        created_by_member_id INTEGER,
         created_at TEXT,
         updated_at TEXT,
         server_id TEXT,
         sync_status TEXT NOT NULL DEFAULT 'pending',
         last_synced_at TEXT,
-        is_deleted INTEGER NOT NULL DEFAULT 0
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (created_by_member_id) REFERENCES slpa_member(id)
       )
     ''');
 
@@ -1054,6 +1042,25 @@ class DBService {
         created_by_last_name TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (account_id) REFERENCES account(id)
+      )
+    ''');
+
+    // Duty shift log
+    await db.execute('''
+      CREATE TABLE member_duty_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL,
+        member_id INTEGER NOT NULL,
+        member_name TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending',
+        last_synced_at TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (account_id) REFERENCES account(id),
+        FOREIGN KEY (member_id) REFERENCES slpa_member(id)
       )
     ''');
 
@@ -1088,29 +1095,6 @@ class DBService {
     await db.insert('credit_status', {'name': 'partial', 'code': 1});
     await db.insert('credit_status', {'name': 'paid', 'code': 2});
 
-    const typeChoices = [
-      'capital_deposit',
-      'transfer_cash_out',
-      'transfer_bank_in',
-    ];
-    for (final t in typeChoices) {
-      await db.insert('type_choices', {'name': t});
-    }
-
-    const sourceChoices = ['cash', 'bank', 'capital'];
-    for (final s in sourceChoices) {
-      await db.insert('source_choices', {'name': s});
-    }
-
-    const categoryChoices = [
-      'inventory_purchase',
-      'rent',
-      'utilities',
-      'other',
-    ];
-    for (final c in categoryChoices) {
-      await db.insert('category_choices', {'name': c});
-    }
     const defaultProductCats = [
       'Imnonon',
       'Alak',
@@ -1170,7 +1154,6 @@ class DBService {
         'payable_payment',
         'payable',
         'owner_installments',
-        'fixed_asset',
         'stock_in',
         'product_unit_conversion',
         'product_selling_option',

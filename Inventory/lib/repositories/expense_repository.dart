@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/current_user.dart';
 import '../models/expense_model.dart';
-import '../providers/account_provider.dart';
 import '../providers/database_provider.dart';
 import '../services/audit_log_service.dart';
 
@@ -11,7 +11,7 @@ import '../services/audit_log_service.dart';
 // -----------------------------
 final expenseRepositoryProvider = FutureProvider<ExpenseRepository>((ref) async {
   final db = await ref.watch(databaseProvider.future);
-  return ExpenseRepository(db, ref);
+  return ExpenseRepository(db);
 });
 
 // -----------------------------
@@ -19,22 +19,17 @@ final expenseRepositoryProvider = FutureProvider<ExpenseRepository>((ref) async 
 // -----------------------------
 class ExpenseRepository {
   final Database db;
-  final Ref ref;
 
-  ExpenseRepository(this.db, this.ref);
+  ExpenseRepository(this.db);
 
   /// Add a new expense
   Future<int> addExpense(ExpenseModel expense) async {
-  // Get current account's name
-  final accountRepo = ref.read(accountRepositoryProvider);
-  final nameParts = await accountRepo.getNameParts();
-
   final data = expense.toMap();
 
-  // Automatically fill created_by fields
-  data['created_by_first_name'] = nameParts['first'];
-  data['created_by_middle_name'] = nameParts['middle'] ?? '';
-  data['created_by_last_name'] = nameParts['last'];
+  data['created_by_first_name'] = CurrentUser.firstName;
+  data['created_by_middle_name'] = CurrentUser.middleName ?? '';
+  data['created_by_last_name'] = CurrentUser.lastName;
+  data['created_by_member_id'] = CurrentUser.memberId;
 
   // created_at: if empty, use current datetime
   data['created_at'] = expense.createdAt.isNotEmpty

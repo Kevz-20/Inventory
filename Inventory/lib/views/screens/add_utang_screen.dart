@@ -290,15 +290,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
           );
         }
 
-        await db.insert('fixed_asset', {
-          'account_id': 1,
-          'name': itemController.text,
-          'cost': total,
-          'accumulated_depreciation': 0,
-          'category': 'Installment Purchase',
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
       } else {
         // âœ… One-time utang: due_date is the due date
         await db.insert('payable', {
@@ -323,15 +314,6 @@ class _AddUtangPageState extends State<AddUtangPage> {
           'updated_at': DateTime.now().toIso8601String(),
         });
 
-        await db.insert('fixed_asset', {
-          'account_id': 1,
-          'name': itemController.text,
-          'cost': total,
-          'accumulated_depreciation': 0,
-          'category': 'Owner Utang',
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
       }
 
       if (!mounted) return;

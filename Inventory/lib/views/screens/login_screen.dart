@@ -41,12 +41,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       await vm.loadSavedMobile();
       vm.clearPin();
 
-      if (vm.mobileNumber.isNotEmpty) {
-        await Future.delayed(const Duration(milliseconds: 300));
-        try {
-          await vm.loginWithBiometric(context, ref);
-        } catch (_) {}
-      }
     });
   }
 

@@ -28,7 +28,6 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
     'customer',
     'payable',
     'capital_management',
-    'fixed_asset',
     'customer_payment',
     'pin_change',
     'pin_reset',

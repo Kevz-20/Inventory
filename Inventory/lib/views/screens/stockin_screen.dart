@@ -516,7 +516,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                   radius: radius12,
                                   valueFs: valueFs,
                                 ),
-                                vm.useAdvancedUnitSetup ? purchaseUnitField : qtyField,
+                                (vm.useAdvancedUnitSetup && _currentStockType(vm) != 'piece') ? purchaseUnitField : qtyField,
                               ];
 
                               Widget topRow;
@@ -542,16 +542,46 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                               // Sync factor controller when purchase unit changes
                               final currentPurchaseUnit = vm.purchaseUnitLabel;
                               final currentBaseUnit = vm.baseUnitLabel;
+                              final isGramBase = _isWeightBaseUnit(vm);
+                              final isLiquidBase = _isLiquidBaseUnit(vm);
+                              final isKiloPurchase = currentPurchaseUnit.toLowerCase() == 'kilo' ||
+                                  currentPurchaseUnit.toLowerCase() == 'kg';
+                              // liter=1,000mL and gallon=3,785mL are fixed constants — always hide
+                              final isKnownLiquidUnit = isLiquidBase && (
+                                  currentPurchaseUnit.toLowerCase() == 'liter' ||
+                                  currentPurchaseUnit.toLowerCase() == 'gallon'
+                              );
+                              // For gram base + kilo purchase: always 1,000 — hide field, user never needs to type it
+                              // For gram base + other unit (sack): ask in kilos, multiply internally
+                              final isKiloMediated = isGramBase && !isKiloPurchase && vm.useAdvancedUnitSetup;
                               final showFactorField = vm.useAdvancedUnitSetup &&
-                                  currentPurchaseUnit.toLowerCase() != currentBaseUnit.toLowerCase();
+                                  currentPurchaseUnit.toLowerCase() != currentBaseUnit.toLowerCase() &&
+                                  !(isGramBase && isKiloPurchase) &&
+                                  !isKnownLiquidUnit;
                               if (_lastUnitForFactor != currentPurchaseUnit) {
                                 _lastUnitForFactor = currentPurchaseUnit;
                                 WidgetsBinding.instance.addPostFrameCallback((_) {
                                   if (!mounted) return;
                                   final factor = vm.quantityFactorFor(currentPurchaseUnit);
-                                  _unitFactorController.text = factor > 1 ? factor.toString() : '';
+                                  if (isKiloMediated && factor >= 1000) {
+                                    _unitFactorController.text = (factor / 1000).round().toString();
+                                  } else {
+                                    _unitFactorController.text = factor > 1 ? factor.toString() : '';
+                                  }
                                 });
                               }
+
+                              // Confirmation summary for kilo-mediated (e.g. 3 sacks × 50 kg = 150 kg)
+                              final enteredQty = double.tryParse(
+                                    vm.quantityController.text.replaceAll(',', '').trim(),
+                                  ) ?? 0;
+                              final kiloPerUnit = double.tryParse(
+                                    _unitFactorController.text.replaceAll(',', '').trim(),
+                                  ) ?? 0;
+                              final totalKilos = enteredQty * kiloPerUnit;
+                              final showKiloConfirmation = isKiloMediated &&
+                                  enteredQty > 0 &&
+                                  kiloPerUnit > 0;
 
                               final sukodAndPrice = (vm.useAdvancedUnitSetup || showSellingPriceField)
                                   ? Column(
@@ -560,7 +590,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                         Row(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            if (vm.useAdvancedUnitSetup) ...[
+                                            if (vm.useAdvancedUnitSetup && _currentStockType(vm) != 'piece') ...[
                                               Expanded(
                                                 child: qtyField,
                                               ),
@@ -587,13 +617,20 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                         if (showFactorField) ...[
                                           SizedBox(height: gap12),
                                           _inputNumberField(
-                                            label: '${currentBaseUnit} per ${currentPurchaseUnit}',
+                                            label: isKiloMediated
+                                                ? 'kilo per $currentPurchaseUnit'
+                                                : '$currentBaseUnit per $currentPurchaseUnit',
                                             controller: _unitFactorController,
                                             showError: false,
                                             icon: Icons.straighten_rounded,
                                             onChanged: (text) {
                                               final qty = int.tryParse(text.replaceAll(',', '')) ?? 0;
-                                              if (qty > 0) vm.setUnitFactor(currentPurchaseUnit, qty);
+                                              if (qty > 0) {
+                                                vm.setUnitFactor(
+                                                  currentPurchaseUnit,
+                                                  isKiloMediated ? qty * 1000 : qty,
+                                                );
+                                              }
                                               setState(() {});
                                             },
                                             scale: scale,
@@ -601,6 +638,41 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                                             radius: radius12,
                                             valueFs: valueFs,
                                           ),
+                                          if (showKiloConfirmation) ...[
+                                            SizedBox(height: (8 * scale).clamp(6, 10)),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: (12 * scale).clamp(10, 14),
+                                                vertical: (10 * scale).clamp(8, 12),
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEEF5FF),
+                                                borderRadius: BorderRadius.circular(radius12),
+                                                border: Border.all(color: const Color(0xFFB8D0F8)),
+                                              ),
+                                              child: Text.rich(
+                                                TextSpan(children: [
+                                                  TextSpan(
+                                                    text: '${enteredQty % 1 == 0 ? enteredQty.toInt() : enteredQty} $currentPurchaseUnit × ${kiloPerUnit % 1 == 0 ? kiloPerUnit.toInt() : kiloPerUnit} kg = ',
+                                                    style: TextStyle(
+                                                      fontSize: (13 * scale).clamp(12, 14.5),
+                                                      fontWeight: FontWeight.w600,
+                                                      color: _subtitleColor,
+                                                    ),
+                                                  ),
+                                                  TextSpan(
+                                                    text: '${totalKilos % 1 == 0 ? totalKilos.toInt() : totalKilos} kg total stocked',
+                                                    style: TextStyle(
+                                                      fontSize: (13 * scale).clamp(12, 14.5),
+                                                      fontWeight: FontWeight.w900,
+                                                      color: _titleColor,
+                                                    ),
+                                                  ),
+                                                ]),
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ],
                                     )
@@ -679,13 +751,15 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                               ],
                             ),
                             if (_showUnitOptions) ...[
-                              SizedBox(height: gap12),
-                              _baseUnitPickerField(
-                                vm,
-                                scale: scale,
-                                radius: radius12,
-                                valueFs: valueFs,
-                              ),
+                              if (_currentStockType(vm) != 'piece' && _currentStockType(vm) != 'weight' && _currentStockType(vm) != 'liquid') ...[
+                                SizedBox(height: gap12),
+                                _baseUnitPickerField(
+                                  vm,
+                                  scale: scale,
+                                  radius: radius12,
+                                  valueFs: valueFs,
+                                ),
+                              ],
                               SizedBox(height: gap12),
                               _unifiedSizesSection(
                                 vm,
@@ -1740,7 +1814,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
       value: 'piece',
       icon: Icons.tag_rounded,
       label: 'By piece / piraso',
-      examples: 'itlog, kendi, bottles, eggs, single items',
+      examples: 'itlog, kendi, bottles, sibuyas, lamas, single items',
     ),
     (
       value: 'weight',
@@ -1751,7 +1825,7 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     (
       value: 'liquid',
       icon: Icons.water_drop_outlined,
-      label: 'Liquid / refill',
+      label: 'Liquid',
       examples: 'mantika, suka, toyo, alcohol, refill items',
     ),
     (
@@ -3814,66 +3888,6 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Existing items
-        if (allItems.isNotEmpty) ...[
-          ...allItems.map((item) {
-            final priceLabel = (item.price != null && item.price! > 0)
-                ? '₱${item.price!.toStringAsFixed(item.price! % 1 == 0 ? 0 : 2)}'
-                : 'Walay presyo';
-            return Padding(
-              padding: EdgeInsets.only(bottom: (8 * s).clamp(6, 10)),
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: (14 * s).clamp(12, 16),
-                  vertical: (12 * s).clamp(10, 14),
-                ),
-                decoration: BoxDecoration(
-                  color: _fieldBg,
-                  borderRadius: BorderRadius.circular(radius),
-                  border: Border.all(color: _cardBorder.withOpacity(0.8)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.straighten_rounded,
-                        color: _accentBlue,
-                        size: (18 * s).clamp(16, 22)),
-                    SizedBox(width: (10 * s).clamp(8, 12)),
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(children: [
-                          TextSpan(
-                            text: _displayUnifiedItemName(item.name),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: _titleColor,
-                              fontSize: (14 * s).clamp(13, 16),
-                            ),
-                          ),
-                          TextSpan(
-                            text: '  —  $priceLabel',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _subtitleColor,
-                              fontSize: (12.5 * s).clamp(11.5, 14),
-                            ),
-                          ),
-                        ]),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _removeUnifiedItem(vm, item.name),
-                      child: Icon(Icons.close_rounded,
-                          color: _subtitleColor,
-                          size: (20 * s).clamp(18, 22)),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-          SizedBox(height: (4 * s).clamp(3, 6)),
-        ],
-
         // Add form
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3949,6 +3963,66 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
             ),
           ),
         ),
+
+        // Added items list
+        if (allItems.isNotEmpty) ...[
+          SizedBox(height: gap12),
+          ...allItems.map((item) {
+            final priceLabel = (item.price != null && item.price! > 0)
+                ? '₱${item.price!.toStringAsFixed(item.price! % 1 == 0 ? 0 : 2)}'
+                : 'Walay presyo';
+            return Padding(
+              padding: EdgeInsets.only(bottom: (8 * s).clamp(6, 10)),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: (14 * s).clamp(12, 16),
+                  vertical: (12 * s).clamp(10, 14),
+                ),
+                decoration: BoxDecoration(
+                  color: _fieldBg,
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(color: _cardBorder.withOpacity(0.8)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.straighten_rounded,
+                        color: _accentBlue,
+                        size: (18 * s).clamp(16, 22)),
+                    SizedBox(width: (10 * s).clamp(8, 12)),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(children: [
+                          TextSpan(
+                            text: _displayUnifiedItemName(item.name),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: _titleColor,
+                              fontSize: (14 * s).clamp(13, 16),
+                            ),
+                          ),
+                          TextSpan(
+                            text: '  —  $priceLabel',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: _subtitleColor,
+                              fontSize: (12.5 * s).clamp(11.5, 14),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _removeUnifiedItem(vm, item.name),
+                      child: Icon(Icons.close_rounded,
+                          color: _subtitleColor,
+                          size: (20 * s).clamp(18, 22)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ],
     );
   }

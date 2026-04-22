@@ -322,15 +322,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                isCash ? 'Cash Sale' : 'Utang Sale',
-                                style: TextStyle(
-                                  fontSize: _r(context, 21),
-                                  fontWeight: FontWeight.w900,
-                                  color: _titleColor,
-                                ),
-                              ),
-                              SizedBox(height: _r(context, 14)),
                               _cashUtangSwitch(vm),
                               if (!isCash && vm.selectedCustomer != null)
                                 Padding(
@@ -1494,8 +1485,8 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                                 SizedBox(width: _r(context, 6)),
                                                 Text(
                                                   isManualPricing
-                                                      ? 'Use Auto Price'
-                                                      : 'Use Manual Total',
+                                                      ? 'Auto Pricing'
+                                                      : 'Manual Pricing',
                                                   style: TextStyle(
                                                     fontSize: _r(context, 12),
                                                     fontWeight: FontWeight.w800,
@@ -1511,10 +1502,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                                   ),
                                   SizedBox(height: _r(context, 8)),
                                   _infoPill('Available: ${product.stockDisplay}'),
-                                  SizedBox(height: _r(context, 8)),
-                                  _sheetHelperText(
-                                    'Use the stock unit for direct deduction, saved sale buttons for common bundles, or manual total if you need to override the price.',
-                                  ),
                                 ],
                               ),
                             ),
@@ -1733,10 +1720,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                         ),
                         SizedBox(height: _r(context, 8)),
                         if (sellingOptions.isNotEmpty) ...[
-                          _sheetHelperText(
-                            'Use this for direct piece-by-piece or unit-by-unit selling. Example: 1 stick, 2 pcs, 500 mL, or 1 kilo worth of stock.',
-                          ),
-                          SizedBox(height: _r(context, 8)),
+
                         ],
                         Container(
                           width: double.infinity,
@@ -1836,11 +1820,7 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       // Preset chips — each has its own fixed price, tap to add/remove
                       if (sellingOptions.isNotEmpty) ...[
                         SizedBox(height: _r(context, 14)),
-                        _sheetSectionLabel('Saved sale buttons'),
-                        SizedBox(height: _r(context, 8)),
-                        _sheetHelperText(
-                          'Use these for common sales like 3 pcs / 20, half dozen, 1 gallon, kaha, case, or ream.',
-                        ),
+                        _sheetSectionLabel('Quick Sale'),
                         SizedBox(height: _r(context, 8)),
                         Wrap(
                           spacing: _r(context, 8),
@@ -1933,10 +1913,6 @@ class _RecordSalesScreenState extends ConsumerState<RecordSalesScreen>
                       if (isManualPricing) ...[
                         SizedBox(height: _r(context, 14)),
                         _sheetSectionLabel('Manual total amount'),
-                        SizedBox(height: _r(context, 8)),
-                        _sheetHelperText(
-                          'Use this only when you need to override the saved price, such as a special deal or manual wholesale total.',
-                        ),
                         SizedBox(height: _r(context, 8)),
                         Container(
                           width: double.infinity,

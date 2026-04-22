@@ -458,7 +458,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _readonlyRow(
             icon: Icons.phone_android_rounded,
             title: 'Mobile Number',
-            subtitle: 'Login number for this member',
+            subtitle: '',
             value: account.mobileNumber,
           ),
         ],
@@ -470,14 +470,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _readonlyRow(
           icon: Icons.person_outline_rounded,
           title: 'First Name',
-          subtitle: 'Member given name',
+          subtitle: '',
           value: account.firstName,
         ),
         const SizedBox(height: 12),
         _readonlyRow(
           icon: Icons.person_outline_rounded,
           title: 'Middle Name',
-          subtitle: 'Optional member middle name',
+          subtitle: '',
           value: (account.middleName ?? '').trim().isEmpty
               ? 'Not set'
               : account.middleName!,
@@ -486,14 +486,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _readonlyRow(
           icon: Icons.badge_rounded,
           title: 'Last Name',
-          subtitle: 'Member surname',
+          subtitle: '',
           value: account.lastName,
         ),
         const SizedBox(height: 12),
         _readonlyRow(
           icon: Icons.phone_android_rounded,
           title: 'Mobile Number',
-          subtitle: 'Login number for this member',
+          subtitle: '',
           value: account.mobileNumber,
         ),
       ],
@@ -510,23 +510,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           value: account.slpaName,
         ),
         const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFF),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _cardBorder),
-          ),
-          child: const Text(
-            'Association details are shown here for reference. Editing association information should be handled separately by the appropriate account owner or admin.',
-            style: TextStyle(
-              color: _textSecondary,
-              fontWeight: FontWeight.w600,
-              height: 1.35,
-            ),
-          ),
-        ),
       ],
     );
   }

@@ -19,13 +19,7 @@ class BalanceSheetRepository {
     double totalCashOnHand =
         (capitalRes.first['cash'] as num?)?.toDouble() ?? 0.0;
 
-    // ---------------- FIXED ASSETS ----------------
-    final assetRes = await db.rawQuery('''
-      SELECT IFNULL(SUM(cost - accumulated_depreciation),0) AS fixed_assets
-      FROM fixed_asset
-    ''');
-    double fixedAssets =
-        (assetRes.first['fixed_assets'] as num?)?.toDouble() ?? 0.0;
+    const double fixedAssets = 0.0;
 
     // ---------------- ACCOUNTS RECEIVABLE (FIXED) ----------------
     final arRes = await db.rawQuery('''

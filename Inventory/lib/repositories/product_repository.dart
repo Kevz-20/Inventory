@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import '../models/current_user.dart';
 import '../models/product_model.dart';
 import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
@@ -210,23 +211,19 @@ class ProductRepository {
   Future<void> checkoutCash(List<Map<String, dynamic>> items) async {
     final now = DateTime.now().toIso8601String();
 
-    // Calculate total
     final total = items.fold<double>(
       0,
       (sum, item) => sum + (item['subtotal'] as num).toDouble(),
     );
 
-    // Get name parts for created_by fields
-    final nameParts = await accountRepo.getNameParts();
-
-    // Insert main sale record
     final saleId = await db.insert('sales', {
       'sale_type': 'cash',
       'total': total,
       'created_at': now,
-      'created_by_first_name': nameParts['first'],
-      'created_by_middle_name': nameParts['middle'],
-      'created_by_last_name': nameParts['last'],
+      'created_by_first_name': CurrentUser.firstName,
+      'created_by_middle_name': CurrentUser.middleName,
+      'created_by_last_name': CurrentUser.lastName,
+      'created_by_member_id': CurrentUser.memberId,
       'sync_status': 'pending',
       'last_synced_at': null,
       'is_deleted': 0,
@@ -248,16 +245,15 @@ class ProductRepository {
         'subtotal': subtotal,
       });
 
-      // Insert into sales_cash (added created_by fields)
       await db.insert('sales_cash', {
         'product_id': productId,
         'amount': subtotal,
         'quantity': quantity,
         'date': now,
         'created_at': now,
-        'created_by_first_name': nameParts['first'],
-        'created_by_middle_name': nameParts['middle'],
-        'created_by_last_name': nameParts['last'],
+        'created_by_first_name': CurrentUser.firstName,
+        'created_by_middle_name': CurrentUser.middleName,
+        'created_by_last_name': CurrentUser.lastName,
       });
 
       // Update stock
@@ -285,7 +281,6 @@ class ProductRepository {
     int customerId, {
     DateTime? dueDate,
   }) async {
-    final nameParts = await accountRepo.getNameParts(); // <-- updated
     final now = DateTime.now().toIso8601String();
     final due = dueDate?.toIso8601String() ??
         DateTime.now().add(const Duration(days: 30)).toIso8601String();
@@ -314,7 +309,6 @@ class ProductRepository {
       if (statusResult.isEmpty) throw Exception('Credit status "unpaid" not found');
       final statusId = statusResult.first['id'] as int;
 
-      // Insert main sale record (updated created_by fields)
       saleId = await txn.insert('sales', {
         'customer_id': customerId,
         'sale_type': 'credit',
@@ -323,9 +317,10 @@ class ProductRepository {
           (sum, item) => sum + (item['subtotal'] as num).toDouble(),
         ),
         'created_at': now,
-        'created_by_first_name': nameParts['first'],
-        'created_by_middle_name': nameParts['middle'],
-        'created_by_last_name': nameParts['last'],
+        'created_by_first_name': CurrentUser.firstName,
+        'created_by_middle_name': CurrentUser.middleName,
+        'created_by_last_name': CurrentUser.lastName,
+        'created_by_member_id': CurrentUser.memberId,
         'sync_status': 'pending',
         'last_synced_at': null,
         'is_deleted': 0,
@@ -347,7 +342,6 @@ class ProductRepository {
           'subtotal': subtotal,
         });
 
-        // Insert into sales_credit (updated created_by fields)
         await txn.insert('sales_credit', {
           'sale_id': saleId,
           'product_id': productId,
@@ -358,9 +352,9 @@ class ProductRepository {
           'credit_date': now,
           'due_date': due,
           'created_at': now,
-          'created_by_first_name': nameParts['first'],
-          'created_by_middle_name': nameParts['middle'],
-          'created_by_last_name': nameParts['last'],
+          'created_by_first_name': CurrentUser.firstName,
+          'created_by_middle_name': CurrentUser.middleName,
+          'created_by_last_name': CurrentUser.lastName,
         });
 
         // Update product stock

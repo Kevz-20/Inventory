@@ -28,10 +28,11 @@ import 'views/screens/capital_management_screen.dart';
 import 'views/screens/record_sales_screen.dart';
 import 'views/screens/utang_summary.screen.dart';
 import 'views/screens/customer_menu_screen.dart';
-import 'views/screens/negosyo_menu_screen.dart';
 import 'views/screens/reports_screen.dart';
 import 'views/screens/customer_utang_screen.dart';
 import 'views/screens/owner_utang_screen.dart';
+import 'views/screens/duty_shift_screen.dart';
+import 'views/screens/member_activity_screen.dart';
 import 'views/screens/notification_screen.dart';
 
 final routeObserver = RouteObserver<ModalRoute<void>>();
@@ -221,15 +222,6 @@ final router = GoRouter(
   ),
 
   GoRoute(
-    path: '/negosyo_menu',
-    pageBuilder: (context, state) => customPage(
-      state,
-      const NegosyoMenuScreen(),
-      transition: PageTransitionType.forward,
-    ),
-  ),
-
-  GoRoute(
   path: '/reports',
   pageBuilder: (context, state) => customPage(
     state,
@@ -266,6 +258,14 @@ final router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/cashflow',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const CashFlowScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
       path: '/about_app',
       pageBuilder: (context, state) => customPage(
         state,
@@ -278,14 +278,6 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const ChangePinScreen(),
-        transition: PageTransitionType.forward,
-      ),
-    ),
-    GoRoute(
-      path: '/cashflow',
-      pageBuilder: (context, state) => customPage(
-        state,
-        const CashFlowScreen(),
         transition: PageTransitionType.forward,
       ),
     ),
@@ -339,6 +331,22 @@ final router = GoRouter(
       pageBuilder: (context, state) => customPage(
         state,
         const NotificationScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/duty_shifts',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const DutyShiftScreen(),
+        transition: PageTransitionType.forward,
+      ),
+    ),
+    GoRoute(
+      path: '/member_activity',
+      pageBuilder: (context, state) => customPage(
+        state,
+        const MemberActivityScreen(),
         transition: PageTransitionType.forward,
       ),
     ),

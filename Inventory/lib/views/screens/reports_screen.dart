@@ -173,6 +173,28 @@ class ReportsScreen extends StatelessWidget {
                           ),
                           SizedBox(height: gap),
                           SizedBox(
+                            height: _r(context, 108),
+                            child: _bigActionTile(
+                              context: context,
+                              label: "MEMBER ACTIVITY",
+                              subtitle: "Per-member sales, expenses & stock-ins",
+                              icon: Icons.people_alt_outlined,
+                              onTap: () => context.push('/member_activity'),
+                            ),
+                          ),
+                          SizedBox(height: gap),
+                          SizedBox(
+                            height: _r(context, 108),
+                            child: _bigActionTile(
+                              context: context,
+                              label: "DUTY SHIFTS",
+                              subtitle: "Login and logout shift history",
+                              icon: Icons.schedule_outlined,
+                              onTap: () => context.push('/duty_shifts'),
+                            ),
+                          ),
+                          SizedBox(height: gap),
+                          SizedBox(
                             height: _r(context, 320),
                             child: _buildTopSellingPanel(context),
                           ),
@@ -203,11 +225,11 @@ class ReportsScreen extends StatelessWidget {
 
                   final tilesBlock = isTablet
                       ? (isLandscape
-                          ? (h * 0.36).clamp(220.0, 300.0)
-                          : (h * 0.40).clamp(280.0, 380.0))
+                          ? (h * 0.60).clamp(370.0, 500.0)
+                          : (h * 0.66).clamp(465.0, 630.0))
                       : (isLandscape
-                          ? (h * 0.42).clamp(190.0, 260.0)
-                          : (h * 0.34).clamp(220.0, 320.0));
+                          ? (h * 0.70).clamp(320.0, 430.0)
+                          : (h * 0.57).clamp(368.0, 530.0));
 
                   return Column(
                     children: [
@@ -265,6 +287,26 @@ class ReportsScreen extends StatelessWidget {
             subtitle: "Cash in and cash out summary",
             icon: Icons.show_chart_outlined,
             onTap: () => context.push('/cashflow'),
+          ),
+        ),
+        SizedBox(height: gap),
+        Expanded(
+          child: _bigActionTile(
+            context: context,
+            label: "MEMBER ACTIVITY",
+            subtitle: "Per-member sales, expenses & stock-ins",
+            icon: Icons.people_alt_outlined,
+            onTap: () => context.push('/member_activity'),
+          ),
+        ),
+        SizedBox(height: gap),
+        Expanded(
+          child: _bigActionTile(
+            context: context,
+            label: "DUTY SHIFTS",
+            subtitle: "Login and logout shift history",
+            icon: Icons.schedule_outlined,
+            onTap: () => context.push('/duty_shifts'),
           ),
         ),
       ],

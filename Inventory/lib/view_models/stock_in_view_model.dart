@@ -686,12 +686,24 @@ class StockInViewModel extends ChangeNotifier {
         await _repository.updateProduct(stock);
         await _repository.replaceUnitConversions(stock.id!, unitConversions);
         await _repository.replaceSellingOptions(stock.id!, sellingOptions);
+        await _repository.recordStockIn(
+          productId: stock.id!,
+          quantity: newQuantity,
+          purchasePrice: mergedCostPerUnit,
+          image: stock.image,
+        );
         message = 'Product updated successfully';
       } else {
         final newId = await _repository.addProduct(stock);
         stock.id = newId;
         await _repository.replaceUnitConversions(newId, unitConversions);
         await _repository.replaceSellingOptions(newId, sellingOptions);
+        await _repository.recordStockIn(
+          productId: newId,
+          quantity: newQuantity,
+          purchasePrice: mergedCostPerUnit,
+          image: stock.image,
+        );
         allProducts.add(stock);
         message = 'Product saved successfully';
       }

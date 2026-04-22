@@ -8,9 +8,9 @@ import '../core/app_colors.dart';
 import '../models/login_model.dart';
 import '../models/current_user.dart';
 import '../providers/current_mobile_number_provider.dart';
+import '../repositories/duty_shift_repository.dart';
 import '../repositories/login_repository.dart';
 import '../services/db_service.dart';
-import 'package:local_auth/local_auth.dart';
 
 final loginViewModelProvider = ChangeNotifierProvider<LoginViewModel>((ref) {
   final repository = LoginRepository(DBService.instance);
@@ -24,7 +24,6 @@ class LoginViewModel extends ChangeNotifier {
     loadSavedMobile();
   }
 
-  final LocalAuthentication _auth = LocalAuthentication();
   final formKey = GlobalKey<FormState>();
 
   bool shakePin = false;
@@ -47,6 +46,17 @@ class LoginViewModel extends ChangeNotifier {
   Future<void> loadSavedMobile() async {
     final prefs = await SharedPreferences.getInstance();
     mobileNumber = prefs.getString('mobileNumber') ?? '';
+    final savedMemberId = prefs.getInt('memberId');
+    final savedAccountId = prefs.getInt('accountId');
+    if (savedMemberId != null && savedAccountId != null) {
+      CurrentUser.setFromAccount(
+        memberId: savedMemberId,
+        accountId: savedAccountId,
+        first: prefs.getString('firstName') ?? '',
+        middle: prefs.getString('middleName'),
+        last: prefs.getString('lastName') ?? '',
+      );
+    }
     notifyListeners();
   }
 
@@ -67,81 +77,48 @@ class LoginViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('fullName', account.fullName);
     await prefs.setString('slpaName', account.slpaName);
+    await prefs.setInt('memberId', account.memberId);
+    await prefs.setInt('accountId', account.accountId);
+    await prefs.setString('firstName', account.firstName);
+    await prefs.setString('lastName', account.lastName);
+    if (account.middleName != null) {
+      await prefs.setString('middleName', account.middleName!);
+    } else {
+      await prefs.remove('middleName');
+    }
     CurrentUser.setFromAccount(
+      memberId: account.memberId,
+      accountId: account.accountId,
       first: account.firstName,
       middle: account.middleName,
       last: account.lastName,
     );
+    await _startDutyShift();
   }
 
-  /// ✅ Updated Biometric Login
-  Future<void> loginWithBiometric(BuildContext context, WidgetRef ref) async {
-    if (mobileNumber.isEmpty) {
-      _showMessageDialog(
-        context,
-        'Please set your mobile number first',
-        success: false,
-      );
-      return;
-    }
-
+  Future<void> _startDutyShift() async {
+    final memberId  = CurrentUser.memberId;
+    final accountId = CurrentUser.accountId;
+    if (memberId == null || accountId == null) return;
+    final parts = [
+      CurrentUser.firstName ?? '',
+      if ((CurrentUser.middleName ?? '').isNotEmpty) CurrentUser.middleName!,
+      CurrentUser.lastName ?? '',
+    ].where((s) => s.isNotEmpty);
     try {
-      // 1️⃣ Check device support
-      final canCheckBiometrics = await _auth.canCheckBiometrics;
-      final isDeviceSupported = await _auth.isDeviceSupported();
-      if (!canCheckBiometrics || !isDeviceSupported) {
-        _showMessageDialog(
-          context,
-          'Biometric not supported on this device',
-          success: false,
-        );
-        return;
-      }
-
-      // 2️⃣ Check if user has enrolled biometrics
-      final availableBiometrics = await _auth.getAvailableBiometrics();
-      if (availableBiometrics.isEmpty) {
-        _showMessageDialog(
-          context,
-          'No fingerprints or face enrolled',
-          success: false,
-        );
-        return;
-      }
-
-      // 3️⃣ Authenticate
-      final didAuthenticate = await _auth.authenticate(
-        localizedReason: 'Scan fingerprint to login',
-        options: const AuthenticationOptions(biometricOnly: true),
+      final db   = await DBService.instance.database;
+      final repo = DutyShiftRepository(db);
+      await repo.startShift(
+        memberId:   memberId,
+        accountId:  accountId,
+        memberName: parts.join(' '),
       );
-
-      if (!didAuthenticate) {
-        return;
-      }
-
-      // 4️⃣ Load account
-      final account = await _repository.getAccountByMobileNumber(mobileNumber);
-      if (account == null) {
-        _showMessageDialog(context, 'Account not found', success: false);
-        return;
-      }
-
-      // 5️⃣ Successful login
-      await _persistLoggedInMember(account, ref);
-      if (context.mounted) {
-        _showMessageDialog(context, 'Login successful!', success: true);
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (context.mounted) {
-          GoRouter.of(context).go('/home', extra: 'fromLogin');
-          clearPin();
-        }
-      }
-    } catch (e) {
-      _showMessageDialog(context, 'Biometric error: $e', success: false);
+    } catch (_) {
+      // Non-critical — login still succeeds even if shift log fails
     }
   }
 
-  // 🔹 PIN input handling (unchanged)
+  // 🔹 PIN input handling
   void onKeyTap(
     BuildContext context,
     String label,

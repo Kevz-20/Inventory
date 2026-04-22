@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/current_user.dart';
 import '../models/product_model.dart';
 import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
@@ -301,6 +302,47 @@ class StockInRepository {
       );
     }
     return deleted;
+  }
+
+  Future<void> recordStockIn({
+    required int productId,
+    required int quantity,
+    required double purchasePrice,
+    String? image,
+  }) async {
+    final now = _now();
+    final stockInId = await db.insert('stock_in', {
+      'account_id': CurrentUser.accountId,
+      'product_id': productId,
+      'quantity': quantity,
+      'purchase_price': purchasePrice,
+      'markup_rate': 0,
+      'image': image,
+      'created_at': now,
+      'updated_at': now,
+      'created_by_member_id': CurrentUser.memberId,
+      'sync_status': 'pending',
+      'last_synced_at': null,
+      'is_deleted': 0,
+    });
+    await AuditLogService.instance.log(
+      memberId: CurrentUser.memberId,
+      memberName: [
+        CurrentUser.firstName,
+        CurrentUser.middleName,
+        CurrentUser.lastName,
+      ].where((p) => (p ?? '').isNotEmpty).join(' '),
+      module: 'stock_in',
+      tableName: 'stock_in',
+      recordId: stockInId.toString(),
+      action: 'create',
+      newValue: {
+        'product_id': productId,
+        'quantity': quantity,
+        'purchase_price': purchasePrice,
+        'created_by_member_id': CurrentUser.memberId,
+      },
+    );
   }
 
   // Clear cache (no longer needed for accountId)

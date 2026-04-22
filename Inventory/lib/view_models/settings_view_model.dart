@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/current_user.dart';
 import '../repositories/account_repository.dart';
+import '../repositories/duty_shift_repository.dart';
+import '../services/db_service.dart';
 import '../core/app_colors.dart';
 
 class SettingsViewModel extends ChangeNotifier {
@@ -69,6 +73,27 @@ class SettingsViewModel extends ChangeNotifier {
 
   /// Handle actual logout
   Future<void> _handleLogout(BuildContext context) async {
+    // End the active duty shift before clearing session
+    try {
+      final accountId = CurrentUser.accountId;
+      if (accountId != null) {
+        final db   = await DBService.instance.database;
+        final repo = DutyShiftRepository(db);
+        final active = await repo.getActiveShift(accountId);
+        if (active != null) await repo.endShift(active.id);
+      }
+    } catch (_) {}
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('memberId');
+    await prefs.remove('accountId');
+    await prefs.remove('firstName');
+    await prefs.remove('middleName');
+    await prefs.remove('lastName');
+    await prefs.remove('fullName');
+    await prefs.remove('slpaName');
+    CurrentUser.clear();
+    if (!context.mounted) return;
     Navigator.pop(context);
     if (!context.mounted) return;
     GoRouter.of(context).go('/login', extra: 'fromLogout');

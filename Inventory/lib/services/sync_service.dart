@@ -28,7 +28,6 @@ class SyncService {
     SyncTableConfig(tableName: 'expenses'),
     SyncTableConfig(tableName: 'payable'),
     SyncTableConfig(tableName: 'capital_management'),
-    SyncTableConfig(tableName: 'fixed_asset'),
     SyncTableConfig(tableName: 'sales', orderBy: 'created_at ASC, id ASC'),
     SyncTableConfig(tableName: 'stock_in', orderBy: 'created_at ASC, id ASC'),
   ];
