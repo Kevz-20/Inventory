@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/account_model.dart';
 import '../services/audit_log_service.dart';
-import '../services/auto_sync_service.dart';
 import '../services/db_service.dart';
 
 class AccountRepository {
@@ -156,7 +155,6 @@ class AccountRepository {
       },
     );
 
-    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
   }
 
   Future<void> updateCurrentMemberProfile(Account updated) async {
@@ -213,6 +211,5 @@ class AccountRepository {
       },
     );
 
-    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
   }
 }

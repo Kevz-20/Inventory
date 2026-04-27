@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import '../repositories/account_repository.dart';
 import '../services/audit_log_service.dart';
-import '../services/auto_sync_service.dart';
 import '../services/db_service.dart';
 
 class SlpaMemberRepository {
@@ -93,7 +90,6 @@ class SlpaMemberRepository {
       },
     );
 
-    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
   }
 
   Future<List<String>> getSecurityQuestions() async {

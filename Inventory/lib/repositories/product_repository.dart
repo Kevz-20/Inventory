@@ -5,6 +5,7 @@ import '../models/product_selling_option.dart';
 import '../models/product_unit_conversion.dart';
 import '../repositories/account_repository.dart';
 import '../services/audit_log_service.dart';
+import '../services/notification_service.dart';
 
 class ProductRepository {
   final Database db;
@@ -36,11 +37,12 @@ class ProductRepository {
 
   Future<List<ProductModel>> getProducts() async {
   final result = await db.rawQuery('''
-    SELECT 
+    SELECT
       p.*,
       c.name AS category_name
     FROM product p
     LEFT JOIN product_category c ON c.id = p.category_id
+    WHERE p.is_deleted = 0
     ORDER BY p.id DESC
   ''');
 
@@ -115,15 +117,28 @@ class ProductRepository {
         oldValue: previous?.toMap(),
         newValue: data,
       );
+      final association = await accountRepo.getSlpaName();
+      final changes     = NotificationService.buildChanges(previous?.toMap(), data);
+      NotificationService.instance.sendProductAlert(
+        action:      'Edited',
+        productName: product.name,
+        memberName:  fullName,
+        association: association,
+        changes:     changes,
+      );
     }
     return updated;
   }
 
   Future<int> deleteProduct(int id) async {
     final previous = await getProductById(id);
-    final deleted = await db.delete(
+    final deleted = await db.update(
       'product',
-      where: 'id = ?',
+      {
+        'is_deleted': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ? AND is_deleted = 0',
       whereArgs: [id],
     );
     if (deleted > 0) {
@@ -133,6 +148,13 @@ class ProductRepository {
         recordId: id.toString(),
         action: 'delete',
         oldValue: previous?.toMap(),
+      );
+      final association = await accountRepo.getSlpaName();
+      NotificationService.instance.sendProductAlert(
+        action:      'Deleted',
+        productName: previous?.name ?? 'Unknown Product',
+        memberName:  await accountRepo.getFullName(),
+        association: association,
       );
     }
     return deleted;

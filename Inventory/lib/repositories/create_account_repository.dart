@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import '../models/create_account_model.dart';
 import '../services/audit_log_service.dart';
-import '../services/auto_sync_service.dart';
 import '../services/db_service.dart';
 
 class CreateAccountRepository {
@@ -44,7 +41,6 @@ class CreateAccountRepository {
       action: 'create',
       newValue: {'slpa_name': account.slpaName},
     );
-    unawaited(AutoSyncService.instance.tryAutoSync(force: true));
     return accountId;
   }
 
